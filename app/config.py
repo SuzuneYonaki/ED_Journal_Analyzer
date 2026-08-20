@@ -1,9 +1,19 @@
 import os
+import sys
 from pathlib import Path
 
-# Base Paths
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
+# Handle PyInstaller frozen executable paths
+if getattr(sys, 'frozen', False):
+    # Running in a PyInstaller bundle
+    EXE_DIR = Path(sys.executable).resolve().parent
+    RESOURCE_DIR = Path(getattr(sys, '_MEIPASS', EXE_DIR))
+    DATA_DIR = EXE_DIR / "data"
+else:
+    # Running in normal Python environment
+    RESOURCE_DIR = Path(__file__).resolve().parent.parent
+    DATA_DIR = RESOURCE_DIR / "data"
+
+BASE_DIR = RESOURCE_DIR
 DATA_DIR.mkdir(exist_ok=True)
 
 DB_PATH = DATA_DIR / "elite_journal.db"
