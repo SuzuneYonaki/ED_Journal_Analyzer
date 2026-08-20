@@ -12,7 +12,6 @@ let state = {
     has_ammonia: false,
     has_terraformable: false,
     has_bio: false,
-    has_landable: false,
     has_high_g: false,
     has_anomalies: false
   },
@@ -263,7 +262,6 @@ function renderSystemList() {
     if (sys.total_bio_signals > 0) tags.push(`<span class="tag-badge tag-bio">BIO: ${sys.total_bio_signals}</span>`);
     else if (sys.has_bio) tags.push('<span class="tag-badge tag-bio">BIO</span>');
     if (sys.has_high_g) tags.push('<span class="tag-badge tag-high-g">High-G</span>');
-    if (sys.has_landable) tags.push('<span class="tag-badge tag-landable">Landable</span>');
     if (sys.has_anomalies) tags.push('<span class="tag-badge tag-anomaly">Rare/Orbit</span>');
 
     const visitedDate = sys.last_visited ? sys.last_visited.substring(0, 10) : '--';
@@ -677,6 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateStaticTexts();
   fetchGlobalStats();
   fetchSystems();
+  checkScanOnStartup();
 
   // Language Switchers
   document.getElementById('btn-lang-ja').addEventListener('click', () => setLanguage('ja'));
@@ -761,7 +760,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-view-visits').classList.toggle('active', state.currentView === 'visits');
   }
 
-  // Rescan Button
+  // Scan Button
   document.getElementById('btn-rescan').addEventListener('click', async () => {
     try {
       const res = await fetch('/api/scan_now', { method: 'POST' });
@@ -772,6 +771,18 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+async function checkScanOnStartup() {
+  try {
+    const res = await fetch('/api/scan_status');
+    const st = await res.json();
+    if (st.is_scanning) {
+      pollScanProgress();
+    }
+  } catch (err) {
+    // Ignore on startup
+  }
+}
+
 // Scan Polling
 function pollScanProgress() {
   const banner = document.getElementById('scan-banner');
@@ -779,20 +790,27 @@ function pollScanProgress() {
   const bannerCount = document.getElementById('scan-banner-count');
   banner.style.display = 'flex';
 
+  let pollCount = 0;
   const interval = setInterval(async () => {
     try {
       const res = await fetch('/api/scan_status');
       const st = await res.json();
       if (st.is_scanning) {
         bannerText.innerText = st.message;
-        bannerCount.innerText = `${st.current} / ${st.total}`;
+        if (bannerCount) bannerCount.innerText = `${st.current} / ${st.total}`;
+        pollCount++;
+        // Update stats periodically during large scans
+        if (pollCount % 3 === 0) {
+          fetchGlobalStats();
+        }
       } else {
         bannerText.innerText = st.message;
-        bannerCount.innerText = `${st.total}`;
+        if (bannerCount) bannerCount.innerText = `${st.total}`;
         setTimeout(() => {
           banner.style.display = 'none';
-        }, 3000);
+        }, 2500);
         clearInterval(interval);
+        // Instant full UI refresh
         fetchGlobalStats();
         fetchSystems();
       }

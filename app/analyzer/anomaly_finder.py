@@ -91,14 +91,7 @@ def detect_anomalies(body: dict) -> list:
                 anomalies.append({"type": "giant_ring", "tag": "Giant Ring System", "color": "gold", "desc": f"巨大リング (外径 {outer_rad_km:,.0f} km)"})
                 break
 
-    # 6. Exobiology & Signals
-    bio_signals = body.get("bio_signals", 0)
-    if bio_signals >= 3:
-        anomalies.append({"type": "rich_bio", "tag": f"Rich Exobiology ({bio_signals} Bio)", "color": "emerald", "desc": f"多様な生体シグナル ({bio_signals}種)"})
-    elif bio_signals > 0:
-        anomalies.append({"type": "bio", "tag": f"Exobiology ({bio_signals} Bio)", "color": "green", "desc": f"生体シグナル検出 ({bio_signals}種)"})
-
-    # 7. Volcanism
+    # 6. Volcanism
     volcanism = (body.get("volcanism") or "").lower()
     if volcanism and volcanism != "none":
         anomalies.append({"type": "volcanism", "tag": "Active Volcanism", "color": "orange", "desc": f"火山活動 ({body.get('volcanism')})"})

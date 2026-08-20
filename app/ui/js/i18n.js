@@ -11,7 +11,7 @@ const i18n = {
     stat_ammonia: "Ammonia",
     stat_bio: "生体 (Bio) 星系 / シグナル",
     stat_payout: "累積探査総価値",
-    btn_rescan: "ログ再スキャン",
+    btn_rescan: "ログスキャン",
     btn_scanning: "ジャーナルログを解析中...",
 
     // Left Pane
@@ -121,7 +121,7 @@ const i18n = {
     stat_ammonia: "Ammonia",
     stat_bio: "Bio Systems / Signals",
     stat_payout: "Total Est. Value",
-    btn_rescan: "Rescan Logs",
+    btn_rescan: "Scan Logs",
     btn_scanning: "Scanning journals...",
 
     // Left Pane

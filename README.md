@@ -15,6 +15,11 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 ### 🌐 日英バイリンガル対応 (One-Click Language Switch)
 - アプリ画面右上の **`[JP] / [EN]`** ボタンから、日本語・英語をいつでも**ワンクリックで即座に切り替え可能**です。
 
+### 💾 ポータブル設計 & 簡単アンインストール
+- 本アプリは**レジストリやシステム領域への書き込みを一切行いません**。
+- `ED_Journal_Analyzer.exe` を実行すると、実行ファイルと同じフォルダにデータベース保管用の **`data`** フォルダが自動生成されます。
+- アンインストールしたい場合は、ダウンロードした **`ED_Journal_Analyzer.exe`** と **`data`** フォルダをそのまま手動で削除するだけで完全に削除されます。
+
 ### 主な機能 (Key Features)
 
 - **星系 & 天体の過去ログ遡り・タイムライン**:
@@ -58,6 +63,11 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
 
 ### 🌐 Instant Bilingual Support (JP / EN Switch)
 - Switch seamlessly between **English** and **Japanese** at any time with a single click on the **`[JP] / [EN]`** toggle in the top-right corner.
+
+### 💾 100% Portable & Clean Uninstall
+- **Zero registry or system modifications**: Everything runs strictly in user space.
+- Running `ED_Journal_Analyzer.exe` will create a local **`data`** directory in the same folder to store the SQLite database.
+- To uninstall, simply delete the **`ED_Journal_Analyzer.exe`** file and the **`data`** folder. No uninstaller or leftover files.
 
 ### Key Features
 

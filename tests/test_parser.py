@@ -32,7 +32,6 @@ def test_anomaly_detection():
     assert any("Extreme High-G" in t for t in tags)
     assert any("Extreme Eccentricity" in t for t in tags)
     assert any("Active Volcanism" in t for t in tags)
-    assert any("Exobiology" in t for t in tags)
 
 def test_journal_parser_in_memory():
     conn = sqlite3.connect(":memory:")
