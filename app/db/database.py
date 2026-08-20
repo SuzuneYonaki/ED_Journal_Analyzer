@@ -1,0 +1,223 @@
+import sqlite3
+import json
+from pathlib import Path
+from app.config import DB_PATH
+
+def get_db_connection():
+    conn = sqlite3.connect(str(DB_PATH), timeout=30.0, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA synchronous = NORMAL;")
+    return conn
+
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Systems table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS systems (
+        system_address INTEGER PRIMARY KEY,
+        star_system TEXT NOT NULL,
+        star_pos_x REAL,
+        star_pos_y REAL,
+        star_pos_z REAL,
+        system_allegiance TEXT,
+        system_economy TEXT,
+        system_government TEXT,
+        system_security TEXT,
+        population INTEGER,
+        first_visited TEXT,
+        last_visited TEXT,
+        visit_count INTEGER DEFAULT 1,
+        total_bodies INTEGER DEFAULT 0,
+        scanned_bodies INTEGER DEFAULT 0,
+        main_star_type TEXT,
+        total_potential_value INTEGER DEFAULT 0,
+        total_fss_value INTEGER DEFAULT 0,
+        total_dss_value INTEGER DEFAULT 0,
+        total_bio_value INTEGER DEFAULT 0,
+        total_bio_signals INTEGER DEFAULT 0,
+        has_elw INTEGER DEFAULT 0,
+        has_water_world INTEGER DEFAULT 0,
+        has_ammonia INTEGER DEFAULT 0,
+        has_terraformable INTEGER DEFAULT 0,
+        has_bio INTEGER DEFAULT 0,
+        has_landable INTEGER DEFAULT 0,
+        has_high_g INTEGER DEFAULT 0,
+        has_anomalies INTEGER DEFAULT 0
+    );
+    """)
+
+    # Bodies table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS bodies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        system_address INTEGER NOT NULL,
+        body_id INTEGER,
+        body_name TEXT NOT NULL,
+        star_system TEXT,
+        distance_from_arrival_ls REAL,
+        star_type TEXT,
+        stellar_mass REAL,
+        absolute_magnitude REAL,
+        radius REAL,
+        surface_temperature REAL,
+        planet_class TEXT,
+        atmosphere TEXT,
+        atmosphere_type TEXT,
+        atmosphere_composition TEXT,
+        mass_em REAL,
+        surface_gravity REAL,
+        surface_gravity_g REAL,
+        surface_pressure REAL,
+        landable INTEGER DEFAULT 0,
+        volcanism TEXT,
+        terraforming_state TEXT,
+        tidal_lock INTEGER DEFAULT 0,
+        semi_major_axis REAL,
+        eccentricity REAL,
+        orbital_inclination REAL,
+        periapsis REAL,
+        orbital_period REAL,
+        ascending_node REAL,
+        mean_anomaly REAL,
+        rotation_period REAL,
+        axial_tilt REAL,
+        rings TEXT,
+        materials TEXT,
+        parents TEXT,
+        was_discovered INTEGER DEFAULT 0,
+        was_mapped INTEGER DEFAULT 0,
+        is_mapped_by_user INTEGER DEFAULT 0,
+        is_first_discovered_by_user INTEGER DEFAULT 0,
+        bio_signals INTEGER DEFAULT 0,
+        geo_signals INTEGER DEFAULT 0,
+        fss_value INTEGER DEFAULT 0,
+        dss_value INTEGER DEFAULT 0,
+        first_discovered_fss INTEGER DEFAULT 0,
+        first_mapped_dss INTEGER DEFAULT 0,
+        max_potential_value INTEGER DEFAULT 0,
+        exobiology_predictions TEXT,
+        anomalies_json TEXT,
+        scan_timestamp TEXT,
+        updated_timestamp TEXT,
+        UNIQUE(system_address, body_id)
+    );
+    """)
+
+    # Visits timeline table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS visits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        system_address INTEGER NOT NULL,
+        star_system TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        jump_dist REAL,
+        fuel_used REAL,
+        ship TEXT,
+        is_taxi INTEGER DEFAULT 0,
+        is_carrier INTEGER DEFAULT 0
+    );
+    """)
+
+    # Scanned organics table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS scanned_organics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        system_address INTEGER NOT NULL,
+        body_id INTEGER,
+        body_name TEXT,
+        timestamp TEXT NOT NULL,
+        scan_type TEXT,
+        genus TEXT,
+        genus_localised TEXT,
+        species TEXT,
+        species_localised TEXT,
+        variant TEXT,
+        variant_localised TEXT,
+        base_value INTEGER DEFAULT 0,
+        first_discovery_value INTEGER DEFAULT 0
+    );
+    """)
+
+    # Parsed files tracker
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS parsed_files (
+        filename TEXT PRIMARY KEY,
+        file_size INTEGER,
+        last_modified REAL,
+        parsed_at TEXT,
+        last_line_offset INTEGER DEFAULT 0
+    );
+    """)
+
+    # Indices for performance
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_name ON systems(star_system);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_last_visited ON systems(last_visited DESC);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bodies_sys_addr ON bodies(system_address);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bodies_name ON bodies(body_name);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_visits_sys_addr ON visits(system_address);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_visits_ts ON visits(timestamp DESC);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_organics_sys ON scanned_organics(system_address);")
+
+    # Column migrations
+    try:
+        cursor.execute("ALTER TABLE systems ADD COLUMN total_bio_signals INTEGER DEFAULT 0;")
+    except Exception:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE systems ADD COLUMN has_water_world INTEGER DEFAULT 0;")
+    except Exception:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE systems ADD COLUMN main_star_type TEXT;")
+    except Exception:
+        pass
+
+    # Clean up non-celestial records (Belt Clusters, Rings, Barycentres without star/planet type)
+    cursor.execute("""
+        DELETE FROM bodies 
+        WHERE (star_type IS NULL AND planet_class IS NULL)
+           OR LOWER(body_name) LIKE '%belt cluster%'
+           OR LOWER(body_name) LIKE '% ring%';
+    """)
+
+    # Ensure system flags, scanned bodies count and main_star consistency from bodies table
+    cursor.execute("""
+        UPDATE systems SET
+            scanned_bodies = (
+                SELECT COUNT(*) FROM bodies b
+                WHERE b.system_address = systems.system_address
+            ),
+            main_star_type = COALESCE(main_star_type, (
+                SELECT b.star_type FROM bodies b
+                WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL
+                ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1
+            )),
+            has_water_world = COALESCE((
+                SELECT MAX(CASE WHEN LOWER(b.planet_class) LIKE '%water world%' THEN 1 ELSE 0 END)
+                FROM bodies b WHERE b.system_address = systems.system_address
+            ), 0),
+            total_bio_signals = COALESCE((
+                SELECT SUM(b.bio_signals)
+                FROM bodies b WHERE b.system_address = systems.system_address
+            ), 0),
+            has_bio = COALESCE((
+                SELECT MAX(CASE WHEN b.bio_signals > 0 THEN 1 ELSE 0 END)
+                FROM bodies b WHERE b.system_address = systems.system_address
+            ), 0),
+            has_high_g = COALESCE((
+                SELECT MAX(CASE WHEN b.landable = 1 AND b.surface_gravity_g >= 3.0 THEN 1 ELSE 0 END)
+                FROM bodies b WHERE b.system_address = systems.system_address
+            ), 0);
+    """)
+
+    conn.commit()
+    conn.close()
+
+if __name__ == "__main__":
+    init_db()
+    print("Database initialized successfully at", DB_PATH)

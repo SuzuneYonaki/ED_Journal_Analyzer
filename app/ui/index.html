@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elite Dangerous Journal Analyzer & Exploration Orrery</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <!-- Global Scan Banner (hidden by default) -->
+  <div id="scan-banner" class="progress-banner" style="display: none;">
+    <span id="scan-banner-text" data-i18n="btn_scanning">ジャーナルログを解析中...</span>
+    <span id="scan-banner-count">0 / 0</span>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="logo-area">
+      <div class="logo-title" data-i18n="app_title">ED Journal Explorer</div>
+      <span class="badge-version">v1.1</span>
+    </div>
+
+    <div class="header-stats">
+      <div class="stat-item">
+        <span class="stat-label" data-i18n="stat_systems">訪問星系</span>
+        <span id="stat-systems" class="stat-value">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label" data-i18n="stat_bodies">スキャン天体</span>
+        <span id="stat-bodies" class="stat-value">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label" data-i18n="stat_elw">ELW (地球型)</span>
+        <span id="stat-elw" class="stat-value highlight">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label" data-i18n="stat_ww">WW (海洋惑星)</span>
+        <span id="stat-ww" class="stat-value" style="color: var(--ed-cyan);">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label" data-i18n="stat_ammonia">Ammonia</span>
+        <span id="stat-ammonia" class="stat-value" style="color: var(--ed-cyan-dim);">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label" data-i18n="stat_bio">生体 (Bio) 星系</span>
+        <span id="stat-bio" class="stat-value" style="color: var(--ed-green);">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label" data-i18n="stat_payout">累積探査総価値</span>
+        <span id="stat-total-payout" class="stat-value credits">0 Cr</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Language Switcher -->
+      <div class="lang-switch-group" style="display: flex; gap: 4px; background: var(--bg-card); padding: 2px; border-radius: 4px; border: 1px solid var(--border-color);">
+        <button id="btn-lang-ja" class="view-btn active" style="padding: 4px 8px; font-size: 0.75rem;">JP</button>
+        <button id="btn-lang-en" class="view-btn" style="padding: 4px 8px; font-size: 0.75rem;">EN</button>
+      </div>
+
+      <button id="btn-rescan" class="btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+        <span data-i18n="btn_rescan">ログ再スキャン</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container (3-pane) -->
+  <div class="main-container">
+    <!-- Left Pane: Systems Search & History -->
+    <div class="left-pane">
+      <div class="search-section">
+        <div class="search-bar">
+          <input type="text" id="system-search" class="search-input" placeholder="星系名を検索 (例: Sol, Beagle Point)...">
+        </div>
+
+        <div class="filter-chips">
+          <button class="chip" data-filter="has_elw" data-i18n="filter_elw">ELW (地球型)</button>
+          <button class="chip" data-filter="has_water_world" data-i18n="filter_ww">WW (海洋惑星)</button>
+          <button class="chip" data-filter="has_ammonia" data-i18n="filter_ammonia">Ammonia</button>
+          <button class="chip" data-filter="has_terraformable" data-i18n="filter_tf">TF可能</button>
+          <button class="chip bio" data-filter="has_bio" data-i18n="filter_bio">Bio (生体)</button>
+          <button class="chip" data-filter="has_landable" data-i18n="filter_landable">着陸可能</button>
+          <button class="chip" data-filter="has_high_g" data-i18n="filter_high_g">高重力 (3G+着陸)</button>
+          <button class="chip" data-filter="has_anomalies" data-i18n="filter_anomalies">特殊・レア</button>
+        </div>
+
+        <div class="sort-row">
+          <span data-i18n="sort_label">並び替え:</span>
+          <select id="sort-select" class="sort-select">
+            <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
+            <option value="total_potential_value-asc" data-i18n="sort_value_asc">推定探査価値 (低い順)</option>
+            <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
+            <option value="total_bio_signals-asc" data-i18n="sort_bio_asc">生体シグナル数 (少ない順)</option>
+            <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
+            <option value="last_visited-asc" data-i18n="sort_visited_asc">最新訪問日時 (古い順)</option>
+            <option value="first_visited-asc" data-i18n="sort_first_asc">初回訪問日時 (古い順)</option>
+            <option value="first_visited-desc" data-i18n="sort_first_desc">初回訪問日時 (新しい順)</option>
+            <option value="scanned_bodies-desc" data-i18n="sort_bodies_desc">スキャン天体数 (多い順)</option>
+            <option value="scanned_bodies-asc" data-i18n="sort_bodies_asc">スキャン天体数 (少ない順)</option>
+            <option value="visit_count-desc" data-i18n="sort_visits_desc">訪問回数 (多い順)</option>
+            <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
+            <option value="star_system-desc" data-i18n="sort_name_desc">星系名 (Z-A)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="system-list" class="system-list">
+        <!-- Systems injected by JS -->
+      </div>
+
+      <div class="pagination-bar">
+        <button id="btn-prev-page" class="btn-page" data-i18n="prev_page" disabled>&lt; 前へ</button>
+        <span id="page-info">1 / 1</span>
+        <button id="btn-next-page" class="btn-page" data-i18n="next_page">&gt; 次へ</button>
+      </div>
+    </div>
+
+    <!-- Center Pane: System Map & Celestial Orbit Hierarchy -->
+    <div class="center-pane">
+      <div class="system-header-bar">
+        <div class="system-title-row">
+          <div id="current-system-name" class="current-system-name" data-i18n="select_system_prompt">星系を選択してください</div>
+          <div id="current-system-coords" class="system-coords"></div>
+        </div>
+        <div class="system-total-payout" style="display: flex; gap: 18px; align-items: flex-end;">
+          <div>
+            <div class="payout-label" data-i18n="system_fss_total_label">FSSスキャン合計</div>
+            <div id="current-system-fss-value" class="payout-amount" style="color: var(--ed-cyan); font-size: 1.05rem;">-- Cr</div>
+          </div>
+          <div>
+            <div class="payout-label" data-i18n="system_max_potential_label">最大見込み (FD+FM)</div>
+            <div id="current-system-value" class="payout-amount">-- Cr</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="map-view-controls">
+        <span data-i18n="view_label">表示:</span>
+        <button id="btn-view-tree" class="view-btn active" data-i18n="view_tree">階層ツリー & 軌道</button>
+        <button id="btn-view-flat" class="view-btn" data-i18n="view_flat">天体一覧</button>
+        <button id="btn-view-visits" class="view-btn" data-i18n="view_visits">過去訪問履歴</button>
+        <div style="flex: 1;"></div>
+        <span style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="body_sort_label">天体ソート:</span>
+        <select id="body-sort-select" class="sort-select" style="font-size: 0.75rem; padding: 2px 6px;">
+          <option value="distance-asc" data-i18n="body_sort_dist">到着距離順 (近い順)</option>
+          <option value="value-desc" data-i18n="body_sort_val_desc">探査価値 (高い順)</option>
+          <option value="value-asc" data-i18n="body_sort_val_asc">探査価値 (低い順)</option>
+          <option value="bio-desc" data-i18n="body_sort_bio_desc">Bioシグナル数 (多い順)</option>
+          <option value="gravity-desc" data-i18n="body_sort_g_desc">重力 (高い順)</option>
+        </select>
+        <span id="body-count-badge" style="font-family: var(--font-mono); color: var(--text-secondary); margin-left: 8px;"></span>
+      </div>
+
+      <div id="map-content" class="map-content-area">
+        <!-- System hierarchy / flat list / visit timeline injected by JS -->
+        <div style="color: var(--text-secondary); text-align: center; margin-top: 50px;" data-i18n="select_system_desc">
+          左側の星系リストから星系を選択してください。
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Pane: Body Inspector & Exobiology Predictor -->
+    <div class="right-pane" id="right-pane">
+      <div class="inspector-header">
+        <div id="inspect-body-name" class="inspector-title" data-i18n="inspector_title">天体詳細インスペクター</div>
+        <div id="inspect-body-type" class="inspector-subtitle" data-i18n="inspector_subtitle">天体をクリックすると詳細が表示されます</div>
+      </div>
+
+      <div id="inspector-content" style="display: none;">
+        <!-- Anomaly Tags -->
+        <div class="inspector-section" id="section-anomalies" style="display: none;">
+          <div class="section-heading" data-i18n="section_anomalies">★ 特殊周回・レア天体 特性</div>
+          <div id="inspect-anomaly-tags" class="system-card-tags"></div>
+        </div>
+
+        <!-- Exploration Value Summary -->
+        <div class="inspector-section">
+          <div class="section-heading" data-i18n="section_payout">💰 探査報酬 & マッピング価値</div>
+          <table class="payout-table">
+            <tr>
+              <td data-i18n="val_fss">FSSスキャン価値:</td>
+              <td class="text-right" id="val-fss">0 Cr</td>
+            </tr>
+            <tr>
+              <td data-i18n="val_dss">DSSマッピング価値:</td>
+              <td class="text-right" id="val-dss">0 Cr</td>
+            </tr>
+            <tr>
+              <td data-i18n="val_fd_fss">初回発見ボーナス (FSS):</td>
+              <td class="text-right" id="val-fd-fss">0 Cr</td>
+            </tr>
+            <tr>
+              <td data-i18n="val_fm_dss">初回マッピングボーナス (DSS):</td>
+              <td class="text-right" id="val-fm-dss">0 Cr</td>
+            </tr>
+            <tr>
+              <td data-i18n="val_max_total">最大見込み総額 (FD+FM):</td>
+              <td class="text-right" id="val-max-total">0 Cr</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Exobiology Prediction & Payout -->
+        <div class="inspector-section" id="section-exobiology">
+          <div class="section-heading" data-i18n="section_exobiology">🌱 Exobiology (植物・菌類 予測 & 報酬)</div>
+          <div id="inspect-bio-signals-info" style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 8px;"></div>
+          <div id="inspect-bio-predictions"></div>
+        </div>
+
+        <!-- Landing & Surface Conditions -->
+        <div class="inspector-section">
+          <div class="section-heading" data-i18n="section_surface">🪐 地表・着陸・環境</div>
+          <div class="grid-2col">
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_landable">着陸可否</div>
+              <div id="prop-landable" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_gravity">表面重力</div>
+              <div id="prop-gravity" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_temp">表面温度</div>
+              <div id="prop-temperature" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_pressure">大気圧</div>
+              <div id="prop-pressure" class="prop-val">--</div>
+            </div>
+            <div class="prop-card" style="grid-column: span 2;">
+              <div class="prop-label" data-i18n="prop_atmosphere">大気</div>
+              <div id="prop-atmosphere" class="prop-val">--</div>
+            </div>
+            <div class="prop-card" style="grid-column: span 2;">
+              <div class="prop-label" data-i18n="prop_volcanism">火山活動 (Volcanism)</div>
+              <div id="prop-volcanism" class="prop-val">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orbital Mechanics (周回・位置関係) -->
+        <div class="inspector-section">
+          <div class="section-heading" data-i18n="section_orbit">📐 軌道パラメータ & 周回</div>
+          <div class="grid-2col">
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_semi_major">軌道長半径 (Semi-Major Axis)</div>
+              <div id="prop-semi-major" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_eccentricity">離心率 (Eccentricity)</div>
+              <div id="prop-eccentricity" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_orbital_period">公転周期 (Orbital Period)</div>
+              <div id="prop-orbital-period" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_rotation_period">自転周期 (Rotation Period)</div>
+              <div id="prop-rotation-period" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_inclination">軌道傾斜角 (Inclination)</div>
+              <div id="prop-inclination" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_tidal_lock">潮汐固定 (Tidal Lock)</div>
+              <div id="prop-tidal-lock" class="prop-val">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rings & Materials -->
+        <div class="inspector-section" id="section-rings" style="display: none;">
+          <div class="section-heading" data-i18n="section_rings">💍 リングシステム</div>
+          <div id="inspect-rings-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

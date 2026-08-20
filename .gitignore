@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local SQLite Database & logs
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Pytest / Virtual environment
+.pytest_cache/
+.venv/
+venv/
+ENV/
+
+# OS specific
+.DS_Store
+Thumbs.db
