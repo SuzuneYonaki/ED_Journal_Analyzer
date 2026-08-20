@@ -2,14 +2,12 @@ import os
 import sys
 from pathlib import Path
 
-# Handle PyInstaller frozen executable paths
+# PyInstaller one-file extraction support
 if getattr(sys, 'frozen', False):
-    # Running in a PyInstaller bundle
     EXE_DIR = Path(sys.executable).resolve().parent
     RESOURCE_DIR = Path(getattr(sys, '_MEIPASS', EXE_DIR))
     DATA_DIR = EXE_DIR / "data"
 else:
-    # Running in normal Python environment
     RESOURCE_DIR = Path(__file__).resolve().parent.parent
     DATA_DIR = RESOURCE_DIR / "data"
 

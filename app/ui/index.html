@@ -4,21 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Elite Dangerous Journal Analyzer</title>
-  <link rel="icon" type="image/png" href="icon.png">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/png" href="/static/icon.png">
+  <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
   <!-- Global Scan Banner (hidden by default) -->
-  <div id="scan-banner" class="progress-banner" style="display: none;">
-    <span id="scan-banner-text" data-i18n="btn_scanning">ジャーナルログを解析中...</span>
-    <span id="scan-banner-count">0 / 0</span>
+  <div id="scan-banner" class="scan-banner">
+    <span class="spinner"></span>
+    <span id="scan-banner-text" data-i18n="scanning_banner">ジャーナルログを解析中...</span>
   </div>
 
   <!-- Header -->
   <header>
     <div class="logo-area">
       <div class="brand">
-        <img src="icon.png" alt="Logo" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 6px;">
+        <img src="/static/icon.png" alt="Logo" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 6px;">
         <span class="logo-text">ED Journal Explorer</span>
         <span class="version-badge">v1.0.0</span>
       </div>

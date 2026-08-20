@@ -275,6 +275,27 @@ ui_dir = BASE_DIR / "app" / "ui"
 ui_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(ui_dir)), name="static")
 
+@app.get("/css/{file_path:path}")
+def get_css(file_path: str):
+    f = ui_dir / "css" / file_path
+    if f.exists():
+        return FileResponse(f)
+    return JSONResponse({"error": "not found"}, status_code=404)
+
+@app.get("/js/{file_path:path}")
+def get_js(file_path: str):
+    f = ui_dir / "js" / file_path
+    if f.exists():
+        return FileResponse(f)
+    return JSONResponse({"error": "not found"}, status_code=404)
+
+@app.get("/icon.png")
+def get_icon():
+    f = ui_dir / "icon.png"
+    if f.exists():
+        return FileResponse(f)
+    return JSONResponse({"error": "not found"}, status_code=404)
+
 @app.get("/")
 def index():
     index_file = ui_dir / "index.html"
