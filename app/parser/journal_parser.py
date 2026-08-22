@@ -46,6 +46,7 @@ class JournalParser:
 
         star_pos = data.get("StarPos", [0, 0, 0])
         pos_x, pos_y, pos_z = (star_pos[0], star_pos[1], star_pos[2]) if len(star_pos) >= 3 else (0, 0, 0)
+        sol_dist = round((pos_x**2 + pos_y**2 + pos_z**2)**0.5, 1) if (pos_x is not None and pos_y is not None and pos_z is not None) else 0
 
         star_class = data.get("StarClass") or data.get("StarType")
         allegiance = data.get("SystemAllegiance")
@@ -63,24 +64,24 @@ class JournalParser:
             visit_count = (row["visit_count"] or 1) + (1 if data.get("event") == "FSDJump" else 0)
             self.cursor.execute("""
                 UPDATE systems SET
-                    star_system = ?, star_pos_x = ?, star_pos_y = ?, star_pos_z = ?,
+                    star_system = COALESCE(?, star_system),
+                    star_pos_x = COALESCE(?, star_pos_x),
+                    star_pos_y = COALESCE(?, star_pos_y),
+                    star_pos_z = COALESCE(?, star_pos_z),
+                    sol_distance_ly = CASE WHEN ? > 0 THEN ? ELSE sol_distance_ly END,
                     main_star_type = COALESCE(?, main_star_type),
-                    system_allegiance = COALESCE(?, system_allegiance),
-                    system_economy = COALESCE(?, system_economy),
-                    system_government = COALESCE(?, system_government),
-                    system_security = COALESCE(?, system_security),
-                    population = COALESCE(?, population),
-                    last_visited = ?, visit_count = ?
+                    last_visited = ?,
+                    visit_count = visit_count + 1
                 WHERE system_address = ?
-            """, (star_sys, pos_x, pos_y, pos_z, star_class, allegiance, economy, govt, sec, pop, timestamp, visit_count, sys_addr))
+            """, (star_sys, pos_x, pos_y, pos_z, sol_dist, sol_dist, star_class, timestamp, sys_addr))
         else:
             self.cursor.execute("""
                 INSERT INTO systems (
-                    system_address, star_system, star_pos_x, star_pos_y, star_pos_z,
+                    system_address, star_system, star_pos_x, star_pos_y, star_pos_z, sol_distance_ly,
                     main_star_type, system_allegiance, system_economy, system_government, system_security,
                     population, first_visited, last_visited, visit_count
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (sys_addr, star_sys, pos_x, pos_y, pos_z, star_class, allegiance, economy, govt, sec, pop, timestamp, timestamp, 1))
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (sys_addr, star_sys, pos_x, pos_y, pos_z, sol_dist, star_class, allegiance, economy, govt, sec, pop, timestamp, timestamp, 1))
 
         # Record visit timeline if FSDJump
         if data.get("event") == "FSDJump":
@@ -402,7 +403,9 @@ class JournalParser:
                 MAX(CASE WHEN bio_signals > 0 THEN 1 ELSE 0 END) as bio,
                 MAX(CASE WHEN landable = 1 THEN 1 ELSE 0 END) as landable,
                 MAX(CASE WHEN landable = 1 AND surface_gravity_g >= 3.0 THEN 1 ELSE 0 END) as high_g,
-                MAX(CASE WHEN anomalies_json != '[]' AND anomalies_json IS NOT NULL THEN 1 ELSE 0 END) as anomalies
+                MAX(CASE WHEN anomalies_json != '[]' AND anomalies_json IS NOT NULL THEN 1 ELSE 0 END) as anomalies,
+                SUM(CASE WHEN was_discovered = 0 THEN 1 ELSE 0 END) as first_disc_count,
+                MAX(CASE WHEN was_discovered = 0 THEN 1 ELSE 0 END) as has_first_disc
             FROM bodies 
             WHERE system_address = ? 
               AND (star_type IS NOT NULL OR planet_class IS NOT NULL)
@@ -418,8 +421,8 @@ class JournalParser:
                     scanned_bodies, main_star_type, total_fss_value, total_dss_value,
                     total_potential_value, total_bio_signals, has_elw,
                     has_water_world, has_ammonia, has_terraformable, has_bio,
-                    has_landable, has_high_g, has_anomalies
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    has_landable, has_high_g, has_anomalies, first_discovered_bodies, has_first_discover
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(system_address) DO UPDATE SET
                     scanned_bodies = excluded.scanned_bodies,
                     main_star_type = COALESCE(excluded.main_star_type, systems.main_star_type),
@@ -434,13 +437,16 @@ class JournalParser:
                     has_bio = excluded.has_bio,
                     has_landable = excluded.has_landable,
                     has_high_g = excluded.has_high_g,
-                    has_anomalies = excluded.has_anomalies
+                    has_anomalies = excluded.has_anomalies,
+                    first_discovered_bodies = excluded.first_discovered_bodies,
+                    has_first_discover = excluded.has_first_discover
             """, (
                 sys_addr, sys_name, ts, ts,
                 row["count"], main_star, row["sum_fss"] or 0, row["sum_dss"] or 0,
                 row["sum_max"] or 0, row["sum_bio"] or 0, row["elw"] or 0,
                 row["ww"] or 0, row["ammonia"] or 0, row["tf"] or 0, row["bio"] or 0,
-                row["landable"] or 0, row["high_g"] or 0, row["anomalies"] or 0
+                row["landable"] or 0, row["high_g"] or 0, row["anomalies"] or 0,
+                row["first_disc_count"] or 0, row["has_first_disc"] or 0
             ))
 
     def parse_file(self, filepath: str, progress_callback=None):

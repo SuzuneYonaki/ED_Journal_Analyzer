@@ -84,27 +84,49 @@
           <button class="chip" data-filter="has_ammonia" data-i18n="filter_ammonia">Ammonia</button>
           <button class="chip" data-filter="has_terraformable" data-i18n="filter_tf">TF可能</button>
           <button class="chip bio" data-filter="has_bio" data-i18n="filter_bio">Bio (生体)</button>
+          <button class="chip first-disc" data-filter="has_first_discover" data-i18n="filter_first_discover" style="border-color: rgba(255, 215, 0, 0.4);">⭐ 1st Disc (初発見)</button>
           <button class="chip" data-filter="has_high_g" data-i18n="filter_high_g">高重力 (3G+着陸)</button>
           <button class="chip" data-filter="has_anomalies" data-i18n="filter_anomalies">特殊・レア</button>
         </div>
 
-        <div class="sort-row">
-          <span data-i18n="sort_label">並び替え:</span>
-          <select id="sort-select" class="sort-select">
-            <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
-            <option value="total_potential_value-asc" data-i18n="sort_value_asc">推定探査価値 (低い順)</option>
-            <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
-            <option value="total_bio_signals-asc" data-i18n="sort_bio_asc">生体シグナル数 (少ない順)</option>
-            <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
-            <option value="last_visited-asc" data-i18n="sort_visited_asc">最新訪問日時 (古い順)</option>
-            <option value="first_visited-asc" data-i18n="sort_first_asc">初回訪問日時 (古い順)</option>
-            <option value="first_visited-desc" data-i18n="sort_first_desc">初回訪問日時 (新しい順)</option>
-            <option value="scanned_bodies-desc" data-i18n="sort_bodies_desc">スキャン天体数 (多い順)</option>
-            <option value="scanned_bodies-asc" data-i18n="sort_bodies_asc">スキャン天体数 (少ない順)</option>
-            <option value="visit_count-desc" data-i18n="sort_visits_desc">訪問回数 (多い順)</option>
-            <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
-            <option value="star_system-desc" data-i18n="sort_name_desc">星系名 (Z-A)</option>
-          </select>
+        <div class="sort-section" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid var(--border-color);">
+          <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+            <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_primary">1次ソート:</span>
+            <select id="sort-select" class="sort-select" style="flex: 1; font-size: 0.78rem;">
+              <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
+              <option value="total_potential_value-asc" data-i18n="sort_value_asc">推定探査価値 (低い順)</option>
+              <option value="total_fss_value-desc" data-i18n="sort_fss_desc">FSS合計 (高い順)</option>
+              <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
+              <option value="total_bio_signals-asc" data-i18n="sort_bio_asc">生体シグナル数 (少ない順)</option>
+              <option value="first_discovered_bodies-desc" data-i18n="sort_first_disc_desc">初発見天体数 (多い順)</option>
+              <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
+              <option value="sol_distance_ly-desc" data-i18n="sort_sol_dist_desc">Sol距離 (遠い順)</option>
+              <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
+              <option value="last_visited-asc" data-i18n="sort_visited_asc">最新訪問日時 (古い順)</option>
+              <option value="first_visited-asc" data-i18n="sort_first_asc">初回訪問日時 (古い順)</option>
+              <option value="first_visited-desc" data-i18n="sort_first_desc">初回訪問日時 (新しい順)</option>
+              <option value="scanned_bodies-desc" data-i18n="sort_bodies_desc">スキャン天体数 (多い順)</option>
+              <option value="scanned_bodies-asc" data-i18n="sort_bodies_asc">スキャン天体数 (少ない順)</option>
+              <option value="visit_count-desc" data-i18n="sort_visits_desc">訪問回数 (多い順)</option>
+              <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
+            </select>
+          </div>
+          <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+            <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_secondary">2次ソート:</span>
+            <select id="sort-select-2" class="sort-select" style="flex: 1; font-size: 0.78rem;">
+              <option value="none" data-i18n="sort_none">（指定なし）</option>
+              <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
+              <option value="sol_distance_ly-desc" data-i18n="sort_sol_dist_desc">Sol距離 (遠い順)</option>
+              <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
+              <option value="first_discovered_bodies-desc" data-i18n="sort_first_disc_desc">初発見天体数 (多い順)</option>
+              <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
+              <option value="total_fss_value-desc" data-i18n="sort_fss_desc">FSS合計 (高い順)</option>
+              <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
+              <option value="last_visited-asc" data-i18n="sort_visited_asc">最新訪問日時 (古い順)</option>
+              <option value="scanned_bodies-desc" data-i18n="sort_bodies_desc">スキャン天体数 (多い順)</option>
+              <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -122,8 +144,12 @@
     <!-- Center Pane: System Map & Celestial Orbit Hierarchy -->
     <div class="center-pane">
       <div class="system-header-bar">
-        <div class="system-title-row">
-          <div id="current-system-name" class="current-system-name" data-i18n="select_system_prompt">星系を選択してください</div>
+        <div class="system-title-row" style="display: flex; align-items: center; gap: 10px;">
+          <div id="current-system-name" class="current-system-name" data-i18n="select_system_prompt" style="cursor: pointer;" title="クリックして星系名をコピー">星系を選択してください</div>
+          <button id="btn-copy-system" class="btn-icon" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: 4px; padding: 3px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.75rem;" title="クリップボードにコピー">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span id="copy-label" data-i18n="copy_name">コピー</span>
+          </button>
           <div id="current-system-coords" class="system-coords"></div>
         </div>
         <div class="system-total-payout" style="display: flex; gap: 18px; align-items: flex-end;">

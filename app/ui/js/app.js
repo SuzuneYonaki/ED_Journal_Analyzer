@@ -12,11 +12,14 @@ let state = {
     has_ammonia: false,
     has_terraformable: false,
     has_bio: false,
+    has_first_discover: false,
     has_high_g: false,
     has_anomalies: false
   },
   sortBy: 'total_potential_value',
   sortOrder: 'desc',
+  sortBy2: null,
+  sortOrder2: 'desc',
   bodySortBy: 'distance',
   bodySortOrder: 'asc',
   page: 1,
@@ -199,6 +202,11 @@ async function fetchSystems() {
     limit: state.limit
   });
 
+  if (state.sortBy2 && state.sortBy2 !== 'none') {
+    params.append('sort_by_2', state.sortBy2);
+    params.append('sort_order_2', state.sortOrder2);
+  }
+
   Object.entries(state.filters).forEach(([k, v]) => {
     if (v) params.append(k, 'true');
   });
@@ -255,12 +263,16 @@ function renderSystemList() {
     card.onclick = () => selectSystem(sys.system_address);
 
     const tags = [];
+    if (sys.has_first_discover || sys.first_discovered_bodies > 0) {
+      tags.push(`<span class="tag-badge tag-first-disc">⭐ 1st Disc (${sys.first_discovered_bodies || 'Yes'})</span>`);
+    }
     if (sys.has_elw) tags.push('<span class="tag-badge tag-elw">ELW</span>');
     if (sys.has_water_world) tags.push('<span class="tag-badge tag-ww">WW</span>');
     if (sys.has_ammonia) tags.push('<span class="tag-badge tag-ammonia">Ammonia</span>');
     if (sys.has_terraformable) tags.push('<span class="tag-badge tag-tf">TF</span>');
     if (sys.total_bio_signals > 0) tags.push(`<span class="tag-badge tag-bio">BIO: ${sys.total_bio_signals}</span>`);
     else if (sys.has_bio) tags.push('<span class="tag-badge tag-bio">BIO</span>');
+    if (sys.sol_distance_ly > 0) tags.push(`<span class="tag-badge tag-sol-dist">Sol: ${Math.round(sys.sol_distance_ly).toLocaleString()} Ly</span>`);
     if (sys.has_high_g) tags.push('<span class="tag-badge tag-high-g">High-G</span>');
     if (sys.has_anomalies) tags.push('<span class="tag-badge tag-anomaly">Rare/Orbit</span>');
 
@@ -703,7 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Sort select for systems
+  // Sort select 1 for systems
   document.getElementById('sort-select').addEventListener('change', (e) => {
     const [by, order] = e.target.value.split('-');
     state.sortBy = by;
@@ -711,6 +723,49 @@ document.addEventListener('DOMContentLoaded', () => {
     state.page = 1;
     fetchSystems();
   });
+
+  // Sort select 2 for systems
+  const sortSelect2 = document.getElementById('sort-select-2');
+  if (sortSelect2) {
+    sortSelect2.addEventListener('change', (e) => {
+      if (e.target.value === 'none') {
+        state.sortBy2 = null;
+      } else {
+        const [by, order] = e.target.value.split('-');
+        state.sortBy2 = by;
+        state.sortOrder2 = order;
+      }
+      state.page = 1;
+      fetchSystems();
+    });
+  }
+
+  // Copy System Name
+  function copySelectedSystem() {
+    if (!state.selectedSystem || !state.selectedSystem.star_system) return;
+    const sysName = state.selectedSystem.star_system;
+    navigator.clipboard.writeText(sysName).then(() => {
+      const copyLabel = document.getElementById('copy-label');
+      if (copyLabel) {
+        const origText = copyLabel.innerText;
+        copyLabel.innerText = t('copied_name');
+        setTimeout(() => {
+          copyLabel.innerText = t('copy_name');
+        }, 1500);
+      }
+    }).catch(err => {
+      console.error('Failed to copy system name:', err);
+    });
+  }
+
+  const btnCopy = document.getElementById('btn-copy-system');
+  if (btnCopy) {
+    btnCopy.addEventListener('click', copySelectedSystem);
+  }
+  const sysNameEl = document.getElementById('current-system-name');
+  if (sysNameEl) {
+    sysNameEl.addEventListener('click', copySelectedSystem);
+  }
 
   // Sort select for bodies
   document.getElementById('body-sort-select').addEventListener('change', (e) => {

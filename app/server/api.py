@@ -92,8 +92,11 @@ def get_systems(
     has_landable: Optional[bool] = False,
     has_high_g: Optional[bool] = False,
     has_anomalies: Optional[bool] = False,
-    sort_by: Optional[str] = "last_visited",
+    has_first_discover: Optional[bool] = False,
+    sort_by: Optional[str] = "total_potential_value",
     sort_order: Optional[str] = "desc",
+    sort_by_2: Optional[str] = None,
+    sort_order_2: Optional[str] = "desc",
     page: int = 1,
     limit: int = 50
 ):
@@ -123,6 +126,8 @@ def get_systems(
         conditions.append("has_high_g = 1")
     if has_anomalies:
         conditions.append("has_anomalies = 1")
+    if has_first_discover:
+        conditions.append("has_first_discover = 1")
 
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -131,12 +136,28 @@ def get_systems(
         "first_visited": "first_visited",
         "star_system": "star_system",
         "total_potential_value": "total_potential_value",
+        "total_fss_value": "total_fss_value",
         "total_bio_signals": "total_bio_signals",
+        "sol_distance_ly": "sol_distance_ly",
+        "first_discovered_bodies": "first_discovered_bodies",
         "scanned_bodies": "scanned_bodies",
         "visit_count": "visit_count"
     }
-    sort_col = allowed_sort.get(sort_by, "last_visited")
-    order_dir = "ASC" if sort_order.lower() == "asc" else "DESC"
+    sort_col_1 = allowed_sort.get(sort_by, "total_potential_value")
+    order_dir_1 = "ASC" if sort_order and sort_order.lower() == "asc" else "DESC"
+
+    order_clauses = [f"{sort_col_1} {order_dir_1}"]
+
+    if sort_by_2 and sort_by_2 in allowed_sort and sort_by_2 != sort_by:
+        sort_col_2 = allowed_sort[sort_by_2]
+        order_dir_2 = "ASC" if sort_order_2 and sort_order_2.lower() == "asc" else "DESC"
+        order_clauses.append(f"{sort_col_2} {order_dir_2}")
+
+    # Fallback deterministic order
+    if "star_system" not in [sort_by, sort_by_2]:
+        order_clauses.append("star_system ASC")
+
+    order_sql = "ORDER BY " + ", ".join(order_clauses)
 
     # Count total
     c.execute(f"SELECT COUNT(*) as cnt FROM systems {where_clause}", params)
@@ -146,7 +167,7 @@ def get_systems(
     c.execute(f"""
         SELECT * FROM systems
         {where_clause}
-        ORDER BY {sort_col} {order_dir}
+        {order_sql}
         LIMIT ? OFFSET ?
     """, params + [limit, offset])
 

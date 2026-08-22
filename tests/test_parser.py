@@ -48,7 +48,8 @@ def test_journal_parser_in_memory():
             total_bodies INTEGER DEFAULT 0, scanned_bodies INTEGER DEFAULT 0, main_star_type TEXT,
             total_potential_value INTEGER DEFAULT 0, total_fss_value INTEGER DEFAULT 0, total_dss_value INTEGER DEFAULT 0, total_bio_value INTEGER DEFAULT 0, total_bio_signals INTEGER DEFAULT 0,
             has_elw INTEGER DEFAULT 0, has_water_world INTEGER DEFAULT 0, has_ammonia INTEGER DEFAULT 0, has_terraformable INTEGER DEFAULT 0,
-            has_bio INTEGER DEFAULT 0, has_landable INTEGER DEFAULT 0, has_high_g INTEGER DEFAULT 0, has_anomalies INTEGER DEFAULT 0
+            has_bio INTEGER DEFAULT 0, has_landable INTEGER DEFAULT 0, has_high_g INTEGER DEFAULT 0, has_anomalies INTEGER DEFAULT 0,
+            sol_distance_ly REAL DEFAULT 0, has_first_discover INTEGER DEFAULT 0, first_discovered_bodies INTEGER DEFAULT 0
         );
     """)
     cursor.execute("""

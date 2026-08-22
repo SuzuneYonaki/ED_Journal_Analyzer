@@ -162,20 +162,18 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_organics_sys ON scanned_organics(system_address);")
 
     # Column migrations
-    try:
-        cursor.execute("ALTER TABLE systems ADD COLUMN total_bio_signals INTEGER DEFAULT 0;")
-    except Exception:
-        pass
-
-    try:
-        cursor.execute("ALTER TABLE systems ADD COLUMN has_water_world INTEGER DEFAULT 0;")
-    except Exception:
-        pass
-
-    try:
-        cursor.execute("ALTER TABLE systems ADD COLUMN main_star_type TEXT;")
-    except Exception:
-        pass
+    for col_def in [
+        ("total_bio_signals", "INTEGER DEFAULT 0"),
+        ("has_water_world", "INTEGER DEFAULT 0"),
+        ("main_star_type", "TEXT"),
+        ("sol_distance_ly", "REAL DEFAULT 0"),
+        ("has_first_discover", "INTEGER DEFAULT 0"),
+        ("first_discovered_bodies", "INTEGER DEFAULT 0"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE systems ADD COLUMN {col_def[0]} {col_def[1]};")
+        except Exception:
+            pass
 
     # Clean up non-celestial records (Belt Clusters, Rings, Barycentres without star/planet type)
     cursor.execute("""
@@ -185,13 +183,19 @@ def init_db():
            OR LOWER(body_name) LIKE '% ring%';
     """)
 
-    # Ensure system flags, scanned bodies count and main_star consistency from bodies table
+    # Ensure system flags, scanned bodies count, sol distance, and first discovery consistency
     cursor.execute("""
         UPDATE systems SET
             scanned_bodies = (
                 SELECT COUNT(*) FROM bodies b
                 WHERE b.system_address = systems.system_address
+                  AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
             ),
+            sol_distance_ly = CASE 
+                WHEN star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
+                THEN ROUND(SQRT(star_pos_x * star_pos_x + star_pos_y * star_pos_y + star_pos_z * star_pos_z), 1)
+                ELSE 0 
+            END,
             main_star_type = COALESCE(main_star_type, (
                 SELECT b.star_type FROM bodies b
                 WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL
@@ -212,6 +216,17 @@ def init_db():
             has_high_g = COALESCE((
                 SELECT MAX(CASE WHEN b.landable = 1 AND b.surface_gravity_g >= 3.0 THEN 1 ELSE 0 END)
                 FROM bodies b WHERE b.system_address = systems.system_address
+            ), 0),
+            first_discovered_bodies = COALESCE((
+                SELECT COUNT(*) FROM bodies b
+                WHERE b.system_address = systems.system_address 
+                  AND b.was_discovered = 0
+                  AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
+            ), 0),
+            has_first_discover = COALESCE((
+                SELECT MAX(CASE WHEN b.was_discovered = 0 THEN 1 ELSE 0 END)
+                FROM bodies b WHERE b.system_address = systems.system_address
+                  AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
             ), 0);
     """)
 

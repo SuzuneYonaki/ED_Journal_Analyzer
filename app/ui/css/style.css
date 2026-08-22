@@ -245,10 +245,10 @@ header {
   font-weight: bold;
 }
 
-.chip.active[data-filter="has_landable"] {
-  background: rgba(255, 204, 0, 0.2) !important;
-  border-color: var(--ed-gold) !important;
-  color: var(--ed-gold) !important;
+.chip.active[data-filter="has_first_discover"] {
+  background: rgba(255, 215, 0, 0.25) !important;
+  border-color: #ffd700 !important;
+  color: #ffd700 !important;
   font-weight: bold;
 }
 
@@ -363,10 +363,23 @@ header {
 .tag-ww { background: rgba(0, 210, 255, 0.2); color: var(--ed-cyan); border: 1px solid rgba(0, 210, 255, 0.5); font-weight: bold; }
 .tag-ammonia { background: rgba(194, 139, 94, 0.25); color: #d4a373; border: 1px solid rgba(194, 139, 94, 0.5); font-weight: bold; }
 .tag-bio { background: rgba(0, 255, 136, 0.25); color: var(--ed-green); border: 1px solid var(--ed-green); font-weight: bold; }
+.tag-first-disc { background: rgba(255, 215, 0, 0.2); color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.5); font-weight: bold; }
+.tag-sol-dist { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
 .tag-high-g { background: rgba(255, 51, 68, 0.2); color: var(--ed-red); border: 1px solid rgba(255, 51, 68, 0.5); font-weight: bold; }
 .tag-landable { background: rgba(255, 204, 0, 0.15); color: var(--ed-gold); border: 1px solid rgba(255, 204, 0, 0.4); }
 .tag-tf { background: rgba(187, 85, 255, 0.2); color: var(--ed-purple); border: 1px solid rgba(187, 85, 255, 0.5); }
 .tag-anomaly { background: rgba(255, 113, 0, 0.2); color: var(--ed-orange); border: 1px solid rgba(255, 113, 0, 0.4); }
+
+.current-system-name:hover {
+  color: var(--ed-orange);
+  text-decoration: underline;
+}
+
+.btn-icon:hover {
+  background: var(--bg-card) !important;
+  color: var(--ed-orange) !important;
+  border-color: var(--ed-orange) !important;
+}
 
 .system-card-value {
   font-family: var(--font-mono);
