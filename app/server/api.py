@@ -93,6 +93,9 @@ def get_systems(
     has_high_g: Optional[bool] = False,
     has_anomalies: Optional[bool] = False,
     has_first_discover: Optional[bool] = False,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    date_field: Optional[str] = "last_visited",
     sort_by: Optional[str] = "total_potential_value",
     sort_order: Optional[str] = "desc",
     sort_by_2: Optional[str] = None,
@@ -128,6 +131,32 @@ def get_systems(
         conditions.append("has_anomalies = 1")
     if has_first_discover:
         conditions.append("has_first_discover = 1")
+
+    # Date range filtering
+    target_date_col = "first_visited" if date_field == "first_visited" else "last_visited"
+    if date_field == "any_visit":
+        visit_conds = ["v.system_address = systems.system_address"]
+        visit_params = []
+        if date_from and date_from.strip():
+            from_ts = date_from.strip() if "T" in date_from else f"{date_from.strip()}T00:00:00"
+            visit_conds.append("v.timestamp >= ?")
+            visit_params.append(from_ts)
+        if date_to and date_to.strip():
+            to_ts = date_to.strip() if "T" in date_to else f"{date_to.strip()}T23:59:59"
+            visit_conds.append("v.timestamp <= ?")
+            visit_params.append(to_ts)
+        if len(visit_conds) > 1:
+            conditions.append(f"EXISTS (SELECT 1 FROM visits v WHERE {' AND '.join(visit_conds)})")
+            params.extend(visit_params)
+    else:
+        if date_from and date_from.strip():
+            from_ts = date_from.strip() if "T" in date_from else f"{date_from.strip()}T00:00:00"
+            conditions.append(f"{target_date_col} >= ?")
+            params.append(from_ts)
+        if date_to and date_to.strip():
+            to_ts = date_to.strip() if "T" in date_to else f"{date_to.strip()}T23:59:59"
+            conditions.append(f"{target_date_col} <= ?")
+            params.append(to_ts)
 
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 

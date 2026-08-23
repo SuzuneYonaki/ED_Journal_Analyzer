@@ -20,6 +20,10 @@ let state = {
   sortOrder: 'desc',
   sortBy2: null,
   sortOrder2: 'desc',
+  datePreset: 'all',
+  dateFrom: '',
+  dateTo: '',
+  dateField: 'last_visited',
   bodySortBy: 'distance',
   bodySortOrder: 'asc',
   page: 1,
@@ -205,6 +209,16 @@ async function fetchSystems() {
   if (state.sortBy2 && state.sortBy2 !== 'none') {
     params.append('sort_by_2', state.sortBy2);
     params.append('sort_order_2', state.sortOrder2);
+  }
+
+  if (state.dateFrom) {
+    params.append('date_from', state.dateFrom);
+  }
+  if (state.dateTo) {
+    params.append('date_to', state.dateTo);
+  }
+  if (state.dateField) {
+    params.append('date_field', state.dateField);
   }
 
   Object.entries(state.filters).forEach(([k, v]) => {
@@ -714,6 +728,123 @@ document.addEventListener('DOMContentLoaded', () => {
       fetchSystems();
     });
   });
+
+  // Date Preset & Filter
+  const presetSelect = document.getElementById('date-preset-select');
+  const customInputs = document.getElementById('custom-date-inputs');
+  const dateFromInput = document.getElementById('filter-date-from');
+  const dateToInput = document.getElementById('filter-date-to');
+  const dateFieldSelect = document.getElementById('date-field-select');
+  const btnClearDate = document.getElementById('btn-clear-date');
+
+  function formatDateIso(d) {
+    return d.toISOString().split('T')[0];
+  }
+
+  function applyDatePreset(preset) {
+    const now = new Date();
+    const todayStr = formatDateIso(now);
+
+    if (preset === 'all') {
+      state.dateFrom = '';
+      state.dateTo = '';
+      dateFromInput.value = '';
+      dateToInput.value = '';
+      customInputs.style.display = 'none';
+    } else if (preset === 'before_today') {
+      state.dateFrom = '';
+      state.dateTo = todayStr;
+      dateFromInput.value = '';
+      dateToInput.value = todayStr;
+      customInputs.style.display = 'flex';
+    } else if (preset === 'last_7_days') {
+      const past = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+      state.dateFrom = formatDateIso(past);
+      state.dateTo = todayStr;
+      dateFromInput.value = state.dateFrom;
+      dateToInput.value = state.dateTo;
+      customInputs.style.display = 'flex';
+    } else if (preset === 'last_30_days') {
+      const past = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+      state.dateFrom = formatDateIso(past);
+      state.dateTo = todayStr;
+      dateFromInput.value = state.dateFrom;
+      dateToInput.value = state.dateTo;
+      customInputs.style.display = 'flex';
+    } else if (preset === 'last_90_days') {
+      const past = new Date(now.getTime() - 90 * 24 * 3600 * 1000);
+      state.dateFrom = formatDateIso(past);
+      state.dateTo = todayStr;
+      dateFromInput.value = state.dateFrom;
+      dateToInput.value = state.dateTo;
+      customInputs.style.display = 'flex';
+    } else if (preset === 'last_1_year') {
+      const past = new Date(now.getTime() - 365 * 24 * 3600 * 1000);
+      state.dateFrom = formatDateIso(past);
+      state.dateTo = todayStr;
+      dateFromInput.value = state.dateFrom;
+      dateToInput.value = state.dateTo;
+      customInputs.style.display = 'flex';
+    } else if (preset === 'this_year') {
+      const curYear = now.getFullYear();
+      state.dateFrom = `${curYear}-01-01`;
+      state.dateTo = `${curYear}-12-31`;
+      dateFromInput.value = state.dateFrom;
+      dateToInput.value = state.dateTo;
+      customInputs.style.display = 'flex';
+    } else if (preset === 'last_year') {
+      const lastYear = now.getFullYear() - 1;
+      state.dateFrom = `${lastYear}-01-01`;
+      state.dateTo = `${lastYear}-12-31`;
+      dateFromInput.value = state.dateFrom;
+      dateToInput.value = state.dateTo;
+      customInputs.style.display = 'flex';
+    } else if (preset === 'custom') {
+      customInputs.style.display = 'flex';
+    }
+    state.datePreset = preset;
+    state.page = 1;
+    fetchSystems();
+  }
+
+  if (presetSelect) {
+    presetSelect.addEventListener('change', (e) => {
+      applyDatePreset(e.target.value);
+    });
+  }
+
+  if (dateFromInput) {
+    dateFromInput.addEventListener('change', (e) => {
+      state.dateFrom = e.target.value;
+      presetSelect.value = 'custom';
+      state.page = 1;
+      fetchSystems();
+    });
+  }
+
+  if (dateToInput) {
+    dateToInput.addEventListener('change', (e) => {
+      state.dateTo = e.target.value;
+      presetSelect.value = 'custom';
+      state.page = 1;
+      fetchSystems();
+    });
+  }
+
+  if (dateFieldSelect) {
+    dateFieldSelect.addEventListener('change', (e) => {
+      state.dateField = e.target.value;
+      state.page = 1;
+      fetchSystems();
+    });
+  }
+
+  if (btnClearDate) {
+    btnClearDate.addEventListener('click', () => {
+      presetSelect.value = 'all';
+      applyDatePreset('all');
+    });
+  }
 
   // Sort select 1 for systems
   document.getElementById('sort-select').addEventListener('change', (e) => {

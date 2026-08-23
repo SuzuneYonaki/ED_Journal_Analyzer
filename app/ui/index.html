@@ -89,6 +89,41 @@
           <button class="chip" data-filter="has_anomalies" data-i18n="filter_anomalies">特殊・レア</button>
         </div>
 
+        <!-- Date Range & Fuzzy Filtering Section -->
+        <div class="date-filter-section" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.25); border-radius: 4px; border: 1px solid var(--border-color);">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+            <span style="font-size: 0.75rem; color: var(--ed-cyan); font-weight: bold; display: flex; align-items: center; gap: 4px;" data-i18n="date_filter_title">
+              📅 訪問期間:
+            </span>
+            <select id="date-preset-select" class="sort-select" style="flex: 1; font-size: 0.78rem;">
+              <option value="all" data-i18n="preset_all">全期間 (すべて)</option>
+              <option value="before_today" data-i18n="preset_before_today">今日より前</option>
+              <option value="last_7_days" data-i18n="preset_last_7">過去7日間</option>
+              <option value="last_30_days" data-i18n="preset_last_30">過去30日間</option>
+              <option value="last_90_days" data-i18n="preset_last_90">過去90日間</option>
+              <option value="last_1_year" data-i18n="preset_last_1_year">過去1年間</option>
+              <option value="this_year" data-i18n="preset_this_year">今年 (2026)</option>
+              <option value="last_year" data-i18n="preset_last_year">昨年 (2025)</option>
+              <option value="custom" data-i18n="preset_custom">カスタム範囲指定...</option>
+            </select>
+          </div>
+          <div id="custom-date-inputs" style="display: none; flex-direction: column; gap: 4px; margin-top: 2px;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <input type="date" id="filter-date-from" class="search-input" style="padding: 3px 6px; font-size: 0.75rem; flex: 1;" title="開始日">
+              <span style="font-size: 0.75rem; color: var(--text-secondary);">〜</span>
+              <input type="date" id="filter-date-to" class="search-input" style="padding: 3px 6px; font-size: 0.75rem; flex: 1;" title="終了日">
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+              <select id="date-field-select" class="sort-select" style="flex: 1; font-size: 0.72rem;">
+                <option value="last_visited" data-i18n="field_last_visited">最新訪問日時を対象</option>
+                <option value="first_visited" data-i18n="field_first_visited">初回訪問日時を対象</option>
+                <option value="any_visit" data-i18n="field_any_visit">全訪問履歴のいずれか</option>
+              </select>
+              <button id="btn-clear-date" class="btn-page" style="padding: 2px 8px; font-size: 0.72rem;" data-i18n="btn_clear_date">クリア</button>
+            </div>
+          </div>
+        </div>
+
         <div class="sort-section" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid var(--border-color);">
           <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
             <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_primary">1次ソート:</span>
