@@ -192,6 +192,18 @@ async function fetchGlobalStats() {
     const bioSigCount = Number(data.total_bio_signals || 0).toLocaleString();
     document.getElementById('stat-bio').innerText = `${bioSysCount} (${bioSigCount} Sig)`;
     document.getElementById('stat-total-payout').innerText = formatCredits(data.total_potential_value);
+
+    // CMDR Current Location
+    const cmdrLocEl = document.getElementById('stat-cmdr-loc');
+    if (cmdrLocEl) {
+      if (data.current_location && data.current_location.star_system) {
+        const cl = data.current_location;
+        cmdrLocEl.innerText = cl.star_system;
+        cmdrLocEl.title = `${cl.star_system} [${cl.star_pos_x.toFixed(1)}, ${cl.star_pos_y.toFixed(1)}, ${cl.star_pos_z.toFixed(1)}]`;
+      } else {
+        cmdrLocEl.innerText = '--';
+      }
+    }
   } catch (err) {
     console.error('Failed to fetch stats:', err);
   }
@@ -230,6 +242,17 @@ async function fetchSystems() {
     const data = await res.json();
     state.systems = data.systems;
     state.totalPages = Math.ceil(data.total / state.limit) || 1;
+
+    // Update CMDR location in header if returned
+    if (data.current_location && data.current_location.star_system) {
+      const cl = data.current_location;
+      const cmdrLocEl = document.getElementById('stat-cmdr-loc');
+      if (cmdrLocEl) {
+        cmdrLocEl.innerText = cl.star_system;
+        cmdrLocEl.title = `${cl.star_system} [${cl.star_pos_x.toFixed(1)}, ${cl.star_pos_y.toFixed(1)}, ${cl.star_pos_z.toFixed(1)}]`;
+      }
+    }
+
     renderSystemList();
     renderPagination(data.total);
   } catch (err) {
@@ -286,7 +309,15 @@ function renderSystemList() {
     if (sys.has_terraformable) tags.push('<span class="tag-badge tag-tf">TF</span>');
     if (sys.total_bio_signals > 0) tags.push(`<span class="tag-badge tag-bio">BIO: ${sys.total_bio_signals}</span>`);
     else if (sys.has_bio) tags.push('<span class="tag-badge tag-bio">BIO</span>');
-    if (sys.sol_distance_ly > 0) tags.push(`<span class="tag-badge tag-sol-dist">Sol: ${Math.round(sys.sol_distance_ly).toLocaleString()} Ly</span>`);
+    
+    // Distance badges
+    if (sys.cmdr_distance_ly !== null && sys.cmdr_distance_ly !== undefined) {
+      tags.push(`<span class="tag-badge tag-cmdr-dist">📍 CMDR: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly</span>`);
+    }
+    if (sys.sol_distance_ly > 0) {
+      tags.push(`<span class="tag-badge tag-sol-dist">Sol: ${Math.round(sys.sol_distance_ly).toLocaleString()} Ly</span>`);
+    }
+
     if (sys.has_high_g) tags.push('<span class="tag-badge tag-high-g">High-G</span>');
     if (sys.has_anomalies) tags.push('<span class="tag-badge tag-anomaly">Rare/Orbit</span>');
 
@@ -297,9 +328,16 @@ function renderSystemList() {
       mainStar = `<span class="tag-badge" style="background: ${style.bg}; color: ${style.text}; border: 1px solid ${style.border}; margin-left: 6px; font-weight: bold;">${sys.main_star_type}</span>`;
     }
 
+    const coordsStr = (sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+      ? `[${sys.star_pos_x.toFixed(1)}, ${sys.star_pos_y.toFixed(1)}, ${sys.star_pos_z.toFixed(1)}]`
+      : '';
+
     card.innerHTML = `
       <div class="system-card-header">
-        <span class="system-card-title">${sys.star_system}</span>
+        <div style="display: flex; flex-direction: column; overflow: hidden; margin-right: 8px;">
+          <span class="system-card-title">${sys.star_system}</span>
+          ${coordsStr ? `<span class="system-coords" style="font-size: 0.7rem; color: var(--text-secondary); font-family: monospace; letter-spacing: -0.3px;">${coordsStr}</span>` : ''}
+        </div>
         <span class="system-card-value">${formatCredits(sys.total_potential_value)}</span>
       </div>
       <div class="system-card-meta">

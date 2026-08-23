@@ -33,6 +33,32 @@ def test_anomaly_detection():
     assert any("Extreme Eccentricity" in t for t in tags)
     assert any("Active Volcanism" in t for t in tags)
 
+    # Heavy Mass code anomaly: G-Star in H-box or E-box
+    body_heavy_g = {
+        "star_type": "G",
+        "star_system": "Synuefe AA-A h1"
+    }
+    anomalies_heavy = detect_anomalies(body_heavy_g)
+    tags_heavy = [a["tag"] for a in anomalies_heavy]
+    assert any("Heavy Mass Code" in t for t in tags_heavy)
+
+    # Heavy Mass code anomaly: Neutron Star in F-box
+    body_heavy_n = {
+        "star_type": "N",
+        "star_system": "Eol Prou AB-C f1-100"
+    }
+    anomalies_n = detect_anomalies(body_heavy_n)
+    tags_n = [a["tag"] for a in anomalies_n]
+    assert any("Heavy Mass Code" in t for t in tags_n)
+
+    # Normal Mass code: G-Star in C-box (Not anomaly)
+    body_normal_g = {
+        "star_type": "G",
+        "star_system": "Eol Prou AB-C c1-100"
+    }
+    anomalies_norm = detect_anomalies(body_normal_g)
+    assert not any("Heavy Mass Code" in a.get("tag", "") for a in anomalies_norm)
+
 def test_journal_parser_in_memory():
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row

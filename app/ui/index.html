@@ -53,6 +53,10 @@
         <span class="stat-label" data-i18n="stat_payout">累積探査総価値</span>
         <span id="stat-total-payout" class="stat-value credits">0 Cr</span>
       </div>
+      <div class="stat-item" id="stat-cmdr-container" style="border-left: 1px solid var(--border-color); padding-left: 10px;">
+        <span class="stat-label" style="color: var(--ed-orange);" data-i18n="stat_current_loc">📍 CMDR現在地</span>
+        <span id="stat-cmdr-loc" class="stat-value" style="font-size: 0.8rem; color: #fff; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">--</span>
+      </div>
     </div>
 
     <div class="header-actions">
@@ -134,6 +138,8 @@
               <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
               <option value="total_bio_signals-asc" data-i18n="sort_bio_asc">生体シグナル数 (少ない順)</option>
               <option value="first_discovered_bodies-desc" data-i18n="sort_first_disc_desc">初発見天体数 (多い順)</option>
+              <option value="cmdr_distance_ly-asc" data-i18n="sort_cmdr_dist_asc">現在地からの距離 (近い順)</option>
+              <option value="cmdr_distance_ly-desc" data-i18n="sort_cmdr_dist_desc">現在地からの距離 (遠い順)</option>
               <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
               <option value="sol_distance_ly-desc" data-i18n="sort_sol_dist_desc">Sol距離 (遠い順)</option>
               <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
@@ -150,6 +156,8 @@
             <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_secondary">2次ソート:</span>
             <select id="sort-select-2" class="sort-select" style="flex: 1; font-size: 0.78rem;">
               <option value="none" data-i18n="sort_none">（指定なし）</option>
+              <option value="cmdr_distance_ly-asc" data-i18n="sort_cmdr_dist_asc">現在地からの距離 (近い順)</option>
+              <option value="cmdr_distance_ly-desc" data-i18n="sort_cmdr_dist_desc">現在地からの距離 (遠い順)</option>
               <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
               <option value="sol_distance_ly-desc" data-i18n="sort_sol_dist_desc">Sol距離 (遠い順)</option>
               <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>

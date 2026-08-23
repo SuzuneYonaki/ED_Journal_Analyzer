@@ -1,8 +1,66 @@
-"""
-Anomaly and Rare Finder for Elite Dangerous celestial bodies and orbits.
-Detects rare stars/planets, unusual orbital mechanics, extreme environments,
-and high-value targets.
-"""
+import re
+
+MASS_CODE_REGEX = re.compile(r'\b[A-Za-z]+-[A-Za-z]\s+([a-hA-H])(?:\d+|-|\b)', re.IGNORECASE)
+
+# Standard expected mass code bounds for main star types
+# Format: star_type_prefix: max_standard_mass_code ('a'..'h')
+# If actual mass code is greater than standard, it's considered unusually heavy!
+STANDARD_MAX_MASS_CODE = {
+    "L": "b",
+    "T": "b",
+    "Y": "b",
+    "TTS": "b",
+    "M": "c",
+    "K": "c",
+    "G": "d",
+    "F": "d",
+    "A": "e",
+    "N": "e",       # Neutron stars are standard in d/e-box; f/g/h is extreme
+    "D": "d",       # White dwarfs are standard in d-box; e/f/g/h is heavy
+    "B": "f",       # B-stars are standard up to e/f; g/h is heavy
+    "O": "g",       # O-stars are standard up to g; h is supermassive box
+}
+
+def extract_mass_code(system_name: str) -> str | None:
+    if not system_name:
+        return None
+    m = MASS_CODE_REGEX.search(system_name)
+    if m:
+        return m.group(1).lower()
+    return None
+
+def detect_heavy_mass_code(system_name: str, star_type: str) -> dict | None:
+    if not system_name or not star_type:
+        return None
+    mc = extract_mass_code(system_name)
+    if not mc:
+        return None
+    
+    st = star_type.upper()
+    prefix = None
+    if st in ["N", "H", "G", "F", "A", "B", "O", "K", "M", "L", "T", "Y", "TTS"]:
+        prefix = st
+    elif st.startswith("D"):
+        prefix = "D"
+    elif st.startswith("W"):
+        prefix = "W"
+    elif st.startswith("C") or st.startswith("S"):
+        prefix = "C"
+    
+    if not prefix:
+        return None
+        
+    max_standard = STANDARD_MAX_MASS_CODE.get(prefix)
+    if max_standard and ord(mc) > ord(max_standard):
+        diff = ord(mc) - ord(max_standard)
+        urgency = "超高質量ボックス" if diff >= 2 else "通常より高質量ボックス"
+        return {
+            "type": "heavy_mass_code",
+            "tag": f"Heavy Mass Code ({mc.upper()}-box)",
+            "color": "magenta" if diff >= 2 else "orange",
+            "desc": f"{urgency}: {star_type}型星が {mc.upper()}クラス星系コードに存在 (通常 {max_standard.upper()} 以下)"
+        }
+    return None
 
 def detect_anomalies(body: dict) -> list:
     """
@@ -10,8 +68,16 @@ def detect_anomalies(body: dict) -> list:
     """
     anomalies = []
 
-    # 1. Rare Stars
+    # 1. Rare Stars & Heavy Mass Code
     star_type = (body.get("star_type") or "").upper()
+    star_system = body.get("star_system") or ""
+    
+    if star_type:
+        # Check heavy mass code anomaly
+        heavy_anomaly = detect_heavy_mass_code(star_system, star_type)
+        if heavy_anomaly:
+            anomalies.append(heavy_anomaly)
+
     if star_type in ["H", "SUPERMASSIVEBLACKHOLE"]:
         anomalies.append({"type": "rare_star", "tag": "Black Hole", "color": "purple", "desc": "ブラックホール"})
     elif star_type == "N":

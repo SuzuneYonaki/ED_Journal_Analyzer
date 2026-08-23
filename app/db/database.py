@@ -230,6 +230,28 @@ def init_db():
             ), 0);
     """)
 
+    # Backfill heavy mass code anomalies on star bodies
+    from app.analyzer.anomaly_finder import detect_anomalies
+    import json
+
+    cursor.execute("SELECT id, body_name, star_system, star_type, eccentricity, orbital_period, rotation_period, orbital_inclination, landable, surface_gravity_g, rings, volcanism, planet_class, terraforming_state, anomalies_json FROM bodies WHERE star_type IS NOT NULL")
+    star_rows = cursor.fetchall()
+    for row in star_rows:
+        body_dict = dict(row)
+        anomalies = detect_anomalies(body_dict)
+        new_json = json.dumps(anomalies)
+        if new_json != (row["anomalies_json"] or "[]"):
+            cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (new_json, row["id"]))
+
+    # Update systems has_anomalies flag
+    cursor.execute("""
+        UPDATE systems SET
+            has_anomalies = COALESCE((
+                SELECT MAX(CASE WHEN b.anomalies_json != '[]' AND b.anomalies_json IS NOT NULL THEN 1 ELSE 0 END)
+                FROM bodies b WHERE b.system_address = systems.system_address
+            ), 0);
+    """)
+
     conn.commit()
     conn.close()
 

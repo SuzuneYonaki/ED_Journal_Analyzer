@@ -47,6 +47,33 @@ def start_watcher():
         watcher_instance = JournalWatcher(str(DEFAULT_JOURNAL_DIR))
         watcher_instance.start()
 
+def get_current_cmdr_location(conn) -> Optional[dict]:
+    c = conn.cursor()
+    c.execute("""
+        SELECT star_system, star_pos_x, star_pos_y, star_pos_z, timestamp 
+        FROM visits 
+        WHERE star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
+        ORDER BY timestamp DESC LIMIT 1
+    """)
+    row = c.fetchone()
+    if not row:
+        c.execute("""
+            SELECT star_system, star_pos_x, star_pos_y, star_pos_z, last_visited as timestamp
+            FROM systems 
+            WHERE star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
+            ORDER BY last_visited DESC LIMIT 1
+        """)
+        row = c.fetchone()
+    if row:
+        return {
+            "star_system": row["star_system"],
+            "star_pos_x": row["star_pos_x"],
+            "star_pos_y": row["star_pos_y"],
+            "star_pos_z": row["star_pos_z"],
+            "timestamp": row["timestamp"]
+        }
+    return None
+
 @app.get("/api/stats")
 def get_global_stats():
     conn = get_db_connection()
@@ -78,6 +105,8 @@ def get_global_stats():
     c.execute("SELECT COUNT(*) as count FROM scanned_organics")
     stats["total_scanned_organics"] = c.fetchone()["count"]
 
+    stats["current_location"] = get_current_cmdr_location(conn)
+
     conn.close()
     return stats
 
@@ -96,6 +125,9 @@ def get_systems(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     date_field: Optional[str] = "last_visited",
+    cmdr_x: Optional[float] = None,
+    cmdr_y: Optional[float] = None,
+    cmdr_z: Optional[float] = None,
     sort_by: Optional[str] = "total_potential_value",
     sort_order: Optional[str] = "desc",
     sort_by_2: Optional[str] = None,
@@ -105,6 +137,12 @@ def get_systems(
 ):
     conn = get_db_connection()
     c = conn.cursor()
+
+    # Determine CMDR location if not provided
+    cur_loc = get_current_cmdr_location(conn)
+    cx = cmdr_x if cmdr_x is not None else (cur_loc["star_pos_x"] if cur_loc else None)
+    cy = cmdr_y if cmdr_y is not None else (cur_loc["star_pos_y"] if cur_loc else None)
+    cz = cmdr_z if cmdr_z is not None else (cur_loc["star_pos_z"] if cur_loc else None)
 
     conditions = []
     params = []
@@ -168,19 +206,25 @@ def get_systems(
         "total_fss_value": "total_fss_value",
         "total_bio_signals": "total_bio_signals",
         "sol_distance_ly": "sol_distance_ly",
+        "cmdr_distance_ly": "cmdr_distance_ly",
         "first_discovered_bodies": "first_discovered_bodies",
         "scanned_bodies": "scanned_bodies",
         "visit_count": "visit_count"
     }
+
+    def build_order_clause(col_name, direction):
+        if col_name == "cmdr_distance_ly":
+            return f"cmdr_distance_ly IS NULL ASC, cmdr_distance_ly {direction}"
+        return f"{col_name} {direction}"
+
     sort_col_1 = allowed_sort.get(sort_by, "total_potential_value")
     order_dir_1 = "ASC" if sort_order and sort_order.lower() == "asc" else "DESC"
-
-    order_clauses = [f"{sort_col_1} {order_dir_1}"]
+    order_clauses = [build_order_clause(sort_col_1, order_dir_1)]
 
     if sort_by_2 and sort_by_2 in allowed_sort and sort_by_2 != sort_by:
         sort_col_2 = allowed_sort[sort_by_2]
         order_dir_2 = "ASC" if sort_order_2 and sort_order_2.lower() == "asc" else "DESC"
-        order_clauses.append(f"{sort_col_2} {order_dir_2}")
+        order_clauses.append(build_order_clause(sort_col_2, order_dir_2))
 
     # Fallback deterministic order
     if "star_system" not in [sort_by, sort_by_2]:
@@ -193,12 +237,25 @@ def get_systems(
     total_count = c.fetchone()["cnt"]
 
     offset = (page - 1) * limit
-    c.execute(f"""
-        SELECT * FROM systems
+    
+    # Select with dynamic cmdr_distance_ly
+    cmdr_dist_expr = "NULL"
+    dist_params = []
+    if cx is not None and cy is not None and cz is not None:
+        cmdr_dist_expr = "CASE WHEN star_pos_x IS NOT NULL THEN ROUND(SQRT((star_pos_x - ?)*(star_pos_x - ?)+(star_pos_y - ?)*(star_pos_y - ?)+(star_pos_z - ?)*(star_pos_z - ?)), 1) ELSE NULL END"
+        dist_params = [cx, cx, cy, cy, cz, cz]
+
+    select_sql = f"""
+        SELECT 
+            systems.*,
+            {cmdr_dist_expr} AS cmdr_distance_ly
+        FROM systems
         {where_clause}
         {order_sql}
         LIMIT ? OFFSET ?
-    """, params + [limit, offset])
+    """
+
+    c.execute(select_sql, dist_params + params + [limit, offset])
 
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
@@ -207,6 +264,7 @@ def get_systems(
         "total": total_count,
         "page": page,
         "limit": limit,
+        "current_location": cur_loc,
         "systems": rows
     }
 

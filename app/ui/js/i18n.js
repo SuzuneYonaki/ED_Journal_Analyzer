@@ -11,6 +11,7 @@ const i18n = {
     stat_ammonia: "Ammonia",
     stat_bio: "生体 (Bio) 星系 / シグナル",
     stat_payout: "累積探査総価値",
+    stat_current_loc: "📍 CMDR現在地",
     btn_rescan: "ログスキャン",
     btn_scanning: "ジャーナルログを解析中...",
 
@@ -49,6 +50,8 @@ const i18n = {
     sort_bio_desc: "生体シグナル数 (多い順)",
     sort_bio_asc: "生体シグナル数 (少ない順)",
     sort_first_disc_desc: "初発見天体数 (多い順)",
+    sort_cmdr_dist_asc: "現在地からの距離 (近い順)",
+    sort_cmdr_dist_desc: "現在地からの距離 (遠い順)",
     sort_sol_dist_asc: "Sol距離 (近い順)",
     sort_sol_dist_desc: "Sol距離 (遠い順)",
     sort_visited_desc: "最新訪問日時 (新しい順)",
@@ -145,6 +148,7 @@ const i18n = {
     stat_ammonia: "Ammonia",
     stat_bio: "Bio Systems / Signals",
     stat_payout: "Total Est. Value",
+    stat_current_loc: "📍 CMDR Location",
     btn_rescan: "Scan Logs",
     btn_scanning: "Scanning journals...",
 
@@ -183,6 +187,8 @@ const i18n = {
     sort_bio_desc: "Bio Signals (High to Low)",
     sort_bio_asc: "Bio Signals (Low to High)",
     sort_first_disc_desc: "First Discoveries (High to Low)",
+    sort_cmdr_dist_asc: "Distance from CMDR (Nearest)",
+    sort_cmdr_dist_desc: "Distance from CMDR (Furthest)",
     sort_sol_dist_asc: "Sol Distance (Near to Far)",
     sort_sol_dist_desc: "Sol Distance (Far to Near)",
     sort_visited_desc: "Last Visited (Newest)",
