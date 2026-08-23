@@ -113,6 +113,9 @@ def init_db():
         system_address INTEGER NOT NULL,
         star_system TEXT NOT NULL,
         timestamp TEXT NOT NULL,
+        star_pos_x REAL,
+        star_pos_y REAL,
+        star_pos_z REAL,
         jump_dist REAL,
         fuel_used REAL,
         ship TEXT,
@@ -161,7 +164,6 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_visits_ts ON visits(timestamp DESC);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_organics_sys ON scanned_organics(system_address);")
 
-    # Column migrations
     for col_def in [
         ("total_bio_signals", "INTEGER DEFAULT 0"),
         ("has_water_world", "INTEGER DEFAULT 0"),
@@ -172,6 +174,16 @@ def init_db():
     ]:
         try:
             cursor.execute(f"ALTER TABLE systems ADD COLUMN {col_def[0]} {col_def[1]};")
+        except Exception:
+            pass
+
+    for col_def in [
+        ("star_pos_x", "REAL"),
+        ("star_pos_y", "REAL"),
+        ("star_pos_z", "REAL"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE visits ADD COLUMN {col_def[0]} {col_def[1]};")
         except Exception:
             pass
 

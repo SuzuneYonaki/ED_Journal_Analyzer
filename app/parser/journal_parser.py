@@ -89,9 +89,9 @@ class JournalParser:
             fuel = data.get("FuelUsed", 0)
             taxi = 1 if data.get("Taxi", False) else 0
             self.cursor.execute("""
-                INSERT INTO visits (system_address, star_system, timestamp, jump_dist, fuel_used, is_taxi)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (sys_addr, star_sys, timestamp, jump_dist, fuel, taxi))
+                INSERT INTO visits (system_address, star_system, timestamp, star_pos_x, star_pos_y, star_pos_z, jump_dist, fuel_used, is_taxi)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (sys_addr, star_sys, timestamp, pos_x, pos_y, pos_z, jump_dist, fuel, taxi))
 
     def _handle_fss_discovery_scan(self, data: dict):
         sys_addr = data.get("SystemAddress")

@@ -255,6 +255,13 @@ async function fetchSystems() {
 
     renderSystemList();
     renderPagination(data.total);
+
+    // Auto select first system if none selected or not in current list
+    if (state.systems && state.systems.length > 0) {
+      if (!state.selectedSystem || !state.systems.some(s => s.system_address === state.selectedSystem.system_address)) {
+        selectSystem(state.systems[0].system_address);
+      }
+    }
   } catch (err) {
     console.error('Failed to fetch systems:', err);
   }

@@ -101,7 +101,8 @@ def test_journal_parser_in_memory():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS visits (
             id INTEGER PRIMARY KEY AUTOINCREMENT, system_address INTEGER NOT NULL, star_system TEXT NOT NULL,
-            timestamp TEXT NOT NULL, jump_dist REAL, fuel_used REAL, ship TEXT, is_taxi INTEGER DEFAULT 0, is_carrier INTEGER DEFAULT 0
+            timestamp TEXT NOT NULL, star_pos_x REAL, star_pos_y REAL, star_pos_z REAL,
+            jump_dist REAL, fuel_used REAL, ship TEXT, is_taxi INTEGER DEFAULT 0, is_carrier INTEGER DEFAULT 0
         );
     """)
     cursor.execute("""

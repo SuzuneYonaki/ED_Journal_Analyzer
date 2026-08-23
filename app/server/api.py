@@ -48,30 +48,36 @@ def start_watcher():
         watcher_instance.start()
 
 def get_current_cmdr_location(conn) -> Optional[dict]:
-    c = conn.cursor()
-    c.execute("""
-        SELECT star_system, star_pos_x, star_pos_y, star_pos_z, timestamp 
-        FROM visits 
-        WHERE star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
-        ORDER BY timestamp DESC LIMIT 1
-    """)
-    row = c.fetchone()
-    if not row:
+    try:
+        c = conn.cursor()
+        # First try: visits table joined with systems table to get coordinates of latest visit
         c.execute("""
-            SELECT star_system, star_pos_x, star_pos_y, star_pos_z, last_visited as timestamp
-            FROM systems 
-            WHERE star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
-            ORDER BY last_visited DESC LIMIT 1
+            SELECT v.star_system, s.star_pos_x, s.star_pos_y, s.star_pos_z, v.timestamp 
+            FROM visits v
+            JOIN systems s ON v.system_address = s.system_address
+            WHERE s.star_pos_x IS NOT NULL AND s.star_pos_y IS NOT NULL AND s.star_pos_z IS NOT NULL
+            ORDER BY v.timestamp DESC LIMIT 1
         """)
         row = c.fetchone()
-    if row:
-        return {
-            "star_system": row["star_system"],
-            "star_pos_x": row["star_pos_x"],
-            "star_pos_y": row["star_pos_y"],
-            "star_pos_z": row["star_pos_z"],
-            "timestamp": row["timestamp"]
-        }
+        if not row:
+            # Second try: systems table by last_visited
+            c.execute("""
+                SELECT star_system, star_pos_x, star_pos_y, star_pos_z, last_visited as timestamp
+                FROM systems 
+                WHERE star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
+                ORDER BY last_visited DESC LIMIT 1
+            """)
+            row = c.fetchone()
+        if row:
+            return {
+                "star_system": row["star_system"],
+                "star_pos_x": row["star_pos_x"],
+                "star_pos_y": row["star_pos_y"],
+                "star_pos_z": row["star_pos_z"],
+                "timestamp": row["timestamp"]
+            }
+    except Exception as err:
+        print("Warning: get_current_cmdr_location failed:", err)
     return None
 
 @app.get("/api/stats")
