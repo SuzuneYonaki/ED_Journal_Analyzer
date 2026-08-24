@@ -59,6 +59,24 @@ def test_anomaly_detection():
     anomalies_norm = detect_anomalies(body_normal_g)
     assert not any("Heavy Mass Code" in a.get("tag", "") for a in anomalies_norm)
 
+    # Close Binary Star (< 20 Ls)
+    body_close_binary = {
+        "star_type": "M",
+        "distance_from_arrival_ls": 12.4
+    }
+    anomalies_cb = detect_anomalies(body_close_binary)
+    tags_cb = [a["tag"] for a in anomalies_cb]
+    assert any("Close Binary Star" in t for t in tags_cb)
+
+    # Tight Binary Orbit (semi_major_axis < 20 Ls = 5.99e9 m)
+    body_tight_orbit = {
+        "star_type": "K",
+        "semi_major_axis": 299792458.0 * 5.0  # 5 light seconds
+    }
+    anomalies_to = detect_anomalies(body_tight_orbit)
+    tags_to = [a["tag"] for a in anomalies_to]
+    assert any("Tight Binary Orbit" in t for t in tags_to)
+
 def test_journal_parser_in_memory():
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row

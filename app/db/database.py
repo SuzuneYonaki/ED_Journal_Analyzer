@@ -242,11 +242,11 @@ def init_db():
             ), 0);
     """)
 
-    # Backfill heavy mass code anomalies on star bodies
+    # Backfill heavy mass code and close binary anomalies on star bodies
     from app.analyzer.anomaly_finder import detect_anomalies
     import json
 
-    cursor.execute("SELECT id, body_name, star_system, star_type, eccentricity, orbital_period, rotation_period, orbital_inclination, landable, surface_gravity_g, rings, volcanism, planet_class, terraforming_state, anomalies_json FROM bodies WHERE star_type IS NOT NULL")
+    cursor.execute("SELECT id, body_name, star_system, star_type, distance_from_arrival_ls, semi_major_axis, parents, eccentricity, orbital_period, rotation_period, orbital_inclination, landable, surface_gravity_g, rings, volcanism, planet_class, terraforming_state, anomalies_json FROM bodies WHERE star_type IS NOT NULL")
     star_rows = cursor.fetchall()
     for row in star_rows:
         body_dict = dict(row)

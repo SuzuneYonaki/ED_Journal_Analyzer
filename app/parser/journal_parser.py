@@ -159,6 +159,10 @@ class JournalParser:
 
         # Calculate values
         body_dict = {
+            "star_system": star_sys,
+            "distance_from_arrival_ls": dist_ls,
+            "semi_major_axis": semi_major_axis,
+            "parents": parents,
             "star_type": star_type,
             "stellar_mass": stellar_mass,
             "planet_class": planet_class,

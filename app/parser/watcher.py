@@ -77,7 +77,10 @@ class JournalWatcher(threading.Thread):
             self.parser.parse_file(self.current_latest_file)
             self.last_stat = current_stat
             if self.on_update_callback:
-                self.on_update_callback()
+                try:
+                    self.on_update_callback(self.current_latest_file)
+                except Exception as cb_err:
+                    print(f"[Watcher Callback Error] {cb_err}")
 
     def stop(self):
         self.running = False

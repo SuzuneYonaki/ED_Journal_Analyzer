@@ -28,7 +28,9 @@ let state = {
   bodySortOrder: 'asc',
   page: 1,
   limit: 50,
-  totalPages: 1
+  totalPages: 1,
+  liveSyncEnabled: true,
+  lastEventVersion: 0
 };
 
 // Utilities
@@ -170,6 +172,7 @@ function updateStaticTexts() {
   }
 
   // Re-render dynamic components with translated labels
+  updateLiveSyncButtonUI();
   renderSystemList();
   renderSystemHeader();
   renderCurrentView();
@@ -267,16 +270,21 @@ async function fetchSystems() {
   }
 }
 
-async function selectSystem(systemAddress) {
+async function selectSystem(systemAddress, preserveSelectedBody = false) {
   try {
     const res = await fetch(`/api/system/${systemAddress}`);
     const data = await res.json();
     state.currentSystemData = data;
     state.selectedSystem = data.system;
     
-    // Auto select first body
+    // Auto select first body or preserve previously selected body
     if (data.bodies && data.bodies.length > 0) {
-      state.selectedBody = data.bodies[0];
+      if (preserveSelectedBody && state.selectedBody) {
+        const matchingBody = data.bodies.find(b => b.body_id === state.selectedBody.body_id);
+        state.selectedBody = matchingBody || data.bodies[0];
+      } else {
+        state.selectedBody = data.bodies[0];
+      }
     } else {
       state.selectedBody = null;
     }
@@ -991,6 +999,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-view-visits').classList.toggle('active', state.currentView === 'visits');
   }
 
+  // Live Sync Toggle Button
+  const btnLiveToggle = document.getElementById('btn-live-toggle');
+  if (btnLiveToggle) {
+    btnLiveToggle.addEventListener('click', () => {
+      state.liveSyncEnabled = !state.liveSyncEnabled;
+      updateLiveSyncButtonUI();
+    });
+  }
+
   // Scan Button
   document.getElementById('btn-rescan').addEventListener('click', async () => {
     try {
@@ -1000,7 +1017,118 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Failed to trigger scan:', err);
     }
   });
+
+  // Start Realtime Live Sync
+  initLiveSync();
 });
+
+function updateLiveSyncButtonUI() {
+  const btn = document.getElementById('btn-live-toggle');
+  const txt = document.getElementById('live-status-text');
+  if (!btn || !txt) return;
+
+  if (state.liveSyncEnabled) {
+    btn.className = 'btn-live active';
+    btn.title = t('live_sync_tip');
+    txt.innerText = t('live_sync_on');
+  } else {
+    btn.className = 'btn-live paused';
+    btn.title = t('live_sync_tip');
+    txt.innerText = t('live_sync_off');
+  }
+}
+
+async function triggerLiveRefresh() {
+  if (!state.liveSyncEnabled) return;
+  
+  // Refresh global statistics
+  fetchGlobalStats();
+
+  // Refresh systems list
+  await fetchSystems();
+
+  // Refresh currently selected system in center pane if open
+  if (state.selectedSystem && state.selectedSystem.system_address) {
+    selectSystem(state.selectedSystem.system_address, true);
+  }
+}
+
+// Real-time Live Sync (WebSocket + Polling Fallback)
+let liveWebSocket = null;
+let liveWsRetryTimeout = null;
+
+function initLiveSync() {
+  updateLiveSyncButtonUI();
+  connectLiveWebSocket();
+
+  // Polling fallback every 2.5 seconds in case WebSocket is unavailable or dropped
+  setInterval(async () => {
+    if (!state.liveSyncEnabled) return;
+    try {
+      const res = await fetch('/api/events/latest');
+      if (res.ok) {
+        const evt = await res.json();
+        if (evt.version && evt.version !== state.lastEventVersion) {
+          state.lastEventVersion = evt.version;
+          triggerLiveRefresh();
+        }
+      }
+    } catch (err) {
+      // Ignore background network jitter
+    }
+  }, 2500);
+}
+
+function connectLiveWebSocket() {
+  if (liveWsRetryTimeout) {
+    clearTimeout(liveWsRetryTimeout);
+    liveWsRetryTimeout = null;
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+
+  try {
+    liveWebSocket = new WebSocket(wsUrl);
+
+    liveWebSocket.onopen = () => {
+      // Ping interval to keep connection alive
+      if (liveWebSocket._pingInterval) clearInterval(liveWebSocket._pingInterval);
+      liveWebSocket._pingInterval = setInterval(() => {
+        if (liveWebSocket && liveWebSocket.readyState === WebSocket.OPEN) {
+          liveWebSocket.send('ping');
+        }
+      }, 15000);
+    };
+
+    liveWebSocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'journal_updated') {
+          state.lastEventVersion = data.version;
+          triggerLiveRefresh();
+        }
+      } catch (err) {
+        // Ping/pong or text messages
+      }
+    };
+
+    liveWebSocket.onclose = () => {
+      if (liveWebSocket && liveWebSocket._pingInterval) {
+        clearInterval(liveWebSocket._pingInterval);
+      }
+      liveWsRetryTimeout = setTimeout(connectLiveWebSocket, 3500);
+    };
+
+    liveWebSocket.onerror = () => {
+      try {
+        liveWebSocket.close();
+      } catch (e) {}
+    };
+  } catch (err) {
+    liveWsRetryTimeout = setTimeout(connectLiveWebSocket, 5000);
+  }
+}
 
 async function checkScanOnStartup() {
   try {

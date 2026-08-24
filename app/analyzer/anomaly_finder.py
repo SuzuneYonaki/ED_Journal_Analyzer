@@ -140,7 +140,57 @@ def detect_anomalies(body: dict) -> list:
         elif gravity_g >= 1.5:
             anomalies.append({"type": "high_gravity", "tag": f"High-G ({gravity_g:.2f}G)", "color": "dark-orange", "desc": "高重力環境 (High-G Landing)"})
 
-    # 5. Rings
+    # 5. Close Binary & Multi-Star Anomalies (超近接連星・バイナリのバイナリ)
+    if star_type:
+        dist_ls = body.get("distance_from_arrival_ls")
+        if dist_ls is not None and 0 < dist_ls <= 20.0:
+            anomalies.append({
+                "type": "close_binary_star",
+                "tag": f"Close Binary Star ({dist_ls:.1f} Ls)",
+                "color": "yellow",
+                "desc": f"主星から至近距離 ({dist_ls:.1f} Ls ≦ 20 Ls) に存在する伴星"
+            })
+        elif dist_ls is not None and 20.0 < dist_ls <= 50.0:
+            anomalies.append({
+                "type": "close_binary_star",
+                "tag": f"Close Companion Star ({dist_ls:.1f} Ls)",
+                "color": "amber",
+                "desc": f"主星から近距離 ({dist_ls:.1f} Ls ≦ 50 Ls) に存在する伴星"
+            })
+
+        sma = body.get("semi_major_axis")
+        if sma and sma > 0:
+            sma_ls = sma / 299792458.0  # 1 light second = 299,792,458 m
+            if sma_ls <= 20.0:
+                anomalies.append({
+                    "type": "tight_binary_orbit",
+                    "tag": f"Tight Binary Orbit ({sma_ls:.1f} Ls)",
+                    "color": "orange",
+                    "desc": f"連星重心を 20 Ls 以内の至近距離で周回 (軌道半径: {sma_ls:.1f} Ls)"
+                })
+
+        parents = body.get("parents")
+        if parents:
+            if isinstance(parents, str):
+                import json
+                try:
+                    parents = json.loads(parents)
+                except Exception:
+                    parents = []
+            null_count = sum(1 for p in parents if "Null" in p)
+            if null_count >= 2:
+                # Hierarchical binary (Binary of binary)
+                sma_ls = (sma / 299792458.0) if (sma and sma > 0) else None
+                dist_val = dist_ls if (dist_ls is not None and dist_ls > 0) else sma_ls
+                if dist_val is not None and dist_val <= 100.0:
+                    anomalies.append({
+                        "type": "hierarchical_binary",
+                        "tag": "Close Hierarchical Binary",
+                        "color": "purple",
+                        "desc": f"近接した多重連星（バイナリのバイナリ）の構成星 (近接距離: {dist_val:.1f} Ls)"
+                    })
+
+    # 6. Rings
     rings = body.get("rings")
     if rings:
         if isinstance(rings, str):
@@ -157,7 +207,7 @@ def detect_anomalies(body: dict) -> list:
                 anomalies.append({"type": "giant_ring", "tag": "Giant Ring System", "color": "gold", "desc": f"巨大リング (外径 {outer_rad_km:,.0f} km)"})
                 break
 
-    # 6. Volcanism
+    # 7. Volcanism
     volcanism = (body.get("volcanism") or "").lower()
     if volcanism and volcanism != "none":
         anomalies.append({"type": "volcanism", "tag": "Active Volcanism", "color": "orange", "desc": f"火山活動 ({body.get('volcanism')})"})

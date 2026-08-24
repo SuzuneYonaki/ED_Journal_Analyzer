@@ -12,6 +12,9 @@ const i18n = {
     stat_bio: "生体 (Bio) 星系 / シグナル",
     stat_payout: "累積探査総価値",
     stat_current_loc: "📍 CMDR現在地",
+    live_sync_on: "LIVE (リアルタイム)",
+    live_sync_off: "PAUSED (停止中)",
+    live_sync_tip: "リアルタイム自動更新の有効/無効を切り替え",
     btn_rescan: "ログスキャン",
     btn_scanning: "ジャーナルログを解析中...",
 
@@ -149,6 +152,9 @@ const i18n = {
     stat_bio: "Bio Systems / Signals",
     stat_payout: "Total Est. Value",
     stat_current_loc: "📍 CMDR Location",
+    live_sync_on: "LIVE (Realtime)",
+    live_sync_off: "PAUSED (Off)",
+    live_sync_tip: "Toggle real-time auto sync",
     btn_rescan: "Scan Logs",
     btn_scanning: "Scanning journals...",
 

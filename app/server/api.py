@@ -1,9 +1,11 @@
 import json
 import os
 import threading
+import time
+import asyncio
 from pathlib import Path
-from typing import Optional
-from fastapi import FastAPI, Query, BackgroundTasks
+from typing import Optional, List
+from fastapi import FastAPI, Query, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,20 +34,98 @@ scan_state = {
     "message": "Ready"
 }
 
+# Live update event tracking
+last_journal_update = {
+    "timestamp": time.time(),
+    "version": 0,
+    "file": None
+}
+
+class LiveConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+        self.loop: Optional[asyncio.AbstractEventLoop] = None
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast_json(self, data: dict):
+        dead_connections = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(data)
+            except Exception:
+                dead_connections.append(connection)
+        for dead in dead_connections:
+            self.disconnect(dead)
+
+    def notify_update_from_thread(self, file_path: Optional[str] = None):
+        global last_journal_update
+        last_journal_update["timestamp"] = time.time()
+        last_journal_update["version"] += 1
+        last_journal_update["file"] = file_path
+
+        payload = {
+            "type": "journal_updated",
+            "version": last_journal_update["version"],
+            "timestamp": last_journal_update["timestamp"],
+            "file": file_path
+        }
+        if self.loop and self.loop.is_running() and self.active_connections:
+            asyncio.run_coroutine_threadsafe(self.broadcast_json(payload), self.loop)
+
+manager = LiveConnectionManager()
 watcher_instance: Optional[JournalWatcher] = None
 
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
+    manager.loop = asyncio.get_running_loop()
     init_db()
     start_watcher()
+
+def on_journal_file_updated(file_path: Optional[str] = None):
+    manager.notify_update_from_thread(file_path)
 
 def start_watcher():
     global watcher_instance
     if DEFAULT_JOURNAL_DIR.exists():
         if watcher_instance:
             watcher_instance.stop()
-        watcher_instance = JournalWatcher(str(DEFAULT_JOURNAL_DIR))
+        watcher_instance = JournalWatcher(
+            journal_dir=str(DEFAULT_JOURNAL_DIR),
+            interval=1.5,
+            on_update_callback=on_journal_file_updated
+        )
         watcher_instance.start()
+
+@app.websocket("/ws/live")
+async def websocket_live_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        # Send initial sync state
+        await websocket.send_json({
+            "type": "connected",
+            "version": last_journal_update["version"],
+            "timestamp": last_journal_update["timestamp"]
+        })
+        while True:
+            # Keep connection open & handle ping/pong
+            msg = await websocket.receive_text()
+            if msg == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception:
+        manager.disconnect(websocket)
+
+@app.get("/api/events/latest")
+def get_latest_event():
+    return last_journal_update
 
 def get_current_cmdr_location(conn) -> Optional[dict]:
     try:
