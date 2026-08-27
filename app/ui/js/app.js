@@ -16,10 +16,14 @@ let state = {
     has_high_g: false,
     has_anomalies: false
   },
-  sortBy: 'total_potential_value',
+  sortBy: 'last_visited',
   sortOrder: 'desc',
   sortBy2: null,
   sortOrder2: 'desc',
+  savedSortBy: 'total_potential_value',
+  savedSortOrder: 'desc',
+  savedSortBy2: null,
+  savedSortOrder2: 'desc',
   datePreset: 'all',
   dateFrom: '',
   dateTo: '',
@@ -173,6 +177,7 @@ function updateStaticTexts() {
 
   // Re-render dynamic components with translated labels
   updateLiveSyncButtonUI();
+  updateSortControlsUI();
   renderSystemList();
   renderSystemHeader();
   renderCurrentView();
@@ -213,17 +218,22 @@ async function fetchGlobalStats() {
 }
 
 async function fetchSystems() {
+  const activeSortBy = state.liveSyncEnabled ? 'last_visited' : (state.savedSortBy || 'total_potential_value');
+  const activeSortOrder = state.liveSyncEnabled ? 'desc' : (state.savedSortOrder || 'desc');
+  const activeSortBy2 = state.liveSyncEnabled ? null : state.savedSortBy2;
+  const activeSortOrder2 = state.liveSyncEnabled ? 'desc' : state.savedSortOrder2;
+
   const params = new URLSearchParams({
     q: state.searchQuery,
-    sort_by: state.sortBy,
-    sort_order: state.sortOrder,
+    sort_by: activeSortBy,
+    sort_order: activeSortOrder,
     page: state.page,
     limit: state.limit
   });
 
-  if (state.sortBy2 && state.sortBy2 !== 'none') {
-    params.append('sort_by_2', state.sortBy2);
-    params.append('sort_order_2', state.sortOrder2);
+  if (activeSortBy2 && activeSortBy2 !== 'none') {
+    params.append('sort_by_2', activeSortBy2);
+    params.append('sort_order_2', activeSortOrder2);
   }
 
   if (state.dateFrom) {
@@ -901,7 +911,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Sort select 1 for systems
   document.getElementById('sort-select').addEventListener('change', (e) => {
+    if (state.liveSyncEnabled || e.target.value === 'live-locked') return;
     const [by, order] = e.target.value.split('-');
+    state.savedSortBy = by;
+    state.savedSortOrder = order;
     state.sortBy = by;
     state.sortOrder = order;
     state.page = 1;
@@ -912,10 +925,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const sortSelect2 = document.getElementById('sort-select-2');
   if (sortSelect2) {
     sortSelect2.addEventListener('change', (e) => {
+      if (state.liveSyncEnabled) return;
       if (e.target.value === 'none') {
+        state.savedSortBy2 = null;
         state.sortBy2 = null;
       } else {
         const [by, order] = e.target.value.split('-');
+        state.savedSortBy2 = by;
+        state.savedSortOrder2 = order;
         state.sortBy2 = by;
         state.sortOrder2 = order;
       }
@@ -1004,7 +1021,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnLiveToggle) {
     btnLiveToggle.addEventListener('click', () => {
       state.liveSyncEnabled = !state.liveSyncEnabled;
+      state.page = 1;
       updateLiveSyncButtonUI();
+      updateSortControlsUI();
+      fetchSystems();
     });
   }
 
@@ -1038,6 +1058,48 @@ function updateLiveSyncButtonUI() {
   }
 }
 
+function updateSortControlsUI() {
+  const sortSelect1 = document.getElementById('sort-select');
+  const sortSelect2 = document.getElementById('sort-select-2');
+  if (!sortSelect1) return;
+
+  if (state.liveSyncEnabled) {
+    sortSelect1.disabled = true;
+    if (sortSelect2) sortSelect2.disabled = true;
+
+    // Insert or update live-locked option at the top
+    let optLocked = sortSelect1.querySelector('option[value="live-locked"]');
+    if (!optLocked) {
+      optLocked = document.createElement('option');
+      optLocked.value = 'live-locked';
+      sortSelect1.insertBefore(optLocked, sortSelect1.firstChild);
+    }
+    optLocked.innerText = t('sort_live_locked');
+    sortSelect1.value = 'live-locked';
+    if (sortSelect2) sortSelect2.value = 'none';
+
+    document.querySelectorAll('.sort-row').forEach(el => el.classList.add('sort-locked'));
+  } else {
+    sortSelect1.disabled = false;
+    if (sortSelect2) sortSelect2.disabled = false;
+
+    // Remove live-locked option
+    const optLocked = sortSelect1.querySelector('option[value="live-locked"]');
+    if (optLocked) {
+      optLocked.remove();
+    }
+
+    // Restore saved user sort selections
+    const savedVal1 = `${state.savedSortBy || 'total_potential_value'}-${state.savedSortOrder || 'desc'}`;
+    sortSelect1.value = savedVal1;
+    if (sortSelect2) {
+      sortSelect2.value = state.savedSortBy2 ? `${state.savedSortBy2}-${state.savedSortOrder2}` : 'none';
+    }
+
+    document.querySelectorAll('.sort-row').forEach(el => el.classList.remove('sort-locked'));
+  }
+}
+
 async function triggerLiveRefresh() {
   if (!state.liveSyncEnabled) return;
   
@@ -1059,6 +1121,7 @@ let liveWsRetryTimeout = null;
 
 function initLiveSync() {
   updateLiveSyncButtonUI();
+  updateSortControlsUI();
   connectLiveWebSocket();
 
   // Polling fallback every 2.5 seconds in case WebSocket is unavailable or dropped

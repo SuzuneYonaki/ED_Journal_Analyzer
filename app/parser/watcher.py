@@ -51,36 +51,39 @@ class JournalWatcher(threading.Thread):
         files = glob.glob(os.path.join(self.journal_dir, "Journal.*.log"))
         if not files:
             return
-        # Get newest file by sorting
-        files.sort()
+        # Get newest file by modified time
+        files.sort(key=lambda f: os.path.getmtime(f))
         newest = files[-1]
         if newest != self.current_latest_file:
             self.current_latest_file = newest
-            p = Path(newest)
-            if p.exists():
-                st = p.stat()
-                self.last_stat = (st.st_size, st.st_mtime)
+            # Reset last_stat to 0 so the new file is immediately parsed
+            self.last_stat = (0, 0.0)
 
     def check_latest_file_updates(self):
         if not self.current_latest_file:
-            return
+            self._find_latest_file()
+            if not self.current_latest_file:
+                return
 
         p = Path(self.current_latest_file)
         if not p.exists():
             return
 
-        st = p.stat()
-        current_stat = (st.st_size, st.st_mtime)
+        try:
+            st = p.stat()
+            current_stat = (st.st_size, st.st_mtime)
 
-        # Only process if file size or mtime changed
-        if current_stat != self.last_stat:
-            self.parser.parse_file(self.current_latest_file)
-            self.last_stat = current_stat
-            if self.on_update_callback:
-                try:
-                    self.on_update_callback(self.current_latest_file)
-                except Exception as cb_err:
-                    print(f"[Watcher Callback Error] {cb_err}")
+            # Process if file size or mtime changed
+            if current_stat != self.last_stat:
+                self.parser.parse_file(self.current_latest_file)
+                self.last_stat = current_stat
+                if self.on_update_callback:
+                    try:
+                        self.on_update_callback(self.current_latest_file)
+                    except Exception as cb_err:
+                        print(f"[Watcher Callback Error] {cb_err}")
+        except Exception as err:
+            print(f"[Watcher Check Error] {err}")
 
     def stop(self):
         self.running = False

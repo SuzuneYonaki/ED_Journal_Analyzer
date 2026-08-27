@@ -341,6 +341,11 @@ header {
   align-items: center;
   font-size: 0.75rem;
   color: var(--text-secondary);
+  transition: opacity 0.2s ease;
+}
+
+.sort-row.sort-locked {
+  opacity: 0.8;
 }
 
 .sort-select {
@@ -351,6 +356,15 @@ header {
   border-radius: 4px;
   font-size: 0.75rem;
   outline: none;
+  transition: all 0.2s ease;
+}
+
+.sort-select:disabled {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(0, 255, 136, 0.3);
+  color: var(--ed-green);
+  cursor: not-allowed;
+  font-weight: 500;
 }
 
 .system-list {
