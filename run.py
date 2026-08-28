@@ -3,6 +3,8 @@ import os
 import io
 import time
 import threading
+import socket
+import urllib.request
 import uvicorn
 import webview
 
@@ -12,29 +14,51 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = io.StringIO()
 
-from app.config import HOST, PORT, BASE_DIR
+from app.config import HOST, BASE_DIR
 from app.server.api import app
 
-def run_server():
-    # Run uvicorn without crashing when stdout/stderr are redirected
-    uvicorn.run(
-        app,
-        host=HOST,
-        port=PORT,
-        log_level="error",
-        access_log=False
-    )
+def find_free_port(start_port=8686):
+    for port in range(start_port, start_port + 50):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind((HOST, port))
+                return port
+            except OSError:
+                continue
+    return start_port
+
+def wait_for_server(url, timeout=10.0):
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            with urllib.request.urlopen(f"{url}/api/scan_status", timeout=1.0) as resp:
+                if resp.status == 200:
+                    return True
+        except Exception:
+            time.sleep(0.15)
+    return False
 
 def main():
+    port = find_free_port(8686)
     use_browser = "--browser" in sys.argv
 
     # Start FastAPI server in a background thread
-    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread = threading.Thread(
+        target=lambda: uvicorn.run(
+            app,
+            host=HOST,
+            port=port,
+            log_level="error",
+            access_log=False
+        ),
+        daemon=True
+    )
     server_thread.start()
 
-    # Wait for server to initialize
-    time.sleep(1.0)
-    url = f"http://{HOST}:{PORT}"
+    url = f"http://{HOST}:{port}"
+
+    # Wait until server is fully responsive
+    wait_for_server(url, timeout=8.0)
 
     if use_browser:
         import webbrowser

@@ -185,9 +185,13 @@ function updateStaticTexts() {
 }
 
 // API Calls
+let statsRetryTimeout = null;
+let systemsRetryTimeout = null;
+
 async function fetchGlobalStats() {
   try {
     const res = await fetch('/api/stats');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     document.getElementById('stat-systems').innerText = Number(data.total_systems).toLocaleString();
     document.getElementById('stat-bodies').innerText = Number(data.total_bodies).toLocaleString();
@@ -213,7 +217,13 @@ async function fetchGlobalStats() {
       }
     }
   } catch (err) {
-    console.error('Failed to fetch stats:', err);
+    console.warn('fetchStats failed, retrying in 1.5s:', err);
+    if (!statsRetryTimeout) {
+      statsRetryTimeout = setTimeout(() => {
+        statsRetryTimeout = null;
+        fetchGlobalStats();
+      }, 1500);
+    }
   }
 }
 
@@ -252,6 +262,7 @@ async function fetchSystems() {
 
   try {
     const res = await fetch(`/api/systems?${params.toString()}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.systems = data.systems;
     state.totalPages = Math.ceil(data.total / state.limit) || 1;
@@ -276,7 +287,13 @@ async function fetchSystems() {
       }
     }
   } catch (err) {
-    console.error('Failed to fetch systems:', err);
+    console.warn('fetchSystems failed, retrying in 1.5s:', err);
+    if (!systemsRetryTimeout) {
+      systemsRetryTimeout = setTimeout(() => {
+        systemsRetryTimeout = null;
+        fetchSystems();
+      }, 1500);
+    }
   }
 }
 
