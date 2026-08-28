@@ -532,7 +532,8 @@ def get_system_detail(system_address: int):
     system_data["bio_total_base_value"] = system_bio_total_base
     system_data["bio_total_first_value"] = system_bio_total_first
     system_data["bio_signals_count"] = system_bio_signals_count
-    system_data["bio_scanned_count"] = system_bio_scanned_count
+    system_data["bio_scanned_count"] = len(system_scanned_organics)
+    system_data["bio_completed_count"] = system_bio_completed_count
 
     # Build hierarchy tree
     hierarchy = build_system_hierarchy(bodies)
@@ -547,7 +548,8 @@ def get_system_detail(system_address: int):
             "total_base_value": system_bio_total_base,
             "total_first_value": system_bio_total_first,
             "total_signals": system_bio_signals_count,
-            "total_scanned": system_bio_scanned_count
+            "total_scanned": len(system_scanned_organics),
+            "total_completed": system_bio_completed_count
         }
     }
 
