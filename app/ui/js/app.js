@@ -1473,6 +1473,10 @@ async function checkScanOnStartup() {
     const st = await res.json();
     if (st.is_scanning) {
       pollScanProgress();
+    } else if (st.total === 0) {
+      // If db has 0 files, trigger scan
+      const triggerRes = await fetch('/api/scan_now', { method: 'POST' });
+      pollScanProgress();
     }
   } catch (err) {
     // Ignore on startup
@@ -1480,38 +1484,75 @@ async function checkScanOnStartup() {
 }
 
 // Scan Polling
+let scanPollInterval = null;
+
 function pollScanProgress() {
   const banner = document.getElementById('scan-banner');
-  const bannerText = document.getElementById('scan-banner-text');
+  const bannerTitle = document.getElementById('scan-banner-title');
   const bannerCount = document.getElementById('scan-banner-count');
-  if (banner) banner.style.display = 'flex';
+  const bannerPercent = document.getElementById('scan-banner-percent');
+  const bannerFile = document.getElementById('scan-banner-file');
+  const progressFill = document.getElementById('scan-progress-bar-fill');
+  const spinner = document.getElementById('scan-banner-spinner');
+
+  if (banner) {
+    banner.classList.remove('completed');
+    banner.style.display = 'block';
+  }
+  if (spinner) spinner.style.display = 'inline-block';
+
+  if (scanPollInterval) {
+    clearInterval(scanPollInterval);
+    scanPollInterval = null;
+  }
 
   let pollCount = 0;
-  const interval = setInterval(async () => {
+  scanPollInterval = setInterval(async () => {
     try {
       const res = await fetch('/api/scan_status');
       const st = await res.json();
+
       if (st.is_scanning) {
-        if (bannerText) bannerText.innerText = st.message;
+        if (bannerTitle) bannerTitle.innerText = t('scanning_banner');
         if (bannerCount) bannerCount.innerText = `${st.current} / ${st.total}`;
+        if (bannerPercent) bannerPercent.innerText = `${st.percent || 0}%`;
+        if (bannerFile) bannerFile.innerText = st.filename ? `📁 ${st.filename}` : '';
+        if (progressFill) progressFill.style.width = `${Math.max(2, st.percent || 0)}%`;
+
         pollCount++;
-        // Update stats periodically during scans
+        // Refresh UI list and stats every 3 polls (~750ms) so user sees progress
         if (pollCount % 3 === 0) {
           fetchGlobalStats();
+          fetchSystems();
         }
       } else {
-        if (bannerText) bannerText.innerText = st.message;
+        if (bannerTitle) bannerTitle.innerText = t('scan_complete') || 'ジャーナル解析完了';
         if (bannerCount) bannerCount.innerText = `${st.total} / ${st.total}`;
-        setTimeout(() => {
-          if (banner) banner.style.display = 'none';
-        }, 1500);
-        clearInterval(interval);
+        if (bannerPercent) bannerPercent.innerText = '100%';
+        if (bannerFile) bannerFile.innerText = t('scan_success_tip') || `${st.total} 件のジャーナルログを正常に同期しました`;
+        if (progressFill) progressFill.style.width = '100%';
+        if (spinner) spinner.style.display = 'none';
+        if (banner) banner.classList.add('completed');
+
+        clearInterval(scanPollInterval);
+        scanPollInterval = null;
+
         // Instant full UI refresh
         fetchGlobalStats();
         fetchSystems();
+
+        setTimeout(() => {
+          if (banner) {
+            banner.style.display = 'none';
+            banner.classList.remove('completed');
+          }
+        }, 2500);
       }
     } catch (err) {
-      clearInterval(interval);
+      if (scanPollInterval) {
+        clearInterval(scanPollInterval);
+        scanPollInterval = null;
+      }
     }
-  }, 500);
+  }, 250);
 }

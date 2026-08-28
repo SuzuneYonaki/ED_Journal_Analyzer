@@ -31,6 +31,8 @@ scan_state = {
     "is_scanning": False,
     "current": 0,
     "total": 0,
+    "percent": 0,
+    "filename": "",
     "message": "Ready"
 }
 
@@ -87,6 +89,8 @@ async def on_startup():
     manager.loop = asyncio.get_running_loop()
     init_db()
     start_watcher()
+    # Trigger background parse automatically on startup in separate thread
+    threading.Thread(target=run_background_parse, daemon=True).start()
 
 def on_journal_file_updated(file_path: Optional[str] = None):
     manager.notify_update_from_thread(file_path)
@@ -527,16 +531,22 @@ def get_system_detail(system_address: int):
 
 def run_background_parse():
     global scan_state
+    if scan_state["is_scanning"]:
+        return
     scan_state["is_scanning"] = True
     scan_state["current"] = 0
     scan_state["total"] = 0
+    scan_state["percent"] = 0
+    scan_state["filename"] = ""
     scan_state["message"] = "Scanning journal logs..."
 
     def cb(curr, tot, fname=None):
         scan_state["current"] = curr
         scan_state["total"] = tot
+        scan_state["filename"] = fname or ""
+        scan_state["percent"] = round((curr / tot) * 100, 1) if tot > 0 else 0
         if fname:
-            scan_state["message"] = f"Processing {curr}/{tot}: {fname}"
+            scan_state["message"] = f"Processing {curr}/{tot} ({scan_state['percent']}%): {fname}"
         else:
             scan_state["message"] = f"Processed {curr}/{tot} journal files..."
 
@@ -545,11 +555,14 @@ def run_background_parse():
         tot = parser.parse_all_journals(str(DEFAULT_JOURNAL_DIR), progress_callback=cb)
         scan_state["current"] = tot
         scan_state["total"] = tot
+        scan_state["percent"] = 100
+        scan_state["filename"] = ""
         scan_state["message"] = f"Successfully parsed {tot} journal files."
     except Exception as e:
         scan_state["message"] = f"Error: {str(e)}"
     finally:
         scan_state["is_scanning"] = False
+        manager.notify_update_from_thread(None)
 
 @app.post("/api/scan_now")
 def trigger_scan(background_tasks: BackgroundTasks):

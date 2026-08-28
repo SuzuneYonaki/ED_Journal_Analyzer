@@ -17,6 +17,9 @@ const i18n = {
     live_sync_tip: "リアルタイム自動更新の有効/無効を切り替え",
     btn_rescan: "ログスキャン",
     btn_scanning: "ジャーナルログを解析中...",
+    scanning_banner: "ジャーナルログを解析中...",
+    scan_complete: "ジャーナル解析完了",
+    scan_success_tip: "件のジャーナルログを正常に同期しました",
 
     // Left Pane
     search_placeholder: "星系名を検索 (例: Sol, Beagle Point)...",
@@ -172,6 +175,9 @@ const i18n = {
     live_sync_tip: "Toggle real-time auto sync",
     btn_rescan: "Scan Logs",
     btn_scanning: "Scanning journals...",
+    scanning_banner: "Scanning Journal Logs...",
+    scan_complete: "Journal Scan Complete",
+    scan_success_tip: "journal files successfully synced",
 
     // Left Pane
     search_placeholder: "Search system (e.g. Sol, Beagle Point)...",

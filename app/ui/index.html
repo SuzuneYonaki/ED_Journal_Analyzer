@@ -9,9 +9,25 @@
 </head>
 <body>
   <!-- Global Scan Banner (hidden by default) -->
-  <div id="scan-banner" class="scan-banner">
-    <span class="spinner"></span>
-    <span id="scan-banner-text" data-i18n="scanning_banner">ジャーナルログを解析中...</span>
+  <div id="scan-banner" class="scan-banner" style="display: none;">
+    <div class="scan-banner-main">
+      <div class="scan-banner-top">
+        <div class="scan-banner-left">
+          <span class="spinner" id="scan-banner-spinner"></span>
+          <span id="scan-banner-title">ジャーナルログを解析中...</span>
+        </div>
+        <div class="scan-banner-right">
+          <span id="scan-banner-count" class="scan-banner-count">0 / 0</span>
+          <span id="scan-banner-percent" class="scan-banner-percent">0%</span>
+        </div>
+      </div>
+      <div class="scan-banner-bottom">
+        <span id="scan-banner-file" class="scan-banner-file"></span>
+      </div>
+      <div class="scan-progress-bg">
+        <div id="scan-progress-bar-fill" class="scan-progress-fill" style="width: 0%;"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Header -->

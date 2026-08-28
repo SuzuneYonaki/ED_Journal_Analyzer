@@ -38,6 +38,121 @@ body {
   user-select: none;
 }
 
+/* Scan Banner */
+.scan-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: rgba(18, 22, 31, 0.95);
+  border: 1px solid var(--ed-orange);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 16px var(--ed-orange-glow);
+  padding: 10px 16px;
+  width: 480px;
+  max-width: 90vw;
+  backdrop-filter: blur(8px);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.scan-banner-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scan-banner-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scan-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.scan-banner-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.scan-banner-count {
+  color: var(--ed-orange);
+}
+
+.scan-banner-percent {
+  color: var(--ed-cyan);
+  font-weight: bold;
+}
+
+.scan-banner-bottom {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scan-progress-bg {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.scan-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ed-orange), var(--ed-cyan));
+  border-radius: 3px;
+  transition: width 0.15s ease-out;
+}
+
+.scan-banner.completed {
+  border-color: var(--ed-green);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 255, 136, 0.25);
+}
+
+.scan-banner.completed .scan-progress-fill {
+  background: var(--ed-green);
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 113, 0, 0.2);
+  border-top-color: var(--ed-orange);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Header */
 header {
   background-color: var(--bg-secondary);
