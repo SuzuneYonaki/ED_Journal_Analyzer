@@ -160,6 +160,7 @@ def test_journal_parser_in_memory():
         "Landable": False,
         "TerraformState": "Terraformable"
     }))
+    parser.flush_dirty_systems()
 
     cursor.execute("SELECT * FROM systems WHERE system_address = 99887766")
     sys_row = cursor.fetchone()

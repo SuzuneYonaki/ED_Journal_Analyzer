@@ -1484,7 +1484,7 @@ function pollScanProgress() {
   const banner = document.getElementById('scan-banner');
   const bannerText = document.getElementById('scan-banner-text');
   const bannerCount = document.getElementById('scan-banner-count');
-  banner.style.display = 'flex';
+  if (banner) banner.style.display = 'flex';
 
   let pollCount = 0;
   const interval = setInterval(async () => {
@@ -1492,19 +1492,19 @@ function pollScanProgress() {
       const res = await fetch('/api/scan_status');
       const st = await res.json();
       if (st.is_scanning) {
-        bannerText.innerText = st.message;
+        if (bannerText) bannerText.innerText = st.message;
         if (bannerCount) bannerCount.innerText = `${st.current} / ${st.total}`;
         pollCount++;
-        // Update stats periodically during large scans
+        // Update stats periodically during scans
         if (pollCount % 3 === 0) {
           fetchGlobalStats();
         }
       } else {
-        bannerText.innerText = st.message;
-        if (bannerCount) bannerCount.innerText = `${st.total}`;
+        if (bannerText) bannerText.innerText = st.message;
+        if (bannerCount) bannerCount.innerText = `${st.total} / ${st.total}`;
         setTimeout(() => {
-          banner.style.display = 'none';
-        }, 2500);
+          if (banner) banner.style.display = 'none';
+        }, 1500);
         clearInterval(interval);
         // Instant full UI refresh
         fetchGlobalStats();
@@ -1513,5 +1513,5 @@ function pollScanProgress() {
     } catch (err) {
       clearInterval(interval);
     }
-  }, 1000);
+  }, 500);
 }

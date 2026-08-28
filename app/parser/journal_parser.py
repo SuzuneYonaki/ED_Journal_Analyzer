@@ -13,6 +13,15 @@ class JournalParser:
     def __init__(self, db_conn=None):
         self.conn = db_conn or get_db_connection()
         self.cursor = self.conn.cursor()
+        self.dirty_systems = set()
+
+    def flush_dirty_systems(self):
+        """Update system-level stats for all modified systems during parsing."""
+        if not self.dirty_systems:
+            return
+        for sys_addr in self.dirty_systems:
+            self._update_system_stats(sys_addr)
+        self.dirty_systems.clear()
 
     def process_journal_line(self, line: str):
         if not line or not line.strip():
@@ -271,7 +280,7 @@ class JournalParser:
             bio_pred_json, anomalies_json, timestamp, timestamp
         ))
 
-        self._update_system_stats(sys_addr)
+        self.dirty_systems.add(sys_addr)
 
     def _handle_signals(self, data: dict):
         sys_addr = data.get("SystemAddress")
@@ -346,7 +355,7 @@ class JournalParser:
                     anomalies_json = excluded.anomalies_json
             """, (sys_addr, body_id or 0, body_name or f"Body {body_id}", bio_count, geo_count, bio_pred_json, anomalies_json))
 
-        self._update_system_stats(sys_addr)
+        self.dirty_systems.add(sys_addr)
 
     def _handle_saa_scan_complete(self, data: dict):
         sys_addr = data.get("SystemAddress")
@@ -358,10 +367,12 @@ class JournalParser:
                 self.cursor.execute("""
                     UPDATE bodies SET is_mapped_by_user = 1 WHERE system_address = ? AND body_id = ?
                 """, (sys_addr, body_id))
+                self.dirty_systems.add(sys_addr)
             elif body_name:
                 self.cursor.execute("""
                     UPDATE bodies SET is_mapped_by_user = 1 WHERE system_address = ? AND body_name = ?
                 """, (sys_addr, body_name))
+                self.dirty_systems.add(sys_addr)
 
     def _handle_scan_organic(self, data: dict, timestamp: str):
         sys_addr = data.get("SystemAddress")
@@ -388,7 +399,7 @@ class JournalParser:
                 sys_addr, body_id, timestamp, scan_type, genus, genus_loc,
                 species, species_loc, variant, variant_loc, base_val, fd_val
             ))
-            self._update_system_stats(sys_addr)
+            self.dirty_systems.add(sys_addr)
 
     def _update_system_stats(self, sys_addr: int):
         self.cursor.execute("""
@@ -483,6 +494,9 @@ class JournalParser:
                 line_count += 1
             current_offset = f.tell()
 
+        # Batch-update systems modified during this file's parse
+        self.flush_dirty_systems()
+
         now_str = datetime.now().isoformat()
         self.cursor.execute("""
             INSERT INTO parsed_files (filename, file_size, last_modified, parsed_at, last_line_offset)
@@ -503,7 +517,8 @@ class JournalParser:
         for fpath in files:
             self.parse_file(fpath)
             count += 1
-            if progress_callback and count % 50 == 0:
-                progress_callback(count, total)
+            if progress_callback:
+                progress_callback(count, total, Path(fpath).name)
+        self.flush_dirty_systems()
         self.conn.commit()
         return total

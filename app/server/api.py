@@ -528,12 +528,17 @@ def get_system_detail(system_address: int):
 def run_background_parse():
     global scan_state
     scan_state["is_scanning"] = True
+    scan_state["current"] = 0
+    scan_state["total"] = 0
     scan_state["message"] = "Scanning journal logs..."
 
-    def cb(curr, tot):
+    def cb(curr, tot, fname=None):
         scan_state["current"] = curr
         scan_state["total"] = tot
-        scan_state["message"] = f"Processed {curr}/{tot} journal files..."
+        if fname:
+            scan_state["message"] = f"Processing {curr}/{tot}: {fname}"
+        else:
+            scan_state["message"] = f"Processed {curr}/{tot} journal files..."
 
     try:
         parser = JournalParser()
