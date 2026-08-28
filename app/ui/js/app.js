@@ -825,9 +825,6 @@ function renderBioOnlyView(container, bodies) {
   container.appendChild(list);
 }
 
-  container.appendChild(list);
-}
-
 function renderVisitsTimeline(container, visits) {
   if (!visits || visits.length === 0) {
     container.innerHTML = `<div style="color: var(--text-secondary); text-align: center;">${t('no_visits')}</div>`;
