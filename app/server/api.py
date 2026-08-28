@@ -416,9 +416,97 @@ def get_system_detail(system_address: int):
 
     # Fetch scanned organics
     c.execute("SELECT * FROM scanned_organics WHERE system_address = ? ORDER BY timestamp DESC", (system_address,))
-    organics = [dict(r) for r in c.fetchall()]
+    raw_organics = [dict(r) for r in c.fetchall()]
 
     conn.close()
+
+    # Deduplicate and group scanned organics by body_id / body_name
+    organics_by_body = {}
+    seen_species_system = set()
+    system_scanned_organics = []
+
+    for org in raw_organics:
+        b_id = org.get("body_id")
+        sp = org.get("species_localised") or org.get("species") or org.get("genus_localised") or org.get("genus") or "Unknown"
+        
+        # Unique per body
+        if b_id not in organics_by_body:
+            organics_by_body[b_id] = {}
+        
+        if sp not in organics_by_body[b_id]:
+            organics_by_body[b_id][sp] = org
+
+        # Unique per system
+        if sp not in seen_species_system:
+            seen_species_system.add(sp)
+            system_scanned_organics.append(org)
+
+    system_bio_total_base = 0
+    system_bio_total_first = 0
+    system_bio_signals_count = 0
+    system_bio_scanned_count = len(system_scanned_organics)
+
+    # Attach Exobiology information & totals to each body
+    for b in bodies:
+        b_id = b.get("body_id")
+        b_name = b.get("body_name")
+        bio_sig = b.get("bio_signals") or 0
+        system_bio_signals_count += bio_sig
+
+        # Scanned organics on this specific body
+        body_scanned_map = organics_by_body.get(b_id, {})
+        if not body_scanned_map and b_name in organics_by_body:
+            body_scanned_map = organics_by_body[b_name]
+
+        b_scanned_list = list(body_scanned_map.values())
+        b["scanned_organics"] = b_scanned_list
+        b["scanned_count"] = len(b_scanned_list)
+
+        # Candidate exobiology predictions (filtering out already scanned species)
+        scanned_species_names = {
+            (s.get("species_localised") or s.get("species") or "").lower() for s in b_scanned_list
+        }
+        scanned_genus_names = {
+            (s.get("genus_localised") or s.get("genus") or "").lower() for s in b_scanned_list
+        }
+
+        unscanned_predictions = []
+        for pred in b.get("exobiology", []):
+            p_sp = (pred.get("species") or "").lower()
+            p_gen = (pred.get("genus") or "").lower()
+            if p_sp not in scanned_species_names and p_gen not in scanned_genus_names:
+                unscanned_predictions.append(pred)
+
+        b["potential_exobiology"] = unscanned_predictions
+
+        # Calculate body bio payouts:
+        # Sum of scanned species + top predicted species for remaining bio signal slots
+        body_base_val = sum(s.get("base_value", 0) for s in b_scanned_list)
+        body_first_val = sum(s.get("first_discovery_value", 0) for s in b_scanned_list)
+
+        remaining_slots = max(0, bio_sig - len(b_scanned_list))
+        for i in range(min(remaining_slots, len(unscanned_predictions))):
+            pred_item = unscanned_predictions[i]
+            body_base_val += pred_item.get("base_value", 0)
+            body_first_val += pred_item.get("first_discovery_value", 0)
+
+        # Fallback if no prediction matched but bio_signals > 0
+        if remaining_slots > len(unscanned_predictions) and remaining_slots > 0:
+            unmatched_slots = remaining_slots - len(unscanned_predictions)
+            body_base_val += unmatched_slots * 1689700  # Default Bacterium value
+            body_first_val += unmatched_slots * (1689700 * 5)
+
+        b["bio_total_base_value"] = body_base_val
+        b["bio_total_first_value"] = body_first_val
+
+        system_bio_total_base += body_base_val
+        system_bio_total_first += body_first_val
+
+    # Add system-level Exobiology summary
+    system_data["bio_total_base_value"] = system_bio_total_base
+    system_data["bio_total_first_value"] = system_bio_total_first
+    system_data["bio_signals_count"] = system_bio_signals_count
+    system_data["bio_scanned_count"] = system_bio_scanned_count
 
     # Build hierarchy tree
     hierarchy = build_system_hierarchy(bodies)
@@ -428,7 +516,13 @@ def get_system_detail(system_address: int):
         "bodies": bodies,
         "hierarchy": hierarchy,
         "visits": visits,
-        "organics": organics
+        "organics": raw_organics,
+        "system_bio_summary": {
+            "total_base_value": system_bio_total_base,
+            "total_first_value": system_bio_total_first,
+            "total_signals": system_bio_signals_count,
+            "total_scanned": system_bio_scanned_count
+        }
     }
 
 def run_background_parse():

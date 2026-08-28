@@ -605,11 +605,18 @@ header {
   border-radius: 6px;
   padding: 10px 14px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 8px;
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+}
+
+.node-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
 .node-card:hover {
@@ -620,6 +627,133 @@ header {
 .node-card.selected {
   border-color: var(--ed-cyan);
   box-shadow: 0 0 10px rgba(0, 210, 255, 0.3), inset 3px 0 0 var(--ed-cyan);
+}
+
+/* Exobiology Body Panel */
+.body-bio-panel {
+  background: rgba(0, 255, 136, 0.04);
+  border: 1px solid rgba(0, 255, 136, 0.25);
+  border-radius: 5px;
+  padding: 8px 12px;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.body-bio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px dashed rgba(0, 255, 136, 0.2);
+  padding-bottom: 5px;
+}
+
+.body-bio-title {
+  font-size: 0.78rem;
+  font-weight: bold;
+  color: var(--ed-green);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.body-bio-total {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.body-bio-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bio-slot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bio-slot-row.confirmed {
+  border-color: rgba(0, 255, 136, 0.4);
+  background: rgba(0, 255, 136, 0.08);
+}
+
+.bio-slot-row.candidate {
+  border-color: rgba(0, 210, 255, 0.25);
+}
+
+.bio-slot-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.bio-badge-confirmed {
+  background: rgba(0, 255, 136, 0.25);
+  color: var(--ed-green);
+  border: 1px solid var(--ed-green);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.68rem;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+}
+
+.bio-badge-candidate {
+  background: rgba(0, 210, 255, 0.15);
+  color: var(--ed-cyan);
+  border: 1px solid var(--ed-cyan);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.68rem;
+  font-weight: bold;
+}
+
+.bio-colony-tag {
+  background: rgba(255, 204, 0, 0.12);
+  color: var(--ed-gold);
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+}
+
+.bio-slot-payouts {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Geological / Volcanism Panel */
+.body-geo-panel {
+  background: rgba(255, 113, 0, 0.05);
+  border: 1px solid rgba(255, 113, 0, 0.25);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.73rem;
+  color: #ffb070;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .node-info-left {

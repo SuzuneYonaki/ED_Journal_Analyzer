@@ -24,3 +24,11 @@ def test_get_species_value():
     val = get_species_value("Stratum Tectonicas")
     assert val["base_value"] == 19010800
     assert val["first_discovery_value"] == 19010800 * 5
+    assert val["colony_distance_m"] == 500
+
+    # Genus fallback
+    val_genus = get_species_value("Cactoida UnknownSpecies", "Cactoida")
+    assert val_genus["base_value"] == 3600000
+    assert val_genus["colony_distance_m"] == 300
+    assert val_genus["first_discovery_value"] == 3600000 * 5
+

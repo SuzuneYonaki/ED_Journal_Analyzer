@@ -201,14 +201,22 @@
           </button>
           <div id="current-system-coords" class="system-coords"></div>
         </div>
-        <div class="system-total-payout" style="display: flex; gap: 18px; align-items: flex-end;">
+        <div class="system-total-payout" style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
           <div>
             <div class="payout-label" data-i18n="system_fss_total_label">FSSスキャン合計</div>
-            <div id="current-system-fss-value" class="payout-amount" style="color: var(--ed-cyan); font-size: 1.05rem;">-- Cr</div>
+            <div id="current-system-fss-value" class="payout-amount" style="color: var(--ed-cyan); font-size: 0.95rem;">-- Cr</div>
           </div>
           <div>
-            <div class="payout-label" data-i18n="system_max_potential_label">最大見込み (FD+FM)</div>
-            <div id="current-system-value" class="payout-amount">-- Cr</div>
+            <div class="payout-label" data-i18n="system_max_potential_label">天体探査最大 (FD+FM)</div>
+            <div id="current-system-value" class="payout-amount" style="font-size: 0.95rem;">-- Cr</div>
+          </div>
+          <div id="system-bio-payout-box" style="display: none; background: rgba(0, 255, 136, 0.08); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 4px; padding: 2px 8px;">
+            <div class="payout-label" style="color: var(--ed-green); font-weight: bold;" data-i18n="system_bio_total_label">🌱 Exobiology 総見込額</div>
+            <div style="display: flex; gap: 8px; align-items: baseline;">
+              <span id="current-system-bio-base" class="payout-amount" style="color: #a7f3d0; font-size: 0.9rem;" title="通常金額">-- Cr</span>
+              <span style="font-size: 0.7rem; color: var(--text-secondary);">/ 1st:</span>
+              <span id="current-system-bio-first" class="payout-amount" style="color: var(--ed-green); font-size: 1.05rem;" title="1st Discover時 (5倍)">-- Cr</span>
+            </div>
           </div>
         </div>
       </div>
@@ -217,6 +225,7 @@
         <span data-i18n="view_label">表示:</span>
         <button id="btn-view-tree" class="view-btn active" data-i18n="view_tree">階層ツリー & 軌道</button>
         <button id="btn-view-flat" class="view-btn" data-i18n="view_flat">天体一覧</button>
+        <button id="btn-view-bio" class="view-btn" style="color: var(--ed-green); border-color: rgba(0, 255, 136, 0.4);" data-i18n="view_bio">🌱 Bio天体のみ</button>
         <button id="btn-view-visits" class="view-btn" data-i18n="view_visits">過去訪問履歴</button>
         <div style="flex: 1;"></div>
         <span style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="body_sort_label">天体ソート:</span>

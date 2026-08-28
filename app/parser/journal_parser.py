@@ -388,6 +388,7 @@ class JournalParser:
                 sys_addr, body_id, timestamp, scan_type, genus, genus_loc,
                 species, species_loc, variant, variant_loc, base_val, fd_val
             ))
+            self._update_system_stats(sys_addr)
 
     def _update_system_stats(self, sys_addr: int):
         self.cursor.execute("""

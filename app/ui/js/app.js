@@ -406,6 +406,26 @@ function renderSystemHeader() {
   document.getElementById('current-system-fss-value').innerText = formatCredits(sys.total_fss_value || 0);
   document.getElementById('current-system-value').innerText = formatCredits(sys.total_potential_value || 0);
   
+  // Exobiology System Summary
+  const bioBox = document.getElementById('system-bio-payout-box');
+  const bioBaseEl = document.getElementById('current-system-bio-base');
+  const bioFirstEl = document.getElementById('current-system-bio-first');
+
+  if (sys.bio_total_base_value > 0 || sys.bio_signals_count > 0 || (state.currentSystemData && state.currentSystemData.system_bio_summary && state.currentSystemData.system_bio_summary.total_base_value > 0)) {
+    const summary = (state.currentSystemData && state.currentSystemData.system_bio_summary) || {};
+    const baseVal = sys.bio_total_base_value || summary.total_base_value || 0;
+    const firstVal = sys.bio_total_first_value || summary.total_first_value || 0;
+    const sigCount = sys.bio_signals_count || summary.total_signals || 0;
+    const scCount = sys.bio_scanned_count || summary.total_scanned || 0;
+
+    if (bioBox) bioBox.style.display = 'block';
+    if (bioBaseEl) bioBaseEl.innerText = formatCredits(baseVal);
+    if (bioFirstEl) bioFirstEl.innerText = formatCredits(firstVal);
+    if (bioBox) bioBox.title = `Total Signals: ${sigCount}, Scanned: ${scCount}`;
+  } else {
+    if (bioBox) bioBox.style.display = 'none';
+  }
+
   const totalB = sys.total_bodies || sys.scanned_bodies || 0;
   document.getElementById('body-count-badge').innerText = `${t('scanned_badge')}: ${sys.scanned_bodies} / ${totalB}`;
 }
@@ -438,6 +458,140 @@ function getSortedBodies(bodies) {
   return list;
 }
 
+function renderBodyExobiologyBlock(node) {
+  const bioSig = node.bio_signals || 0;
+  const scannedList = node.scanned_organics || [];
+  const potentialList = node.potential_exobiology || node.exobiology || [];
+
+  if (bioSig === 0 && scannedList.length === 0) return '';
+
+  const totalSlots = Math.max(bioSig, scannedList.length, 1);
+  const slotRows = [];
+
+  // 1. Confirmed scanned organics
+  scannedList.forEach(org => {
+    const spName = org.species_localised || org.species || org.genus_localised || org.genus || 'Confirmed Flora';
+    const genName = org.genus_localised || org.genus || '';
+    const baseVal = org.base_value || 0;
+    const fdVal = org.first_discovery_value || (baseVal * 5);
+    const dist = org.colony_distance_m || 500;
+
+    slotRows.push(`
+      <div class="bio-slot-row confirmed">
+        <div class="bio-slot-left">
+          <span class="bio-badge-confirmed">✓ ${t('bio_status_confirmed')}</span>
+          <span style="font-weight: bold; color: var(--text-primary);">${spName} ${genName && genName !== spName ? `<span style="color:var(--text-secondary); font-size:0.7rem;">(${genName})</span>` : ''}</span>
+          <span class="bio-colony-tag" title="${t('bio_colony_dist')} ${dist}m">📍 ${dist}m</span>
+        </div>
+        <div class="bio-slot-payouts">
+          <span style="color: #a7f3d0;">${t('bio_normal_val')} ${formatCredits(baseVal)}</span>
+          <span style="color: var(--ed-green); font-weight: bold;">${t('bio_first_val')} ${formatCredits(fdVal)}</span>
+        </div>
+      </div>
+    `);
+  });
+
+  // 2. Candidate potential species for remaining slots
+  const remainingSlots = Math.max(0, totalSlots - scannedList.length);
+  for (let i = 0; i < remainingSlots; i++) {
+    if (i < potentialList.length) {
+      const pot = potentialList[i];
+      const spName = pot.species || pot.genus || 'Candidate';
+      const genName = pot.genus || '';
+      const baseVal = pot.base_value || 0;
+      const fdVal = pot.first_discovery_value || (baseVal * 5);
+      const dist = pot.colony_distance_m || 500;
+      const desc = pot.description || '';
+
+      slotRows.push(`
+        <div class="bio-slot-row candidate">
+          <div class="bio-slot-left">
+            <span class="bio-badge-candidate">? ${t('bio_status_potential')}</span>
+            <span style="color: #e2e8f0; font-weight: 500;">${spName} ${genName && genName !== spName ? `<span style="color:var(--text-secondary); font-size:0.7rem;">(${genName})</span>` : ''}</span>
+            <span class="bio-colony-tag" title="${t('bio_colony_dist')} ${dist}m">📍 ${dist}m</span>
+            ${desc ? `<span style="color: var(--text-dim); font-size: 0.68rem; margin-left: 4px;">(${desc})</span>` : ''}
+          </div>
+          <div class="bio-slot-payouts">
+            <span style="color: #94a3b8;">${t('bio_normal_val')} ${formatCredits(baseVal)}</span>
+            <span style="color: var(--ed-green);">${t('bio_first_val')} ${formatCredits(fdVal)}</span>
+          </div>
+        </div>
+      `);
+    } else {
+      // Unspecified slot
+      const defaultVal = 1689700;
+      slotRows.push(`
+        <div class="bio-slot-row candidate">
+          <div class="bio-slot-left">
+            <span class="bio-badge-candidate">? ${t('bio_status_potential')}</span>
+            <span style="color: #94a3b8;">${t('bio_slot_empty')} #${scannedList.length + i + 1}</span>
+            <span class="bio-colony-tag">📍 500m</span>
+          </div>
+          <div class="bio-slot-payouts">
+            <span style="color: #94a3b8;">${t('bio_normal_val')} ${formatCredits(defaultVal)}</span>
+            <span style="color: var(--ed-green);">${t('bio_first_val')} ${formatCredits(defaultVal * 5)}</span>
+          </div>
+        </div>
+      `);
+    }
+  }
+
+  // Environmental info (Gravity safety & Atmosphere/Temp)
+  const envBadges = [];
+  if (node.landable) {
+    const g = node.surface_gravity_g || 0;
+    if (g >= 3.0) {
+      envBadges.push(`<span class="tag-badge tag-high-g" style="font-size:0.68rem;">⚠️ ${g.toFixed(2)}G (${t('danger_gravity')})</span>`);
+    } else if (g > 0) {
+      envBadges.push(`<span class="tag-badge" style="background: rgba(0,255,136,0.1); color: var(--ed-green); border:1px solid rgba(0,255,136,0.3); font-size:0.68rem;">🟢 ${g.toFixed(2)}G (${t('safe_gravity')})</span>`);
+    }
+  }
+  if (node.atmosphere && node.atmosphere.toLowerCase() !== 'none') {
+    envBadges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.06); color: var(--text-secondary); font-size:0.68rem;">🌫️ ${node.atmosphere}</span>`);
+  }
+  if (node.surface_temperature) {
+    const kelvin = Math.round(node.surface_temperature);
+    const celsius = Math.round(node.surface_temperature - 273.15);
+    envBadges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.06); color: var(--text-secondary); font-size:0.68rem;">🌡️ ${kelvin}K (${celsius}℃)</span>`);
+  }
+
+  return `
+    <div class="body-bio-panel">
+      <div class="body-bio-header">
+        <div class="body-bio-title">
+          🌱 Exobiology (${t('filter_bio')}: ${bioSig} / ${t('bio_status_confirmed')}: ${scannedList.length})
+          <div style="display: inline-flex; gap: 4px; margin-left: 6px; flex-wrap: wrap;">${envBadges.join('')}</div>
+        </div>
+        <div class="body-bio-total">
+          <span style="color: var(--text-secondary);">${t('bio_body_total')}</span>
+          <span style="color: #a7f3d0;" title="通常合計">${formatCredits(node.bio_total_base_value || 0)}</span>
+          <span style="color: var(--text-secondary);">/ 1st:</span>
+          <span style="color: var(--ed-green); font-weight: bold;" title="1st Discover合計 (5倍)">${formatCredits(node.bio_total_first_value || 0)}</span>
+        </div>
+      </div>
+      <div class="body-bio-slots">
+        ${slotRows.join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderBodyGeoBlock(node) {
+  const geoSig = node.geo_signals || 0;
+  const volc = node.volcanism || '';
+  if (geoSig === 0 && (!volc || volc.toLowerCase() === 'none')) return '';
+
+  return `
+    <div class="body-geo-panel">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span style="font-weight: bold; color: var(--ed-orange);">🌋 ${t('geological_signals')} (${geoSig}):</span>
+        <span>${volc || 'Active Geological Formations'}</span>
+      </div>
+      <span class="tag-badge" style="background: rgba(255,113,0,0.2); color: var(--ed-orange); border: 1px solid rgba(255,113,0,0.4); font-size: 0.68rem;">GEO: ${geoSig}</span>
+    </div>
+  `;
+}
+
 function renderCurrentView() {
   const container = document.getElementById('map-content');
   container.innerHTML = '';
@@ -449,6 +603,9 @@ function renderCurrentView() {
   } else if (state.currentView === 'flat') {
     const sorted = getSortedBodies(state.currentSystemData.bodies);
     renderFlatBodiesList(container, sorted);
+  } else if (state.currentView === 'bio') {
+    const sorted = getSortedBodies(state.currentSystemData.bodies);
+    renderBioOnlyView(container, sorted);
   } else if (state.currentView === 'visits') {
     renderVisitsTimeline(container, state.currentSystemData.visits);
   }
@@ -495,20 +652,26 @@ function renderHierarchyTree(container, nodes) {
     }
 
     const typeDesc = node.star_type ? `${t('star_type_label')} (${node.star_type})` : (node.planet_class || 'Planet');
+    const bioHtml = renderBodyExobiologyBlock(node);
+    const geoHtml = renderBodyGeoBlock(node);
 
     card.innerHTML = `
-      <div class="node-info-left">
-        <div class="body-icon ${iconClass}">${iconLabel}</div>
-        <div class="node-details">
-          <div class="node-name">${node.body_name}</div>
-          <div class="node-subtext">${typeDesc}</div>
-          <div class="node-badges">${badges.join('')}</div>
+      <div class="node-card-top">
+        <div class="node-info-left">
+          <div class="body-icon ${iconClass}">${iconLabel}</div>
+          <div class="node-details">
+            <div class="node-name">${node.body_name}</div>
+            <div class="node-subtext">${typeDesc}</div>
+            <div class="node-badges">${badges.join('')}</div>
+          </div>
+        </div>
+        <div class="node-info-right">
+          <span class="node-value">${formatCredits(node.max_potential_value || node.fss_value)}</span>
+          <span class="node-distance">${formatDistance(node.distance_from_arrival_ls)}</span>
         </div>
       </div>
-      <div class="node-info-right">
-        <span class="node-value">${formatCredits(node.max_potential_value || node.fss_value)}</span>
-        <span class="node-distance">${formatDistance(node.distance_from_arrival_ls)}</span>
-      </div>
+      ${geoHtml}
+      ${bioHtml}
     `;
 
     nodeWrapper.appendChild(card);
@@ -539,7 +702,7 @@ function renderFlatBodiesList(container, bodies) {
   const list = document.createElement('div');
   list.style.display = 'flex';
   list.style.flexDirection = 'column';
-  list.style.gap = '8px';
+  list.style.gap = '10px';
 
   bodies.forEach(body => {
     const card = document.createElement('div');
@@ -561,23 +724,89 @@ function renderFlatBodiesList(container, bodies) {
       else badges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.1);">${body.surface_gravity_g.toFixed(2)}G</span>`);
     }
     if (body.bio_signals > 0) badges.push(`<span class="tag-badge tag-bio">BIO: ${body.bio_signals}</span>`);
+    if (body.geo_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(255,113,0,0.2); color: var(--ed-orange);">GEO: ${body.geo_signals}</span>`);
+
+    const bioHtml = renderBodyExobiologyBlock(body);
+    const geoHtml = renderBodyGeoBlock(body);
 
     card.innerHTML = `
-      <div class="node-info-left">
-        <div class="body-icon ${iconClass}">${iconLabel}</div>
-        <div class="node-details">
-          <div class="node-name">${body.body_name}</div>
-          <div class="node-subtext">${body.star_type ? t('star_type_label') + ' ' + body.star_type : body.planet_class || 'Body'}</div>
-          <div class="node-badges">${badges.join('')}</div>
+      <div class="node-card-top">
+        <div class="node-info-left">
+          <div class="body-icon ${iconClass}">${iconLabel}</div>
+          <div class="node-details">
+            <div class="node-name">${body.body_name}</div>
+            <div class="node-subtext">${body.star_type ? t('star_type_label') + ' ' + body.star_type : body.planet_class || 'Body'}</div>
+            <div class="node-badges">${badges.join('')}</div>
+          </div>
+        </div>
+        <div class="node-info-right">
+          <span class="node-value">${formatCredits(body.max_potential_value)}</span>
+          <span class="node-distance">${formatDistance(body.distance_from_arrival_ls)}</span>
         </div>
       </div>
-      <div class="node-info-right">
-        <span class="node-value">${formatCredits(body.max_potential_value)}</span>
-        <span class="node-distance">${formatDistance(body.distance_from_arrival_ls)}</span>
-      </div>
+      ${geoHtml}
+      ${bioHtml}
     `;
     list.appendChild(card);
   });
+  container.appendChild(list);
+}
+
+function renderBioOnlyView(container, bodies) {
+  if (!bodies) return;
+  const bioBodies = bodies.filter(b => (b.bio_signals > 0) || (b.scanned_organics && b.scanned_organics.length > 0));
+
+  if (bioBodies.length === 0) {
+    container.innerHTML = `
+      <div style="color: var(--text-secondary); text-align: center; margin-top: 40px; padding: 20px;">
+        <div style="font-size: 1.5rem; margin-bottom: 8px;">🌱</div>
+        <div>${t('no_bio_bodies')}</div>
+      </div>
+    `;
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.style.display = 'flex';
+  list.style.flexDirection = 'column';
+  list.style.gap = '12px';
+
+  bioBodies.forEach(body => {
+    const card = document.createElement('div');
+    card.className = `node-card ${state.selectedBody && state.selectedBody.body_id === body.body_id ? 'selected' : ''}`;
+    card.style.borderColor = 'rgba(0, 255, 136, 0.4)';
+    card.onclick = () => {
+      state.selectedBody = body;
+      renderBodyInspector();
+      document.querySelectorAll('.node-card').forEach(nc => nc.classList.remove('selected'));
+      card.classList.add('selected');
+    };
+
+    const iconClass = getBodyIconClass(body);
+    const iconLabel = getBodyIconLabel(body);
+    const bioHtml = renderBodyExobiologyBlock(body);
+    const geoHtml = renderBodyGeoBlock(body);
+
+    card.innerHTML = `
+      <div class="node-card-top">
+        <div class="node-info-left">
+          <div class="body-icon ${iconClass}">${iconLabel}</div>
+          <div class="node-details">
+            <div class="node-name" style="color: var(--ed-green);">${body.body_name}</div>
+            <div class="node-subtext">${body.planet_class || 'Landable World'}</div>
+          </div>
+        </div>
+        <div class="node-info-right">
+          <span class="node-distance">${formatDistance(body.distance_from_arrival_ls)}</span>
+        </div>
+      </div>
+      ${geoHtml}
+      ${bioHtml}
+    `;
+    list.appendChild(card);
+  });
+  container.appendChild(list);
+}
 
   container.appendChild(list);
 }
@@ -659,16 +888,46 @@ function renderBodyInspector() {
   document.getElementById('val-fm-dss').innerText = formatCredits(b.first_mapped_dss);
   document.getElementById('val-max-total').innerText = formatCredits(b.max_potential_value);
 
-  // Exobiology Predictions
+  // Exobiology Predictions & Confirmed
   const bioInfo = document.getElementById('inspect-bio-signals-info');
   const bioContainer = document.getElementById('inspect-bio-predictions');
-  if (b.bio_signals > 0 || (b.exobiology && b.exobiology.length > 0)) {
-    bioInfo.innerText = `${t('bio_signals_detected')}: ${b.bio_signals || 0} / ${t('bio_species_candidates')}`;
-    if (b.exobiology && b.exobiology.length > 0) {
-      bioContainer.innerHTML = b.exobiology.map(bio => `
+  const scannedOrganics = b.scanned_organics || [];
+  const potBio = b.potential_exobiology || b.exobiology || [];
+
+  if (b.bio_signals > 0 || scannedOrganics.length > 0 || potBio.length > 0) {
+    bioInfo.innerText = `${t('bio_signals_detected')}: ${b.bio_signals || 0} (${t('bio_status_confirmed')}: ${scannedOrganics.length})`;
+    
+    let html = '';
+    
+    // Confirmed
+    if (scannedOrganics.length > 0) {
+      html += scannedOrganics.map(org => {
+        const spName = org.species_localised || org.species || org.genus_localised || org.genus;
+        const genName = org.genus_localised || org.genus || '';
+        const baseVal = org.base_value || 0;
+        const fdVal = org.first_discovery_value || (baseVal * 5);
+        const dist = org.colony_distance_m || 500;
+        return `
+          <div class="bio-pred-card" style="border-color: rgba(0, 255, 136, 0.4); background: rgba(0, 255, 136, 0.06);">
+            <div class="bio-pred-header">
+              <span class="bio-species-name" style="color: var(--ed-green);">✓ [${t('bio_status_confirmed')}] ${spName} ${genName && genName !== spName ? `(${genName})` : ''}</span>
+              <span class="bio-sample-dist">${t('bio_dist_req')} ${dist}m</span>
+            </div>
+            <div class="bio-payout-row">
+              <span>${t('bio_base_payout')} ${formatCredits(baseVal)}</span>
+              <span class="bio-first-bonus">${t('bio_first_bonus')} ${formatCredits(fdVal)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Candidates
+    if (potBio.length > 0) {
+      html += potBio.map(bio => `
         <div class="bio-pred-card">
           <div class="bio-pred-header">
-            <span class="bio-species-name">🌱 ${bio.species} (${bio.genus})</span>
+            <span class="bio-species-name">🌱 [${t('bio_status_potential')}] ${bio.species} (${bio.genus})</span>
             <span class="bio-sample-dist">${t('bio_dist_req')} ${bio.colony_distance_m}m</span>
           </div>
           <div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">${bio.description}</div>
@@ -678,9 +937,13 @@ function renderBodyInspector() {
           </div>
         </div>
       `).join('');
-    } else {
-      bioContainer.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-secondary);">${t('bio_none_desc')}</div>`;
     }
+
+    if (!html) {
+      html = `<div style="font-size: 0.75rem; color: var(--text-secondary);">${t('bio_none_desc')}</div>`;
+    }
+
+    bioContainer.innerHTML = html;
   } else {
     bioInfo.innerText = t('bio_none');
     bioContainer.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-dim);">${t('bio_none_desc')}</div>`;
@@ -1004,6 +1267,15 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCurrentView();
   });
 
+  const btnViewBio = document.getElementById('btn-view-bio');
+  if (btnViewBio) {
+    btnViewBio.addEventListener('click', () => {
+      state.currentView = 'bio';
+      updateViewButtons();
+      renderCurrentView();
+    });
+  }
+
   document.getElementById('btn-view-visits').addEventListener('click', () => {
     state.currentView = 'visits';
     updateViewButtons();
@@ -1013,6 +1285,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateViewButtons() {
     document.getElementById('btn-view-tree').classList.toggle('active', state.currentView === 'tree');
     document.getElementById('btn-view-flat').classList.toggle('active', state.currentView === 'flat');
+    const btnBio = document.getElementById('btn-view-bio');
+    if (btnBio) btnBio.classList.toggle('active', state.currentView === 'bio');
     document.getElementById('btn-view-visits').classList.toggle('active', state.currentView === 'visits');
   }
 

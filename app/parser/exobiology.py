@@ -83,9 +83,27 @@ EXOBIOLOGY_SPECIES_DB = {
     "Tussock Viridans": {"genus": "Tussock", "value": 1638900, "colony_distance": 200, "description": "Common green tussock"},
     "Tussock Propinquus": {"genus": "Tussock", "value": 1000000, "colony_distance": 200, "description": "Low value widespread tussock"},
 
+    # Cactoida
+    "Cactoida Vermis": {"genus": "Cactoida", "value": 16396400, "colony_distance": 300, "description": "Methane/CO2 atmosphere desert succulents"},
+    "Cactoida Pullulans": {"genus": "Cactoida", "value": 3600000, "colony_distance": 300, "description": "SO2/CO2 atmosphere cactus-like flora"},
+    "Cactoida Cortex": {"genus": "Cactoida", "value": 3600000, "colony_distance": 300, "description": "Rocky terrain with thin atmosphere"},
+    "Cactoida Lapis": {"genus": "Cactoida", "value": 2416200, "colony_distance": 300, "description": "Rocky canyon cactus"},
+
+    # Fungoida
+    "Fungoida Setisis": {"genus": "Fungoida", "value": 3600000, "colony_distance": 300, "description": "Ammonia/Water thin atmosphere bracket fungus"},
+    "Fungoida Bullata": {"genus": "Fungoida", "value": 3600000, "colony_distance": 300, "description": "Methane/Nitrogen atmosphere fungal growths"},
+    "Fungoida Gelata": {"genus": "Fungoida", "value": 2637500, "colony_distance": 300, "description": "Cold CO2/SO2 icy rocky fungus"},
+
     # Electricae
     "Electricae Pluma": {"genus": "Electricae", "value": 6284400, "colony_distance": 1000, "description": "Airless or ultra-thin atmosphere glowing bio-electric flora"},
     "Electricae Radial": {"genus": "Electricae", "value": 6284400, "colony_distance": 1000, "description": "Extreme radiation/magnetic fields"},
+
+    # Anemone / Brain Tree / Sinuous Tubers (Surface POIs)
+    "Roseum Anemone": {"genus": "Anemone", "value": 1500000, "colony_distance": 100, "description": "Volcanic/Geological active body anemone"},
+    "Blatteum Bioluminescent Anemone": {"genus": "Anemone", "value": 1500000, "colony_distance": 100, "description": "Deep canyon bioluminescent anemone"},
+    "Roseum Brain Tree": {"genus": "Brain Tree", "value": 1500000, "colony_distance": 100, "description": "Guardian sites / Nebula volcanic regions"},
+    "Lindigoticum Brain Tree": {"genus": "Brain Tree", "value": 1500000, "colony_distance": 100, "description": "Metal-rich rocky crater floors"},
+    "Roseum Sinuous Tuber": {"genus": "Sinuous Tuber", "value": 1500000, "colony_distance": 100, "description": "Sinuous biological roots near vents"}
 }
 
 GENUS_DEFAULT_VALUES = {
@@ -106,6 +124,26 @@ GENUS_DEFAULT_VALUES = {
     "Brain Tree": 1500000,
     "Anemone": 1500000,
     "Sinuous Tuber": 1500000,
+}
+
+GENUS_DEFAULT_DISTANCE = {
+    "Stratum": 500,
+    "Clypeus": 150,
+    "Concha": 150,
+    "Recepta": 150,
+    "Tubus": 800,
+    "Aleoida": 150,
+    "Frutexa": 150,
+    "Osseus": 800,
+    "Fonticula": 500,
+    "Tussock": 200,
+    "Bacterium": 500,
+    "Electricae": 1000,
+    "Fungoida": 300,
+    "Cactoida": 300,
+    "Brain Tree": 100,
+    "Anemone": 100,
+    "Sinuous Tuber": 100,
 }
 
 FIRST_DISCOVERY_MULTIPLIER = 5.0  # 5x payout for First Vista Genomics Discovery
@@ -227,20 +265,36 @@ def predict_exobiology_candidates(body_data: dict) -> list:
     return result
 
 def get_species_value(species_name: str, genus_name: str = "") -> dict:
-    """Lookup exact or genus-based value for scanned organic."""
-    if species_name in EXOBIOLOGY_SPECIES_DB:
-        val = EXOBIOLOGY_SPECIES_DB[species_name]["value"]
-        genus = EXOBIOLOGY_SPECIES_DB[species_name]["genus"]
-    elif genus_name and genus_name in GENUS_DEFAULT_VALUES:
-        val = GENUS_DEFAULT_VALUES[genus_name]
-        genus = genus_name
+    """Lookup exact or genus-based value and colony distance for scanned organic."""
+    clean_species = (species_name or "").strip()
+    clean_genus = (genus_name or "").strip()
+
+    # Try exact match first
+    if clean_species in EXOBIOLOGY_SPECIES_DB:
+        info = EXOBIOLOGY_SPECIES_DB[clean_species]
+        val = info["value"]
+        genus = info["genus"]
+        dist = info["colony_distance"]
+        desc = info["description"]
     else:
-        val = 1000000
-        genus = genus_name or "Unknown"
+        # Fallback to genus
+        g_name = clean_genus
+        if not g_name and clean_species:
+            # Extract first word as genus if possible
+            first_word = clean_species.split()[0]
+            if first_word in GENUS_DEFAULT_VALUES:
+                g_name = first_word
+
+        genus = g_name or "Unknown"
+        val = GENUS_DEFAULT_VALUES.get(genus, 1000000)
+        dist = GENUS_DEFAULT_DISTANCE.get(genus, 500)
+        desc = f"{genus} biological sample"
 
     return {
-        "species": species_name,
+        "species": clean_species or genus,
         "genus": genus,
         "base_value": val,
-        "first_discovery_value": int(val * FIRST_DISCOVERY_MULTIPLIER)
+        "first_discovery_value": int(val * FIRST_DISCOVERY_MULTIPLIER),
+        "colony_distance_m": dist,
+        "description": desc
     }
