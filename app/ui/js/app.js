@@ -485,18 +485,33 @@ function renderBodyExobiologyBlock(node) {
   const totalSlots = Math.max(bioSig, scannedList.length, 1);
   const slotRows = [];
 
-  // 1. Confirmed scanned organics
+  // 1. Scanned / in-progress species
   scannedList.forEach(org => {
     const spName = org.species_localised || org.species || org.genus_localised || org.genus || 'Confirmed Flora';
     const genName = org.genus_localised || org.genus || '';
     const baseVal = org.base_value || 0;
     const fdVal = org.first_discovery_value || (baseVal * 5);
     const dist = org.colony_distance_m || 500;
+    const stage = org.stage_level || 3;
+
+    let badgeClass = "bio-badge-confirmed";
+    let badgeText = `✓ ${t('bio_status_analyzed')}`;
+    let rowClass = "confirmed";
+
+    if (stage === 1) {
+      badgeClass = "tag-badge";
+      badgeText = `🔬 ${t('bio_status_sample_1')}`;
+      rowClass = "in-progress";
+    } else if (stage === 2) {
+      badgeClass = "tag-badge";
+      badgeText = `🔬 ${t('bio_status_sample_2')}`;
+      rowClass = "in-progress";
+    }
 
     slotRows.push(`
-      <div class="bio-slot-row confirmed">
+      <div class="bio-slot-row ${rowClass}">
         <div class="bio-slot-left">
-          <span class="bio-badge-confirmed">✓ ${t('bio_status_confirmed')}</span>
+          <span class="${badgeClass}">${badgeText}</span>
           <span style="font-weight: bold; color: var(--text-primary);">${spName} ${genName && genName !== spName ? `<span style="color:var(--text-secondary); font-size:0.7rem;">(${genName})</span>` : ''}</span>
           <span class="bio-colony-tag" title="${t('bio_colony_dist')} ${dist}m">📍 ${dist}m</span>
         </div>
@@ -576,7 +591,7 @@ function renderBodyExobiologyBlock(node) {
     <div class="body-bio-panel">
       <div class="body-bio-header">
         <div class="body-bio-title">
-          🌱 Exobiology (${t('filter_bio')}: ${bioSig} / ${t('bio_status_confirmed')}: ${scannedList.length})
+          🌱 Exobiology (${t('filter_bio')}: ${bioSig} / ${t('bio_status_confirmed')}: ${node.completed_bio_count || 0})
           <div style="display: inline-flex; gap: 4px; margin-left: 6px; flex-wrap: wrap;">${envBadges.join('')}</div>
         </div>
         <div class="body-bio-total">
@@ -588,6 +603,9 @@ function renderBodyExobiologyBlock(node) {
       </div>
       <div class="body-bio-slots">
         ${slotRows.join('')}
+      </div>
+      <div style="font-size: 0.65rem; color: var(--text-dim); text-align: right; margin-top: 4px;">
+        🔬 Prediction Ref: Canonn Research Group
       </div>
     </div>
   `;
@@ -771,7 +789,14 @@ function renderFlatBodiesList(container, bodies) {
 
 function renderBioOnlyView(container, bodies) {
   if (!bodies) return;
-  const bioBodies = bodies.filter(b => (b.bio_signals > 0) || (b.scanned_organics && b.scanned_organics.length > 0));
+  let bioBodies = bodies.filter(b => (b.bio_signals > 0) || (b.scanned_organics && b.scanned_organics.length > 0));
+
+  const hideCompletedCb = document.getElementById('cb-hide-completed-bio');
+  const shouldHideCompleted = hideCompletedCb ? hideCompletedCb.checked : false;
+
+  if (shouldHideCompleted) {
+    bioBodies = bioBodies.filter(b => !b.is_bio_completed);
+  }
 
   if (bioBodies.length === 0) {
     container.innerHTML = `
@@ -791,7 +816,7 @@ function renderBioOnlyView(container, bodies) {
   bioBodies.forEach(body => {
     const card = document.createElement('div');
     card.className = `node-card ${state.selectedBody && state.selectedBody.body_id === body.body_id ? 'selected' : ''}`;
-    card.style.borderColor = 'rgba(0, 255, 136, 0.4)';
+    card.style.borderColor = body.is_bio_completed ? 'rgba(0, 255, 136, 0.2)' : 'rgba(0, 255, 136, 0.5)';
     card.onclick = () => {
       state.selectedBody = body;
       renderBodyInspector();
@@ -804,12 +829,19 @@ function renderBioOnlyView(container, bodies) {
     const bioHtml = renderBodyExobiologyBlock(body);
     const geoHtml = renderBodyGeoBlock(body);
 
+    const completionBadge = body.is_bio_completed
+      ? `<span class="tag-badge" style="background: rgba(0, 255, 136, 0.2); color: var(--ed-green); border: 1px solid rgba(0, 255, 136, 0.4); font-size: 0.72rem;">✅ ${t('bio_body_all_completed')}</span>`
+      : `<span class="tag-badge" style="background: rgba(255, 113, 0, 0.15); color: var(--ed-orange); border: 1px solid rgba(255, 113, 0, 0.3); font-size: 0.72rem;">🌱 採取進捗: ${body.completed_bio_count || 0} / ${body.bio_signals || 0}</span>`;
+
     card.innerHTML = `
       <div class="node-card-top">
         <div class="node-info-left">
           <div class="body-icon ${iconClass}">${iconLabel}</div>
           <div class="node-details">
-            <div class="node-name" style="color: var(--ed-green);">${body.body_name}</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="node-name" style="color: var(--ed-green);">${body.body_name}</div>
+              ${completionBadge}
+            </div>
             <div class="node-subtext">${body.planet_class || 'Landable World'}</div>
           </div>
         </div>
@@ -1302,6 +1334,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnBio = document.getElementById('btn-view-bio');
     if (btnBio) btnBio.classList.toggle('active', state.currentView === 'bio');
     document.getElementById('btn-view-visits').classList.toggle('active', state.currentView === 'visits');
+
+    // Show/hide completed bio filter container
+    const bioFilterContainer = document.getElementById('bio-filter-hide-completed-container');
+    if (bioFilterContainer) {
+      bioFilterContainer.style.display = state.currentView === 'bio' ? 'inline-flex' : 'none';
+    }
+  }
+
+  // Hide completed bio checkbox event
+  const cbHideCompletedBio = document.getElementById('cb-hide-completed-bio');
+  if (cbHideCompletedBio) {
+    cbHideCompletedBio.addEventListener('change', () => {
+      renderCurrentView();
+    });
+  }
+
+  // Credits Modal Events
+  const btnCreditsOpen = document.getElementById('btn-credits-open');
+  const btnCreditsClose = document.getElementById('btn-credits-close');
+  const creditsModal = document.getElementById('credits-modal');
+
+  if (btnCreditsOpen && creditsModal) {
+    btnCreditsOpen.addEventListener('click', () => {
+      creditsModal.style.display = 'flex';
+    });
+  }
+  if (btnCreditsClose && creditsModal) {
+    btnCreditsClose.addEventListener('click', () => {
+      creditsModal.style.display = 'none';
+    });
+  }
+  if (creditsModal) {
+    creditsModal.addEventListener('click', (e) => {
+      if (e.target === creditsModal) {
+        creditsModal.style.display = 'none';
+      }
+    });
   }
 
   // Live Sync Toggle Button

@@ -32,3 +32,39 @@ def test_get_species_value():
     assert val_genus["colony_distance_m"] == 300
     assert val_genus["first_discovery_value"] == 3600000 * 5
 
+def test_scan_organic_stages():
+    import json
+    from app.server.api import init_db, get_db_connection
+    from app.parser.journal_parser import JournalParser
+    
+    conn = get_db_connection()
+    init_db()
+    parser = JournalParser(conn)
+    
+    # 1. Log stage
+    event_log = {
+        "event": "ScanOrganic",
+        "timestamp": "2026-08-28T00:00:00Z",
+        "SystemAddress": 999999999,
+        "Body": 1,
+        "BodyID": 1,
+        "ScanType": "Log",
+        "Genus": "$Codex_Ent_Stratum_Genus_Name;",
+        "Genus_Localised": "Stratum",
+        "Species": "$Codex_Ent_Stratum_01_Name;",
+        "Species_Localised": "Stratum Tectonicas"
+    }
+    parser.process_journal_line(json.dumps(event_log))
+    parser.flush_dirty_systems()
+    
+    c = conn.cursor()
+    c.execute("SELECT * FROM scanned_organics WHERE system_address = 999999999")
+    row = c.fetchone()
+    assert row is not None
+    assert row["scan_type"] == "Log"
+    assert row["species_localised"] == "Stratum Tectonicas"
+    assert row["base_value"] == 19010800
+    
+    conn.close()
+
+

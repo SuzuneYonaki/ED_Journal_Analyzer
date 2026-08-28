@@ -152,12 +152,22 @@ const i18n = {
     landable_yes: "✓ 着陸可能 (Landable)",
     landable_no: "不可 (No)",
     extreme_danger: "[超危険]",
-    high_g_warn: "[高重力]",
-    tidal_locked_yes: "はい (固定)",
-    tidal_locked_no: "いいえ",
     hours_unit: "時間",
     days_unit: "日",
-    star_type_label: "恒星種別"
+    star_type_label: "恒星種別",
+
+    // Exobiology completion & filter
+    hide_completed_bio: "スキャン完了天体を非表示",
+    bio_status_analyzed: "スキャン完了 (3/3 確定)",
+    bio_status_sample_2: "サンプル採取中 (2/3)",
+    bio_status_sample_1: "サンプル採取中 (1/3)",
+    bio_body_all_completed: "全Bioスキャン完了",
+    
+    // Credits
+    credits_title: "謝辞 & クレジット",
+    credits_fdev: "Frontier Developments: Elite Dangerous の世界とジャーナルAPI",
+    credits_canonn: "Canonn Research Group: Exobiology 生体予測モデル・データリファレンス",
+    credits_google: "Google & Gemini Flash (Antigravity): アプリケーション開発・ペアプログラミング支援"
   },
   en: {
     // Header
@@ -315,7 +325,20 @@ const i18n = {
     tidal_locked_no: "No",
     hours_unit: "hours",
     days_unit: "days",
-    star_type_label: "Star Class"
+    star_type_label: "Star Class",
+
+    // Exobiology completion & filter
+    hide_completed_bio: "Hide Completed Bodies",
+    bio_status_analyzed: "Scan Analyzed (3/3 Complete)",
+    bio_status_sample_2: "Sampling In Progress (2/3)",
+    bio_status_sample_1: "Sampling Logged (1/3)",
+    bio_body_all_completed: "All Bio Scanned",
+    
+    // Credits
+    credits_title: "Credits & Acknowledgements",
+    credits_fdev: "Frontier Developments: Elite Dangerous universe & Journal API",
+    credits_canonn: "Canonn Research Group: Exobiology prediction models & research database",
+    credits_google: "Google & Gemini Flash (Antigravity): Application development & pair programming"
   }
 };
 

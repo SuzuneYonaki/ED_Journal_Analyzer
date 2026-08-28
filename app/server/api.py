@@ -424,31 +424,48 @@ def get_system_detail(system_address: int):
 
     conn.close()
 
-    # Deduplicate and group scanned organics by body_id / body_name
+    # Deduplicate and group scanned organics by body_id / body_name, tracking latest / highest stage
+    # Stage priority: Analyse (3) > Sample (2) > Log (1)
+    stage_priority = {"analyse": 3, "sample": 2, "log": 1}
+
     organics_by_body = {}
-    seen_species_system = set()
-    system_scanned_organics = []
+    seen_species_system = {}
 
     for org in raw_organics:
         b_id = org.get("body_id")
         sp = org.get("species_localised") or org.get("species") or org.get("genus_localised") or org.get("genus") or "Unknown"
-        
-        # Unique per body
+        stype = (org.get("scan_type") or "").lower()
+        sp_priority = stage_priority.get(stype, 1)
+
+        # Unique per body (keep highest stage)
         if b_id not in organics_by_body:
             organics_by_body[b_id] = {}
         
         if sp not in organics_by_body[b_id]:
-            organics_by_body[b_id][sp] = org
+            org_copy = dict(org)
+            org_copy["stage_level"] = sp_priority
+            org_copy["is_completed"] = (sp_priority == 3)
+            organics_by_body[b_id][sp] = org_copy
+        else:
+            existing_stage = organics_by_body[b_id][sp].get("stage_level", 1)
+            if sp_priority > existing_stage:
+                org_copy = dict(org)
+                org_copy["stage_level"] = sp_priority
+                org_copy["is_completed"] = (sp_priority == 3)
+                organics_by_body[b_id][sp] = org_copy
 
         # Unique per system
-        if sp not in seen_species_system:
-            seen_species_system.add(sp)
-            system_scanned_organics.append(org)
+        if sp not in seen_species_system or sp_priority > seen_species_system[sp].get("stage_level", 1):
+            org_sys = dict(org)
+            org_sys["stage_level"] = sp_priority
+            org_sys["is_completed"] = (sp_priority == 3)
+            seen_species_system[sp] = org_sys
 
+    system_scanned_organics = list(seen_species_system.values())
     system_bio_total_base = 0
     system_bio_total_first = 0
     system_bio_signals_count = 0
-    system_bio_scanned_count = len(system_scanned_organics)
+    system_bio_completed_count = sum(1 for s in system_scanned_organics if s.get("is_completed"))
 
     # Attach Exobiology information & totals to each body
     for b in bodies:
@@ -465,6 +482,11 @@ def get_system_detail(system_address: int):
         b_scanned_list = list(body_scanned_map.values())
         b["scanned_organics"] = b_scanned_list
         b["scanned_count"] = len(b_scanned_list)
+
+        completed_count = sum(1 for s in b_scanned_list if s.get("is_completed"))
+        b["completed_bio_count"] = completed_count
+        # A body is fully completed if it has bio signals and all are analysed, OR if bio_sig == 0 but scanned >= 1 completed
+        b["is_bio_completed"] = (bio_sig > 0 and completed_count >= bio_sig) or (bio_sig == 0 and completed_count > 0)
 
         # Candidate exobiology predictions (filtering out already scanned species)
         scanned_species_names = {

@@ -88,6 +88,11 @@
         <button id="btn-lang-en" class="view-btn" style="padding: 4px 8px; font-size: 0.75rem;">EN</button>
       </div>
 
+      <!-- Credits Button -->
+      <button id="btn-credits-open" class="view-btn" style="padding: 4px 8px; font-size: 0.75rem; color: var(--text-secondary);" title="謝辞 & クレジット">
+        <span>📜 Credits</span>
+      </button>
+
       <button id="btn-rescan" class="btn-primary">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
         <span data-i18n="btn_rescan">ログスキャン</span>
@@ -243,6 +248,13 @@
         <button id="btn-view-flat" class="view-btn" data-i18n="view_flat">天体一覧</button>
         <button id="btn-view-bio" class="view-btn" style="color: var(--ed-green); border-color: rgba(0, 255, 136, 0.4);" data-i18n="view_bio">🌱 Bio天体のみ</button>
         <button id="btn-view-visits" class="view-btn" data-i18n="view_visits">過去訪問履歴</button>
+        
+        <!-- Bio-only view filter -->
+        <label id="bio-filter-hide-completed-container" style="display: none; align-items: center; gap: 4px; font-size: 0.75rem; color: #a7f3d0; cursor: pointer; margin-left: 8px; background: rgba(0, 255, 136, 0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(0, 255, 136, 0.3);">
+          <input type="checkbox" id="cb-hide-completed-bio" style="cursor: pointer;">
+          <span data-i18n="hide_completed_bio">スキャン完了天体を非表示</span>
+        </label>
+
         <div style="flex: 1;"></div>
         <span style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="body_sort_label">天体ソート:</span>
         <select id="body-sort-select" class="sort-select" style="font-size: 0.75rem; padding: 2px 6px;">
@@ -377,6 +389,33 @@
         <div class="inspector-section" id="section-rings" style="display: none;">
           <div class="section-heading" data-i18n="section_rings">💍 リングシステム</div>
           <div id="inspect-rings-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Credits & Acknowledgements Modal -->
+  <div id="credits-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 data-i18n="credits_title">📜 謝辞 & クレジット</h3>
+        <button id="btn-credits-close" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="line-height: 1.6; font-size: 0.85rem; color: var(--text-primary);">
+        <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+          <div style="font-weight: bold; color: var(--ed-orange); font-size: 0.95rem;">🚀 Frontier Developments</div>
+          <div style="color: var(--text-secondary); margin-top: 2px;" data-i18n="credits_fdev">Elite Dangerous の広大な宇宙とジャーナルログAPI仕様を提供</div>
+        </div>
+        <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+          <div style="font-weight: bold; color: var(--ed-green); font-size: 0.95rem;">🔬 Canonn Research Group</div>
+          <div style="color: var(--text-secondary); margin-top: 2px;" data-i18n="credits_canonn">Exobiology（生体シグナル）の出現条件予測モデル・Codex生物データベース・コロニー距離研究データのリファレンス</div>
+        </div>
+        <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+          <div style="font-weight: bold; color: var(--ed-cyan); font-size: 0.95rem;">✨ Google & Gemini Flash (Antigravity)</div>
+          <div style="color: var(--text-secondary); margin-top: 2px;" data-i18n="credits_google">リアルタイム解析アーキテクチャの設計、自動化パイプラインおよびUIコードの実装支援・ペアプログラミング</div>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; margin-top: 8px;">
+          Elite Dangerous Journal Analyzer & Exploration Orrery &bull; Built with FastAPI, PyWebView & Vanilla JS
         </div>
       </div>
     </div>

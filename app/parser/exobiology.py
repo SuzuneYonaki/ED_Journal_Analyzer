@@ -1,8 +1,20 @@
 """
 Elite Dangerous Odyssey Exobiology Database & Prediction Engine.
-Contains updated payout tables (post-Update 14) and atmosphere/temperature conditions
-for determining potential botanical/fungal species and their sample values.
+Data, species classification, and atmospheric/environmental prediction conditions
+are based on and refined from the research provided by the Canonn Research Group (Canonn ED-Biology / Canonn R&D).
+
+Credits & Acknowledgements:
+- Frontier Developments: Elite Dangerous and Game Journal API
+- Canonn Research Group: Exobiology prediction tables, species data, and colony distance data
+- Google & Gemini Flash (Antigravity): Architecture design, code generation, and pair-programming
+- EDCD / EDDN Community: Journal schemas and community documentation
 """
+
+CANONN_CREDITS = {
+    "organization": "Canonn Research Group",
+    "field": "Odyssey Exobiology & Codex Research",
+    "url": "https://canonn.science/codex/biology/"
+}
 
 EXOBIOLOGY_SPECIES_DB = {
     # Stratum
