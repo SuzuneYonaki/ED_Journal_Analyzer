@@ -316,6 +316,9 @@ def get_systems(
     conn = get_db_connection()
     c = conn.cursor()
 
+    page = max(1, page or 1)
+    limit = min(500, max(1, limit or 50))
+
     # Determine CMDR location if not provided
     cur_loc = get_current_cmdr_location(conn)
     cx = cmdr_x if cmdr_x is not None else (cur_loc["star_pos_x"] if cur_loc else None)

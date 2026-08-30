@@ -13,15 +13,24 @@ from typing import Dict, List, Any, Optional
 
 from app.parser.exobiology_rules import EXOBIOLOGY_RULES, GENUS_DEFAULTS
 
-# Load external Canonn Research JSON rules if present
+# Load external Canonn Research JSON rules dynamically (SSOT)
 CANONN_RULES_FILE = Path(__file__).resolve().parents[1] / "data" / "canonn_rules.json"
-CANONN_DATA: Dict[str, Any] = {}
-if CANONN_RULES_FILE.is_file():
-    try:
-        with CANONN_RULES_FILE.open("r", encoding="utf-8") as f:
-            CANONN_DATA = json.load(f)
-    except Exception as e:
-        print(f"[Exobiology] Error reading canonn_rules.json: {e}")
+
+def get_effective_exobiology_rules() -> Dict[str, Any]:
+    """
+    Dynamically loads and returns the effective Exobiology rules.
+    Prioritizes external canonn_rules.json if present, merged over static fallback rules.
+    """
+    rules = dict(EXOBIOLOGY_RULES)
+    if CANONN_RULES_FILE.is_file():
+        try:
+            with CANONN_RULES_FILE.open("r", encoding="utf-8") as f:
+                external_rules = json.load(f)
+                if isinstance(external_rules, dict):
+                    rules.update(external_rules)
+        except Exception as e:
+            print(f"[Exobiology] Error reading {CANONN_RULES_FILE}: {e}")
+    return rules
 
 
 def normalize_string(val: Optional[str]) -> str:
@@ -212,10 +221,11 @@ def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
     if "gas giant" in p_class or "stars" in p_class:
         return []
 
-    # Rule evaluation
+    # Rule evaluation from dynamic SSOT ruleset
     candidates: List[Dict[str, Any]] = []
+    active_rules = get_effective_exobiology_rules()
 
-    for species_name, rule in EXOBIOLOGY_RULES.items():
+    for species_name, rule in active_rules.items():
         # 1. Planet class check
         if not match_planet_class(rule.get("body_types", []), p_class):
             continue
@@ -319,8 +329,9 @@ def get_species_value(species_name: str, genus_name: Optional[str] = None) -> Di
     clean_name = species_name.replace("$Codex_Ent_", "").replace("_Name;", "").replace(";", "")
     clean_name = clean_name.replace("_", " ").strip()
 
-    # Exact match in rules
-    for k, v in EXOBIOLOGY_RULES.items():
+    # Exact match in active dynamic rules (SSOT)
+    active_rules = get_effective_exobiology_rules()
+    for k, v in active_rules.items():
         if k.lower() == clean_name.lower() or k.lower() in clean_name.lower():
             base = v.get("base_value", 1000000)
             return {
