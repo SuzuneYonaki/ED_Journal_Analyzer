@@ -11,10 +11,11 @@ from app.parser.exobiology import predict_exobiology_candidates, get_species_val
 from app.analyzer.anomaly_finder import detect_anomalies
 
 class JournalParser:
-    def __init__(self, db_conn=None):
+    def __init__(self, db_conn=None, event_callback=None):
         self.conn = db_conn or get_db_connection()
         self.cursor = self.conn.cursor()
         self.dirty_systems = set()
+        self.event_callback = event_callback
 
     def flush_dirty_systems(self):
         """Update system-level stats for all modified systems during parsing."""
@@ -36,24 +37,41 @@ class JournalParser:
         event = event_data.get("event")
         timestamp = event_data.get("timestamp", "")
 
-        if event in ["FSDJump", "Location", "CarrierJump"]:
+        if event == "StartJump":
+            if self.event_callback:
+                self.event_callback("StartJump", event_data)
+        elif event in ["FSDJump", "Location", "CarrierJump"]:
             self._handle_jump_or_location(event_data, timestamp)
+            if self.event_callback:
+                self.event_callback(event, event_data)
         elif event == "FSSDiscoveryScan":
             self._handle_fss_discovery_scan(event_data)
+            if self.event_callback:
+                self.event_callback("FSSDiscoveryScan", event_data)
         elif event == "Scan":
             self._handle_scan(event_data, timestamp)
             self._update_last_targeted_body(event_data.get("SystemAddress"), event_data.get("BodyID"), event_data.get("BodyName"))
+            if self.event_callback:
+                self.event_callback("Scan", event_data)
         elif event in ["FSSBodySignals", "SAASignalsFound"]:
             self._handle_signals(event_data)
             self._update_last_targeted_body(event_data.get("SystemAddress"), event_data.get("BodyID"), event_data.get("BodyName"))
+            if self.event_callback:
+                self.event_callback(event, event_data)
         elif event == "SAAScanComplete":
             self._handle_saa_scan_complete(event_data)
             self._update_last_targeted_body(event_data.get("SystemAddress"), event_data.get("BodyID"), event_data.get("BodyName"))
+            if self.event_callback:
+                self.event_callback("SAAScanComplete", event_data)
         elif event == "ScanOrganic":
             self._handle_scan_organic(event_data, timestamp)
             self._update_last_targeted_body(event_data.get("SystemAddress"), event_data.get("Body") or event_data.get("BodyID"))
+            if self.event_callback:
+                self.event_callback("ScanOrganic", event_data)
         elif event == "CodexEntry":
             self._handle_codex_entry(event_data, timestamp)
+            if self.event_callback:
+                self.event_callback("CodexEntry", event_data)
         elif event in ["ApproachBody", "Touchdown"]:
             self._update_last_targeted_body(event_data.get("SystemAddress"), event_data.get("BodyID"), event_data.get("Body"))
 
@@ -239,8 +257,9 @@ class JournalParser:
         fm_dss = values.get("first_mapped_dss", 0)
         max_pot = values.get("max_potential_value", 0)
 
-        # Predict Exobiology candidates
+        # Predict Exobiology candidates and preserve locked/confirmed organics
         bio_predictions = predict_exobiology_candidates(body_dict)
+        self._lock_confirmed_organics_into_predictions(sys_addr, body_id, bio_predictions)
         bio_pred_json = json.dumps(bio_predictions)
 
         # Detect Anomalies
@@ -320,6 +339,7 @@ class JournalParser:
         body_id = data.get("BodyID")
         body_name = data.get("BodyName")
         signals = data.get("Signals", [])
+        event_name = data.get("event", "")
 
         if sys_addr is None:
             return
@@ -345,6 +365,7 @@ class JournalParser:
                         confirmed_genuses_list.append(clean_g)
         
         confirmed_genuses_json = json.dumps(confirmed_genuses_list) if confirmed_genuses_list else None
+        is_saa_signals = (event_name == "SAASignalsFound")
 
         # Check if body exists
         if body_id is not None:
@@ -356,29 +377,34 @@ class JournalParser:
 
         existing = self.cursor.fetchone()
         if existing:
-            # Update existing record and recalculate bio predictions / anomalies
             b_dict = dict(existing)
             b_dict["bio_signals"] = bio_count
             b_dict["geo_signals"] = geo_count
+            if is_saa_signals:
+                b_dict["is_mapped_by_user"] = 1
+
             if confirmed_genuses_list:
                 b_dict["confirmed_genuses"] = confirmed_genuses_list
             elif existing["confirmed_genuses"]:
                 b_dict["confirmed_genuses"] = existing["confirmed_genuses"]
             
             bio_predictions = predict_exobiology_candidates(b_dict)
+            self._lock_confirmed_organics_into_predictions(sys_addr, body_id or existing["body_id"], bio_predictions)
             bio_pred_json = json.dumps(bio_predictions)
             anomalies = detect_anomalies(b_dict)
             anomalies_json = json.dumps(anomalies)
 
+            mapped_val = 1 if is_saa_signals else existing["is_mapped_by_user"]
             self.cursor.execute("""
                 UPDATE bodies SET
                     bio_signals = ?,
                     geo_signals = ?,
+                    is_mapped_by_user = ?,
                     confirmed_genuses = COALESCE(?, confirmed_genuses),
                     exobiology_predictions = ?,
                     anomalies_json = ?
                 WHERE id = ?
-            """, (bio_count, geo_count, confirmed_genuses_json, bio_pred_json, anomalies_json, existing["id"]))
+            """, (bio_count, geo_count, mapped_val, confirmed_genuses_json, bio_pred_json, anomalies_json, existing["id"]))
         else:
             # Insert stub body record if Scan hasn't occurred yet
             b_dict = {
@@ -387,9 +413,11 @@ class JournalParser:
                 "body_name": body_name or f"Body {body_id}",
                 "bio_signals": bio_count,
                 "geo_signals": geo_count,
+                "is_mapped_by_user": 1 if is_saa_signals else 0,
                 "confirmed_genuses": confirmed_genuses_list if confirmed_genuses_list else None
             }
             bio_predictions = predict_exobiology_candidates(b_dict)
+            self._lock_confirmed_organics_into_predictions(sys_addr, body_id or 0, bio_predictions)
             bio_pred_json = json.dumps(bio_predictions)
             anomalies = detect_anomalies(b_dict)
             anomalies_json = json.dumps(anomalies)
@@ -397,17 +425,66 @@ class JournalParser:
             self.cursor.execute("""
                 INSERT INTO bodies (
                     system_address, body_id, body_name, bio_signals, geo_signals,
-                    confirmed_genuses, exobiology_predictions, anomalies_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    is_mapped_by_user, confirmed_genuses, exobiology_predictions, anomalies_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(system_address, body_id) DO UPDATE SET
                     bio_signals = excluded.bio_signals,
                     geo_signals = excluded.geo_signals,
+                    is_mapped_by_user = CASE WHEN excluded.is_mapped_by_user = 1 THEN 1 ELSE bodies.is_mapped_by_user END,
                     confirmed_genuses = COALESCE(excluded.confirmed_genuses, bodies.confirmed_genuses),
                     exobiology_predictions = excluded.exobiology_predictions,
                     anomalies_json = excluded.anomalies_json
-            """, (sys_addr, body_id or 0, body_name or f"Body {body_id}", bio_count, geo_count, confirmed_genuses_json, bio_pred_json, anomalies_json))
+            """, (sys_addr, body_id or 0, body_name or f"Body {body_id}", bio_count, geo_count, 1 if is_saa_signals else 0, confirmed_genuses_json, bio_pred_json, anomalies_json))
 
         self.dirty_systems.add(sys_addr)
+
+    def _lock_confirmed_organics_into_predictions(self, sys_addr: int, body_id: int, predictions: list):
+        """Promote scanned organics to confirmed and lock them in the predictions list."""
+        if not sys_addr or body_id is None:
+            return
+        self.cursor.execute("""
+            SELECT species_localised, species, genus_localised, genus, scan_type
+            FROM scanned_organics
+            WHERE system_address = ? AND body_id = ?
+        """, (sys_addr, body_id))
+        rows = self.cursor.fetchall()
+        if not rows:
+            return
+
+        for row in rows:
+            sp_name = row["species_localised"] or row["species"] or ""
+            stype = (row["scan_type"] or "").lower()
+            stage_num = 3 if stype in ["analyse", "analyze"] else (2 if stype == "sample" else 1)
+
+            # Check if species matches any prediction
+            matched = False
+            for p in predictions:
+                if sp_name.lower() in p["species"].lower() or p["species"].lower() in sp_name.lower():
+                    p["confidence"] = "confirmed"
+                    p["status"] = "Confirmed"
+                    p["stage_level"] = stage_num
+                    p["locked"] = True
+                    matched = True
+                    break
+
+            # If not in predictions (rare edge case), append as confirmed
+            if not matched and sp_name:
+                val_info = get_species_value(sp_name, row["genus_localised"] or row["genus"])
+                base_v = val_info.get("base_value", 1000000)
+                predictions.insert(0, {
+                    "species": sp_name,
+                    "genus": row["genus_localised"] or row["genus"] or sp_name.split()[0],
+                    "species_variant": sp_name,
+                    "variant_color": "",
+                    "base_value": base_v,
+                    "first_discovery_value": base_v * 5,
+                    "colony_distance_m": val_info.get("colony_distance_m", 500),
+                    "fit_score": 1.0,
+                    "confidence": "confirmed",
+                    "status": "Confirmed",
+                    "stage_level": stage_num,
+                    "locked": True
+                })
 
     def _handle_saa_scan_complete(self, data: dict):
         sys_addr = data.get("SystemAddress")
@@ -428,7 +505,6 @@ class JournalParser:
 
     def _handle_scan_organic(self, data: dict, timestamp: str):
         sys_addr = data.get("SystemAddress")
-        # In Journal, ScanOrganic uses "Body" for the body ID (sometimes "BodyID")
         body_id = data.get("Body") if data.get("Body") is not None else data.get("BodyID")
         scan_type = data.get("ScanType", "")
         genus = data.get("Genus", "")
@@ -442,7 +518,6 @@ class JournalParser:
         base_val = val_info.get("base_value", 0)
         fd_val = val_info.get("first_discovery_value", 0)
 
-        # Lookup body_name from bodies table if available
         body_name = None
         if sys_addr is not None and body_id is not None:
             self.cursor.execute("SELECT body_name FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
@@ -460,6 +535,19 @@ class JournalParser:
                 sys_addr, body_id, body_name, timestamp, scan_type, genus, genus_loc,
                 species, species_loc, variant, variant_loc, base_val, fd_val
             ))
+
+            # Re-lock predictions on existing body if present
+            if body_id is not None:
+                self.cursor.execute("SELECT id, exobiology_predictions FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
+                body_row = self.cursor.fetchone()
+                if body_row and body_row["exobiology_predictions"]:
+                    try:
+                        preds = json.loads(body_row["exobiology_predictions"])
+                        self._lock_confirmed_organics_into_predictions(sys_addr, body_id, preds)
+                        self.cursor.execute("UPDATE bodies SET exobiology_predictions = ? WHERE id = ?", (json.dumps(preds), body_row["id"]))
+                    except Exception:
+                        pass
+
             self.dirty_systems.add(sys_addr)
 
     def _handle_codex_entry(self, data: dict, timestamp: str):

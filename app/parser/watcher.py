@@ -8,7 +8,7 @@ from app.parser.journal_parser import JournalParser
 from app.db.database import get_db_connection
 
 class JournalWatcher(threading.Thread):
-    def __init__(self, journal_dirs: Union[str, Path, List[Union[str, Path]]], interval: float = 0.5, on_update_callback=None):
+    def __init__(self, journal_dirs: Union[str, Path, List[Union[str, Path]]], interval: float = 0.5, on_update_callback=None, on_event_callback=None):
         super().__init__(daemon=True)
         if isinstance(journal_dirs, (str, Path)):
             self.journal_dirs = [Path(journal_dirs)]
@@ -16,6 +16,7 @@ class JournalWatcher(threading.Thread):
             self.journal_dirs = [Path(d) for d in journal_dirs]
         self.interval = max(0.2, interval)
         self.on_update_callback = on_update_callback
+        self.on_event_callback = on_event_callback
         self.running = True
         self.conn = None
         self.parser = None
@@ -24,10 +25,17 @@ class JournalWatcher(threading.Thread):
         self.last_dir_scan_time = 0.0
         self.files_scan_interval = 1.0 # Rescan directories for new files every 1 second
 
+    def _handle_journal_event(self, event_name: str, event_data: dict):
+        if self.on_event_callback:
+            try:
+                self.on_event_callback(event_name, event_data)
+            except Exception as e:
+                print(f"[Watcher Event Error] {e}")
+
     def run(self):
         # Initialize connection inside the worker thread
         self.conn = get_db_connection()
-        self.parser = JournalParser(self.conn)
+        self.parser = JournalParser(self.conn, event_callback=self._handle_journal_event)
         self._scan_active_files()
 
         while self.running:

@@ -10,8 +10,11 @@ def get_db_connection():
     conn.execute("PRAGMA synchronous = NORMAL;")
     return conn
 
-def init_db():
-    conn = get_db_connection()
+def init_db(conn=None):
+    close_after = False
+    if conn is None:
+        conn = get_db_connection()
+        close_after = True
     cursor = conn.cursor()
 
     # Systems table
@@ -275,7 +278,8 @@ def init_db():
     """)
 
     conn.commit()
-    conn.close()
+    if close_after:
+        conn.close()
 
 if __name__ == "__main__":
     init_db()

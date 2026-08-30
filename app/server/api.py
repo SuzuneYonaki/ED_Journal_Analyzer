@@ -82,6 +82,16 @@ class LiveConnectionManager:
         if self.loop and self.loop.is_running() and self.active_connections:
             asyncio.run_coroutine_threadsafe(self.broadcast_json(payload), self.loop)
 
+    def notify_event_from_thread(self, event_name: str, event_data: dict):
+        payload = {
+            "type": "journal_event",
+            "event": event_name,
+            "data": event_data,
+            "timestamp": time.time()
+        }
+        if self.loop and self.loop.is_running() and self.active_connections:
+            asyncio.run_coroutine_threadsafe(self.broadcast_json(payload), self.loop)
+
 manager = LiveConnectionManager()
 watcher_instance: Optional[JournalWatcher] = None
 
@@ -96,12 +106,16 @@ async def on_startup():
 def on_journal_file_updated(file_path: Optional[str] = None):
     manager.notify_update_from_thread(file_path)
 
+def on_journal_event(event_name: str, event_data: dict):
+    manager.notify_event_from_thread(event_name, event_data)
+
 def start_watcher():
     global watcher_instance
     if watcher_instance:
         watcher_instance.stop()
 
     candidate_dirs = [
+        get_saved_journal_dir(),
         DEFAULT_JOURNAL_DIR,
         BASE_DIR,
         Path.cwd()
@@ -118,7 +132,8 @@ def start_watcher():
     watcher_instance = JournalWatcher(
         journal_dirs=watched_dirs,
         interval=0.4,
-        on_update_callback=on_journal_file_updated
+        on_update_callback=on_journal_file_updated,
+        on_event_callback=on_journal_event
     )
     watcher_instance.start()
 

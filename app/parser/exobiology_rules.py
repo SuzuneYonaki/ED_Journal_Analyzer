@@ -1,0 +1,1581 @@
+"""
+Exobiology Condition Rule Dataset Module for Elite Dangerous.
+Defines environmental parameter requirements, physical thresholds,
+base exploration payouts, minimum colony distances, and star color variants
+for all biological species based on Canonn Research Group and BioInsights matrices.
+
+All text, variable names, and comments in this module are strictly English ASCII.
+"""
+
+from typing import Dict, List, Any, Optional
+
+EXOBIOLOGY_RULES: Dict[str, Dict[str, Any]] = {
+    # -------------------------------------------------------------------------
+    # ALEOIDA
+    # -------------------------------------------------------------------------
+    "Aleoida Arcus": {
+        "genus": "Aleoida",
+        "species": "Aleoida Arcus",
+        "base_value": 7252500,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 185.0,
+        "press_min": 0.015, "press_max": 0.105,
+        "grav_min": 0.04, "grav_max": 0.30,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "K": "Turquoise",
+            "M": "Emerald", "L": "Lime", "T": "Sage", "TTS": "Mauve",
+            "Y": "Amethyst", "W": "Grey", "D": "Indigo", "N": "Ocher", "O": "Yellow", "G": "Teal"
+        }
+    },
+    "Aleoida Coronamus": {
+        "genus": "Aleoida",
+        "species": "Aleoida Coronamus",
+        "base_value": 6284600,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 195.0,
+        "press_min": 0.005, "press_max": 0.085,
+        "grav_min": 0.05, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "K": "Turquoise",
+            "M": "Emerald", "L": "Lime", "T": "Sage", "TTS": "Mauve",
+            "Y": "Amethyst", "W": "Grey", "D": "Indigo", "N": "Ocher", "O": "Yellow", "G": "Teal"
+        }
+    },
+    "Aleoida Gravis": {
+        "genus": "Aleoida",
+        "species": "Aleoida Gravis",
+        "base_value": 12934100,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich", "ammonia"],
+        "temp_min": 150.0, "temp_max": 190.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.03, "grav_max": 0.30,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "K": "Turquoise",
+            "M": "Emerald", "L": "Lime", "T": "Sage", "TTS": "Mauve",
+            "Y": "Amethyst", "W": "Grey", "D": "Indigo", "N": "Ocher", "O": "Yellow", "G": "Teal"
+        }
+    },
+    "Aleoida Laminata": {
+        "genus": "Aleoida",
+        "species": "Aleoida Laminata",
+        "base_value": 3724800,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 200.0,
+        "press_min": 0.010, "press_max": 0.095,
+        "grav_min": 0.04, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "K": "Turquoise",
+            "M": "Emerald", "L": "Lime", "T": "Sage", "TTS": "Mauve",
+            "Y": "Amethyst", "W": "Grey", "D": "Indigo", "N": "Ocher", "O": "Yellow", "G": "Teal"
+        }
+    },
+    "Aleoida Spica": {
+        "genus": "Aleoida",
+        "species": "Aleoida Spica",
+        "base_value": 3280300,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 175.0, "temp_max": 210.0,
+        "press_min": 0.010, "press_max": 0.095,
+        "grav_min": 0.04, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "K": "Turquoise",
+            "M": "Emerald", "L": "Lime", "T": "Sage", "TTS": "Mauve",
+            "Y": "Amethyst", "W": "Grey", "D": "Indigo", "N": "Ocher", "O": "Yellow", "G": "Teal"
+        }
+    },
+    "Aleoida Viride": {
+        "genus": "Aleoida",
+        "species": "Aleoida Viride",
+        "base_value": 4668500,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 175.0, "temp_max": 200.0,
+        "press_min": 0.010, "press_max": 0.095,
+        "grav_min": 0.04, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "K": "Turquoise",
+            "M": "Emerald", "L": "Lime", "T": "Sage", "TTS": "Mauve",
+            "Y": "Amethyst", "W": "Grey", "D": "Indigo", "N": "Ocher", "O": "Yellow", "G": "Teal"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # BACTERIUM
+    # -------------------------------------------------------------------------
+    "Bacterium Acis": {
+        "genus": "Bacterium",
+        "species": "Bacterium Acis",
+        "base_value": 1000000,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["water", "water-rich"],
+        "temp_min": 100.0, "temp_max": 350.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+    "Bacterium Alcyoneum": {
+        "genus": "Bacterium",
+        "species": "Bacterium Alcyoneum",
+        "base_value": 1656500,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["argon", "argon-rich"],
+        "temp_min": 80.0, "temp_max": 300.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+    "Bacterium Aurasus": {
+        "genus": "Bacterium",
+        "species": "Bacterium Aurasus",
+        "base_value": 1000000,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 140.0, "temp_max": 300.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+    "Bacterium Bullaris": {
+        "genus": "Bacterium",
+        "species": "Bacterium Bullaris",
+        "base_value": 1133000,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["nitrogen", "nitrogen-rich"],
+        "temp_min": 50.0, "temp_max": 160.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+    "Bacterium Cerbrus": {
+        "genus": "Bacterium",
+        "species": "Bacterium Cerbrus",
+        "base_value": 1689700,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 150.0, "temp_max": 350.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+    "Bacterium Informis": {
+        "genus": "Bacterium",
+        "species": "Bacterium Informis",
+        "base_value": 8454500,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["ammonia", "ammonia-rich"],
+        "temp_min": 120.0, "temp_max": 220.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+    "Bacterium Nebulus": {
+        "genus": "Bacterium",
+        "species": "Bacterium Nebulus",
+        "base_value": 5262700,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["methane", "methane-rich"],
+        "temp_min": 80.0, "temp_max": 200.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+    "Bacterium Omentum": {
+        "genus": "Bacterium",
+        "species": "Bacterium Omentum",
+        "base_value": 4443900,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["water", "water-rich", "carbon dioxide", "ammonia"],
+        "temp_min": 120.0, "temp_max": 280.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+    "Bacterium Scopulum": {
+        "genus": "Bacterium",
+        "species": "Bacterium Scopulum",
+        "base_value": 4909700,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["argon", "argon-rich", "nitrogen", "methane"],
+        "temp_min": 60.0, "temp_max": 180.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+    "Bacterium Verrata": {
+        "genus": "Bacterium",
+        "species": "Bacterium Verrata",
+        "base_value": 3897100,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 160.0, "temp_max": 320.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+    "Bacterium Vesicula": {
+        "genus": "Bacterium",
+        "species": "Bacterium Vesicula",
+        "base_value": 1000000,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["neon", "neon-rich"],
+        "temp_min": 40.0, "temp_max": 120.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+    "Bacterium Volu": {
+        "genus": "Bacterium",
+        "species": "Bacterium Volu",
+        "base_value": 7794300,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "rocky ice body", "icy body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 310.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Teal", "B": "Teal", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta",
+            "TTS": "Aquamarine", "W": "White", "D": "Grey", "N": "Cyan"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # CACTOIDA
+    # -------------------------------------------------------------------------
+    "Cactoida Cortexum": {
+        "genus": "Cactoida",
+        "species": "Cactoida Cortexum",
+        "base_value": 3667600,
+        "colony_distance_m": 300,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 280.0, "temp_max": 380.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.10, "grav_max": 0.50,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Yellow", "B": "Green", "A": "Teal", "F": "Turquoise", "G": "Emerald",
+            "K": "Lime", "M": "Sage", "L": "Mauve", "T": "Amethyst", "Y": "Indigo", "W": "Grey"
+        }
+    },
+    "Cactoida Lapis": {
+        "genus": "Cactoida",
+        "species": "Cactoida Lapis",
+        "base_value": 2497300,
+        "colony_distance_m": 300,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 280.0, "temp_max": 360.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.10, "grav_max": 0.50,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Yellow", "B": "Green", "A": "Teal", "F": "Turquoise", "G": "Emerald",
+            "K": "Lime", "M": "Sage", "L": "Mauve", "T": "Amethyst", "Y": "Indigo", "W": "Grey"
+        }
+    },
+    "Cactoida Peperistis": {
+        "genus": "Cactoida",
+        "species": "Cactoida Peperistis",
+        "base_value": 2497300,
+        "colony_distance_m": 300,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 280.0, "temp_max": 380.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.10, "grav_max": 0.50,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Yellow", "B": "Green", "A": "Teal", "F": "Turquoise", "G": "Emerald",
+            "K": "Lime", "M": "Sage", "L": "Mauve", "T": "Amethyst", "Y": "Indigo", "W": "Grey"
+        }
+    },
+    "Cactoida Proteus": {
+        "genus": "Cactoida",
+        "species": "Cactoida Proteus",
+        "base_value": 3667600,
+        "colony_distance_m": 300,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 280.0, "temp_max": 380.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.10, "grav_max": 0.50,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Yellow", "B": "Green", "A": "Teal", "F": "Turquoise", "G": "Emerald",
+            "K": "Lime", "M": "Sage", "L": "Mauve", "T": "Amethyst", "Y": "Indigo", "W": "Grey"
+        }
+    },
+    "Cactoida Pulverulentus": {
+        "genus": "Cactoida",
+        "species": "Cactoida Pulverulentus",
+        "base_value": 3667600,
+        "colony_distance_m": 300,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 280.0, "temp_max": 380.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.10, "grav_max": 0.50,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Yellow", "B": "Green", "A": "Teal", "F": "Turquoise", "G": "Emerald",
+            "K": "Lime", "M": "Sage", "L": "Mauve", "T": "Amethyst", "Y": "Indigo", "W": "Grey"
+        }
+    },
+    "Cactoida Vermis": {
+        "genus": "Cactoida",
+        "species": "Cactoida Vermis",
+        "base_value": 16484100,
+        "colony_distance_m": 300,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 280.0, "temp_max": 380.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.10, "grav_max": 0.50,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Yellow", "B": "Green", "A": "Teal", "F": "Turquoise", "G": "Emerald",
+            "K": "Lime", "M": "Sage", "L": "Mauve", "T": "Amethyst", "Y": "Indigo", "W": "Grey"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # CLYPEUS
+    # -------------------------------------------------------------------------
+    "Clypeus Lacrimata": {
+        "genus": "Clypeus",
+        "species": "Clypeus Lacrimata",
+        "base_value": 8418600,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["water", "water-rich", "carbon dioxide"],
+        "temp_min": 170.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Clypeus Margaritus": {
+        "genus": "Clypeus",
+        "species": "Clypeus Margaritus",
+        "base_value": 11849100,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["water", "water-rich", "carbon dioxide"],
+        "temp_min": 170.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Clypeus Speculumi": {
+        "genus": "Clypeus",
+        "species": "Clypeus Speculumi",
+        "base_value": 16890200,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["water", "water-rich", "carbon dioxide"],
+        "temp_min": 170.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # CONCHA
+    # -------------------------------------------------------------------------
+    "Concha Aureolas": {
+        "genus": "Concha",
+        "species": "Concha Aureolas",
+        "base_value": 7794300,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich", "ammonia"],
+        "temp_min": 140.0, "temp_max": 220.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Concha Biconvexi": {
+        "genus": "Concha",
+        "species": "Concha Biconvexi",
+        "base_value": 19010800,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich", "nitrogen"],
+        "temp_min": 140.0, "temp_max": 220.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Concha Labiata": {
+        "genus": "Concha",
+        "species": "Concha Labiata",
+        "base_value": 2368400,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 140.0, "temp_max": 220.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Concha Renibus": {
+        "genus": "Concha",
+        "species": "Concha Renibus",
+        "base_value": 4571100,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 140.0, "temp_max": 220.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # ELECTRICAE
+    # -------------------------------------------------------------------------
+    "Electricae Pluma": {
+        "genus": "Electricae",
+        "species": "Electricae Pluma",
+        "base_value": 6284600,
+        "colony_distance_m": 1000,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "icy body"],
+        "atmosphere_types": ["neon", "neon-rich", "argon", "argon-rich", "methane"],
+        "temp_min": 30.0, "temp_max": 120.0,
+        "press_min": 0.001, "press_max": 0.100,
+        "grav_min": 0.01, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Cyan", "A": "Blue", "F": "Green", "G": "Yellow",
+            "K": "Orange", "M": "Red", "L": "Purple", "T": "Magenta", "Y": "Violet"
+        }
+    },
+    "Electricae Radial": {
+        "genus": "Electricae",
+        "species": "Electricae Radial",
+        "base_value": 6284600,
+        "colony_distance_m": 1000,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "icy body"],
+        "atmosphere_types": ["neon", "neon-rich", "argon", "argon-rich", "methane"],
+        "temp_min": 30.0, "temp_max": 120.0,
+        "press_min": 0.001, "press_max": 0.100,
+        "grav_min": 0.01, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Cyan", "A": "Blue", "F": "Green", "G": "Yellow",
+            "K": "Orange", "M": "Red", "L": "Purple", "T": "Magenta", "Y": "Violet"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # FONTICULUA
+    # -------------------------------------------------------------------------
+    "Fonticulua Campestris": {
+        "genus": "Fonticulua",
+        "species": "Fonticulua Campestris",
+        "base_value": 1000000,
+        "colony_distance_m": 500,
+        "body_types": ["icy body", "rocky ice body"],
+        "atmosphere_types": ["water", "water-rich", "carbon dioxide", "ammonia"],
+        "temp_min": 80.0, "temp_max": 180.0,
+        "press_min": 0.001, "press_max": 0.080,
+        "grav_min": 0.01, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Amethyst", "A": "Emerald", "F": "Lime", "G": "Teal",
+            "K": "Turquoise", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Fonticulua Cuniculum": {
+        "genus": "Fonticulua",
+        "species": "Fonticulua Cuniculum",
+        "base_value": 3110600,
+        "colony_distance_m": 500,
+        "body_types": ["icy body", "rocky ice body"],
+        "atmosphere_types": ["argon", "argon-rich", "methane"],
+        "temp_min": 60.0, "temp_max": 150.0,
+        "press_min": 0.001, "press_max": 0.080,
+        "grav_min": 0.01, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Amethyst", "A": "Emerald", "F": "Lime", "G": "Teal",
+            "K": "Turquoise", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Fonticulua Digitatum": {
+        "genus": "Fonticulua",
+        "species": "Fonticulua Digitatum",
+        "base_value": 1888400,
+        "colony_distance_m": 500,
+        "body_types": ["icy body", "rocky ice body"],
+        "atmosphere_types": ["water", "water-rich", "nitrogen"],
+        "temp_min": 70.0, "temp_max": 160.0,
+        "press_min": 0.001, "press_max": 0.080,
+        "grav_min": 0.01, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Amethyst", "A": "Emerald", "F": "Lime", "G": "Teal",
+            "K": "Turquoise", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Fonticulua Fluctus": {
+        "genus": "Fonticulua",
+        "species": "Fonticulua Fluctus",
+        "base_value": 20000000,
+        "colony_distance_m": 500,
+        "body_types": ["icy body", "rocky ice body"],
+        "atmosphere_types": ["ammonia", "ammonia-rich", "water"],
+        "temp_min": 90.0, "temp_max": 190.0,
+        "press_min": 0.001, "press_max": 0.080,
+        "grav_min": 0.01, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Amethyst", "A": "Emerald", "F": "Lime", "G": "Teal",
+            "K": "Turquoise", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Fonticulua Lapida": {
+        "genus": "Fonticulua",
+        "species": "Fonticulua Lapida",
+        "base_value": 3110600,
+        "colony_distance_m": 500,
+        "body_types": ["icy body", "rocky ice body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 80.0, "temp_max": 180.0,
+        "press_min": 0.001, "press_max": 0.080,
+        "grav_min": 0.01, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Amethyst", "A": "Emerald", "F": "Lime", "G": "Teal",
+            "K": "Turquoise", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Fonticulua Segmentatus": {
+        "genus": "Fonticulua",
+        "species": "Fonticulua Segmentatus",
+        "base_value": 19010800,
+        "colony_distance_m": 500,
+        "body_types": ["icy body", "rocky ice body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich", "water"],
+        "temp_min": 80.0, "temp_max": 180.0,
+        "press_min": 0.001, "press_max": 0.080,
+        "grav_min": 0.01, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Amethyst", "A": "Emerald", "F": "Lime", "G": "Teal",
+            "K": "Turquoise", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Fonticulua Upupam": {
+        "genus": "Fonticulua",
+        "species": "Fonticulua Upupam",
+        "base_value": 5749100,
+        "colony_distance_m": 500,
+        "body_types": ["icy body", "rocky ice body"],
+        "atmosphere_types": ["methane", "methane-rich", "nitrogen"],
+        "temp_min": 60.0, "temp_max": 160.0,
+        "press_min": 0.001, "press_max": 0.080,
+        "grav_min": 0.01, "grav_max": 0.35,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Amethyst", "A": "Emerald", "F": "Lime", "G": "Teal",
+            "K": "Turquoise", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # FRUTEXA
+    # -------------------------------------------------------------------------
+    "Frutexa Aculeata": {
+        "genus": "Frutexa",
+        "species": "Frutexa Aculeata",
+        "base_value": 7794300,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Teal", "A": "Green", "F": "Lime", "G": "Turquoise",
+            "K": "Emerald", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Frutexa Collum": {
+        "genus": "Frutexa",
+        "species": "Frutexa Collum",
+        "base_value": 16484100,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich", "ammonia"],
+        "temp_min": 160.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Teal", "A": "Green", "F": "Lime", "G": "Turquoise",
+            "K": "Emerald", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Frutexa Flabellum": {
+        "genus": "Frutexa",
+        "species": "Frutexa Flabellum",
+        "base_value": 19010800,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Teal", "A": "Green", "F": "Lime", "G": "Turquoise",
+            "K": "Emerald", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Frutexa Flecto": {
+        "genus": "Frutexa",
+        "species": "Frutexa Flecto",
+        "base_value": 7794300,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Teal", "A": "Green", "F": "Lime", "G": "Turquoise",
+            "K": "Emerald", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Frutexa Metallicum": {
+        "genus": "Frutexa",
+        "species": "Frutexa Metallicum",
+        "base_value": 16484100,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Teal", "A": "Green", "F": "Lime", "G": "Turquoise",
+            "K": "Emerald", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Frutexa Sannio": {
+        "genus": "Frutexa",
+        "species": "Frutexa Sannio",
+        "base_value": 1656500,
+        "colony_distance_m": 150,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Teal", "A": "Green", "F": "Lime", "G": "Turquoise",
+            "K": "Emerald", "M": "Indigo", "L": "Violet", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # FUMEROLA
+    # -------------------------------------------------------------------------
+    "Fumerola Aquatis": {
+        "genus": "Fumerola",
+        "species": "Fumerola Aquatis",
+        "base_value": 6692200,
+        "colony_distance_m": 100,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "icy body"],
+        "atmosphere_types": ["water", "water-rich"],
+        "temp_min": 100.0, "temp_max": 350.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism_required": True,
+        "star_color_map": {
+            "O": "Teal", "B": "Cyan", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Fumerola Carbosis": {
+        "genus": "Fumerola",
+        "species": "Fumerola Carbosis",
+        "base_value": 6692200,
+        "colony_distance_m": 100,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 140.0, "temp_max": 380.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism_required": True,
+        "star_color_map": {
+            "O": "Teal", "B": "Cyan", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Fumerola Extremus": {
+        "genus": "Fumerola",
+        "species": "Fumerola Extremus",
+        "base_value": 16890200,
+        "colony_distance_m": 100,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["argon", "argon-rich", "methane", "nitrogen"],
+        "temp_min": 60.0, "temp_max": 200.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism_required": True,
+        "star_color_map": {
+            "O": "Teal", "B": "Cyan", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Fumerola Nitris": {
+        "genus": "Fumerola",
+        "species": "Fumerola Nitris",
+        "base_value": 7458100,
+        "colony_distance_m": 100,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "icy body"],
+        "atmosphere_types": ["nitrogen", "nitrogen-rich"],
+        "temp_min": 60.0, "temp_max": 180.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism_required": True,
+        "star_color_map": {
+            "O": "Teal", "B": "Cyan", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Fumerola Pinnata": {
+        "genus": "Fumerola",
+        "species": "Fumerola Pinnata",
+        "base_value": 6692200,
+        "colony_distance_m": 100,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 150.0, "temp_max": 350.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism_required": True,
+        "star_color_map": {
+            "O": "Teal", "B": "Cyan", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+    "Fumerola Polinices": {
+        "genus": "Fumerola",
+        "species": "Fumerola Polinices",
+        "base_value": 6692200,
+        "colony_distance_m": 100,
+        "body_types": ["high metal content body", "high metal content world", "rocky body", "icy body"],
+        "atmosphere_types": ["ammonia", "ammonia-rich"],
+        "temp_min": 100.0, "temp_max": 220.0,
+        "press_min": 0.001, "press_max": 0.150,
+        "grav_min": 0.01, "grav_max": 0.60,
+        "volcanism_required": True,
+        "star_color_map": {
+            "O": "Teal", "B": "Cyan", "A": "Green", "F": "Lime", "G": "Gold",
+            "K": "Yellow", "M": "Orange", "L": "Red", "T": "Mauve", "Y": "Magenta"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # OSSEUS
+    # -------------------------------------------------------------------------
+    "Osseus Cornibus": {
+        "genus": "Osseus",
+        "species": "Osseus Cornibus",
+        "base_value": 1483800,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 250.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Osseus Discus": {
+        "genus": "Osseus",
+        "species": "Osseus Discus",
+        "base_value": 12934100,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich", "ammonia"],
+        "temp_min": 160.0, "temp_max": 250.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Osseus Fractus": {
+        "genus": "Osseus",
+        "species": "Osseus Fractus",
+        "base_value": 4038100,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 250.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Osseus Pelleas": {
+        "genus": "Osseus",
+        "species": "Osseus Pelleas",
+        "base_value": 2497300,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 250.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Osseus Pumice": {
+        "genus": "Osseus",
+        "species": "Osseus Pumice",
+        "base_value": 3280300,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 250.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Osseus Spiralis": {
+        "genus": "Osseus",
+        "species": "Osseus Spiralis",
+        "base_value": 2497300,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 250.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # RADICOIDA
+    # -------------------------------------------------------------------------
+    "Radicoida Coronamus": {
+        "genus": "Radicoida",
+        "species": "Radicoida Coronamus",
+        "base_value": 7200000,
+        "colony_distance_m": 1000,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 450.0, "temp_max": 720.0,
+        "press_min": 0.005, "press_max": 0.080,
+        "grav_min": 0.04, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Orange", "B": "Orange", "A": "Orange", "F": "Orange",
+            "G": "Orange", "K": "Orange", "M": "Red", "L": "Red", "T": "Red", "Y": "Red"
+        }
+    },
+    "Radicoida Unica": {
+        "genus": "Radicoida",
+        "species": "Radicoida Unica",
+        "base_value": 7200000,
+        "colony_distance_m": 1000,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 450.0, "temp_max": 720.0,
+        "press_min": 0.005, "press_max": 0.080,
+        "grav_min": 0.04, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "O": "Orange", "B": "Orange", "A": "Orange", "F": "Orange",
+            "G": "Orange", "K": "Orange", "M": "Red", "L": "Red", "T": "Red", "Y": "Red"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # RECEPTA
+    # -------------------------------------------------------------------------
+    "Recepta Condensata": {
+        "genus": "Recepta",
+        "species": "Recepta Condensata",
+        "base_value": 14805700,
+        "colony_distance_m": 600,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich", "ammonia"],
+        "temp_min": 170.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Recepta Delta": {
+        "genus": "Recepta",
+        "species": "Recepta Delta",
+        "base_value": 16484100,
+        "colony_distance_m": 600,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 170.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Recepta Umbrux": {
+        "genus": "Recepta",
+        "species": "Recepta Umbrux",
+        "base_value": 12934100,
+        "colony_distance_m": 600,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich", "water"],
+        "temp_min": 170.0, "temp_max": 240.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # STRATUM
+    # -------------------------------------------------------------------------
+    "Stratum Araneamus": {
+        "genus": "Stratum",
+        "species": "Stratum Araneamus",
+        "base_value": 2497300,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Stratum Cucumisis": {
+        "genus": "Stratum",
+        "species": "Stratum Cucumisis",
+        "base_value": 19010800,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich", "ammonia"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Stratum Excutitus": {
+        "genus": "Stratum",
+        "species": "Stratum Excutitus",
+        "base_value": 2497300,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Stratum Frigus": {
+        "genus": "Stratum",
+        "species": "Stratum Frigus",
+        "base_value": 2634300,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 160.0, "temp_max": 250.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Stratum Laminascis": {
+        "genus": "Stratum",
+        "species": "Stratum Laminascis",
+        "base_value": 2497300,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Stratum Limax": {
+        "genus": "Stratum",
+        "species": "Stratum Limax",
+        "base_value": 2497300,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Stratum Paleas": {
+        "genus": "Stratum",
+        "species": "Stratum Paleas",
+        "base_value": 16484100,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Stratum Tectonicas": {
+        "genus": "Stratum",
+        "species": "Stratum Tectonicas",
+        "base_value": 19010800,
+        "colony_distance_m": 500,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Emerald", "G": "Teal",
+            "K": "Turquoise", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # TUBUS
+    # -------------------------------------------------------------------------
+    "Tubus Cava": {
+        "genus": "Tubus",
+        "species": "Tubus Cava",
+        "base_value": 11849100,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tubus Clipeus": {
+        "genus": "Tubus",
+        "species": "Tubus Clipeus",
+        "base_value": 8418600,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tubus Conifer": {
+        "genus": "Tubus",
+        "species": "Tubus Conifer",
+        "base_value": 2405200,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tubus Dilatus": {
+        "genus": "Tubus",
+        "species": "Tubus Dilatus",
+        "base_value": 2904800,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tubus Rosarium": {
+        "genus": "Tubus",
+        "species": "Tubus Rosarium",
+        "base_value": 2634300,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tubus Sororibus": {
+        "genus": "Tubus",
+        "species": "Tubus Sororibus",
+        "base_value": 5749100,
+        "colony_distance_m": 800,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.120,
+        "grav_min": 0.05, "grav_max": 0.45,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # TUSSOCK
+    # -------------------------------------------------------------------------
+    "Tussock Albireo": {
+        "genus": "Tussock",
+        "species": "Tussock Albireo",
+        "base_value": 3724800,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Capillum": {
+        "genus": "Tussock",
+        "species": "Tussock Capillum",
+        "base_value": 7067700,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich", "ammonia"],
+        "temp_min": 170.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Caputis": {
+        "genus": "Tussock",
+        "species": "Tussock Caputis",
+        "base_value": 5262700,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Catena": {
+        "genus": "Tussock",
+        "species": "Tussock Catena",
+        "base_value": 1767400,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Cultris": {
+        "genus": "Tussock",
+        "species": "Tussock Cultris",
+        "base_value": 1888400,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Divisa": {
+        "genus": "Tussock",
+        "species": "Tussock Divisa",
+        "base_value": 1888400,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Ignis": {
+        "genus": "Tussock",
+        "species": "Tussock Ignis",
+        "base_value": 2497300,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Pennata": {
+        "genus": "Tussock",
+        "species": "Tussock Pennata",
+        "base_value": 1888400,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Pennatis": {
+        "genus": "Tussock",
+        "species": "Tussock Pennatis",
+        "base_value": 1000000,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Propinquus": {
+        "genus": "Tussock",
+        "species": "Tussock Propinquus",
+        "base_value": 2497300,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Serratus": {
+        "genus": "Tussock",
+        "species": "Tussock Serratus",
+        "base_value": 4571100,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Staveley": {
+        "genus": "Tussock",
+        "species": "Tussock Staveley",
+        "base_value": 1888400,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Triticum": {
+        "genus": "Tussock",
+        "species": "Tussock Triticum",
+        "base_value": 7794300,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Ventusa": {
+        "genus": "Tussock",
+        "species": "Tussock Ventusa",
+        "base_value": 3280300,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    },
+    "Tussock Viridis": {
+        "genus": "Tussock",
+        "species": "Tussock Viridis",
+        "base_value": 7794300,
+        "colony_distance_m": 200,
+        "body_types": ["high metal content body", "high metal content world", "rocky body"],
+        "atmosphere_types": ["carbon dioxide", "carbon dioxide-rich"],
+        "temp_min": 180.0, "temp_max": 280.0,
+        "press_min": 0.005, "press_max": 0.100,
+        "grav_min": 0.05, "grav_max": 0.40,
+        "volcanism": None,
+        "star_color_map": {
+            "B": "Yellow", "A": "Green", "F": "Teal", "G": "Turquoise",
+            "K": "Emerald", "M": "Lime", "L": "Sage", "T": "Mauve", "Y": "Indigo"
+        }
+    }
+}
+
+# Generic fallback payouts and distances for unlisted or custom genera
+GENUS_DEFAULTS: Dict[str, Dict[str, Any]] = {
+    "Aleoida": {"base_value": 6000000, "colony_distance_m": 150},
+    "Bacterium": {"base_value": 1000000, "colony_distance_m": 500},
+    "Cactoida": {"base_value": 3667600, "colony_distance_m": 300},
+    "Clypeus": {"base_value": 8418600, "colony_distance_m": 150},
+    "Concha": {"base_value": 4571100, "colony_distance_m": 150},
+    "Electricae": {"base_value": 6284600, "colony_distance_m": 1000},
+    "Fonticulua": {"base_value": 3110600, "colony_distance_m": 500},
+    "Frutexa": {"base_value": 7794300, "colony_distance_m": 150},
+    "Fumerola": {"base_value": 6692200, "colony_distance_m": 100},
+    "Osseus": {"base_value": 3280300, "colony_distance_m": 800},
+    "Radicoida": {"base_value": 7200000, "colony_distance_m": 1000},
+    "Recepta": {"base_value": 14805700, "colony_distance_m": 600},
+    "Stratum": {"base_value": 19010800, "colony_distance_m": 500},
+    "Tubus": {"base_value": 2904800, "colony_distance_m": 800},
+    "Tussock": {"base_value": 3724800, "colony_distance_m": 200},
+}

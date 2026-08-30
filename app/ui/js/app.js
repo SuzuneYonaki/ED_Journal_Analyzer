@@ -33,9 +33,10 @@ let state = {
   bodySortOrder: 'asc',
   page: 1,
   limit: 50,
-  totalPages: 1,
   liveSyncEnabled: true,
-  lastEventVersion: 0
+  lastEventVersion: 0,
+  jumpState: 'idle', // 'idle' | 'hyperspace' | 'arrived_waiting_fss' | 'scanned'
+  targetJumpSystem: ''
 };
 
 // Utilities
@@ -333,8 +334,12 @@ async function fetchSystems() {
   }
 }
 
-async function selectSystem(systemAddress, preserveSelectedBody = false) {
+async function selectSystem(systemAddress, preserveSelectedBody = false, resetJumpState = true) {
   try {
+    if (resetJumpState) {
+      state.jumpState = 'idle';
+    }
+
     const res = await fetch(`/api/system/${systemAddress}`);
     const data = await res.json();
     state.currentSystemData = data;
@@ -361,7 +366,9 @@ async function selectSystem(systemAddress, preserveSelectedBody = false) {
 
     renderSystemHeader();
     renderCurrentView();
-    renderBodyInspector();
+    if (state.jumpState === 'idle' || state.jumpState === 'scanned') {
+      renderBodyInspector();
+    }
     highlightSelectedSystemCard();
 
     // Check First Discovery and announce via TTS
@@ -369,7 +376,7 @@ async function selectSystem(systemAddress, preserveSelectedBody = false) {
       announceFirstDiscovery(data.system.star_system);
     }
 
-    if (state.selectedBody) {
+    if (state.selectedBody && (state.jumpState === 'idle' || state.jumpState === 'scanned')) {
       focusAndScrollToTargetBody(state.selectedBody.body_id);
     }
   } catch (err) {
@@ -815,9 +822,63 @@ function focusAndScrollToTargetBody(bodyId) {
   }, 100);
 }
 
+function clearBodyInspector() {
+  document.getElementById('inspect-body-name').innerText = '--';
+  document.getElementById('inspect-planet-class').innerText = '--';
+  document.getElementById('val-fss').innerText = '0 Cr';
+  document.getElementById('val-dss').innerText = '0 Cr';
+  document.getElementById('val-fd-fss').innerText = '0 Cr';
+  document.getElementById('val-fm-dss').innerText = '0 Cr';
+  document.getElementById('val-max-total').innerText = '0 Cr';
+  document.getElementById('inspect-bio-signals-info').innerText = '';
+  document.getElementById('inspect-bio-predictions').innerHTML = '';
+  document.getElementById('prop-landable').innerText = '--';
+  document.getElementById('prop-gravity').innerText = '--';
+  document.getElementById('prop-temperature').innerText = '--';
+  document.getElementById('prop-pressure').innerText = '--';
+  document.getElementById('prop-atmosphere').innerText = '--';
+  document.getElementById('prop-volcanism').innerText = '--';
+  document.getElementById('prop-semi-major').innerText = '--';
+  document.getElementById('prop-eccentricity').innerText = '--';
+  document.getElementById('prop-orbital-period').innerText = '--';
+  document.getElementById('prop-rotation-period').innerText = '--';
+  document.getElementById('prop-inclination').innerText = '--';
+  document.getElementById('prop-tidal-lock').innerText = '--';
+  const ringsSection = document.getElementById('section-rings');
+  if (ringsSection) ringsSection.style.display = 'none';
+}
+
 function renderCurrentView() {
   const container = document.getElementById('map-content');
   container.innerHTML = '';
+
+  // 1. Hyperspace Jump State Placeholder
+  if (state.jumpState === 'hyperspace') {
+    const nextSys = state.targetJumpSystem || (state.selectedSystem ? state.selectedSystem.star_system : 'Unknown');
+    container.innerHTML = `
+      <div class="jump-status-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 420px; color: var(--ed-orange); text-align: center; padding: 40px;">
+        <div style="font-size: 3rem; margin-bottom: 16px;">🌀</div>
+        <div style="font-size: 1.2rem; font-weight: bold; letter-spacing: 1.5px; color: #fff;">HYPERSPACE JUMP IN PROGRESS</div>
+        <div style="font-size: 0.95rem; color: var(--ed-orange); margin-top: 8px;">ジャンプ先星系 &rarr; <span style="color: #fff; font-weight: bold;">${nextSys}</span></div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 14px;">星系データをクリアしました。到着を待機中...</div>
+      </div>
+    `;
+    return;
+  }
+
+  // 2. Arrived Waiting FSS (Honk) State Placeholder
+  if (state.jumpState === 'arrived_waiting_fss') {
+    const curSys = state.selectedSystem ? state.selectedSystem.star_system : (state.targetJumpSystem || 'Current System');
+    container.innerHTML = `
+      <div class="jump-status-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 420px; color: var(--ed-cyan); text-align: center; padding: 40px;">
+        <div style="font-size: 3rem; margin-bottom: 16px;">📡</div>
+        <div style="font-size: 1.2rem; font-weight: bold; letter-spacing: 1.5px; color: #fff;">ARRIVED: ${curSys}</div>
+        <div style="font-size: 0.9rem; color: var(--ed-cyan); margin-top: 8px;">FSS ディスカバリースキャン (Honk) 待機中...</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 14px;">Discovery Scanner (Honk) を実行すると System Map の確定描画を開始します</div>
+      </div>
+    `;
+    return;
+  }
 
   if (!state.currentSystemData) return;
 
@@ -825,8 +886,6 @@ function renderCurrentView() {
     if (typeof renderSystemMapView === 'function') {
       renderSystemMapView(container, state.currentSystemData.hierarchy, state.currentSystemData.bodies);
     }
-  } else if (state.currentView === 'tree') {
-    renderHierarchyTree(container, state.currentSystemData.hierarchy);
   } else if (state.currentView === 'flat') {
     const sorted = getSortedBodies(state.currentSystemData.bodies);
     renderFlatBodiesList(container, sorted);
@@ -839,7 +898,7 @@ function renderCurrentView() {
 
   // Auto focus & scroll to target body
   const targetId = state.selectedBody ? state.selectedBody.body_id : state.targetBodyId;
-  if (targetId !== null && targetId !== undefined && state.currentView !== 'orrery') {
+  if (targetId !== null && targetId !== undefined) {
     focusAndScrollToTargetBody(targetId);
   }
 }
@@ -1815,6 +1874,46 @@ function initLiveSync() {
   }, 800);
 }
 
+function handleLiveJournalEvent(eventName, eventData) {
+  if (!state.liveSyncEnabled) return;
+
+  if (eventName === 'StartJump') {
+    const jumpType = eventData.JumpType || 'Hyperspace';
+    if (jumpType === 'Hyperspace') {
+      state.jumpState = 'hyperspace';
+      state.targetJumpSystem = eventData.StarSystem || 'Unknown';
+      clearBodyInspector();
+      renderCurrentView();
+    }
+  } else if (eventName === 'FSDJump' || eventName === 'Location' || eventName === 'CarrierJump') {
+    state.jumpState = 'arrived_waiting_fss';
+    state.targetJumpSystem = eventData.StarSystem || '';
+    
+    // Refresh global stats & systems list
+    fetchGlobalStats();
+    fetchSystems();
+
+    if (eventData.SystemAddress) {
+      selectSystem(eventData.SystemAddress, false, false);
+    } else {
+      renderCurrentView();
+    }
+  } else if (eventName === 'FSSDiscoveryScan') {
+    state.jumpState = 'scanned';
+    fetchGlobalStats();
+    fetchSystems();
+
+    const sysAddr = eventData.SystemAddress || (state.selectedSystem ? state.selectedSystem.system_address : null);
+    if (sysAddr) {
+      selectSystem(sysAddr, false, false);
+    } else {
+      triggerLiveRefresh();
+    }
+  } else if (eventName === 'Scan' || eventName === 'SAAScanComplete' || eventName === 'ScanOrganic' || eventName === 'FSSBodySignals') {
+    triggerLiveRefresh();
+  }
+}
+
 function connectLiveWebSocket() {
   if (liveWsRetryTimeout) {
     clearTimeout(liveWsRetryTimeout);
@@ -1840,7 +1939,9 @@ function connectLiveWebSocket() {
     liveWebSocket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'journal_updated') {
+        if (data.type === 'journal_event') {
+          handleLiveJournalEvent(data.event, data.data || {});
+        } else if (data.type === 'journal_updated') {
           state.lastEventVersion = data.version;
           triggerLiveRefresh();
         }
