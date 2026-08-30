@@ -43,6 +43,12 @@ last_journal_update = {
     "version": 0,
     "file": None
 }
+last_journal_event = {
+    "event": None,
+    "data": None,
+    "timestamp": 0.0,
+    "version": 0
+}
 
 class LiveConnectionManager:
     def __init__(self):
@@ -83,11 +89,18 @@ class LiveConnectionManager:
             asyncio.run_coroutine_threadsafe(self.broadcast_json(payload), self.loop)
 
     def notify_event_from_thread(self, event_name: str, event_data: dict):
+        global last_journal_event
+        last_journal_event["version"] += 1
+        last_journal_event["event"] = event_name
+        last_journal_event["data"] = event_data
+        last_journal_event["timestamp"] = time.time()
+
         payload = {
             "type": "journal_event",
             "event": event_name,
             "data": event_data,
-            "timestamp": time.time()
+            "version": last_journal_event["version"],
+            "timestamp": last_journal_event["timestamp"]
         }
         if self.loop and self.loop.is_running() and self.active_connections:
             asyncio.run_coroutine_threadsafe(self.broadcast_json(payload), self.loop)
@@ -129,6 +142,7 @@ def start_watcher():
             seen.add(str(p))
             watched_dirs.append(p)
 
+    print(f"[Watcher] Starting JournalWatcher on dirs: {[str(d) for d in watched_dirs]}")
     watcher_instance = JournalWatcher(
         journal_dirs=watched_dirs,
         interval=0.4,
@@ -159,7 +173,12 @@ async def websocket_live_endpoint(websocket: WebSocket):
 
 @app.get("/api/events/latest")
 def get_latest_event():
-    return last_journal_update
+    return {
+        "version": last_journal_update["version"],
+        "timestamp": last_journal_update["timestamp"],
+        "event_version": last_journal_event["version"],
+        "last_event": last_journal_event
+    }
 
 def get_current_cmdr_location(conn) -> Optional[dict]:
     try:
@@ -731,6 +750,7 @@ def save_app_settings_endpoint(settings: dict):
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         with open(APP_SETTINGS_FILE, "w", encoding="utf-8") as f:
             json.dump(settings, f, ensure_ascii=False, indent=2)
+        start_watcher()
         return {"status": "saved", "settings": settings}
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)

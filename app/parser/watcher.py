@@ -1,3 +1,11 @@
+"""
+Real-time Journal File Watcher Module for Elite Dangerous.
+Monitors configured journal directories for Journal.*.log file updates and
+dispatches line-level events and batch update notifications.
+
+All code, strings, and comments in this module are strictly English ASCII.
+"""
+
 import time
 import threading
 import glob
@@ -8,13 +16,19 @@ from app.parser.journal_parser import JournalParser
 from app.db.database import get_db_connection
 
 class JournalWatcher(threading.Thread):
-    def __init__(self, journal_dirs: Union[str, Path, List[Union[str, Path]]], interval: float = 0.5, on_update_callback=None, on_event_callback=None):
+    def __init__(
+        self,
+        journal_dirs: Union[str, Path, List[Union[str, Path]]],
+        interval: float = 0.4,
+        on_update_callback=None,
+        on_event_callback=None
+    ):
         super().__init__(daemon=True)
         if isinstance(journal_dirs, (str, Path)):
             self.journal_dirs = [Path(journal_dirs)]
         else:
             self.journal_dirs = [Path(d) for d in journal_dirs]
-        self.interval = max(0.2, interval)
+        self.interval = max(0.1, interval)
         self.on_update_callback = on_update_callback
         self.on_event_callback = on_event_callback
         self.running = True
@@ -23,7 +37,8 @@ class JournalWatcher(threading.Thread):
         # Track file stats: {filepath: (size, mtime)}
         self.file_stats: Dict[str, Tuple[int, float]] = {}
         self.last_dir_scan_time = 0.0
-        self.files_scan_interval = 1.0 # Rescan directories for new files every 1 second
+        self.files_scan_interval = 1.0
+        self.initialized = False
 
     def _handle_journal_event(self, event_name: str, event_data: dict):
         if self.on_event_callback:
@@ -33,17 +48,18 @@ class JournalWatcher(threading.Thread):
                 print(f"[Watcher Event Error] {e}")
 
     def run(self):
-        # Initialize connection inside the worker thread
         self.conn = get_db_connection()
         self.parser = JournalParser(self.conn, event_callback=self._handle_journal_event)
-        self._scan_active_files()
+        
+        # Initial scan: seed file stats without triggering events for past data
+        self._scan_active_files(initial_seed=True)
+        self.initialized = True
 
         while self.running:
             try:
                 now = time.time()
-                # Periodically check for newly created journal files
                 if now - self.last_dir_scan_time > self.files_scan_interval:
-                    self._scan_active_files()
+                    self._scan_active_files(initial_seed=False)
                     self.last_dir_scan_time = now
 
                 self.check_file_updates()
@@ -57,7 +73,7 @@ class JournalWatcher(threading.Thread):
             except Exception:
                 pass
 
-    def _scan_active_files(self):
+    def _scan_active_files(self, initial_seed: bool = False):
         """Scans all monitored directories for Journal.*.log files and tracks the most recent ones."""
         found_files = []
         for j_dir in self.journal_dirs:
@@ -79,14 +95,18 @@ class JournalWatcher(threading.Thread):
             if fpath not in self.file_stats:
                 try:
                     st = os.stat(fpath)
-                    # Initialize with (0, 0.0) so first check triggers a parse if not already in DB
-                    self.file_stats[fpath] = (0, 0.0)
+                    if initial_seed:
+                        # On initial startup, record current file stats so only future writes trigger events
+                        self.file_stats[fpath] = (st.st_size, st.st_mtime)
+                    else:
+                        # New file appeared while running: trigger full parse
+                        self.file_stats[fpath] = (0, 0.0)
                 except Exception:
                     pass
 
     def check_file_updates(self):
         if not self.file_stats:
-            self._scan_active_files()
+            self._scan_active_files(initial_seed=False)
             if not self.file_stats:
                 return
 
@@ -102,6 +122,7 @@ class JournalWatcher(threading.Thread):
                 current_stat = (st.st_size, st.st_mtime)
 
                 if current_stat != last_stat:
+                    # File size or mtime changed: parse newly appended lines
                     self.parser.parse_file(fpath)
                     self.file_stats[fpath] = current_stat
                     updated_any = True

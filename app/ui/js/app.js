@@ -32,9 +32,9 @@ let state = {
   bodySortBy: 'distance',
   bodySortOrder: 'asc',
   page: 1,
-  limit: 50,
   liveSyncEnabled: true,
   lastEventVersion: 0,
+  lastJournalEventVersion: 0,
   jumpState: 'idle', // 'idle' | 'hyperspace' | 'arrived_waiting_fss' | 'scanned'
   targetJumpSystem: ''
 };
@@ -1843,7 +1843,7 @@ async function triggerLiveRefresh() {
 
   // Refresh currently selected system in center pane if open
   if (state.selectedSystem && state.selectedSystem.system_address) {
-    selectSystem(state.selectedSystem.system_address, true);
+    selectSystem(state.selectedSystem.system_address, true, false);
   }
 }
 
@@ -1856,22 +1856,34 @@ function initLiveSync() {
   updateSortControlsUI();
   connectLiveWebSocket();
 
-  // High-frequency polling fallback (every 800ms) to ensure instant updates even without WebSocket
+  // High-frequency polling fallback (every 600ms) to ensure instant updates
   setInterval(async () => {
     if (!state.liveSyncEnabled) return;
     try {
       const res = await fetch('/api/events/latest');
       if (res.ok) {
         const evt = await res.json();
+        let changed = false;
+
+        if (evt.event_version && evt.event_version !== state.lastJournalEventVersion) {
+          state.lastJournalEventVersion = evt.event_version;
+          if (evt.last_event && evt.last_event.event) {
+            handleLiveJournalEvent(evt.last_event.event, evt.last_event.data || {});
+            changed = true;
+          }
+        }
+
         if (evt.version && evt.version !== state.lastEventVersion) {
           state.lastEventVersion = evt.version;
-          triggerLiveRefresh();
+          if (!changed) {
+            triggerLiveRefresh();
+          }
         }
       }
     } catch (err) {
       // Ignore background network jitter
     }
-  }, 800);
+  }, 600);
 }
 
 function handleLiveJournalEvent(eventName, eventData) {
@@ -1909,8 +1921,16 @@ function handleLiveJournalEvent(eventName, eventData) {
     } else {
       triggerLiveRefresh();
     }
-  } else if (eventName === 'Scan' || eventName === 'SAAScanComplete' || eventName === 'ScanOrganic' || eventName === 'FSSBodySignals') {
-    triggerLiveRefresh();
+  } else if (eventName === 'Scan' || eventName === 'SAAScanComplete' || eventName === 'ScanOrganic' || eventName === 'FSSBodySignals' || eventName === 'SAASignalsFound') {
+    const sysAddr = eventData.SystemAddress || (state.selectedSystem ? state.selectedSystem.system_address : null);
+    fetchGlobalStats();
+    fetchSystems();
+
+    if (sysAddr && state.selectedSystem && String(state.selectedSystem.system_address) === String(sysAddr)) {
+      selectSystem(sysAddr, true, false);
+    } else {
+      triggerLiveRefresh();
+    }
   }
 }
 
@@ -1940,6 +1960,7 @@ function connectLiveWebSocket() {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'journal_event') {
+          if (data.version) state.lastJournalEventVersion = data.version;
           handleLiveJournalEvent(data.event, data.data || {});
         } else if (data.type === 'journal_updated') {
           state.lastEventVersion = data.version;
