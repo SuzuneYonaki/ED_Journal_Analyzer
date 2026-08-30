@@ -429,14 +429,15 @@ function renderSystemList() {
       mainStar = `<span class="tag-badge" style="background: ${style.bg}; color: ${style.text}; border: 1px solid ${style.border}; margin-left: 6px; font-weight: bold;">${sys.main_star_type}</span>`;
     }
 
+    const sysName = sys.star_system || (`System ${sys.system_address || ''}`);
     const coordsStr = (sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
       ? `[${sys.star_pos_x.toFixed(6)}, ${sys.star_pos_y.toFixed(6)}, ${sys.star_pos_z.toFixed(6)}]`
       : '';
 
     card.innerHTML = `
       <div class="system-card-header">
-        <div style="display: flex; flex-direction: column; overflow: hidden; margin-right: 8px;">
-          <span class="system-card-title">${sys.star_system}</span>
+        <div class="system-card-title-group">
+          <span class="system-card-title" title="${sysName}">${sysName}</span>
           ${coordsStr ? `<span class="system-coords" style="font-size: 0.7rem; color: var(--text-secondary); font-family: monospace; letter-spacing: -0.3px;">${coordsStr}</span>` : ''}
         </div>
         <span class="system-card-value">${formatCredits(sys.total_potential_value)}</span>

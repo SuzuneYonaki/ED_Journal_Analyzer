@@ -516,19 +516,28 @@ header {
 .system-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 8px;
   margin-bottom: 6px;
+}
+
+.system-card-title-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .system-card-title {
   font-family: var(--font-mono);
   font-weight: bold;
-  font-size: 0.9rem;
-  color: var(--text-primary);
+  font-size: 0.92rem;
+  color: #f1f5f9;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px;
+  display: block;
 }
 
 .system-card.selected .system-card-title {
