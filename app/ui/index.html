@@ -36,43 +36,53 @@
       <div class="brand">
         <img src="/static/icon.png" alt="Logo" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 6px;">
         <span class="logo-text">ED Journal Explorer</span>
-        <span class="version-badge">v1.0.0</span>
+        <span class="version-badge">v0.0.1</span>
       </div>
     </div>
 
-    <div class="header-stats">
-      <div class="stat-item">
-        <span class="stat-label" data-i18n="stat_systems">訪問星系</span>
-        <span id="stat-systems" class="stat-value">0</span>
+    <!-- Header Logged Exploration Stats Group -->
+    <div class="header-logged-group" style="display: flex; align-items: center; background: rgba(255, 113, 0, 0.06); border: 1px solid rgba(255, 113, 0, 0.3); border-radius: 6px; padding: 2px 6px; gap: 8px;">
+      <div class="stat-prefix-badge" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 2px 6px; background: rgba(255, 113, 0, 0.18); border-radius: 4px; border: 1px solid rgba(255, 113, 0, 0.4); flex-shrink: 0;">
+        <span style="font-size: 0.72rem; color: var(--ed-orange); font-weight: bold; white-space: nowrap;">🚀 探査・記録済み</span>
+        <span id="header-logged-period" style="font-size: 0.62rem; color: #fed7aa; white-space: nowrap;">全期間</span>
       </div>
-      <div class="stat-item">
-        <span class="stat-label" data-i18n="stat_bodies">スキャン天体</span>
-        <span id="stat-bodies" class="stat-value">0</span>
+
+      <div class="header-stats" style="margin: 0; padding: 0; border: none;">
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_systems">訪問星系</span>
+          <span id="stat-systems" class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_bodies">スキャン天体</span>
+          <span id="stat-bodies" class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_elw">ELW (地球型)</span>
+          <span id="stat-elw" class="stat-value highlight">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_ww">WW (海洋惑星)</span>
+          <span id="stat-ww" class="stat-value" style="color: var(--ed-cyan);">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_ammonia">Ammonia</span>
+          <span id="stat-ammonia" class="stat-value" style="color: var(--ed-cyan-dim);">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_bio">生体 (Bio) 星系</span>
+          <span id="stat-bio" class="stat-value" style="color: var(--ed-green);">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_payout">累積探査総価値</span>
+          <span id="stat-total-payout" class="stat-value credits">0 Cr</span>
+        </div>
       </div>
-      <div class="stat-item">
-        <span class="stat-label" data-i18n="stat_elw">ELW (地球型)</span>
-        <span id="stat-elw" class="stat-value highlight">0</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label" data-i18n="stat_ww">WW (海洋惑星)</span>
-        <span id="stat-ww" class="stat-value" style="color: var(--ed-cyan);">0</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label" data-i18n="stat_ammonia">Ammonia</span>
-        <span id="stat-ammonia" class="stat-value" style="color: var(--ed-cyan-dim);">0</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label" data-i18n="stat_bio">生体 (Bio) 星系</span>
-        <span id="stat-bio" class="stat-value" style="color: var(--ed-green);">0</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label" data-i18n="stat_payout">累積探査総価値</span>
-        <span id="stat-total-payout" class="stat-value credits">0 Cr</span>
-      </div>
-      <div class="stat-item" id="stat-cmdr-container" style="border-left: 1px solid var(--border-color); padding-left: 10px;">
-        <span class="stat-label" style="color: var(--ed-orange);" data-i18n="stat_current_loc">📍 CMDR現在地</span>
-        <span id="stat-cmdr-loc" class="stat-value" style="font-size: 0.8rem; color: #fff; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">--</span>
-      </div>
+    </div>
+
+    <!-- CMDR Location -->
+    <div class="stat-item" id="stat-cmdr-container" style="border-left: 1px solid var(--border-color); padding-left: 10px; flex-shrink: 0; margin-left: 6px;">
+      <span class="stat-label" style="color: var(--ed-orange);" data-i18n="stat_current_loc">📍 CMDR現在地</span>
+      <span id="stat-cmdr-loc" class="stat-value" style="font-size: 0.8rem; color: #fff; max-width: none; white-space: nowrap;">--</span>
     </div>
 
     <div class="header-actions">
@@ -82,21 +92,16 @@
         <span id="live-status-text" data-i18n="live_sync_on">LIVE (リアルタイム)</span>
       </button>
 
+      <!-- Unified Settings Modal Button (Logs, TTS, Credits) -->
+      <button id="btn-settings-open" class="view-btn" style="padding: 4px 10px; font-size: 0.78rem; color: var(--text-primary); border-color: var(--border-color); display: flex; align-items: center; gap: 4px;" title="⚙️ 設定 & ログスキャン & TTS & 謝辞">
+        <span>⚙️ 設定</span>
+      </button>
+
       <!-- Language Switcher -->
       <div class="lang-switch-group" style="display: flex; gap: 4px; background: var(--bg-card); padding: 2px; border-radius: 4px; border: 1px solid var(--border-color);">
         <button id="btn-lang-ja" class="view-btn active" style="padding: 4px 8px; font-size: 0.75rem;">JP</button>
         <button id="btn-lang-en" class="view-btn" style="padding: 4px 8px; font-size: 0.75rem;">EN</button>
       </div>
-
-      <!-- Credits Button -->
-      <button id="btn-credits-open" class="view-btn" style="padding: 4px 8px; font-size: 0.75rem; color: var(--text-secondary);" title="謝辞 & クレジット">
-        <span>📜 Credits</span>
-      </button>
-
-      <button id="btn-rescan" class="btn-primary">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
-        <span data-i18n="btn_rescan">ログスキャン</span>
-      </button>
     </div>
   </header>
 
@@ -231,12 +236,26 @@
             <div class="payout-label" data-i18n="system_max_potential_label">天体探査最大 (FD+FM)</div>
             <div id="current-system-value" class="payout-amount" style="font-size: 0.95rem;">-- Cr</div>
           </div>
-          <div id="system-bio-payout-box" style="display: none; background: rgba(0, 255, 136, 0.08); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 4px; padding: 2px 8px;">
-            <div class="payout-label" style="color: var(--ed-green); font-weight: bold;" data-i18n="system_bio_total_label">🌱 Exobiology 総見込額</div>
-            <div style="display: flex; gap: 8px; align-items: baseline;">
-              <span id="current-system-bio-base" class="payout-amount" style="color: #a7f3d0; font-size: 0.9rem;" title="通常金額">-- Cr</span>
-              <span style="font-size: 0.7rem; color: var(--text-secondary);">/ 1st:</span>
-              <span id="current-system-bio-first" class="payout-amount" style="color: var(--ed-green); font-size: 1.05rem;" title="1st Discover時 (5倍)">-- Cr</span>
+          <div id="system-bio-payout-box" style="display: none; background: rgba(0, 255, 136, 0.08); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 4px; padding: 2px 10px;">
+            <div style="display: flex; gap: 14px; align-items: flex-end;">
+              <div id="system-bio-scanned-container" style="border-right: 1px solid rgba(0, 255, 136, 0.25); padding-right: 12px;">
+                <div class="payout-label" style="color: #6ee7b7; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+                  <span>✓</span> <span data-i18n="system_bio_scanned_label">スキャン確定</span>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: baseline;">
+                  <span id="current-system-bio-scanned-base" class="payout-amount" style="color: #d1fae5; font-size: 0.85rem;" title="スキャン確定 (通常)">0 Cr</span>
+                  <span style="font-size: 0.68rem; color: var(--text-secondary);">/ 1st:</span>
+                  <span id="current-system-bio-scanned-first" class="payout-amount" style="color: var(--ed-green); font-weight: bold; font-size: 0.95rem;" title="スキャン確定 (1st 5倍)">0 Cr</span>
+                </div>
+              </div>
+              <div>
+                <div class="payout-label" style="color: var(--ed-green); font-weight: bold;" data-i18n="system_bio_total_label">🌱 Exobiology 総見込</div>
+                <div style="display: flex; gap: 6px; align-items: baseline;">
+                  <span id="current-system-bio-base" class="payout-amount" style="color: #a7f3d0; font-size: 0.85rem;" title="総見込 (通常)">-- Cr</span>
+                  <span style="font-size: 0.68rem; color: var(--text-secondary);">/ 1st:</span>
+                  <span id="current-system-bio-first" class="payout-amount" style="color: var(--ed-green); font-size: 1.0rem;" title="総見込 (1st 5倍)">-- Cr</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -244,7 +263,7 @@
 
       <div class="map-view-controls">
         <span data-i18n="view_label">表示:</span>
-        <button id="btn-view-tree" class="view-btn active" data-i18n="view_tree">階層ツリー & 軌道</button>
+        <button id="btn-view-sysmap" class="view-btn active" style="color: var(--ed-cyan); border-color: rgba(0, 210, 255, 0.4);" data-i18n="view_sysmap">🌌 System Map</button>
         <button id="btn-view-flat" class="view-btn" data-i18n="view_flat">天体一覧</button>
         <button id="btn-view-bio" class="view-btn" style="color: var(--ed-green); border-color: rgba(0, 255, 136, 0.4);" data-i18n="view_bio">🌱 Bio天体のみ</button>
         <button id="btn-view-visits" class="view-btn" data-i18n="view_visits">過去訪問履歴</button>
@@ -394,34 +413,201 @@
     </div>
   </div>
 
-  <!-- Credits & Acknowledgements Modal -->
-  <div id="credits-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content" style="max-width: 580px;">
+  <!-- Unified Settings Modal (Tabs: Logs / TTS / Credits) -->
+  <div id="settings-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 620px; max-height: 88vh; display: flex; flex-direction: column;">
       <div class="modal-header">
-        <h3 data-i18n="credits_title">📜 謝辞 & クレジット</h3>
-        <button id="btn-credits-close" class="modal-close-btn">&times;</button>
+        <h3 style="color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+          ⚙️ 設定 & ログ同期 & 謝辞
+        </h3>
+        <button id="btn-settings-close" class="modal-close-btn">&times;</button>
       </div>
-      <div class="modal-body" style="line-height: 1.6; font-size: 0.85rem; color: var(--text-primary);">
-        <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
-          <div style="font-weight: bold; color: var(--ed-orange); font-size: 0.95rem;">🚀 Frontier Developments</div>
-          <div style="color: var(--text-secondary); margin-top: 2px;" data-i18n="credits_fdev">Elite Dangerous の広大な宇宙とジャーナルログAPI仕様を提供</div>
+
+      <!-- Settings Tabs Header -->
+      <div class="settings-tabs" style="display: flex; gap: 4px; border-bottom: 1px solid var(--border-color); padding: 0 16px; background: rgba(0,0,0,0.2);">
+        <button id="tab-btn-logs" class="view-btn active" style="border-bottom: 2px solid var(--ed-orange); border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;">
+          📁 ログ同期 & パス
+        </button>
+        <button id="tab-btn-tts" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;">
+          🔊 音声読み上げ (TTS)
+        </button>
+        <button id="tab-btn-credits" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;">
+          📜 謝辞 & クレジット
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px; overflow-y: auto; flex: 1; font-size: 0.85rem; color: var(--text-primary);">
+        
+        <!-- Tab 1: Logs & Sync -->
+        <div id="tab-pane-logs" class="settings-tab-pane" style="display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.82rem; margin-bottom: 4px; display: block;">
+              📁 ジャーナルログ保存フォルダ:
+            </label>
+            <div style="display: flex; gap: 6px;">
+              <input type="text" id="setting-journal-dir" class="search-input" style="flex: 1; font-size: 0.8rem; font-family: monospace;" placeholder="C:\Users\...\Saved Games\Frontier Developments\Elite Dangerous">
+              <button id="btn-reset-journal-dir" class="view-btn" style="white-space: nowrap; font-size: 0.75rem;" title="既定のパスにリセット">既定に戻す</button>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 4px;">
+              ※ Steam版/Epic版など別ドライブにジャーナルがある場合は上記パスを変更してください
+            </div>
+          </div>
+
+          <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <div style="font-weight: bold; color: #fff;">手動ログスキャン実行</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">全ジャーナルファイルを再解析しデータベースを更新します</div>
+              </div>
+              <button id="btn-modal-rescan" class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem;">
+                🔄 ログスキャン開始
+              </button>
+            </div>
+            <div id="modal-scan-status-text" style="font-size: 0.75rem; color: var(--ed-cyan); font-family: monospace;"></div>
+          </div>
         </div>
-        <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
-          <div style="font-weight: bold; color: var(--ed-green); font-size: 0.95rem;">🔬 Canonn Research Group</div>
-          <div style="color: var(--text-secondary); margin-top: 2px;" data-i18n="credits_canonn">Exobiology（生体シグナル）の出現条件予測モデル・Codex生物データベース・コロニー距離研究データのリファレンス</div>
+
+        <!-- Tab 2: TTS Settings -->
+        <div id="tab-pane-tts" class="settings-tab-pane" style="display: none; flex-direction: column; gap: 14px;">
+          <!-- Enable / Disable Checkbox (Default unchecked) -->
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+            <div>
+              <div style="font-weight: bold; color: var(--text-primary);">未発見（1st Discover）読み上げ通知</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">新星系到着時に未発見天体/星系だった場合、音声で読み上げます</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="tts-enabled-toggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- Engine Selector -->
+          <div>
+            <label style="font-size: 0.78rem; font-weight: bold; color: var(--ed-orange); margin-bottom: 4px; display: block;">
+              TTS エンジン選択:
+            </label>
+            <select id="tts-engine-select" class="sort-select" style="width: 100%; padding: 6px 10px; font-size: 0.82rem;">
+              <option value="web_speech">Web Speech API (Microsoft Multilingual / Windows Natural / ブラウザ標準)</option>
+              <option value="voicevox">VOICEVOX (ローカル連携: http://127.0.0.1:50021)</option>
+            </select>
+          </div>
+
+          <!-- Voice / Speaker Selector -->
+          <div id="tts-voice-container">
+            <label style="font-size: 0.78rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 4px; display: block;">
+              話者 / ボイス:
+            </label>
+            <!-- Web Speech API Voices -->
+            <select id="tts-web-voice-select" class="sort-select" style="width: 100%; padding: 6px 10px; font-size: 0.82rem;">
+              <option value="">システム既定の音声</option>
+            </select>
+            <!-- VOICEVOX Speakers (hidden by default) -->
+            <div id="tts-voicevox-group" style="display: none; flex-direction: column; gap: 6px;">
+              <select id="tts-voicevox-speaker-select" class="sort-select" style="width: 100%; padding: 6px 10px; font-size: 0.82rem;">
+                <option value="3">ずんだもん (ノーマル)</option>
+                <option value="1">ずんだもん (あまあま)</option>
+                <option value="7">ずんだもん (ツンツン)</option>
+                <option value="5">ずんだもん (セクシー)</option>
+                <option value="2">四国めたん (ノーマル)</option>
+                <option value="8">春日部つむぎ (ノーマル)</option>
+                <option value="14">冥鳴ひまり (ノーマル)</option>
+              </select>
+              <div id="tts-voicevox-status" style="font-size: 0.72rem; color: #94a3b8;"></div>
+            </div>
+          </div>
+
+          <!-- Custom Speech Text -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+              <label style="font-size: 0.78rem; font-weight: bold; color: var(--text-secondary);">
+                読み上げメッセージ (変数使用可能):
+              </label>
+              <span style="font-size: 0.7rem; color: var(--ed-cyan);" title="使用可能な変数: {system} = 星系名, {bodies} = 未発見天体数">
+                変数: <code style="color: var(--ed-cyan);">{system}</code> <code style="color: var(--ed-cyan);">{bodies}</code>
+              </span>
+            </div>
+            <input type="text" id="tts-custom-text" class="search-input" value="First discover." placeholder="例: First discovery in {system}." style="width: 100%; font-size: 0.82rem;">
+            
+            <!-- Template quick insert chips -->
+            <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+              <button type="button" class="chip" style="padding: 2px 8px; font-size: 0.7rem; height: auto;" onclick="document.getElementById('tts-custom-text').value='First discover.'">
+                First discover.
+              </button>
+              <button type="button" class="chip" style="padding: 2px 8px; font-size: 0.7rem; height: auto;" onclick="document.getElementById('tts-custom-text').value='First discovery in {system}.'">
+                First discovery in {system}.
+              </button>
+              <button type="button" class="chip" style="padding: 2px 8px; font-size: 0.7rem; height: auto;" onclick="document.getElementById('tts-custom-text').value='{system}、初回発見です。'">
+                {system}、初回発見です。
+              </button>
+            </div>
+          </div>
+
+          <!-- Sliders: Volume & Rate -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary);">
+                <span>音量 (Volume)</span>
+                <span id="tts-vol-val">100%</span>
+              </div>
+              <input type="range" id="tts-volume" min="0" max="1" step="0.05" value="1" style="width: 100%; accent-color: var(--ed-cyan);">
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary);">
+                <span>速度 (Speed)</span>
+                <span id="tts-rate-val">1.0x</span>
+              </div>
+              <input type="range" id="tts-rate" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%; accent-color: var(--ed-cyan);">
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; justify-content: flex-start; gap: 8px; margin-top: 4px;">
+            <button id="btn-tts-test" class="btn-primary" style="background: rgba(0, 210, 255, 0.2); border: 1px solid var(--ed-cyan); color: var(--ed-cyan);">
+              🔊 テスト再生 (Test)
+            </button>
+          </div>
         </div>
-        <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
-          <div style="font-weight: bold; color: var(--ed-cyan); font-size: 0.95rem;">✨ Google & Gemini Flash (Antigravity)</div>
-          <div style="color: var(--text-secondary); margin-top: 2px;" data-i18n="credits_google">リアルタイム解析アーキテクチャの設計、自動化パイプラインおよびUIコードの実装支援・ペアプログラミング</div>
+
+        <!-- Tab 3: Credits & Acknowledgements -->
+        <div id="tab-pane-credits" class="settings-tab-pane" style="display: none; line-height: 1.6; font-size: 0.85rem; color: var(--text-primary);">
+          <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <div style="font-weight: bold; color: var(--ed-orange); font-size: 0.95rem;">🚀 Frontier Developments</div>
+            <div style="color: var(--text-secondary); margin-top: 2px;" data-i18n="credits_fdev">Elite Dangerous の広大な宇宙とジャーナルログAPI仕様を提供</div>
+          </div>
+          <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-weight: bold; color: var(--ed-green); font-size: 0.95rem;">🔬 Canonn Research Group</div>
+              <a href="https://canonn.science/codex/appendices/" target="_blank" style="color: #6ee7b7; font-size: 0.75rem; text-decoration: none;">canonn.science/codex/appendices &rarr;</a>
+            </div>
+            <div style="color: var(--text-secondary); margin-top: 4px; font-size: 0.8rem;" data-i18n="credits_canonn">
+              Exobiology（生体シグナル）の厳密な環境出現条件マトリクス（惑星種別、大気組成、温度帯分布、重力、気圧、火山活動、恒星種別カラーバリアント）およびコロニー距離研究データのリファレンス
+            </div>
+          </div>
+          <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <div style="font-weight: bold; color: var(--ed-cyan); font-size: 0.95rem;">✨ Google & Gemini Flash (Antigravity)</div>
+            <div style="color: var(--text-secondary); margin-top: 2px;" data-i18n="credits_google">リアルタイム解析アーキテクチャの設計、自動化パイプラインおよびUIコードの実装支援・ペアプログラミング</div>
+          </div>
+          <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <div style="font-weight: bold; color: #a78bfa; font-size: 0.95rem;">🎙️ VOICEVOX</div>
+            <div style="color: var(--text-secondary); margin-top: 2px;">高品質な日本語音声合成エンジン（ずんだもん、四国めたん、春日部つむぎ等）とのローカル連携</div>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; margin-top: 8px;">
+            Elite Dangerous Journal Analyzer &bull; Built with FastAPI, PyWebView & Vanilla JS
+          </div>
         </div>
-        <div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; margin-top: 8px;">
-          Elite Dangerous Journal Analyzer & Exploration Orrery &bull; Built with FastAPI, PyWebView & Vanilla JS
-        </div>
+
+      </div>
+
+      <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+        <button id="btn-settings-save" class="btn-primary">
+          設定を保存して閉じる
+        </button>
       </div>
     </div>
   </div>
 
   <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/system_map.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
 </html>

@@ -98,6 +98,7 @@ def init_db():
         first_discovered_fss INTEGER DEFAULT 0,
         first_mapped_dss INTEGER DEFAULT 0,
         max_potential_value INTEGER DEFAULT 0,
+        confirmed_genuses TEXT,
         exobiology_predictions TEXT,
         anomalies_json TEXT,
         scan_timestamp TEXT,
@@ -171,6 +172,7 @@ def init_db():
         ("sol_distance_ly", "REAL DEFAULT 0"),
         ("has_first_discover", "INTEGER DEFAULT 0"),
         ("first_discovered_bodies", "INTEGER DEFAULT 0"),
+        ("last_targeted_body_id", "INTEGER"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE systems ADD COLUMN {col_def[0]} {col_def[1]};")
@@ -184,6 +186,14 @@ def init_db():
     ]:
         try:
             cursor.execute(f"ALTER TABLE visits ADD COLUMN {col_def[0]} {col_def[1]};")
+        except Exception:
+            pass
+
+    for col_def in [
+        ("confirmed_genuses", "TEXT"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE bodies ADD COLUMN {col_def[0]} {col_def[1]};")
         except Exception:
             pass
 

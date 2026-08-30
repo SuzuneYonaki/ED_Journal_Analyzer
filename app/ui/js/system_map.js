@@ -1,0 +1,420 @@
+/**
+ * Elite Dangerous Official System Map View Renderer
+ * Accurately parses Body Designation & Journal Parents Hierarchy:
+ * - Sorts Planets strictly by Planet Index (1, 2, 3... / A 1, A 2... / B 1, B 2...)
+ * - Sorts Moons strictly by Moon Letter (a, b, c, d, e, f, g...)
+ * - Correctly parents moons like '1 e', '1 f' under Planet 1.
+ */
+
+function getBodyShortName(fullName, systemName) {
+  if (!fullName) return '';
+  const sys = systemName || (state.selectedSystem ? state.selectedSystem.star_system : '');
+  if (!sys) return fullName;
+
+  let short = fullName.trim();
+  if (short.startsWith(sys)) {
+    short = short.substring(sys.length).trim();
+  }
+  return short || fullName;
+}
+
+function parseParentsList(parentsRaw) {
+  if (!parentsRaw) return [];
+  if (Array.isArray(parentsRaw)) return parentsRaw;
+  try {
+    const parsed = JSON.parse(parentsRaw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Parses body name tokens to extract Star, Planet Number, and Moon Letters.
+ * Examples:
+ * - "A" -> { star: "A", planet: null, moon: null, submoon: null, rank: 0 }
+ * - "1" -> { star: "A", planet: 1, moon: null, submoon: null, rank: 1 }
+ * - "1 e" -> { star: "A", planet: 1, moon: "e", submoon: null, rank: 2 }
+ * - "1 a a" -> { star: "A", planet: 1, moon: "a", submoon: "a", rank: 3 }
+ * - "B 4" -> { star: "B", planet: 4, moon: null, submoon: null, rank: 1 }
+ * - "B 4 a" -> { star: "B", planet: 4, moon: "a", submoon: null, rank: 2 }
+ * - "AB 1" -> { star: "AB", planet: 1, moon: null, submoon: null, rank: 1 }
+ */
+function analyzeBodyDesignation(bodyName, systemName, isStar) {
+  const short = getBodyShortName(bodyName, systemName).trim();
+  const tokens = short.split(/\s+/).filter(Boolean);
+
+  if (isStar || tokens.length === 0) {
+    return {
+      shortName: short || 'Star',
+      starGroup: tokens[0] || 'A',
+      isStar: true,
+      planetNum: null,
+      moonLetter: null,
+      submoonLetter: null,
+      level: 0 // 0: Star, 1: Planet, 2: Moon, 3: Submoon
+    };
+  }
+
+  let starGroup = 'A';
+  let planetNum = null;
+  let moonLetter = null;
+  let submoonLetter = null;
+  let level = 1;
+
+  let idx = 0;
+  // Check if first token is a Star / Barycentre letter (A, B, C, AB, CD etc.)
+  if (/^[A-Z]{1,3}$/.test(tokens[0])) {
+    starGroup = tokens[0];
+    idx = 1;
+  }
+
+  // Next token should be Planet number (1, 2, 3...) or Moon letter
+  if (idx < tokens.length) {
+    const tok = tokens[idx];
+    const numMatch = tok.match(/^(\d+)$/);
+    if (numMatch) {
+      planetNum = parseInt(numMatch[1], 10);
+      idx++;
+      level = 1;
+
+      // Next token: Moon letter (a, b, c...)
+      if (idx < tokens.length && /^[a-z]$/i.test(tokens[idx])) {
+        moonLetter = tokens[idx].toLowerCase();
+        idx++;
+        level = 2;
+
+        // Next token: Submoon letter (a, b, c...)
+        if (idx < tokens.length && /^[a-z]$/i.test(tokens[idx])) {
+          submoonLetter = tokens[idx].toLowerCase();
+          level = 3;
+        }
+      }
+    } else if (/^[a-z]$/i.test(tok)) {
+      // Direct moon letter without number (rare)
+      moonLetter = tok.toLowerCase();
+      level = 2;
+    }
+  }
+
+  return {
+    shortName: short,
+    starGroup: starGroup,
+    isStar: false,
+    planetNum: planetNum,
+    moonLetter: moonLetter,
+    submoonLetter: submoonLetter,
+    level: level
+  };
+}
+
+/**
+ * Builds a strict and reliable hierarchical tree from bodies:
+ * Stars -> Planets (sorted 1, 2, 3...) -> Moons (sorted a, b, c...) -> Submoons
+ */
+function buildSystemMapTree(flatBodies, systemName) {
+  if (!flatBodies || flatBodies.length === 0) return [];
+
+  // 1. Tag and analyze each body
+  const analyzedList = flatBodies.map(b => {
+    const isStar = Boolean(b.star_type || (b.body_type && b.body_type.toLowerCase() === 'star'));
+    const info = analyzeBodyDesignation(b.body_name, systemName, isStar);
+    return {
+      ...b,
+      ...info,
+      moons: [],
+      submoons: []
+    };
+  });
+
+  // 2. Collect Stars and Star Sections
+  const starMap = new Map();
+  const stars = analyzedList.filter(b => b.isStar);
+
+  // If no explicit star found, use a fallback 'A' section
+  if (stars.length === 0) {
+    starMap.set('A', {
+      starKey: 'A',
+      rootStar: analyzedList[0],
+      planets: []
+    });
+  } else {
+    // Sort stars alphabetically (A, B, C...)
+    stars.sort((a, b) => a.starGroup.localeCompare(b.starGroup));
+    stars.forEach(s => {
+      starMap.set(s.starGroup, {
+        starKey: s.starGroup,
+        rootStar: s,
+        planets: []
+      });
+    });
+  }
+
+  // 3. Separate Planets, Moons, and Submoons
+  const planets = analyzedList.filter(b => !b.isStar && b.level === 1);
+  const moons = analyzedList.filter(b => !b.isStar && b.level === 2);
+  const submoons = analyzedList.filter(b => !b.isStar && b.level === 3);
+
+  // Planet Map keyed by `${starGroup}-${planetNum}` (e.g. "A-1", "A-2", "B-4")
+  const planetKeyMap = new Map();
+
+  planets.forEach(p => {
+    const sGroup = starMap.has(p.starGroup) ? p.starGroup : (starMap.keys().next().value || 'A');
+    const pNum = p.planetNum !== null ? p.planetNum : (p.distance_from_arrival_ls || 0);
+    const key = `${sGroup}-${pNum}`;
+
+    planetKeyMap.set(key, p);
+
+    if (!starMap.has(sGroup)) {
+      starMap.set(sGroup, {
+        starKey: sGroup,
+        rootStar: p,
+        planets: []
+      });
+    }
+    starMap.get(sGroup).planets.push(p);
+  });
+
+  // 4. Attach Moons to their respective Planets
+  moons.forEach(m => {
+    const sGroup = starMap.has(m.starGroup) ? m.starGroup : (starMap.keys().next().value || 'A');
+    const key = `${sGroup}-${m.planetNum}`;
+
+    if (planetKeyMap.has(key)) {
+      planetKeyMap.get(key).moons.push(m);
+    } else {
+      // If parent planet not found in map (e.g. not yet scanned), create a placeholder planet node
+      const placeholderPlanet = {
+        body_id: `p-${key}`,
+        body_name: `${systemName} ${sGroup} ${m.planetNum}`.trim(),
+        shortName: `${sGroup !== 'A' ? sGroup + ' ' : ''}${m.planetNum}`,
+        starGroup: sGroup,
+        isStar: false,
+        planetNum: m.planetNum,
+        planet_class: 'Unscanned Planet',
+        distance_from_arrival_ls: m.distance_from_arrival_ls,
+        level: 1,
+        moons: [m],
+        submoons: []
+      };
+      planetKeyMap.set(key, placeholderPlanet);
+      if (starMap.has(sGroup)) {
+        starMap.get(sGroup).planets.push(placeholderPlanet);
+      }
+    }
+  });
+
+  // 5. Attach Submoons to their respective Moons
+  submoons.forEach(sm => {
+    const sGroup = sm.starGroup;
+    const key = `${sGroup}-${sm.planetNum}`;
+    if (planetKeyMap.has(key)) {
+      const p = planetKeyMap.get(key);
+      const parentMoon = p.moons.find(m => m.moonLetter === sm.moonLetter);
+      if (parentMoon) {
+        parentMoon.submoons.push(sm);
+      } else {
+        p.moons.push(sm);
+      }
+    }
+  });
+
+  // 6. Natural Sorting:
+  // - Sort Planets by planetNum (1, 2, 3...) ascending
+  // - Sort Moons by moonLetter ('a', 'b', 'c', 'd', 'e', 'f'...) ascending
+  // - Sort Submoons by submoonLetter ('a', 'b', 'c'...) ascending
+  const starSections = Array.from(starMap.values());
+
+  starSections.forEach(sec => {
+    sec.planets.sort((a, b) => {
+      if (a.planetNum !== null && b.planetNum !== null) {
+        return a.planetNum - b.planetNum;
+      }
+      return (a.distance_from_arrival_ls || 0) - (b.distance_from_arrival_ls || 0);
+    });
+
+    sec.planets.forEach(p => {
+      p.moons.sort((a, b) => {
+        if (a.moonLetter && b.moonLetter) {
+          return a.moonLetter.localeCompare(b.moonLetter);
+        }
+        return (a.distance_from_arrival_ls || 0) - (b.distance_from_arrival_ls || 0);
+      });
+
+      p.moons.forEach(m => {
+        m.submoons.sort((a, b) => {
+          if (a.submoonLetter && b.submoonLetter) {
+            return a.submoonLetter.localeCompare(b.submoonLetter);
+          }
+          return (a.distance_from_arrival_ls || 0) - (b.distance_from_arrival_ls || 0);
+        });
+      });
+    });
+  });
+
+  return starSections;
+}
+
+function renderSystemMapView(container, hierarchyNodes, flatBodies) {
+  container.innerHTML = '';
+
+  if (!flatBodies || flatBodies.length === 0) {
+    container.innerHTML = `<div style="color: var(--text-secondary); text-align: center; padding: 40px;">${t('no_bodies') || '天体データがありません'}</div>`;
+    return;
+  }
+
+  const systemName = state.selectedSystem ? state.selectedSystem.star_system : '';
+  const mapWrapper = document.createElement('div');
+  mapWrapper.className = 'ed-system-map-container';
+
+  // Build accurate hierarchy tree
+  const starSections = buildSystemMapTree(flatBodies, systemName);
+
+  starSections.forEach(section => {
+    const starSectionEl = document.createElement('div');
+    starSectionEl.className = 'sysmap-star-system-section';
+
+    // Primary Star / Section Root
+    const rootEl = createSysMapBodyElement(section.rootStar, 'root-star', systemName);
+    starSectionEl.appendChild(rootEl);
+
+    // Horizontal Rail of Planets (Strictly ordered 1, 2, 3, 4...)
+    if (section.planets && section.planets.length > 0) {
+      const planetsRail = document.createElement('div');
+      planetsRail.className = 'sysmap-planets-rail';
+
+      section.planets.forEach(planetNode => {
+        const planetCol = document.createElement('div');
+        planetCol.className = 'sysmap-planet-column';
+
+        // Planet Body
+        const pRole = planetNode.isStar ? 'root-star' : 'planet';
+        const planetEl = createSysMapBodyElement(planetNode, pRole, systemName);
+        planetCol.appendChild(planetEl);
+
+        // Moons Branch descending vertically (Strictly ordered a, b, c, d, e, f...)
+        if (planetNode.moons && planetNode.moons.length > 0) {
+          const moonsBranch = document.createElement('div');
+          moonsBranch.className = 'sysmap-moons-branch';
+
+          planetNode.moons.forEach(moonNode => {
+            const moonItem = document.createElement('div');
+            moonItem.className = 'sysmap-moon-item';
+
+            const moonEl = createSysMapBodyElement(moonNode, 'moon', systemName);
+            moonItem.appendChild(moonEl);
+
+            // Sub-moons Branch (nested)
+            if (moonNode.submoons && moonNode.submoons.length > 0) {
+              const subMoonsBranch = document.createElement('div');
+              subMoonsBranch.className = 'sysmap-submoons-branch';
+              moonNode.submoons.forEach(subMoonNode => {
+                const subMoonEl = createSysMapBodyElement(subMoonNode, 'submoon', systemName);
+                subMoonsBranch.appendChild(subMoonEl);
+              });
+              moonItem.appendChild(subMoonsBranch);
+            }
+
+            moonsBranch.appendChild(moonItem);
+          });
+          planetCol.appendChild(moonsBranch);
+        }
+
+        planetsRail.appendChild(planetCol);
+      });
+
+      starSectionEl.appendChild(planetsRail);
+    }
+
+    mapWrapper.appendChild(starSectionEl);
+  });
+
+  container.appendChild(mapWrapper);
+}
+
+function createSysMapBodyElement(body, role = 'planet', systemName = '') {
+  const isSelected = state.selectedBody && state.selectedBody.body_id === body.body_id;
+  const isTarget = state.targetBodyId !== null && body.body_id === state.targetBodyId;
+
+  const card = document.createElement('div');
+  card.className = `sysmap-body-node ${role} ${isSelected ? 'selected' : ''} ${isTarget ? 'target-pulse' : ''}`;
+  card.dataset.bodyId = body.body_id;
+
+  card.onclick = (e) => {
+    e.stopPropagation();
+    state.selectedBody = body;
+    state.targetBodyId = body.body_id;
+    renderBodyInspector();
+    document.querySelectorAll('.sysmap-body-node').forEach(n => n.classList.remove('selected'));
+    card.classList.add('selected');
+  };
+
+  // Celestial sphere styling & glow
+  const sphere = document.createElement('div');
+  sphere.className = 'sysmap-sphere-wrapper';
+
+  const iconLabel = getBodyIconLabel(body);
+  const iconClass = getBodyIconClass(body);
+
+  // Check planetary rings
+  const hasRings = (body.rings_list && body.rings_list.length > 0) || (body.rings && body.rings !== '[]');
+
+  // Check Landable (Blue crescent arc in ED)
+  const isLandable = Boolean(body.landable);
+
+  // Badges & Signals
+  const badgeList = [];
+  if (isTarget) {
+    badgeList.push('<span class="sysmap-mini-badge target">🎯 TARGET</span>');
+  }
+  if (body.bio_signals > 0) {
+    badgeList.push(`<span class="sysmap-mini-badge bio">🌱 ${body.bio_signals}</span>`);
+  }
+  if (body.geo_signals > 0) {
+    badgeList.push(`<span class="sysmap-mini-badge geo">🌋 ${body.geo_signals}</span>`);
+  }
+  if (body.has_first_discover || body.was_discovered === 0) {
+    badgeList.push('<span class="sysmap-mini-badge first-disc">⭐ 1st</span>');
+  }
+
+  // Sphere HTML with optional ring and landable arc
+  const landableArcHtml = isLandable ? '<div class="sysmap-landable-arc"></div>' : '';
+  const ringHtml = hasRings ? '<div class="sysmap-ring-system"></div>' : '';
+
+  sphere.innerHTML = `
+    ${landableArcHtml}
+    ${ringHtml}
+    <div class="sysmap-sphere ${iconClass} ${role}">
+      <span class="sysmap-icon-label">${iconLabel}</span>
+    </div>
+  `;
+
+  // Short Name (e.g. "1", "1 e", "1 f", "2 f", "B 4")
+  const shortName = body.shortName || getBodyShortName(body.body_name, systemName);
+
+  // Info labels below body with full name tooltip and neat badge plate
+  const info = document.createElement('div');
+  info.className = 'sysmap-body-info';
+
+  const typeDesc = body.star_type 
+    ? `Star (${body.star_type})` 
+    : (body.planet_class || 'Planet');
+
+  const distStr = body.distance_from_arrival_ls 
+    ? formatDistance(body.distance_from_arrival_ls) 
+    : (role === 'root-star' ? '0 Ls' : '--');
+
+  info.innerHTML = `
+    <div class="sysmap-body-shortname" title="${body.body_name}">${shortName}</div>
+    <div class="sysmap-body-type-plate" title="${body.body_name} - ${typeDesc}">
+      <span class="sysmap-type-text">${typeDesc}</span>
+    </div>
+    <div class="sysmap-body-dist">${distStr}</div>
+    ${badgeList.length > 0 ? `<div class="sysmap-badges-row">${badgeList.join('')}</div>` : ''}
+  `;
+
+  card.appendChild(sphere);
+  card.appendChild(info);
+
+  return card;
+}

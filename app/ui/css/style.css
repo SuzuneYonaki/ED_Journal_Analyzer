@@ -1205,3 +1205,343 @@ header {
   border-color: rgba(255, 113, 0, 0.35);
 }
 
+/* Target Focused Pulse Animation */
+.node-card.target-pulse {
+  animation: targetPulseGlow 1.5s infinite alternate ease-in-out;
+  border-color: var(--ed-green) !important;
+  box-shadow: 0 0 16px rgba(0, 255, 136, 0.45), inset 0 0 8px rgba(0, 255, 136, 0.2);
+}
+
+@keyframes targetPulseGlow {
+  0% {
+    box-shadow: 0 0 6px rgba(0, 255, 136, 0.3), inset 0 0 4px rgba(0, 255, 136, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.7), inset 0 0 12px rgba(0, 255, 136, 0.3);
+  }
+}
+
+/* TTS Switch Toggle Button */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #334155;
+  transition: all 0.25s ease-in-out;
+  border-radius: 26px;
+  border: 1px solid #475569;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #f8fafc;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.switch input:checked + .slider {
+  background-color: var(--ed-cyan);
+  border-color: var(--ed-cyan);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(22px);
+  background-color: #ffffff;
+}
+
+/* ==========================================================================
+   Elite Dangerous System Map Styles
+   ========================================================================== */
+
+.ed-system-map-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  padding: 30px 20px 60px 20px;
+  overflow-x: auto;
+  overflow-y: auto;
+  min-height: 100%;
+  background-image: 
+    radial-gradient(circle at center, rgba(255, 113, 0, 0.03) 0%, transparent 70%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 40px, 40px 40px;
+}
+
+.sysmap-star-system-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.sysmap-planets-rail {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  position: relative;
+  padding-left: 20px;
+}
+
+/* Horizontal Main Sequence Line */
+.sysmap-planets-rail:before {
+  content: "";
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 20px;
+  height: 2px;
+  background: repeating-linear-gradient(to right, rgba(255, 170, 0, 0.5), rgba(255, 170, 0, 0.5) 6px, transparent 6px, transparent 10px);
+  z-index: 1;
+}
+
+.sysmap-planet-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+/* Vertical Moon Branch Lines */
+.sysmap-moons-branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  position: relative;
+  padding-top: 10px;
+}
+
+.sysmap-moons-branch:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 20px;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(to bottom, rgba(0, 210, 255, 0.4), rgba(0, 210, 255, 0.4) 4px, transparent 4px, transparent 8px);
+  z-index: 1;
+}
+
+.sysmap-moon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.sysmap-submoons-branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding-left: 14px;
+  border-left: 1px dashed rgba(0, 210, 255, 0.3);
+}
+
+/* System Map Celestial Body Node */
+.sysmap-body-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  min-width: 90px;
+  max-width: 140px;
+  text-align: center;
+}
+
+.sysmap-body-node:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 113, 0, 0.4);
+}
+
+.sysmap-body-node.selected {
+  background: rgba(0, 210, 255, 0.08);
+  border-color: var(--ed-cyan);
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.3);
+}
+
+/* Sphere Wrapper & Landable Arc & Rings */
+.sysmap-sphere-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.sysmap-sphere {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  position: relative;
+  z-index: 3;
+}
+
+.sysmap-sphere.root-star {
+  width: 80px;
+  height: 80px;
+  box-shadow: 0 0 30px rgba(255, 170, 0, 0.6), inset 0 0 14px rgba(255, 255, 255, 0.8);
+}
+
+.sysmap-sphere.moon {
+  width: 38px;
+  height: 38px;
+}
+
+.sysmap-sphere.submoon {
+  width: 28px;
+  height: 28px;
+}
+
+.sysmap-icon-label {
+  font-size: 0.72rem;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.sysmap-sphere.moon .sysmap-icon-label {
+  font-size: 0.62rem;
+}
+.sysmap-sphere.submoon .sysmap-icon-label {
+  font-size: 0.55rem;
+}
+
+/* Landable Arc (Blue Crescent) */
+.sysmap-landable-arc {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border: 2px solid var(--ed-cyan);
+  border-radius: 50%;
+  clip-path: polygon(0 0, 60% 0, 60% 100%, 0 100%);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Planetary Ring Graphic */
+.sysmap-ring-system {
+  position: absolute;
+  width: 140%;
+  height: 36%;
+  border: 4px double rgba(187, 136, 238, 0.7);
+  border-radius: 50%;
+  transform: rotate(-25deg);
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 0 8px rgba(187, 136, 238, 0.4);
+}
+
+/* Info Labels */
+.sysmap-body-shortname {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  font-family: var(--font-mono);
+  text-shadow: 0 0 8px rgba(0, 210, 255, 0.4);
+}
+
+.sysmap-body-node.selected .sysmap-body-shortname {
+  color: var(--ed-cyan);
+  text-shadow: 0 0 12px var(--ed-cyan);
+}
+
+.sysmap-body-type-plate {
+  background: rgba(18, 22, 31, 0.9);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-top: 4px;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sysmap-type-text {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+.sysmap-body-dist {
+  font-size: 0.68rem;
+  color: var(--ed-orange);
+  font-family: var(--font-mono);
+  margin-top: 3px;
+}
+
+.sysmap-badges-row {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.sysmap-mini-badge {
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.sysmap-mini-badge.target {
+  background: rgba(0, 255, 136, 0.25);
+  color: var(--ed-green);
+  border: 1px solid var(--ed-green);
+}
+.sysmap-mini-badge.bio {
+  background: rgba(0, 255, 136, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(0, 255, 136, 0.35);
+}
+.sysmap-mini-badge.geo {
+  background: rgba(255, 113, 0, 0.15);
+  color: var(--ed-orange);
+  border: 1px solid rgba(255, 113, 0, 0.35);
+}
+.sysmap-mini-badge.first-disc {
+  background: rgba(255, 204, 0, 0.15);
+  color: var(--ed-gold);
+  border: 1px solid rgba(255, 204, 0, 0.35);
+}
+

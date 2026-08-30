@@ -23,6 +23,7 @@ hiddenimports = [
 
 datas = [
     ('app/ui', 'app/ui'),
+    ('app/data', 'app/data'),
     ('app/icon.ico', 'app'),
 ] + collect_data_files('webview')
 

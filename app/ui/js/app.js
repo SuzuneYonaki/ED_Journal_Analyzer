@@ -3,8 +3,9 @@ let state = {
   systems: [],
   selectedSystem: null,
   selectedBody: null,
+  targetBodyId: null,
   currentSystemData: null,
-  currentView: 'tree', // 'tree', 'flat', 'visits'
+  currentView: 'sysmap', // 'sysmap', 'orrery', 'tree', 'flat', 'bio', 'visits'
   searchQuery: '',
   filters: {
     has_elw: false,
@@ -190,7 +191,13 @@ let systemsRetryTimeout = null;
 
 async function fetchGlobalStats() {
   try {
-    const res = await fetch('/api/stats');
+    const params = new URLSearchParams();
+    if (state.dateFrom) params.append('date_from', state.dateFrom);
+    if (state.dateTo) params.append('date_to', state.dateTo);
+    if (state.dateField) params.append('date_field', state.dateField);
+
+    const url = `/api/stats${params.toString() ? '?' + params.toString() : ''}`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     document.getElementById('stat-systems').innerText = Number(data.total_systems).toLocaleString();
@@ -205,13 +212,27 @@ async function fetchGlobalStats() {
     document.getElementById('stat-bio').innerText = `${bioSysCount} (${bioSigCount} Sig)`;
     document.getElementById('stat-total-payout').innerText = formatCredits(data.total_potential_value);
 
+    // Update Header Period Label
+    const periodLabelEl = document.getElementById('header-logged-period');
+    if (periodLabelEl) {
+      if (!state.dateFrom && !state.dateTo) {
+        periodLabelEl.innerText = '全期間';
+      } else if (state.dateFrom && !state.dateTo) {
+        periodLabelEl.innerText = `${state.dateFrom} 〜 今日`;
+      } else if (!state.dateFrom && state.dateTo) {
+        periodLabelEl.innerText = `最初 〜 ${state.dateTo}`;
+      } else {
+        periodLabelEl.innerText = `${state.dateFrom} 〜 ${state.dateTo}`;
+      }
+    }
+
     // CMDR Current Location
     const cmdrLocEl = document.getElementById('stat-cmdr-loc');
     if (cmdrLocEl) {
       if (data.current_location && data.current_location.star_system) {
         const cl = data.current_location;
         cmdrLocEl.innerText = cl.star_system;
-        cmdrLocEl.title = `${cl.star_system} [${cl.star_pos_x.toFixed(1)}, ${cl.star_pos_y.toFixed(1)}, ${cl.star_pos_z.toFixed(1)}]`;
+        cmdrLocEl.title = `${cl.star_system} [${cl.star_pos_x.toFixed(6)}, ${cl.star_pos_y.toFixed(6)}, ${cl.star_pos_z.toFixed(6)}]`;
       } else {
         cmdrLocEl.innerText = '--';
       }
@@ -268,22 +289,37 @@ async function fetchSystems() {
     state.totalPages = Math.ceil(data.total / state.limit) || 1;
 
     // Update CMDR location in header if returned
+    let jumpedToNewSystem = false;
     if (data.current_location && data.current_location.star_system) {
       const cl = data.current_location;
+      const prevCmdrSys = state.currentCmdrSystemAddress;
+      state.currentCmdrSystemAddress = cl.system_address;
+
       const cmdrLocEl = document.getElementById('stat-cmdr-loc');
       if (cmdrLocEl) {
         cmdrLocEl.innerText = cl.star_system;
-        cmdrLocEl.title = `${cl.star_system} [${cl.star_pos_x.toFixed(1)}, ${cl.star_pos_y.toFixed(1)}, ${cl.star_pos_z.toFixed(1)}]`;
+        if (cl.star_pos_x !== undefined) {
+          cmdrLocEl.title = `${cl.star_system} [${cl.star_pos_x.toFixed(1)}, ${cl.star_pos_y.toFixed(1)}, ${cl.star_pos_z.toFixed(1)}]`;
+        }
+      }
+
+      // If LIVE sync is active and CMDR jumped to a new system, auto-switch center pane to new system!
+      if (state.liveSyncEnabled && prevCmdrSys && cl.system_address && prevCmdrSys !== cl.system_address) {
+        jumpedToNewSystem = true;
+        selectSystem(cl.system_address);
       }
     }
 
     renderSystemList();
     renderPagination(data.total);
 
-    // Auto select first system if none selected or not in current list
-    if (state.systems && state.systems.length > 0) {
+    // Auto select first system if none selected or not in current list (and not just jumped)
+    if (!jumpedToNewSystem && state.systems && state.systems.length > 0) {
       if (!state.selectedSystem || !state.systems.some(s => s.system_address === state.selectedSystem.system_address)) {
-        selectSystem(state.systems[0].system_address);
+        const targetAddress = (state.currentCmdrSystemAddress && state.systems.some(s => s.system_address === state.currentCmdrSystemAddress))
+          ? state.currentCmdrSystemAddress
+          : state.systems[0].system_address;
+        selectSystem(targetAddress);
       }
     }
   } catch (err) {
@@ -303,12 +339,19 @@ async function selectSystem(systemAddress, preserveSelectedBody = false) {
     const data = await res.json();
     state.currentSystemData = data;
     state.selectedSystem = data.system;
+
+    if (data.system && data.system.last_targeted_body_id !== undefined && data.system.last_targeted_body_id !== null) {
+      state.targetBodyId = data.system.last_targeted_body_id;
+    }
     
-    // Auto select first body or preserve previously selected body
+    // Auto select target body, preserved body, or first body
     if (data.bodies && data.bodies.length > 0) {
       if (preserveSelectedBody && state.selectedBody) {
         const matchingBody = data.bodies.find(b => b.body_id === state.selectedBody.body_id);
         state.selectedBody = matchingBody || data.bodies[0];
+      } else if (state.targetBodyId !== null && state.targetBodyId !== undefined) {
+        const targetMatching = data.bodies.find(b => b.body_id === state.targetBodyId);
+        state.selectedBody = targetMatching || data.bodies[0];
       } else {
         state.selectedBody = data.bodies[0];
       }
@@ -320,6 +363,15 @@ async function selectSystem(systemAddress, preserveSelectedBody = false) {
     renderCurrentView();
     renderBodyInspector();
     highlightSelectedSystemCard();
+
+    // Check First Discovery and announce via TTS
+    if (data.system && (data.system.has_first_discover || (data.system.first_discovered_bodies && data.system.first_discovered_bodies > 0))) {
+      announceFirstDiscovery(data.system.star_system);
+    }
+
+    if (state.selectedBody) {
+      focusAndScrollToTargetBody(state.selectedBody.body_id);
+    }
   } catch (err) {
     console.error('Failed to select system:', err);
   }
@@ -371,7 +423,7 @@ function renderSystemList() {
     }
 
     const coordsStr = (sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
-      ? `[${sys.star_pos_x.toFixed(1)}, ${sys.star_pos_y.toFixed(1)}, ${sys.star_pos_z.toFixed(1)}]`
+      ? `[${sys.star_pos_x.toFixed(6)}, ${sys.star_pos_y.toFixed(6)}, ${sys.star_pos_z.toFixed(6)}]`
       : '';
 
     card.innerHTML = `
@@ -417,7 +469,7 @@ function renderSystemHeader() {
   document.getElementById('current-system-name').innerText = sys.star_system;
   
   const coords = (sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
-    ? `[ ${sys.star_pos_x.toFixed(1)}, ${sys.star_pos_y.toFixed(1)}, ${sys.star_pos_z.toFixed(1)} ]`
+    ? `[ ${sys.star_pos_x.toFixed(6)}, ${sys.star_pos_y.toFixed(6)}, ${sys.star_pos_z.toFixed(6)} ]`
     : '';
   document.getElementById('current-system-coords').innerText = coords;
   document.getElementById('current-system-fss-value').innerText = formatCredits(sys.total_fss_value || 0);
@@ -425,17 +477,23 @@ function renderSystemHeader() {
   
   // Exobiology System Summary
   const bioBox = document.getElementById('system-bio-payout-box');
+  const bioScannedBaseEl = document.getElementById('current-system-bio-scanned-base');
+  const bioScannedFirstEl = document.getElementById('current-system-bio-scanned-first');
   const bioBaseEl = document.getElementById('current-system-bio-base');
   const bioFirstEl = document.getElementById('current-system-bio-first');
 
-  if (sys.bio_total_base_value > 0 || sys.bio_signals_count > 0 || (state.currentSystemData && state.currentSystemData.system_bio_summary && state.currentSystemData.system_bio_summary.total_base_value > 0)) {
+  if (sys.bio_total_base_value > 0 || sys.bio_signals_count > 0 || (state.currentSystemData && state.currentSystemData.system_bio_summary && (state.currentSystemData.system_bio_summary.total_base_value > 0 || state.currentSystemData.system_bio_summary.scanned_base_value > 0))) {
     const summary = (state.currentSystemData && state.currentSystemData.system_bio_summary) || {};
+    const scannedBaseVal = sys.bio_scanned_base_value !== undefined ? sys.bio_scanned_base_value : (summary.scanned_base_value || 0);
+    const scannedFirstVal = sys.bio_scanned_first_value !== undefined ? sys.bio_scanned_first_value : (summary.scanned_first_value || 0);
     const baseVal = sys.bio_total_base_value || summary.total_base_value || 0;
     const firstVal = sys.bio_total_first_value || summary.total_first_value || 0;
     const sigCount = sys.bio_signals_count || summary.total_signals || 0;
     const scCount = sys.bio_scanned_count || summary.total_scanned || 0;
 
     if (bioBox) bioBox.style.display = 'block';
+    if (bioScannedBaseEl) bioScannedBaseEl.innerText = formatCredits(scannedBaseVal);
+    if (bioScannedFirstEl) bioScannedFirstEl.innerText = formatCredits(scannedFirstVal);
     if (bioBaseEl) bioBaseEl.innerText = formatCredits(baseVal);
     if (bioFirstEl) bioFirstEl.innerText = formatCredits(firstVal);
     if (bioBox) bioBox.title = `Total Signals: ${sigCount}, Scanned: ${scCount}`;
@@ -478,14 +536,16 @@ function getSortedBodies(bodies) {
 function renderBodyExobiologyBlock(node) {
   const bioSig = node.bio_signals || 0;
   const scannedList = node.scanned_organics || [];
-  const potentialList = node.potential_exobiology || node.exobiology || [];
+  const rawPotential = node.exobiology || node.potential_exobiology || [];
 
   if (bioSig === 0 && scannedList.length === 0) return '';
 
-  const totalSlots = Math.max(bioSig, scannedList.length, 1);
+  const scannedGenusSet = new Set(scannedList.map(s => (s.genus_localised || s.genus || '').toLowerCase()));
+  const scannedSpeciesSet = new Set(scannedList.map(s => (s.species_localised || s.species || '').toLowerCase()));
+
   const slotRows = [];
 
-  // 1. Scanned / in-progress species
+  // 1. Scanned / Confirmed Species Rows
   scannedList.forEach(org => {
     const spName = org.species_localised || org.species || org.genus_localised || org.genus || 'Confirmed Flora';
     const genName = org.genus_localised || org.genus || '';
@@ -493,26 +553,36 @@ function renderBodyExobiologyBlock(node) {
     const fdVal = org.first_discovery_value || (baseVal * 5);
     const dist = org.colony_distance_m || 500;
     const stage = org.stage_level || 3;
+    const variant = org.variant_localised || org.variant || '';
 
+    let stageDots = "●●●";
     let badgeClass = "bio-badge-confirmed";
-    let badgeText = `✓ ${t('bio_status_analyzed')}`;
+    let badgeText = `✓ [3/3 ${t('bio_status_analyzed')}]`;
     let rowClass = "confirmed";
 
     if (stage === 1) {
+      stageDots = "●○○";
       badgeClass = "tag-badge";
-      badgeText = `🔬 ${t('bio_status_sample_1')}`;
+      badgeText = `🔬 [1/3 ${t('bio_status_sample_1')}]`;
       rowClass = "in-progress";
     } else if (stage === 2) {
+      stageDots = "●●○";
       badgeClass = "tag-badge";
-      badgeText = `🔬 ${t('bio_status_sample_2')}`;
+      badgeText = `🔬 [2/3 ${t('bio_status_sample_2')}]`;
       rowClass = "in-progress";
     }
+
+    const varColor = variant.includes(" - ") ? variant.split(" - ")[1].trim() : "";
+    const colorBadge = varColor ? `<span class="tag-badge" style="background: rgba(0, 255, 136, 0.15); color: #6ee7b7; border: 1px solid rgba(0, 255, 136, 0.35); font-size: 0.65rem;">🎨 ${varColor}</span>` : '';
 
     slotRows.push(`
       <div class="bio-slot-row ${rowClass}">
         <div class="bio-slot-left">
           <span class="${badgeClass}">${badgeText}</span>
-          <span style="font-weight: bold; color: var(--text-primary);">${spName} ${genName && genName !== spName ? `<span style="color:var(--text-secondary); font-size:0.7rem;">(${genName})</span>` : ''}</span>
+          <span style="font-weight: bold; color: #f8fafc;">${spName}</span>
+          ${genName && !spName.includes(genName) ? `<span style="color:var(--text-secondary); font-size:0.7rem;">(${genName})</span>` : ''}
+          ${colorBadge}
+          <span style="color: var(--ed-green); font-size: 0.75rem; letter-spacing: 1px; margin-left: 2px;">${stageDots}</span>
           <span class="bio-colony-tag" title="${t('bio_colony_dist')} ${dist}m">📍 ${dist}m</span>
         </div>
         <div class="bio-slot-payouts">
@@ -523,49 +593,124 @@ function renderBodyExobiologyBlock(node) {
     `);
   });
 
-  // 2. Candidate potential species for remaining slots
-  const remainingSlots = Math.max(0, totalSlots - scannedList.length);
-  for (let i = 0; i < remainingSlots; i++) {
-    if (i < potentialList.length) {
-      const pot = potentialList[i];
-      const spName = pot.species || pot.genus || 'Candidate';
+  // 2. Candidate Potential Species Rows (BioInsights & ED Exploration Buddy Slot Allocation)
+  const isFullyScanned = (bioSig > 0 && scannedList.length >= bioSig);
+  const remainingSlots = Math.max(0, bioSig - scannedList.length);
+
+  // Filter un-scanned potential candidates
+  const unscannedCandidates = [];
+  const excludedCandidates = [];
+
+  rawPotential.forEach(pot => {
+    const sp = (pot.species || '').toLowerCase();
+    const gen = (pot.genus || '').toLowerCase();
+    if (scannedSpeciesSet.has(sp)) return;
+
+    if (scannedGenusSet.has(gen) || isFullyScanned) {
+      excludedCandidates.push(pot);
+    } else {
+      unscannedCandidates.push(pot);
+    }
+  });
+
+  // Sort candidates by genus base_value descending (highest price first), then by probability score
+  unscannedCandidates.sort((a, b) => (b.base_value || 0) - (a.base_value || 0) || (b.probability_score || 0) - (a.probability_score || 0));
+
+  // Primary prediction slots (up to remainingSlots)
+  const primaryCandidates = unscannedCandidates.slice(0, remainingSlots > 0 ? remainingSlots : undefined);
+  const alternativeCandidates = unscannedCandidates.slice(remainingSlots > 0 ? remainingSlots : unscannedCandidates.length);
+
+  primaryCandidates.forEach((pot, idx) => {
+    const spName = pot.species_variant || pot.species || pot.genus || 'Candidate';
+    const genName = pot.genus || '';
+    const baseVal = pot.base_value || 0;
+    const fdVal = pot.first_discovery_value || (baseVal * 5);
+    const dist = pot.colony_distance_m || 500;
+    const desc = pot.description || '';
+    const variantColor = pot.variant_color || '';
+    const slotNum = scannedList.length + idx + 1;
+    const colorBadge = variantColor ? `<span class="tag-badge" style="background: rgba(250, 204, 21, 0.15); color: #fde047; border: 1px solid rgba(250, 204, 21, 0.35); font-size: 0.65rem;">🎨 ${variantColor}</span>` : '';
+    const genusBadge = genName ? `<span class="tag-badge" style="background: rgba(0, 210, 255, 0.12); color: var(--ed-cyan); border: 1px solid rgba(0, 210, 255, 0.35); font-size: 0.68rem; font-weight: bold;">${genName}</span>` : '';
+
+    slotRows.push(`
+      <div class="bio-slot-row candidate" style="border-left: 3px solid var(--ed-green);">
+        <div class="bio-slot-left">
+          <span class="bio-badge-candidate">? [Slot ${slotNum}/${bioSig || '?'}]</span>
+          ${genusBadge}
+          <span style="color: #f1f5f9; font-weight: 600;">${spName}</span>
+          ${colorBadge}
+          <span class="bio-colony-tag" title="${t('bio_colony_dist')} ${dist}m">📍 ${dist}m</span>
+          ${desc ? `<span style="color: var(--text-dim); font-size: 0.68rem; margin-left: 4px;">(${desc})</span>` : ''}
+        </div>
+        <div class="bio-slot-payouts">
+          <span style="color: #94a3b8;">${t('bio_normal_val')} ${formatCredits(baseVal)}</span>
+          <span style="color: var(--ed-green); font-weight: bold;">${t('bio_first_val')} ${formatCredits(fdVal)}</span>
+        </div>
+      </div>
+    `);
+  });
+
+  // Optional alternative candidates (rendered cleanly in a collapsed or secondary block)
+  if (alternativeCandidates.length > 0) {
+    const altDetailsId = `alt-bio-${node.body_id || Math.random().toString(36).substr(2, 9)}`;
+    const altRows = alternativeCandidates.map(pot => {
+      const spName = pot.species_variant || pot.species || pot.genus || 'Candidate';
       const genName = pot.genus || '';
       const baseVal = pot.base_value || 0;
       const fdVal = pot.first_discovery_value || (baseVal * 5);
       const dist = pot.colony_distance_m || 500;
-      const desc = pot.description || '';
+      const variantColor = pot.variant_color || '';
+      const colorBadge = variantColor ? `<span class="tag-badge" style="background: rgba(250, 204, 21, 0.12); color: #fde047; font-size: 0.62rem;">🎨 ${variantColor}</span>` : '';
+      const genusBadge = genName ? `<span class="tag-badge" style="background: rgba(0, 210, 255, 0.08); color: var(--ed-cyan-dim); border: 1px solid rgba(0, 210, 255, 0.2); font-size: 0.62rem;">${genName}</span>` : '';
 
-      slotRows.push(`
-        <div class="bio-slot-row candidate">
+      return `
+        <div class="bio-slot-row candidate" style="opacity: 0.8; font-size: 0.8rem; padding: 4px 8px; background: rgba(0,0,0,0.15);">
           <div class="bio-slot-left">
-            <span class="bio-badge-candidate">? ${t('bio_status_potential')}</span>
-            <span style="color: #e2e8f0; font-weight: 500;">${spName} ${genName && genName !== spName ? `<span style="color:var(--text-secondary); font-size:0.7rem;">(${genName})</span>` : ''}</span>
-            <span class="bio-colony-tag" title="${t('bio_colony_dist')} ${dist}m">📍 ${dist}m</span>
-            ${desc ? `<span style="color: var(--text-dim); font-size: 0.68rem; margin-left: 4px;">(${desc})</span>` : ''}
+            <span class="tag-badge" style="background: rgba(255,255,255,0.06); color: var(--text-secondary); font-size: 0.62rem;">alt</span>
+            ${genusBadge}
+            <span style="color: #cbd5e1;">${spName}</span>
+            ${colorBadge}
+            <span class="bio-colony-tag" style="font-size: 0.62rem;">📍 ${dist}m</span>
+          </div>
+          <div class="bio-slot-payouts" style="font-size: 0.72rem;">
+            <span style="color: #94a3b8;">${formatCredits(baseVal)}</span>
+            <span style="color: var(--ed-green); margin-left: 6px;">${formatCredits(fdVal)}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    slotRows.push(`
+      <details style="margin-top: 4px; border: 1px dashed rgba(255,255,255,0.15); border-radius: 4px; padding: 4px 8px;">
+        <summary style="font-size: 0.72rem; color: var(--text-secondary); cursor: pointer; user-select: none;">
+          🔍 他の候補の可能性 (${alternativeCandidates.length}件を表示/非表示)
+        </summary>
+        <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+          ${altRows}
+        </div>
+      </details>
+    `);
+  }
+
+  // Excluded candidates (already scanned genus)
+  if (excludedCandidates.length > 0) {
+    excludedCandidates.forEach(pot => {
+      const spName = pot.species_variant || pot.species || pot.genus || 'Candidate';
+      const baseVal = pot.base_value || 0;
+      const dist = pot.colony_distance_m || 500;
+      slotRows.push(`
+        <div class="bio-slot-row candidate" style="opacity: 0.35; filter: grayscale(50%);">
+          <div class="bio-slot-left">
+            <span class="tag-badge" style="background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25); font-size: 0.62rem;">✕ ${t('bio_status_excluded') || '除外'}</span>
+            <span style="color: #94a3b8; text-decoration: line-through;">${spName}</span>
+            <span class="bio-colony-tag" style="opacity: 0.6;">📍 ${dist}m</span>
           </div>
           <div class="bio-slot-payouts">
-            <span style="color: #94a3b8;">${t('bio_normal_val')} ${formatCredits(baseVal)}</span>
-            <span style="color: var(--ed-green);">${t('bio_first_val')} ${formatCredits(fdVal)}</span>
+            <span style="color: #64748b;">${formatCredits(baseVal)}</span>
           </div>
         </div>
       `);
-    } else {
-      // Unspecified slot
-      const defaultVal = 1689700;
-      slotRows.push(`
-        <div class="bio-slot-row candidate">
-          <div class="bio-slot-left">
-            <span class="bio-badge-candidate">? ${t('bio_status_potential')}</span>
-            <span style="color: #94a3b8;">${t('bio_slot_empty')} #${scannedList.length + i + 1}</span>
-            <span class="bio-colony-tag">📍 500m</span>
-          </div>
-          <div class="bio-slot-payouts">
-            <span style="color: #94a3b8;">${t('bio_normal_val')} ${formatCredits(defaultVal)}</span>
-            <span style="color: var(--ed-green);">${t('bio_first_val')} ${formatCredits(defaultVal * 5)}</span>
-          </div>
-        </div>
-      `);
-    }
+    });
   }
 
   // Environmental info (Gravity safety & Atmosphere/Temp)
@@ -587,6 +732,20 @@ function renderBodyExobiologyBlock(node) {
     envBadges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.06); color: var(--text-secondary); font-size:0.68rem;">🌡️ ${kelvin}K (${celsius}℃)</span>`);
   }
 
+  const scannedBase = node.bio_scanned_base_value || 0;
+  const scannedFirst = node.bio_scanned_first_value || 0;
+  const totalBase = node.bio_total_base_value || 0;
+  const totalFirst = node.bio_total_first_value || 0;
+
+  const scannedSubtotalHtml = scannedBase > 0 ? `
+    <div style="display: flex; align-items: baseline; gap: 4px; background: rgba(0, 255, 136, 0.12); padding: 1px 6px; border-radius: 3px; border: 1px solid rgba(0, 255, 136, 0.3);">
+      <span style="color: #6ee7b7; font-size: 0.72rem; font-weight: 500;">✓ ${t('bio_body_scanned_total')}</span>
+      <span style="color: #d1fae5; font-size: 0.75rem;" title="スキャン確定 (通常)">${formatCredits(scannedBase)}</span>
+      <span style="color: var(--text-secondary); font-size: 0.65rem;">/ 1st:</span>
+      <span style="color: var(--ed-green); font-size: 0.78rem; font-weight: bold;" title="スキャン確定 (1st 5倍)">${formatCredits(scannedFirst)}</span>
+    </div>
+  ` : '';
+
   return `
     <div class="body-bio-panel">
       <div class="body-bio-header">
@@ -594,11 +753,14 @@ function renderBodyExobiologyBlock(node) {
           🌱 Exobiology (${t('filter_bio')}: ${bioSig} / ${t('bio_status_confirmed')}: ${node.completed_bio_count || 0})
           <div style="display: inline-flex; gap: 4px; margin-left: 6px; flex-wrap: wrap;">${envBadges.join('')}</div>
         </div>
-        <div class="body-bio-total">
-          <span style="color: var(--text-secondary);">${t('bio_body_total')}</span>
-          <span style="color: #a7f3d0;" title="通常合計">${formatCredits(node.bio_total_base_value || 0)}</span>
-          <span style="color: var(--text-secondary);">/ 1st:</span>
-          <span style="color: var(--ed-green); font-weight: bold;" title="1st Discover合計 (5倍)">${formatCredits(node.bio_total_first_value || 0)}</span>
+        <div class="body-bio-total" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          ${scannedSubtotalHtml}
+          <div style="display: flex; align-items: baseline; gap: 4px;">
+            <span style="color: var(--text-secondary); font-size: 0.72rem;">${t('bio_body_total')}</span>
+            <span style="color: #a7f3d0; font-size: 0.75rem;" title="見込合計 (通常)">${formatCredits(totalBase)}</span>
+            <span style="color: var(--text-secondary); font-size: 0.65rem;">/ 1st:</span>
+            <span style="color: var(--ed-green); font-weight: bold; font-size: 0.8rem;" title="1st Discover合計 (5倍)">${formatCredits(totalFirst)}</span>
+          </div>
         </div>
       </div>
       <div class="body-bio-slots">
@@ -627,13 +789,43 @@ function renderBodyGeoBlock(node) {
   `;
 }
 
+function focusAndScrollToTargetBody(bodyId) {
+  const targetId = (bodyId !== null && bodyId !== undefined) ? bodyId : (state.selectedBody ? state.selectedBody.body_id : state.targetBodyId);
+  if (targetId === null || targetId === undefined) return;
+
+  setTimeout(() => {
+    const targetCard = document.querySelector(`.node-card[data-body-id="${targetId}"]`);
+    if (targetCard) {
+      // Remove pulse from all cards
+      document.querySelectorAll('.node-card').forEach(nc => nc.classList.remove('target-pulse'));
+
+      // Ensure card is selected visually
+      document.querySelectorAll('.node-card').forEach(nc => nc.classList.remove('selected'));
+      targetCard.classList.add('selected');
+
+      // Smooth scroll to center of view
+      targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      // Add visual pulse effect
+      targetCard.classList.add('target-pulse');
+      setTimeout(() => {
+        targetCard.classList.remove('target-pulse');
+      }, 3000);
+    }
+  }, 100);
+}
+
 function renderCurrentView() {
   const container = document.getElementById('map-content');
   container.innerHTML = '';
 
   if (!state.currentSystemData) return;
 
-  if (state.currentView === 'tree') {
+  if (state.currentView === 'sysmap') {
+    if (typeof renderSystemMapView === 'function') {
+      renderSystemMapView(container, state.currentSystemData.hierarchy, state.currentSystemData.bodies);
+    }
+  } else if (state.currentView === 'tree') {
     renderHierarchyTree(container, state.currentSystemData.hierarchy);
   } else if (state.currentView === 'flat') {
     const sorted = getSortedBodies(state.currentSystemData.bodies);
@@ -643,6 +835,12 @@ function renderCurrentView() {
     renderBioOnlyView(container, sorted);
   } else if (state.currentView === 'visits') {
     renderVisitsTimeline(container, state.currentSystemData.visits);
+  }
+
+  // Auto focus & scroll to target body
+  const targetId = state.selectedBody ? state.selectedBody.body_id : state.targetBodyId;
+  if (targetId !== null && targetId !== undefined && state.currentView !== 'orrery') {
+    focusAndScrollToTargetBody(targetId);
   }
 }
 
@@ -662,6 +860,7 @@ function renderHierarchyTree(container, nodes) {
     card.onclick = (e) => {
       e.stopPropagation();
       state.selectedBody = node;
+      state.targetBodyId = node.body_id;
       renderBodyInspector();
       document.querySelectorAll('.node-card').forEach(nc => nc.classList.remove('selected'));
       card.classList.add('selected');
@@ -680,15 +879,12 @@ function renderHierarchyTree(container, nodes) {
       else badges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.1);">${node.surface_gravity_g.toFixed(2)}G</span>`);
     }
 
-    if (node.bio_signals > 0) badges.push(`<span class="tag-badge tag-bio">BIO: ${node.bio_signals}</span>`);
     if (node.geo_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(255,113,0,0.2); color: var(--ed-orange);">GEO: ${node.geo_signals}</span>`);
     if (node.anomalies && node.anomalies.length > 0) {
       node.anomalies.forEach(a => badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`));
     }
 
     const typeDesc = node.star_type ? `${t('star_type_label')} (${node.star_type})` : (node.planet_class || 'Planet');
-    const bioHtml = renderBodyExobiologyBlock(node);
-    const geoHtml = renderBodyGeoBlock(node);
 
     card.innerHTML = `
       <div class="node-card-top">
@@ -705,15 +901,13 @@ function renderHierarchyTree(container, nodes) {
           <span class="node-distance">${formatDistance(node.distance_from_arrival_ls)}</span>
         </div>
       </div>
-      ${geoHtml}
-      ${bioHtml}
     `;
 
     nodeWrapper.appendChild(card);
 
     if (node.children && node.children.length > 0) {
       const childrenWrapper = document.createElement('div');
-      childrenWrapper.className = 'node-children';
+      childrenWrapper.className = 'tree-children';
       node.children.forEach(child => {
         childrenWrapper.appendChild(createNodeElement(child));
       });
@@ -740,10 +934,13 @@ function renderFlatBodiesList(container, bodies) {
   list.style.gap = '10px';
 
   bodies.forEach(body => {
+    const isTarget = state.targetBodyId !== null && body.body_id === state.targetBodyId;
     const card = document.createElement('div');
-    card.className = `node-card ${state.selectedBody && state.selectedBody.body_id === body.body_id ? 'selected' : ''}`;
+    card.className = `node-card ${state.selectedBody && state.selectedBody.body_id === body.body_id ? 'selected' : ''} ${isTarget ? 'is-current-target' : ''}`;
+    card.dataset.bodyId = body.body_id;
     card.onclick = () => {
       state.selectedBody = body;
+      state.targetBodyId = body.body_id;
       renderBodyInspector();
       document.querySelectorAll('.node-card').forEach(nc => nc.classList.remove('selected'));
       card.classList.add('selected');
@@ -753,23 +950,22 @@ function renderFlatBodiesList(container, bodies) {
     const iconLabel = getBodyIconLabel(body);
 
     const badges = [];
+    if (isTarget) badges.push('<span class="tag-badge" style="background: rgba(0, 210, 255, 0.2); color: var(--ed-cyan); border: 1px solid rgba(0, 210, 255, 0.6); font-weight: bold;">📍 ACTIVE TARGET</span>');
     if (body.landable) badges.push('<span class="tag-badge tag-landable">LANDABLE</span>');
     if (body.landable && body.surface_gravity_g) {
       if (body.surface_gravity_g >= 3.0) badges.push(`<span class="tag-badge tag-high-g">${body.surface_gravity_g.toFixed(2)}G !</span>`);
       else badges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.1);">${body.surface_gravity_g.toFixed(2)}G</span>`);
     }
-    if (body.bio_signals > 0) badges.push(`<span class="tag-badge tag-bio">BIO: ${body.bio_signals}</span>`);
     if (body.geo_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(255,113,0,0.2); color: var(--ed-orange);">GEO: ${body.geo_signals}</span>`);
-
-    const bioHtml = renderBodyExobiologyBlock(body);
-    const geoHtml = renderBodyGeoBlock(body);
-
+    if (body.anomalies && body.anomalies.length > 0) {
+      body.anomalies.forEach(a => badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`));
+    }
     card.innerHTML = `
       <div class="node-card-top">
         <div class="node-info-left">
           <div class="body-icon ${iconClass}">${iconLabel}</div>
           <div class="node-details">
-            <div class="node-name">${body.body_name}</div>
+            <div class="node-name" style="${isTarget ? 'color: var(--ed-cyan); font-weight: bold;' : ''}">${body.body_name}</div>
             <div class="node-subtext">${body.star_type ? t('star_type_label') + ' ' + body.star_type : body.planet_class || 'Body'}</div>
             <div class="node-badges">${badges.join('')}</div>
           </div>
@@ -779,8 +975,6 @@ function renderFlatBodiesList(container, bodies) {
           <span class="node-distance">${formatDistance(body.distance_from_arrival_ls)}</span>
         </div>
       </div>
-      ${geoHtml}
-      ${bioHtml}
     `;
     list.appendChild(card);
   });
@@ -813,12 +1007,26 @@ function renderBioOnlyView(container, bodies) {
   list.style.flexDirection = 'column';
   list.style.gap = '12px';
 
-  bioBodies.forEach(body => {
+  // Place active/targeted body at the top if present in bioBodies
+  const targetId = state.targetBodyId !== null && state.targetBodyId !== undefined ? state.targetBodyId : (state.selectedBody ? state.selectedBody.body_id : null);
+  let displayBioBodies = [...bioBodies];
+  if (targetId !== null) {
+    const targetIdx = displayBioBodies.findIndex(b => b.body_id === targetId);
+    if (targetIdx > 0) {
+      const targetBody = displayBioBodies.splice(targetIdx, 1)[0];
+      displayBioBodies.unshift(targetBody);
+    }
+  }
+
+  displayBioBodies.forEach(body => {
+    const isTarget = targetId !== null && body.body_id === targetId;
     const card = document.createElement('div');
-    card.className = `node-card ${state.selectedBody && state.selectedBody.body_id === body.body_id ? 'selected' : ''}`;
-    card.style.borderColor = body.is_bio_completed ? 'rgba(0, 255, 136, 0.2)' : 'rgba(0, 255, 136, 0.5)';
+    card.className = `node-card ${state.selectedBody && state.selectedBody.body_id === body.body_id ? 'selected' : ''} ${isTarget ? 'is-current-target' : ''}`;
+    card.dataset.bodyId = body.body_id;
+    card.style.borderColor = isTarget ? 'var(--ed-green)' : (body.is_bio_completed ? 'rgba(0, 255, 136, 0.2)' : 'rgba(0, 255, 136, 0.5)');
     card.onclick = () => {
       state.selectedBody = body;
+      state.targetBodyId = body.body_id;
       renderBodyInspector();
       document.querySelectorAll('.node-card').forEach(nc => nc.classList.remove('selected'));
       card.classList.add('selected');
@@ -833,13 +1041,16 @@ function renderBioOnlyView(container, bodies) {
       ? `<span class="tag-badge" style="background: rgba(0, 255, 136, 0.2); color: var(--ed-green); border: 1px solid rgba(0, 255, 136, 0.4); font-size: 0.72rem;">✅ ${t('bio_body_all_completed')}</span>`
       : `<span class="tag-badge" style="background: rgba(255, 113, 0, 0.15); color: var(--ed-orange); border: 1px solid rgba(255, 113, 0, 0.3); font-size: 0.72rem;">🌱 採取進捗: ${body.completed_bio_count || 0} / ${body.bio_signals || 0}</span>`;
 
+    const targetBadge = isTarget ? '<span class="tag-badge" style="background: rgba(0, 255, 136, 0.25); color: var(--ed-green); border: 1px solid rgba(0, 255, 136, 0.8); font-weight: bold; font-size: 0.72rem;">🎯 ACTIVE TARGET (探査中)</span>' : '';
+
     card.innerHTML = `
       <div class="node-card-top">
         <div class="node-info-left">
           <div class="body-icon ${iconClass}">${iconLabel}</div>
           <div class="node-details">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div class="node-name" style="color: var(--ed-green);">${body.body_name}</div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <div class="node-name" style="color: var(--ed-green); font-weight: bold;">${body.body_name}</div>
+              ${targetBadge}
               ${completionBadge}
             </div>
             <div class="node-subtext">${body.planet_class || 'Landable World'}</div>
@@ -968,21 +1179,53 @@ function renderBodyInspector() {
       }).join('');
     }
 
-    // Candidates
-    if (potBio.length > 0) {
-      html += potBio.map(bio => `
-        <div class="bio-pred-card">
-          <div class="bio-pred-header">
-            <span class="bio-species-name">🌱 [${t('bio_status_potential')}] ${bio.species} (${bio.genus})</span>
-            <span class="bio-sample-dist">${t('bio_dist_req')} ${bio.colony_distance_m}m</span>
-          </div>
-          <div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">${bio.description}</div>
-          <div class="bio-payout-row">
-            <span>${t('bio_base_payout')} ${formatCredits(bio.base_value)}</span>
-            <span class="bio-first-bonus">${t('bio_first_bonus')} ${formatCredits(bio.first_discovery_value)}</span>
-          </div>
-        </div>
-      `).join('');
+    // Exobiology matrix
+    const scannedGenusSet = new Set(scannedOrganics.map(s => (s.genus_localised || s.genus || '').toLowerCase()));
+    const scannedSpeciesSet = new Set(scannedOrganics.map(s => (s.species_localised || s.species || '').toLowerCase()));
+    const isFullyScanned = (b.bio_signals > 0 && scannedOrganics.length >= b.bio_signals);
+
+    const allBio = b.exobiology || b.potential_exobiology || [];
+
+    if (allBio.length > 0) {
+      allBio.forEach(bio => {
+        const sp = (bio.species || '').toLowerCase();
+        const gen = (bio.genus || '').toLowerCase();
+
+        if (scannedSpeciesSet.has(sp)) return; // Already rendered above
+
+        const spName = bio.species_variant || bio.species;
+        const colorBadge = bio.variant_color ? `<span class="tag-badge" style="background: rgba(250, 204, 21, 0.15); color: #fde047; border: 1px solid rgba(250, 204, 21, 0.35); font-size: 0.65rem;">🎨 ${bio.variant_color}</span>` : '';
+        const isExcluded = scannedGenusSet.has(gen) || isFullyScanned;
+
+        if (isExcluded) {
+          html += `
+            <div class="bio-pred-card" style="opacity: 0.45; filter: grayscale(40%);">
+              <div class="bio-pred-header">
+                <span class="bio-species-name" style="color: #94a3b8; text-decoration: line-through;">✕ [${t('bio_status_excluded') || '除外'}] ${spName}</span>
+                <span class="bio-sample-dist">📍 ${bio.colony_distance_m || 500}m</span>
+              </div>
+              <div class="bio-payout-row">
+                <span style="color: #64748b;">${formatCredits(bio.base_value)}</span>
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="bio-pred-card">
+              <div class="bio-pred-header">
+                <span class="bio-species-name">🌱 [${t('bio_status_potential')}] ${spName} ${bio.genus && !spName.includes(bio.genus) ? `(${bio.genus})` : ''}</span>
+                ${colorBadge}
+                <span class="bio-sample-dist">📍 ${bio.colony_distance_m || 500}m</span>
+              </div>
+              ${bio.description ? `<div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">${bio.description}</div>` : ''}
+              <div class="bio-payout-row">
+                <span>${t('bio_base_payout')} ${formatCredits(bio.base_value)}</span>
+                <span class="bio-first-bonus">${t('bio_first_bonus')} ${formatCredits(bio.first_discovery_value)}</span>
+              </div>
+            </div>
+          `;
+        }
+      });
     }
 
     if (!html) {
@@ -1029,9 +1272,48 @@ function renderBodyInspector() {
     gravEl.className = 'prop-val';
   }
 
+  const ATMOSPHERE_JA_MAP = {
+    'carbon dioxide': '二酸化炭素',
+    'ammonia': 'アンモニア',
+    'water': '水',
+    'methane': 'メタン',
+    'nitrogen': '窒素',
+    'argon': 'アルゴン',
+    'helium': 'ヘリウム',
+    'oxygen': '酸素',
+    'sulphur dioxide': '二酸化硫黄',
+    'neon': 'ネオン',
+    'silicate vapour': 'ケイ酸塩蒸気',
+    'metallic vapour': '金属蒸気',
+    'suitable for water-based life': '水系生命に適する'
+  };
+
+  function formatAtmosphereDescription(rawAtmo) {
+    if (!rawAtmo || rawAtmo === 'None') return 'None (なし)';
+    let lower = rawAtmo.toLowerCase();
+    for (const [enKey, jaVal] of Object.entries(ATMOSPHERE_JA_MAP)) {
+      if (lower.includes(enKey)) {
+        return `${rawAtmo} (${jaVal})`;
+      }
+    }
+    return rawAtmo;
+  }
+
+  function formatSurfacePressure(atm) {
+    if (atm === null || atm === undefined) return (b.atmosphere ? 'Thin Atmosphere' : 'None (Vacuum)');
+    const pa = atm * 101325;
+    if (pa >= 1000000) {
+      return `${atm.toFixed(4)} atm (${(pa / 1000000).toFixed(3)} MPa / ${Math.round(pa).toLocaleString()} Pa)`;
+    } else if (pa >= 1000) {
+      return `${atm.toFixed(4)} atm (${(pa / 1000).toFixed(2)} kPa / ${Math.round(pa).toLocaleString()} Pa)`;
+    } else {
+      return `${atm.toFixed(4)} atm (${Math.round(pa).toLocaleString()} Pa)`;
+    }
+  }
+
   document.getElementById('prop-temperature').innerText = b.surface_temperature ? `${b.surface_temperature.toFixed(0)} K (${(b.surface_temperature - 273.15).toFixed(0)} °C)` : '--';
-  document.getElementById('prop-pressure').innerText = b.surface_pressure ? `${b.surface_pressure.toFixed(3)} atm` : (b.atmosphere ? 'Thin Atmosphere' : 'None (Vacuum)');
-  document.getElementById('prop-atmosphere').innerText = b.atmosphere || 'None';
+  document.getElementById('prop-pressure').innerText = formatSurfacePressure(b.surface_pressure);
+  document.getElementById('prop-atmosphere').innerText = formatAtmosphereDescription(b.atmosphere);
   document.getElementById('prop-volcanism').innerText = b.volcanism || 'None';
 
   // Orbit parameters
@@ -1051,18 +1333,42 @@ function renderBodyInspector() {
   document.getElementById('prop-inclination').innerText = b.orbital_inclination !== null && b.orbital_inclination !== undefined ? `${b.orbital_inclination.toFixed(2)}°` : '--';
   document.getElementById('prop-tidal-lock').innerText = b.tidal_lock ? t('tidal_locked_yes') : t('tidal_locked_no');
 
-  // Rings
+  // Rings & Fleet Carrier Fuel (Tritium Mining in Icy Rings)
   const ringsSection = document.getElementById('section-rings');
   const ringsList = document.getElementById('inspect-rings-list');
   if (b.rings_list && b.rings_list.length > 0) {
     ringsSection.style.display = 'block';
-    ringsList.innerHTML = b.rings_list.map(r => `
-      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 10px; margin-bottom: 6px; font-size: 0.75rem;">
-        <div style="font-weight: bold; color: var(--ed-gold);">${r.Name || 'Ring'}</div>
-        <div style="color: var(--text-secondary); margin-top: 2px;">Type: ${r.RingClass ? r.RingClass.replace('eRingClass_', '') : '--'}</div>
-        <div style="color: var(--text-secondary);">Outer: ${(r.OuterRad / 1000).toLocaleString()} km / Mass: ${(r.MassMT || 0).toLocaleString()} MT</div>
-      </div>
-    `).join('');
+
+    const hasIcyRing = b.rings_list.some(r => (r.RingClass || '').toLowerCase().includes('icy'));
+    const fcMiningBadge = hasIcyRing 
+      ? `<div style="background: rgba(0, 210, 255, 0.12); border: 1px solid rgba(0, 210, 255, 0.4); border-radius: 4px; padding: 6px 10px; margin-bottom: 8px; font-size: 0.78rem; color: #a5f3fc; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+          <span>💎 Fleet Carrier 燃料 (Tritium) 採掘適性:</span>
+          <span style="color: #38bdf8;">✓ 採掘可能 (Icy Ring 検出)</span>
+         </div>`
+      : `<div style="background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 4px; padding: 6px 10px; margin-bottom: 8px; font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
+          <span>💎 Fleet Carrier 燃料 (Tritium) 採掘適性:</span>
+          <span>氷リングなし (Icy Ring Not Found)</span>
+         </div>`;
+
+    ringsList.innerHTML = fcMiningBadge + b.rings_list.map(r => {
+      const rClass = (r.RingClass || '').replace('eRingClass_', '');
+      const isIcy = rClass.toLowerCase().includes('icy');
+      const classBadge = isIcy 
+        ? `<span class="tag-badge" style="background: rgba(0, 210, 255, 0.2); color: #38bdf8; border: 1px solid rgba(0, 210, 255, 0.4); font-weight: bold;">❄️ Icy Ring (氷)</span>`
+        : `<span class="tag-badge">${rClass || 'Ring'}</span>`;
+
+      return `
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px 10px; margin-bottom: 6px; font-size: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: bold; color: var(--ed-gold);">${r.Name || 'Ring'}</span>
+            ${classBadge}
+          </div>
+          <div style="color: var(--text-secondary); margin-top: 4px;">
+            外径: ${(r.OuterRad / 1000).toLocaleString()} km / 質量: ${(r.MassMT || 0).toLocaleString()} MT
+          </div>
+        </div>
+      `;
+    }).join('');
   } else {
     ringsSection.style.display = 'none';
   }
@@ -1071,6 +1377,7 @@ function renderBodyInspector() {
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
   updateStaticTexts();
+  initSettingsModal();
   fetchGlobalStats();
   fetchSystems();
   checkScanOnStartup();
@@ -1177,6 +1484,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.datePreset = preset;
     state.page = 1;
     fetchSystems();
+    fetchGlobalStats();
   }
 
   if (presetSelect) {
@@ -1191,6 +1499,7 @@ document.addEventListener('DOMContentLoaded', () => {
       presetSelect.value = 'custom';
       state.page = 1;
       fetchSystems();
+      fetchGlobalStats();
     });
   }
 
@@ -1301,11 +1610,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // View Controls
-  document.getElementById('btn-view-tree').addEventListener('click', () => {
-    state.currentView = 'tree';
-    updateViewButtons();
-    renderCurrentView();
-  });
+  const btnViewSysmap = document.getElementById('btn-view-sysmap');
+  if (btnViewSysmap) {
+    btnViewSysmap.addEventListener('click', () => {
+      state.currentView = 'sysmap';
+      updateViewButtons();
+      renderCurrentView();
+    });
+  }
 
   document.getElementById('btn-view-flat').addEventListener('click', () => {
     state.currentView = 'flat';
@@ -1329,13 +1641,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function updateViewButtons() {
-    document.getElementById('btn-view-tree').classList.toggle('active', state.currentView === 'tree');
-    document.getElementById('btn-view-flat').classList.toggle('active', state.currentView === 'flat');
+    const btnSys = document.getElementById('btn-view-sysmap');
+    const btnFlat = document.getElementById('btn-view-flat');
     const btnBio = document.getElementById('btn-view-bio');
-    if (btnBio) btnBio.classList.toggle('active', state.currentView === 'bio');
-    document.getElementById('btn-view-visits').classList.toggle('active', state.currentView === 'visits');
+    const btnVis = document.getElementById('btn-view-visits');
 
-    // Show/hide completed bio filter container
+    if (btnSys) btnSys.classList.toggle('active', state.currentView === 'sysmap');
+    if (btnFlat) btnFlat.classList.toggle('active', state.currentView === 'flat');
+    if (btnBio) btnBio.classList.toggle('active', state.currentView === 'bio');
+    if (btnVis) btnVis.classList.toggle('active', state.currentView === 'visits');
+
+    // Show completed bio filter container only on bio view
     const bioFilterContainer = document.getElementById('bio-filter-hide-completed-container');
     if (bioFilterContainer) {
       bioFilterContainer.style.display = state.currentView === 'bio' ? 'inline-flex' : 'none';
@@ -1481,7 +1797,7 @@ function initLiveSync() {
   updateSortControlsUI();
   connectLiveWebSocket();
 
-  // Polling fallback every 2.5 seconds in case WebSocket is unavailable or dropped
+  // High-frequency polling fallback (every 800ms) to ensure instant updates even without WebSocket
   setInterval(async () => {
     if (!state.liveSyncEnabled) return;
     try {
@@ -1496,7 +1812,7 @@ function initLiveSync() {
     } catch (err) {
       // Ignore background network jitter
     }
-  }, 2500);
+  }, 800);
 }
 
 function connectLiveWebSocket() {
@@ -1518,7 +1834,7 @@ function connectLiveWebSocket() {
         if (liveWebSocket && liveWebSocket.readyState === WebSocket.OPEN) {
           liveWebSocket.send('ping');
         }
-      }, 15000);
+      }, 10000);
     };
 
     liveWebSocket.onmessage = (event) => {
@@ -1537,7 +1853,7 @@ function connectLiveWebSocket() {
       if (liveWebSocket && liveWebSocket._pingInterval) {
         clearInterval(liveWebSocket._pingInterval);
       }
-      liveWsRetryTimeout = setTimeout(connectLiveWebSocket, 3500);
+      liveWsRetryTimeout = setTimeout(connectLiveWebSocket, 1500);
     };
 
     liveWebSocket.onerror = () => {
@@ -1546,7 +1862,7 @@ function connectLiveWebSocket() {
       } catch (e) {}
     };
   } catch (err) {
-    liveWsRetryTimeout = setTimeout(connectLiveWebSocket, 5000);
+    liveWsRetryTimeout = setTimeout(connectLiveWebSocket, 2000);
   }
 }
 
@@ -1638,4 +1954,479 @@ function pollScanProgress() {
       }
     }
   }, 250);
+}
+
+// =============================================================================
+// Text-to-Speech (TTS) Voice Notification System
+// Supports Web Speech API (Microsoft Natural / Multilingual) & VOICEVOX (Local)
+// =============================================================================
+
+const ttsState = {
+  enabled: false,
+  engine: 'web_speech', // 'web_speech' | 'voicevox'
+  webVoiceURI: '',
+  voicevoxSpeakerId: '3', // ずんだもん (ノーマル)
+  voicevoxUrl: 'http://127.0.0.1:50021',
+  customText: 'First discover.',
+  volume: 1.0,
+  rate: 1.0
+};
+
+const announcedFirstDiscSystems = new Set();
+
+async function loadTTSSettings() {
+  try {
+    const res = await fetch('/api/tts_settings');
+    if (res.ok) {
+      const data = await res.json();
+      Object.assign(ttsState, data);
+    } else {
+      const saved = localStorage.getItem('ed_analyzer_tts_settings');
+      if (saved) Object.assign(ttsState, JSON.parse(saved));
+    }
+  } catch (e) {
+    const saved = localStorage.getItem('ed_analyzer_tts_settings');
+    if (saved) Object.assign(ttsState, JSON.parse(saved));
+  }
+  updateTTSHeaderIcon();
+}
+
+async function saveTTSSettings() {
+  try {
+    localStorage.setItem('ed_analyzer_tts_settings', JSON.stringify(ttsState));
+    await fetch('/api/tts_settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ttsState)
+    });
+  } catch (e) {
+    console.warn('Failed to save TTS settings to server:', e);
+  }
+  updateTTSHeaderIcon();
+}
+
+function updateTTSHeaderIcon() {
+  const iconEl = document.getElementById('tts-header-icon');
+  const btnEl = document.getElementById('btn-tts-settings-open');
+  if (iconEl && btnEl) {
+    if (ttsState.enabled) {
+      iconEl.innerText = '🔊 TTS';
+      btnEl.style.color = 'var(--ed-cyan)';
+      btnEl.style.borderColor = 'rgba(0, 210, 255, 0.4)';
+    } else {
+      iconEl.innerText = '🔇 TTS';
+      btnEl.style.color = 'var(--text-secondary)';
+      btnEl.style.borderColor = 'transparent';
+    }
+  }
+}
+
+function formatTTSMessage(template, params = {}) {
+  let text = template || 'First discover.';
+  const systemName = params.system || params.system_name || (state.selectedSystem ? state.selectedSystem.star_system : 'Sol');
+  const bodiesCount = params.bodies !== undefined ? String(params.bodies) : '1';
+
+  text = text.replace(/\{system\}/gi, systemName);
+  text = text.replace(/\{system_name\}/gi, systemName);
+  text = text.replace(/\{bodies\}/gi, bodiesCount);
+  return text;
+}
+
+function populateWebVoices() {
+  if (!('speechSynthesis' in window)) return;
+  const select = document.getElementById('tts-web-voice-select');
+  if (!select) return;
+
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return;
+
+  const currentSelection = ttsState.webVoiceURI || select.value;
+  select.innerHTML = '<option value="">システム既定の音声 (Default)</option>';
+
+  const jaVoices = [];
+  const enVoices = [];
+  const otherVoices = [];
+
+  voices.forEach(v => {
+    if (v.lang.startsWith('ja')) jaVoices.push(v);
+    else if (v.lang.startsWith('en')) enVoices.push(v);
+    else otherVoices.push(v);
+  });
+
+  const appendVoiceGroup = (groupLabel, voiceList) => {
+    if (!voiceList || voiceList.length === 0) return;
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = groupLabel;
+
+    voiceList.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.voiceURI;
+      const isOnline = v.name.includes('Online') || v.name.includes('Natural');
+      const onlineTag = isOnline ? ' [🌐 Natural]' : '';
+      const defTag = v.default ? ' ★' : '';
+      opt.innerText = `${v.name}${onlineTag} (${v.lang})${defTag}`;
+      if (v.voiceURI === currentSelection) {
+        opt.selected = true;
+      }
+      optgroup.appendChild(opt);
+    });
+    select.appendChild(optgroup);
+  };
+
+  appendVoiceGroup('日本語 (Japanese)', jaVoices);
+  appendVoiceGroup('英語 (English)', enVoices);
+  appendVoiceGroup('その他の言語 (Other Languages)', otherVoices);
+}
+
+async function checkVoicevoxConnection() {
+  const statusEl = document.getElementById('tts-voicevox-status');
+  const speakerSelect = document.getElementById('tts-voicevox-speaker-select');
+  if (!statusEl) return;
+
+  try {
+    const res = await fetch(`${ttsState.voicevoxUrl}/speakers`, { method: 'GET' });
+    if (!res.ok) throw new Error('Status ' + res.status);
+    const speakers = await res.json();
+    
+    if (speakerSelect && Array.isArray(speakers)) {
+      speakerSelect.innerHTML = '';
+      speakers.forEach(sp => {
+        const group = document.createElement('optgroup');
+        group.label = sp.name;
+        if (sp.styles && Array.isArray(sp.styles)) {
+          sp.styles.forEach(st => {
+            const opt = document.createElement('option');
+            opt.value = String(st.id);
+            opt.innerText = `${sp.name} (${st.name})`;
+            if (String(st.id) === String(ttsState.voicevoxSpeakerId)) {
+              opt.selected = true;
+            }
+            group.appendChild(opt);
+          });
+        }
+        speakerSelect.appendChild(group);
+      });
+    }
+
+    statusEl.innerHTML = '<span style="color: #6ee7b7;">🟢 VOICEVOX 接続成功 (127.0.0.1:50021)</span>';
+  } catch (err) {
+    statusEl.innerHTML = '<span style="color: #94a3b8;">🔴 VOICEVOX 未検出 (起動すると自動連携されます。未起動時はWeb Speech APIが使われます)</span>';
+  }
+}
+
+function playWebSpeech(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const uttr = new SpeechSynthesisUtterance(text);
+  const voices = window.speechSynthesis.getVoices();
+  if (ttsState.webVoiceURI && voices && voices.length > 0) {
+    const v = voices.find(v => v.voiceURI === ttsState.webVoiceURI);
+    if (v) uttr.voice = v;
+  }
+  uttr.volume = Math.max(0, Math.min(1, ttsState.volume));
+  uttr.rate = Math.max(0.5, Math.min(2.0, ttsState.rate));
+  window.speechSynthesis.speak(uttr);
+}
+
+async function playVoicevoxSpeech(text) {
+  try {
+    const queryRes = await fetch(`${ttsState.voicevoxUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${ttsState.voicevoxSpeakerId}`, {
+      method: 'POST'
+    });
+    if (!queryRes.ok) throw new Error('Audio query failed');
+    const queryData = await queryRes.json();
+    queryData.speedScale = ttsState.rate;
+    queryData.volumeScale = ttsState.volume;
+
+    const synthRes = await fetch(`${ttsState.voicevoxUrl}/synthesis?speaker=${ttsState.voicevoxSpeakerId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(queryData)
+    });
+    if (!synthRes.ok) throw new Error('Synthesis failed');
+    const blob = await synthRes.blob();
+    const audio = new Audio(URL.createObjectURL(blob));
+    audio.play();
+  } catch (err) {
+    console.warn('VOICEVOX play failed, falling back to Web Speech:', err);
+    playWebSpeech(text);
+  }
+}
+
+function speakText(rawText, params = {}) {
+  if (!ttsState.enabled) return;
+  const processedText = formatTTSMessage(rawText || ttsState.customText || 'First discover.', params);
+
+  if (ttsState.engine === 'voicevox') {
+    playVoicevoxSpeech(processedText);
+  } else {
+    playWebSpeech(processedText);
+  }
+}
+
+function announceFirstDiscovery(systemName, bodiesCount = 1) {
+  if (!ttsState.enabled) return;
+  if (!systemName) return;
+
+  if (announcedFirstDiscSystems.has(systemName)) return;
+  announcedFirstDiscSystems.add(systemName);
+
+  speakText(ttsState.customText || 'First discover.', { system: systemName, bodies: bodiesCount });
+}
+
+async function initSettingsModal() {
+  await loadTTSSettings();
+  updateTTSHeaderIcon();
+
+  // Populate Web Voices when ready with multiple delayed retries for online/natural voices
+  if ('speechSynthesis' in window) {
+    populateWebVoices();
+    window.speechSynthesis.onvoiceschanged = () => {
+      populateWebVoices();
+    };
+    setTimeout(populateWebVoices, 300);
+    setTimeout(populateWebVoices, 1000);
+    setTimeout(populateWebVoices, 2500);
+  }
+
+  // Bind Unified Settings Modal & Tabs
+  const modal = document.getElementById('settings-modal');
+  const btnOpen = document.getElementById('btn-settings-open');
+  const btnClose = document.getElementById('btn-settings-close');
+  const btnSave = document.getElementById('btn-settings-save');
+
+  const tabBtnLogs = document.getElementById('tab-btn-logs');
+  const tabBtnTTS = document.getElementById('tab-btn-tts');
+  const tabBtnCredits = document.getElementById('tab-btn-credits');
+
+  const tabPaneLogs = document.getElementById('tab-pane-logs');
+  const tabPaneTTS = document.getElementById('tab-pane-tts');
+  const tabPaneCredits = document.getElementById('tab-pane-credits');
+
+  function switchTab(tabName) {
+    [tabBtnLogs, tabBtnTTS, tabBtnCredits].forEach(btn => {
+      if (btn) {
+        btn.classList.remove('active');
+        btn.style.borderBottom = 'none';
+      }
+    });
+    [tabPaneLogs, tabPaneTTS, tabPaneCredits].forEach(pane => {
+      if (pane) pane.style.display = 'none';
+    });
+
+    if (tabName === 'logs') {
+      if (tabBtnLogs) {
+        tabBtnLogs.classList.add('active');
+        tabBtnLogs.style.borderBottom = '2px solid var(--ed-orange)';
+      }
+      if (tabPaneLogs) tabPaneLogs.style.display = 'flex';
+      loadAppSettingsToUI();
+    } else if (tabName === 'tts') {
+      if (tabBtnTTS) {
+        tabBtnTTS.classList.add('active');
+        tabBtnTTS.style.borderBottom = '2px solid var(--ed-cyan)';
+      }
+      if (tabPaneTTS) tabPaneTTS.style.display = 'flex';
+      updateTTSModalFields();
+    } else if (tabName === 'credits') {
+      if (tabBtnCredits) {
+        tabBtnCredits.classList.add('active');
+        tabBtnCredits.style.borderBottom = '2px solid var(--ed-green)';
+      }
+      if (tabPaneCredits) tabPaneCredits.style.display = 'block';
+    }
+  }
+
+  if (tabBtnLogs) tabBtnLogs.addEventListener('click', () => switchTab('logs'));
+  if (tabBtnTTS) tabBtnTTS.addEventListener('click', () => switchTab('tts'));
+  if (tabBtnCredits) tabBtnCredits.addEventListener('click', () => switchTab('credits'));
+
+  // App Settings (Journal Dir)
+  const inputJournalDir = document.getElementById('setting-journal-dir');
+  const btnResetJournalDir = document.getElementById('btn-reset-journal-dir');
+  const btnModalRescan = document.getElementById('btn-modal-rescan');
+  const modalScanStatusText = document.getElementById('modal-scan-status-text');
+
+  let defaultJournalDirCache = '';
+
+  async function loadAppSettingsToUI() {
+    try {
+      const res = await fetch('/api/app_settings');
+      if (res.ok) {
+        const data = await res.json();
+        defaultJournalDirCache = data.default_journal_dir || '';
+        if (inputJournalDir) inputJournalDir.value = data.journal_dir || '';
+      }
+    } catch (e) {
+      console.warn('loadAppSettingsToUI error:', e);
+    }
+  }
+
+  if (btnResetJournalDir) {
+    btnResetJournalDir.addEventListener('click', () => {
+      if (defaultJournalDirCache && inputJournalDir) {
+        inputJournalDir.value = defaultJournalDirCache;
+      }
+    });
+  }
+
+  if (btnModalRescan) {
+    btnModalRescan.addEventListener('click', async () => {
+      // Save directory first if changed
+      if (inputJournalDir && inputJournalDir.value.trim()) {
+        try {
+          await fetch('/api/app_settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ journal_dir: inputJournalDir.value.trim() })
+          });
+        } catch (e) {}
+      }
+
+      // Trigger scan
+      triggerScanNow();
+      if (modalScanStatusText) {
+        modalScanStatusText.innerText = 'ログスキャンを開始しました...';
+      }
+    });
+  }
+
+  // TTS Controls
+  const enabledToggle = document.getElementById('tts-enabled-toggle');
+  const engineSelect = document.getElementById('tts-engine-select');
+  const webVoiceSelect = document.getElementById('tts-web-voice-select');
+  const voicevoxSpeakerSelect = document.getElementById('tts-voicevox-speaker-select');
+  const voicevoxGroup = document.getElementById('tts-voicevox-group');
+  const customTextInput = document.getElementById('tts-custom-text');
+  const volumeRange = document.getElementById('tts-volume');
+  const rateRange = document.getElementById('tts-rate');
+  const volVal = document.getElementById('tts-vol-val');
+  const rateVal = document.getElementById('tts-rate-val');
+  const btnTest = document.getElementById('btn-tts-test');
+
+  function updateTTSModalFields() {
+    if (enabledToggle) enabledToggle.checked = Boolean(ttsState.enabled);
+    if (engineSelect) engineSelect.value = ttsState.engine;
+    if (customTextInput) customTextInput.value = ttsState.customText;
+    if (volumeRange) {
+      volumeRange.value = ttsState.volume;
+      if (volVal) volVal.innerText = `${Math.round(ttsState.volume * 100)}%`;
+    }
+    if (rateRange) {
+      rateRange.value = ttsState.rate;
+      if (rateVal) rateVal.innerText = `${ttsState.rate.toFixed(1)}x`;
+    }
+
+    if (ttsState.engine === 'voicevox') {
+      if (webVoiceSelect) webVoiceSelect.style.display = 'none';
+      if (voicevoxGroup) voicevoxGroup.style.display = 'flex';
+      checkVoicevoxConnection();
+    } else {
+      if (webVoiceSelect) webVoiceSelect.style.display = 'block';
+      if (voicevoxGroup) voicevoxGroup.style.display = 'none';
+      populateWebVoices();
+    }
+  }
+
+  if (btnOpen && modal) {
+    btnOpen.addEventListener('click', () => {
+      switchTab('logs');
+      modal.style.display = 'flex';
+    });
+  }
+
+  if (btnClose && modal) {
+    btnClose.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+  }
+
+  if (btnSave && modal) {
+    btnSave.addEventListener('click', async () => {
+      // Save Journal Path
+      if (inputJournalDir && inputJournalDir.value.trim()) {
+        try {
+          await fetch('/api/app_settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ journal_dir: inputJournalDir.value.trim() })
+          });
+        } catch (e) {}
+      }
+
+      // Save TTS
+      if (enabledToggle) ttsState.enabled = enabledToggle.checked;
+      if (engineSelect) ttsState.engine = engineSelect.value;
+      if (webVoiceSelect) ttsState.webVoiceURI = webVoiceSelect.value;
+      if (voicevoxSpeakerSelect) ttsState.voicevoxSpeakerId = voicevoxSpeakerSelect.value;
+      if (customTextInput) ttsState.customText = customTextInput.value || 'First discover.';
+      if (volumeRange) ttsState.volume = parseFloat(volumeRange.value) || 1.0;
+      if (rateRange) ttsState.rate = parseFloat(rateRange.value) || 1.0;
+
+      saveTTSSettings();
+      updateTTSHeaderIcon();
+      modal.style.display = 'none';
+    });
+  }
+
+  if (btnTest) {
+    btnTest.addEventListener('click', () => {
+      const tempState = {
+        enabled: true,
+        engine: engineSelect ? engineSelect.value : ttsState.engine,
+        webVoiceURI: webVoiceSelect ? webVoiceSelect.value : ttsState.webVoiceURI,
+        voicevoxSpeakerId: voicevoxSpeakerSelect ? voicevoxSpeakerSelect.value : ttsState.voicevoxSpeakerId,
+        customText: customTextInput ? customTextInput.value : ttsState.customText,
+        volume: volumeRange ? parseFloat(volumeRange.value) : ttsState.volume,
+        rate: rateRange ? parseFloat(rateRange.value) : ttsState.rate
+      };
+      
+      const textToSpeak = formatTTSMessage(tempState.customText || 'First discover.', {
+        system: (state.selectedSystem ? state.selectedSystem.star_system : 'Hypoe Pra DM-U d3-557'),
+        bodies: 4
+      });
+
+      if (tempState.engine === 'voicevox') {
+        playVoicevoxSpeech(textToSpeak);
+      } else {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const uttr = new SpeechSynthesisUtterance(textToSpeak);
+        const voices = window.speechSynthesis.getVoices();
+        if (tempState.webVoiceURI && voices) {
+          const v = voices.find(v => v.voiceURI === tempState.webVoiceURI);
+          if (v) uttr.voice = v;
+        }
+        uttr.volume = tempState.volume;
+        uttr.rate = tempState.rate;
+        window.speechSynthesis.speak(uttr);
+      }
+    });
+  }
+
+  if (engineSelect) {
+    engineSelect.addEventListener('change', () => {
+      if (engineSelect.value === 'voicevox') {
+        if (webVoiceSelect) webVoiceSelect.style.display = 'none';
+        if (voicevoxGroup) voicevoxGroup.style.display = 'flex';
+        checkVoicevoxConnection();
+      } else {
+        if (webVoiceSelect) webVoiceSelect.style.display = 'block';
+        if (voicevoxGroup) voicevoxGroup.style.display = 'none';
+        populateWebVoices();
+      }
+    });
+  }
+
+  if (volumeRange && volVal) {
+    volumeRange.addEventListener('input', () => {
+      volVal.innerText = `${Math.round(volumeRange.value * 100)}%`;
+    });
+  }
+
+  if (rateRange && rateVal) {
+    rateRange.addEventListener('input', () => {
+      rateVal.innerText = `${parseFloat(rateRange.value).toFixed(1)}x`;
+    });
+  }
 }

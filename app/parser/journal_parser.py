@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import glob
 from pathlib import Path
@@ -22,6 +23,7 @@ class JournalParser:
         for sys_addr in self.dirty_systems:
             self._update_system_stats(sys_addr)
         self.dirty_systems.clear()
+        self.conn.commit()
 
     def process_journal_line(self, line: str):
         if not line or not line.strip():
@@ -40,12 +42,33 @@ class JournalParser:
             self._handle_fss_discovery_scan(event_data)
         elif event == "Scan":
             self._handle_scan(event_data, timestamp)
+            self._update_last_targeted_body(event_data.get("SystemAddress"), event_data.get("BodyID"), event_data.get("BodyName"))
         elif event in ["FSSBodySignals", "SAASignalsFound"]:
             self._handle_signals(event_data)
+            self._update_last_targeted_body(event_data.get("SystemAddress"), event_data.get("BodyID"), event_data.get("BodyName"))
         elif event == "SAAScanComplete":
             self._handle_saa_scan_complete(event_data)
+            self._update_last_targeted_body(event_data.get("SystemAddress"), event_data.get("BodyID"), event_data.get("BodyName"))
         elif event == "ScanOrganic":
             self._handle_scan_organic(event_data, timestamp)
+            self._update_last_targeted_body(event_data.get("SystemAddress"), event_data.get("Body") or event_data.get("BodyID"))
+        elif event == "CodexEntry":
+            self._handle_codex_entry(event_data, timestamp)
+        elif event in ["ApproachBody", "Touchdown"]:
+            self._update_last_targeted_body(event_data.get("SystemAddress"), event_data.get("BodyID"), event_data.get("Body"))
+
+    def _update_last_targeted_body(self, sys_addr: int, body_id=None, body_name=None):
+        if not sys_addr:
+            return
+        if body_id is None and body_name:
+            self.cursor.execute("SELECT body_id FROM bodies WHERE system_address = ? AND body_name = ?", (sys_addr, body_name))
+            row = self.cursor.fetchone()
+            if row:
+                body_id = row["body_id"]
+
+        if body_id is not None:
+            self.cursor.execute("UPDATE systems SET last_targeted_body_id = ? WHERE system_address = ?", (body_id, sys_addr))
+            self.dirty_systems.add(sys_addr)
 
     def _handle_jump_or_location(self, data: dict, timestamp: str):
         sys_addr = data.get("SystemAddress")
@@ -168,6 +191,9 @@ class JournalParser:
 
         # Calculate values
         body_dict = {
+            "system_address": sys_addr,
+            "body_id": body_id,
+            "body_name": body_name,
             "star_system": star_sys,
             "distance_from_arrival_ls": dist_ls,
             "semi_major_axis": semi_major_axis,
@@ -181,7 +207,11 @@ class JournalParser:
             "surface_temperature": surface_temp,
             "surface_gravity": gravity_raw,
             "surface_gravity_g": gravity_g,
+            "surface_pressure": surface_pressure,
             "atmosphere": atmosphere,
+            "atmosphere_type": atmosphere_type,
+            "atmosphere_composition": atmosphere_comp,
+            "materials": materials,
             "volcanism": volcanism,
             "eccentricity": eccentricity,
             "orbital_period": orbital_period,
@@ -191,13 +221,16 @@ class JournalParser:
             "bio_signals": 0
         }
 
-        # Check if already had bio_signals in existing body record
-        self.cursor.execute("SELECT bio_signals, geo_signals, is_mapped_by_user FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
+        # Check if already had bio_signals / confirmed_genuses in existing body record
+        self.cursor.execute("SELECT bio_signals, geo_signals, is_mapped_by_user, confirmed_genuses FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
         existing_b = self.cursor.fetchone()
         existing_bio = existing_b["bio_signals"] if existing_b else 0
         existing_geo = existing_b["geo_signals"] if existing_b else 0
         existing_mapped = existing_b["is_mapped_by_user"] if existing_b else 0
+        existing_genuses = existing_b["confirmed_genuses"] if existing_b else None
         body_dict["bio_signals"] = existing_bio
+        if existing_genuses:
+            body_dict["confirmed_genuses"] = existing_genuses
 
         values = calculate_body_value(body_dict)
         fss_val = values.get("fss_value", 0)
@@ -225,9 +258,9 @@ class JournalParser:
                 rotation_period, axial_tilt, rings, materials, parents, was_discovered, was_mapped,
                 is_mapped_by_user, bio_signals, geo_signals, fss_value, dss_value,
                 first_discovered_fss, first_mapped_dss, max_potential_value,
-                exobiology_predictions, anomalies_json, scan_timestamp, updated_timestamp
+                confirmed_genuses, exobiology_predictions, anomalies_json, scan_timestamp, updated_timestamp
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             ON CONFLICT(system_address, body_id) DO UPDATE SET
                 body_name = excluded.body_name,
@@ -277,7 +310,7 @@ class JournalParser:
             rotation_period, axial_tilt, rings, materials, parents, was_discovered, was_mapped,
             existing_mapped, existing_bio, existing_geo, fss_val, dss_val,
             fd_fss, fm_dss, max_pot,
-            bio_pred_json, anomalies_json, timestamp, timestamp
+            existing_genuses, bio_pred_json, anomalies_json, timestamp, timestamp
         ))
 
         self.dirty_systems.add(sys_addr)
@@ -301,6 +334,18 @@ class JournalParser:
             elif "$SAA_SignalType_Geological" in stype or "geological" in stype.lower() or "geo" in stype.lower():
                 geo_count += scount
 
+        # Extract confirmed Genuses from SAASignalsFound if present
+        confirmed_genuses_list = []
+        if "Genuses" in data and isinstance(data["Genuses"], list):
+            for g in data["Genuses"]:
+                g_name = g.get("Genus_Localised") or g.get("Genus") or ""
+                if g_name:
+                    clean_g = re.sub(r"^\$Codex_Ent_|_Genus_Name;?$", "", g_name, flags=re.IGNORECASE).strip()
+                    if clean_g:
+                        confirmed_genuses_list.append(clean_g)
+        
+        confirmed_genuses_json = json.dumps(confirmed_genuses_list) if confirmed_genuses_list else None
+
         # Check if body exists
         if body_id is not None:
             self.cursor.execute("SELECT * FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
@@ -315,6 +360,10 @@ class JournalParser:
             b_dict = dict(existing)
             b_dict["bio_signals"] = bio_count
             b_dict["geo_signals"] = geo_count
+            if confirmed_genuses_list:
+                b_dict["confirmed_genuses"] = confirmed_genuses_list
+            elif existing["confirmed_genuses"]:
+                b_dict["confirmed_genuses"] = existing["confirmed_genuses"]
             
             bio_predictions = predict_exobiology_candidates(b_dict)
             bio_pred_json = json.dumps(bio_predictions)
@@ -325,10 +374,11 @@ class JournalParser:
                 UPDATE bodies SET
                     bio_signals = ?,
                     geo_signals = ?,
+                    confirmed_genuses = COALESCE(?, confirmed_genuses),
                     exobiology_predictions = ?,
                     anomalies_json = ?
                 WHERE id = ?
-            """, (bio_count, geo_count, bio_pred_json, anomalies_json, existing["id"]))
+            """, (bio_count, geo_count, confirmed_genuses_json, bio_pred_json, anomalies_json, existing["id"]))
         else:
             # Insert stub body record if Scan hasn't occurred yet
             b_dict = {
@@ -336,7 +386,8 @@ class JournalParser:
                 "body_id": body_id or 0,
                 "body_name": body_name or f"Body {body_id}",
                 "bio_signals": bio_count,
-                "geo_signals": geo_count
+                "geo_signals": geo_count,
+                "confirmed_genuses": confirmed_genuses_list if confirmed_genuses_list else None
             }
             bio_predictions = predict_exobiology_candidates(b_dict)
             bio_pred_json = json.dumps(bio_predictions)
@@ -346,14 +397,15 @@ class JournalParser:
             self.cursor.execute("""
                 INSERT INTO bodies (
                     system_address, body_id, body_name, bio_signals, geo_signals,
-                    exobiology_predictions, anomalies_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    confirmed_genuses, exobiology_predictions, anomalies_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(system_address, body_id) DO UPDATE SET
                     bio_signals = excluded.bio_signals,
                     geo_signals = excluded.geo_signals,
+                    confirmed_genuses = COALESCE(excluded.confirmed_genuses, bodies.confirmed_genuses),
                     exobiology_predictions = excluded.exobiology_predictions,
                     anomalies_json = excluded.anomalies_json
-            """, (sys_addr, body_id or 0, body_name or f"Body {body_id}", bio_count, geo_count, bio_pred_json, anomalies_json))
+            """, (sys_addr, body_id or 0, body_name or f"Body {body_id}", bio_count, geo_count, confirmed_genuses_json, bio_pred_json, anomalies_json))
 
         self.dirty_systems.add(sys_addr)
 
@@ -376,7 +428,8 @@ class JournalParser:
 
     def _handle_scan_organic(self, data: dict, timestamp: str):
         sys_addr = data.get("SystemAddress")
-        body_id = data.get("BodyID")
+        # In Journal, ScanOrganic uses "Body" for the body ID (sometimes "BodyID")
+        body_id = data.get("Body") if data.get("Body") is not None else data.get("BodyID")
         scan_type = data.get("ScanType", "")
         genus = data.get("Genus", "")
         genus_loc = data.get("Genus_Localised", "")
@@ -389,17 +442,72 @@ class JournalParser:
         base_val = val_info.get("base_value", 0)
         fd_val = val_info.get("first_discovery_value", 0)
 
+        # Lookup body_name from bodies table if available
+        body_name = None
+        if sys_addr is not None and body_id is not None:
+            self.cursor.execute("SELECT body_name FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
+            b_row = self.cursor.fetchone()
+            if b_row:
+                body_name = b_row["body_name"]
+
         if sys_addr is not None:
             self.cursor.execute("""
                 INSERT INTO scanned_organics (
-                    system_address, body_id, timestamp, scan_type, genus, genus_localised,
+                    system_address, body_id, body_name, timestamp, scan_type, genus, genus_localised,
                     species, species_localised, variant, variant_localised, base_value, first_discovery_value
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                sys_addr, body_id, timestamp, scan_type, genus, genus_loc,
+                sys_addr, body_id, body_name, timestamp, scan_type, genus, genus_loc,
                 species, species_loc, variant, variant_loc, base_val, fd_val
             ))
             self.dirty_systems.add(sys_addr)
+
+    def _handle_codex_entry(self, data: dict, timestamp: str):
+        cat = data.get("Category", "")
+        cat_loc = (data.get("Category_Localised") or "").lower()
+        subcat = data.get("SubCategory", "")
+        
+        # Check if biological
+        is_bio = ("biology" in cat.lower() or "biology" in cat_loc or "organic" in subcat.lower())
+        if not is_bio:
+            return
+
+        sys_addr = data.get("SystemAddress")
+        body_id = data.get("BodyID") if data.get("BodyID") is not None else data.get("Body")
+        entry_name_loc = data.get("Name_Localised") or data.get("Name", "")
+        
+        # Extract species/genus
+        val_info = get_species_value(entry_name_loc)
+        species_loc = val_info.get("species", entry_name_loc)
+        genus_loc = val_info.get("genus", "")
+        base_val = val_info.get("base_value", 0)
+        fd_val = val_info.get("first_discovery_value", 0)
+
+        # Lookup body_name from bodies table if available
+        body_name = None
+        if sys_addr is not None and body_id is not None:
+            self.cursor.execute("SELECT body_name FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
+            b_row = self.cursor.fetchone()
+            if b_row:
+                body_name = b_row["body_name"]
+
+        if sys_addr is not None:
+            # Check if this species on this body is already recorded
+            self.cursor.execute("""
+                SELECT COUNT(*) FROM scanned_organics 
+                WHERE system_address = ? AND body_id = ? AND species_localised = ?
+            """, (sys_addr, body_id, species_loc))
+            if self.cursor.fetchone()[0] == 0:
+                self.cursor.execute("""
+                    INSERT INTO scanned_organics (
+                        system_address, body_id, body_name, timestamp, scan_type, genus, genus_localised,
+                        species, species_localised, variant, variant_localised, base_value, first_discovery_value
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    sys_addr, body_id, body_name, timestamp, "Log", "", genus_loc,
+                    "", species_loc, "", entry_name_loc, base_val, fd_val
+                ))
+                self.dirty_systems.add(sys_addr)
 
     def _update_system_stats(self, sys_addr: int):
         self.cursor.execute("""

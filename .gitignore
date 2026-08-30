@@ -24,3 +24,11 @@ ENV/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Temporary research & test files
+*.log
+*.htm
+*.zip
+*.eop
+BioInsights_extracted/
+species/

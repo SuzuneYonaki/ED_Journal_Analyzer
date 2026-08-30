@@ -10,11 +10,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR
+from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR, DATA_DIR
 from app.db.database import get_db_connection, init_db
 from app.parser.journal_parser import JournalParser
 from app.parser.watcher import JournalWatcher
 from app.analyzer.orbit_analyzer import build_system_hierarchy
+from app.parser.exobiology import predict_exobiology_candidates
 
 app = FastAPI(title="Elite Dangerous Journal Analyzer")
 
@@ -97,15 +98,29 @@ def on_journal_file_updated(file_path: Optional[str] = None):
 
 def start_watcher():
     global watcher_instance
-    if DEFAULT_JOURNAL_DIR.exists():
-        if watcher_instance:
-            watcher_instance.stop()
-        watcher_instance = JournalWatcher(
-            journal_dir=str(DEFAULT_JOURNAL_DIR),
-            interval=1.5,
-            on_update_callback=on_journal_file_updated
-        )
-        watcher_instance.start()
+    if watcher_instance:
+        watcher_instance.stop()
+
+    candidate_dirs = [
+        DEFAULT_JOURNAL_DIR,
+        BASE_DIR,
+        Path.cwd()
+    ]
+    # Filter unique existing or potential directories
+    watched_dirs = []
+    seen = set()
+    for d in candidate_dirs:
+        p = Path(d).resolve()
+        if str(p) not in seen:
+            seen.add(str(p))
+            watched_dirs.append(p)
+
+    watcher_instance = JournalWatcher(
+        journal_dirs=watched_dirs,
+        interval=0.4,
+        on_update_callback=on_journal_file_updated
+    )
+    watcher_instance.start()
 
 @app.websocket("/ws/live")
 async def websocket_live_endpoint(websocket: WebSocket):
@@ -136,7 +151,7 @@ def get_current_cmdr_location(conn) -> Optional[dict]:
         c = conn.cursor()
         # First try: visits table joined with systems table to get coordinates of latest visit
         c.execute("""
-            SELECT v.star_system, s.star_pos_x, s.star_pos_y, s.star_pos_z, v.timestamp 
+            SELECT v.system_address, v.star_system, s.star_pos_x, s.star_pos_y, s.star_pos_z, v.timestamp 
             FROM visits v
             JOIN systems s ON v.system_address = s.system_address
             WHERE s.star_pos_x IS NOT NULL AND s.star_pos_y IS NOT NULL AND s.star_pos_z IS NOT NULL
@@ -146,7 +161,7 @@ def get_current_cmdr_location(conn) -> Optional[dict]:
         if not row:
             # Second try: systems table by last_visited
             c.execute("""
-                SELECT star_system, star_pos_x, star_pos_y, star_pos_z, last_visited as timestamp
+                SELECT system_address, star_system, star_pos_x, star_pos_y, star_pos_z, last_visited as timestamp
                 FROM systems 
                 WHERE star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
                 ORDER BY last_visited DESC LIMIT 1
@@ -154,6 +169,7 @@ def get_current_cmdr_location(conn) -> Optional[dict]:
             row = c.fetchone()
         if row:
             return {
+                "system_address": row["system_address"],
                 "star_system": row["star_system"],
                 "star_pos_x": row["star_pos_x"],
                 "star_pos_y": row["star_pos_y"],
@@ -165,11 +181,47 @@ def get_current_cmdr_location(conn) -> Optional[dict]:
     return None
 
 @app.get("/api/stats")
-def get_global_stats():
+def get_global_stats(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    date_field: Optional[str] = "last_visited"
+):
     conn = get_db_connection()
     c = conn.cursor()
-    
-    c.execute("""
+
+    where_clauses = []
+    params = []
+
+    if date_from or date_to:
+        if date_field == "first_visited":
+            if date_from:
+                where_clauses.append("first_visited >= ?")
+                params.append(f"{date_from}T00:00:00")
+            if date_to:
+                where_clauses.append("first_visited <= ?")
+                params.append(f"{date_to}T23:59:59")
+        elif date_field == "any_visit":
+            sub_conds = []
+            sub_params = []
+            if date_from:
+                sub_conds.append("timestamp >= ?")
+                sub_params.append(f"{date_from}T00:00:00")
+            if date_to:
+                sub_conds.append("timestamp <= ?")
+                sub_params.append(f"{date_to}T23:59:59")
+            where_clauses.append(f"system_address IN (SELECT DISTINCT system_address FROM visits WHERE {' AND '.join(sub_conds)})")
+            params.extend(sub_params)
+        else:
+            if date_from:
+                where_clauses.append("last_visited >= ?")
+                params.append(f"{date_from}T00:00:00")
+            if date_to:
+                where_clauses.append("last_visited <= ?")
+                params.append(f"{date_to}T23:59:59")
+
+    where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+    c.execute(f"""
         SELECT 
             COUNT(*) as total_systems,
             COALESCE(SUM(visit_count), 0) as total_visits,
@@ -183,20 +235,22 @@ def get_global_stats():
             COALESCE(SUM(total_bio_signals), 0) as total_bio_signals,
             COALESCE(SUM(has_landable), 0) as landable_systems,
             COALESCE(SUM(has_anomalies), 0) as anomaly_systems
-        FROM systems
-    """)
+        FROM systems {where_sql}
+    """, params)
     stats = dict(c.fetchone())
 
-    # Fallback to bodies table if total_bio_signals in systems needs direct sum
-    c.execute("SELECT COALESCE(SUM(bio_signals), 0) as sum_bio FROM bodies")
-    bodies_bio_sum = c.fetchone()["sum_bio"]
-    stats["total_bio_signals"] = max(stats.get("total_bio_signals", 0), bodies_bio_sum)
+    # Bio signals sum in matching systems
+    if where_sql:
+        c.execute(f"SELECT COALESCE(SUM(bio_signals), 0) as sum_bio FROM bodies WHERE system_address IN (SELECT system_address FROM systems {where_sql})", params)
+        stats["total_bio_signals"] = c.fetchone()["sum_bio"]
+    else:
+        c.execute("SELECT COALESCE(SUM(bio_signals), 0) as sum_bio FROM bodies")
+        stats["total_bio_signals"] = max(stats.get("total_bio_signals", 0), c.fetchone()["sum_bio"])
 
     c.execute("SELECT COUNT(*) as count FROM scanned_organics")
     stats["total_scanned_organics"] = c.fetchone()["count"]
 
     stats["current_location"] = get_current_cmdr_location(conn)
-
     conn.close()
     return stats
 
@@ -377,9 +431,14 @@ def get_system_detail(system_address: int):
         WHERE system_address = ? 
         ORDER BY distance_from_arrival_ls ASC, body_id ASC
     """, (system_address,))
+    main_star = system_data.get("main_star_type") or "F"
     bodies = []
     for r in c.fetchall():
         b = dict(r)
+        b["main_star_type"] = main_star
+        b["system_main_star_type"] = main_star
+        b["star_system"] = system_data.get("system_name", "")
+
         if b.get("anomalies_json"):
             try:
                 b["anomalies"] = json.loads(b["anomalies_json"])
@@ -388,13 +447,17 @@ def get_system_detail(system_address: int):
         else:
             b["anomalies"] = []
 
-        if b.get("exobiology_predictions"):
-            try:
-                b["exobiology"] = json.loads(b["exobiology_predictions"])
-            except Exception:
+        # Always calculate latest exobiology predictions dynamically using full planet attributes & main star class
+        try:
+            b["exobiology"] = predict_exobiology_candidates(b)
+        except Exception:
+            if b.get("exobiology_predictions"):
+                try:
+                    b["exobiology"] = json.loads(b["exobiology_predictions"])
+                except Exception:
+                    b["exobiology"] = []
+            else:
                 b["exobiology"] = []
-        else:
-            b["exobiology"] = []
 
         if b.get("rings"):
             try:
@@ -424,39 +487,57 @@ def get_system_detail(system_address: int):
 
     conn.close()
 
-    # Deduplicate and group scanned organics by body_id / body_name, tracking latest / highest stage
-    # Stage priority: Analyse (3) > Sample (2) > Log (1)
-    stage_priority = {"analyse": 3, "sample": 2, "log": 1}
-
+    # Process and deduplicate scanned organics
     organics_by_body = {}
     seen_species_system = {}
+    stage_priority = {"log": 1, "sample": 2, "analyse": 3, "analyze": 3}
+
+    def normalize_species(raw_sp: str) -> str:
+        if not raw_sp:
+            return "Unknown"
+        s = raw_sp.strip()
+        if " - " in s:
+            s = s.split(" - ")[0].strip()
+        return s
 
     for org in raw_organics:
         b_id = org.get("body_id")
-        sp = org.get("species_localised") or org.get("species") or org.get("genus_localised") or org.get("genus") or "Unknown"
+        b_name = org.get("body_name")
+        raw_sp = org.get("species_localised") or org.get("species") or org.get("genus_localised") or org.get("genus") or "Unknown"
+        sp = normalize_species(raw_sp)
         stype = (org.get("scan_type") or "").lower()
         sp_priority = stage_priority.get(stype, 1)
 
-        # Unique per body (keep highest stage)
-        if b_id not in organics_by_body:
-            organics_by_body[b_id] = {}
-        
-        if sp not in organics_by_body[b_id]:
-            org_copy = dict(org)
-            org_copy["stage_level"] = sp_priority
-            org_copy["is_completed"] = (sp_priority == 3)
-            organics_by_body[b_id][sp] = org_copy
-        else:
-            existing_stage = organics_by_body[b_id][sp].get("stage_level", 1)
-            if sp_priority > existing_stage:
+        # Index by both body_id (int/str) and body_name for 100% robust lookup
+        keys_to_index = []
+        if b_id is not None:
+            keys_to_index.extend([b_id, str(b_id)])
+        if b_name:
+            keys_to_index.append(b_name)
+
+        for k in keys_to_index:
+            if k not in organics_by_body:
+                organics_by_body[k] = {}
+            
+            if sp not in organics_by_body[k]:
                 org_copy = dict(org)
+                org_copy["species_localised"] = sp
                 org_copy["stage_level"] = sp_priority
                 org_copy["is_completed"] = (sp_priority == 3)
-                organics_by_body[b_id][sp] = org_copy
+                organics_by_body[k][sp] = org_copy
+            else:
+                existing_stage = organics_by_body[k][sp].get("stage_level", 1)
+                if sp_priority >= existing_stage:
+                    org_copy = dict(org)
+                    org_copy["species_localised"] = sp
+                    org_copy["stage_level"] = max(sp_priority, existing_stage)
+                    org_copy["is_completed"] = (org_copy["stage_level"] == 3)
+                    organics_by_body[k][sp] = org_copy
 
         # Unique per system
         if sp not in seen_species_system or sp_priority > seen_species_system[sp].get("stage_level", 1):
             org_sys = dict(org)
+            org_sys["species_localised"] = sp
             org_sys["stage_level"] = sp_priority
             org_sys["is_completed"] = (sp_priority == 3)
             seen_species_system[sp] = org_sys
@@ -464,6 +545,8 @@ def get_system_detail(system_address: int):
     system_scanned_organics = list(seen_species_system.values())
     system_bio_total_base = 0
     system_bio_total_first = 0
+    system_bio_scanned_base = 0
+    system_bio_scanned_first = 0
     system_bio_signals_count = 0
     system_bio_completed_count = sum(1 for s in system_scanned_organics if s.get("is_completed"))
 
@@ -475,9 +558,12 @@ def get_system_detail(system_address: int):
         system_bio_signals_count += bio_sig
 
         # Scanned organics on this specific body
-        body_scanned_map = organics_by_body.get(b_id, {})
-        if not body_scanned_map and b_name in organics_by_body:
-            body_scanned_map = organics_by_body[b_name]
+        body_scanned_map = (
+            organics_by_body.get(b_id) or 
+            organics_by_body.get(str(b_id)) or 
+            organics_by_body.get(b_name) or 
+            {}
+        )
 
         b_scanned_list = list(body_scanned_map.values())
         b["scanned_organics"] = b_scanned_list
@@ -506,31 +592,42 @@ def get_system_detail(system_address: int):
         b["potential_exobiology"] = unscanned_predictions
 
         # Calculate body bio payouts:
-        # Sum of scanned species + top predicted species for remaining bio signal slots
-        body_base_val = sum(s.get("base_value", 0) for s in b_scanned_list)
-        body_first_val = sum(s.get("first_discovery_value", 0) for s in b_scanned_list)
+        # 1. Scanned / confirmed species amount
+        body_scanned_base_val = sum(s.get("base_value", 0) for s in b_scanned_list)
+        body_scanned_first_val = sum(s.get("first_discovery_value", 0) for s in b_scanned_list)
+
+        b["bio_scanned_base_value"] = body_scanned_base_val
+        b["bio_scanned_first_value"] = body_scanned_first_val
+        system_bio_scanned_base += body_scanned_base_val
+        system_bio_scanned_first += body_scanned_first_val
+
+        # 2. Total estimated payouts (Scanned + remaining potential slots)
+        body_total_base_val = body_scanned_base_val
+        body_total_first_val = body_scanned_first_val
 
         remaining_slots = max(0, bio_sig - len(b_scanned_list))
         for i in range(min(remaining_slots, len(unscanned_predictions))):
             pred_item = unscanned_predictions[i]
-            body_base_val += pred_item.get("base_value", 0)
-            body_first_val += pred_item.get("first_discovery_value", 0)
+            body_total_base_val += pred_item.get("base_value", 0)
+            body_total_first_val += pred_item.get("first_discovery_value", 0)
 
         # Fallback if no prediction matched but bio_signals > 0
         if remaining_slots > len(unscanned_predictions) and remaining_slots > 0:
             unmatched_slots = remaining_slots - len(unscanned_predictions)
-            body_base_val += unmatched_slots * 1689700  # Default Bacterium value
-            body_first_val += unmatched_slots * (1689700 * 5)
+            body_total_base_val += unmatched_slots * 1689700  # Default Bacterium value
+            body_total_first_val += unmatched_slots * (1689700 * 5)
 
-        b["bio_total_base_value"] = body_base_val
-        b["bio_total_first_value"] = body_first_val
+        b["bio_total_base_value"] = body_total_base_val
+        b["bio_total_first_value"] = body_total_first_val
 
-        system_bio_total_base += body_base_val
-        system_bio_total_first += body_first_val
+        system_bio_total_base += body_total_base_val
+        system_bio_total_first += body_total_first_val
 
     # Add system-level Exobiology summary
     system_data["bio_total_base_value"] = system_bio_total_base
     system_data["bio_total_first_value"] = system_bio_total_first
+    system_data["bio_scanned_base_value"] = system_bio_scanned_base
+    system_data["bio_scanned_first_value"] = system_bio_scanned_first
     system_data["bio_signals_count"] = system_bio_signals_count
     system_data["bio_scanned_count"] = len(system_scanned_organics)
     system_data["bio_completed_count"] = system_bio_completed_count
@@ -547,16 +644,31 @@ def get_system_detail(system_address: int):
         "system_bio_summary": {
             "total_base_value": system_bio_total_base,
             "total_first_value": system_bio_total_first,
+            "scanned_base_value": system_bio_scanned_base,
+            "scanned_first_value": system_bio_scanned_first,
             "total_signals": system_bio_signals_count,
             "total_scanned": len(system_scanned_organics),
             "total_completed": system_bio_completed_count
         }
     }
 
+APP_SETTINGS_FILE = DATA_DIR / "app_settings.json"
+
+def get_saved_journal_dir() -> Path:
+    if APP_SETTINGS_FILE.exists():
+        try:
+            with open(APP_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                if cfg.get("journal_dir"):
+                    p = Path(cfg["journal_dir"])
+                    if p.exists() and p.is_dir():
+                        return p
+        except Exception:
+            pass
+    return DEFAULT_JOURNAL_DIR
+
 def run_background_parse():
     global scan_state
-    if scan_state["is_scanning"]:
-        return
     scan_state["is_scanning"] = True
     scan_state["current"] = 0
     scan_state["total"] = 0
@@ -576,17 +688,37 @@ def run_background_parse():
 
     try:
         parser = JournalParser()
-        tot = parser.parse_all_journals(str(DEFAULT_JOURNAL_DIR), progress_callback=cb)
+        target_dir = get_saved_journal_dir()
+        tot = parser.parse_all_journals(str(target_dir), progress_callback=cb)
         scan_state["current"] = tot
         scan_state["total"] = tot
         scan_state["percent"] = 100
         scan_state["filename"] = ""
-        scan_state["message"] = f"Successfully parsed {tot} journal files."
+        scan_state["message"] = f"Successfully parsed {tot} journal files from {target_dir}."
     except Exception as e:
         scan_state["message"] = f"Error: {str(e)}"
     finally:
         scan_state["is_scanning"] = False
         manager.notify_update_from_thread(None)
+
+@app.get("/api/app_settings")
+def get_app_settings():
+    current_dir = get_saved_journal_dir()
+    return {
+        "journal_dir": str(current_dir),
+        "default_journal_dir": str(DEFAULT_JOURNAL_DIR),
+        "is_default": str(current_dir) == str(DEFAULT_JOURNAL_DIR)
+    }
+
+@app.post("/api/app_settings")
+def save_app_settings_endpoint(settings: dict):
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with open(APP_SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(settings, f, ensure_ascii=False, indent=2)
+        return {"status": "saved", "settings": settings}
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
 @app.post("/api/scan_now")
 def trigger_scan(background_tasks: BackgroundTasks):
@@ -599,6 +731,40 @@ def trigger_scan(background_tasks: BackgroundTasks):
 @app.get("/api/scan_status")
 def get_scan_status():
     return scan_state
+
+# TTS Settings Persistence Endpoints
+TTS_SETTINGS_FILE = DATA_DIR / "tts_settings.json"
+
+@app.get("/api/tts_settings")
+def get_tts_settings():
+    default_settings = {
+        "enabled": False,
+        "engine": "web_speech",
+        "webVoiceURI": "",
+        "voicevoxSpeakerId": "3",
+        "voicevoxUrl": "http://127.0.0.1:50021",
+        "customText": "First discover.",
+        "volume": 1.0,
+        "rate": 1.0
+    }
+    if TTS_SETTINGS_FILE.exists():
+        try:
+            with open(TTS_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+                default_settings.update(saved)
+        except Exception:
+            pass
+    return default_settings
+
+@app.post("/api/tts_settings")
+def save_tts_settings_endpoint(settings: dict):
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with open(TTS_SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(settings, f, ensure_ascii=False, indent=2)
+        return {"status": "saved", "settings": settings}
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
 # Mount static files UI
 ui_dir = BASE_DIR / "app" / "ui"
