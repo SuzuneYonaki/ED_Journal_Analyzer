@@ -32,6 +32,7 @@ let state = {
   bodySortBy: 'distance',
   bodySortOrder: 'asc',
   page: 1,
+  limit: 50,
   liveSyncEnabled: true,
   lastEventVersion: 0,
   lastJournalEventVersion: 0,
@@ -256,11 +257,11 @@ async function fetchSystems() {
   const activeSortOrder2 = state.liveSyncEnabled ? 'desc' : state.savedSortOrder2;
 
   const params = new URLSearchParams({
-    q: state.searchQuery,
+    q: state.searchQuery || '',
     sort_by: activeSortBy,
     sort_order: activeSortOrder,
-    page: state.page,
-    limit: state.limit
+    page: state.page || 1,
+    limit: state.limit || 50
   });
 
   if (activeSortBy2 && activeSortBy2 !== 'none') {
