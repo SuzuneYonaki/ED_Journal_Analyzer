@@ -1760,15 +1760,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Scan Button
-  document.getElementById('btn-rescan').addEventListener('click', async () => {
-    try {
-      const res = await fetch('/api/scan_now', { method: 'POST' });
-      pollScanProgress();
-    } catch (err) {
-      console.error('Failed to trigger scan:', err);
-    }
-  });
+  // Scan Button (if exists)
+  const btnRescan = document.getElementById('btn-rescan');
+  if (btnRescan) {
+    btnRescan.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/scan_now', { method: 'POST' });
+        pollScanProgress();
+      } catch (err) {
+        console.error('Failed to trigger scan:', err);
+      }
+    });
+  }
 
   // Start Realtime Live Sync
   initLiveSync();
