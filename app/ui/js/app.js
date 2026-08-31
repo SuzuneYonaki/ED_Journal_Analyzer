@@ -371,12 +371,6 @@ async function selectSystem(systemAddress, preserveSelectedBody = false, resetJu
       renderBodyInspector();
     }
     highlightSelectedSystemCard();
-
-    // Check First Discovery and announce via TTS
-    if (data.system && (data.system.has_first_discover || (data.system.first_discovered_bodies && data.system.first_discovered_bodies > 0))) {
-      announceFirstDiscovery(data.system.star_system);
-    }
-
     if (state.selectedBody && (state.jumpState === 'idle' || state.jumpState === 'scanned')) {
       focusAndScrollToTargetBody(state.selectedBody.body_id);
     }
@@ -1891,6 +1885,25 @@ function initLiveSync() {
   }, 600);
 }
 
+const announcedFirstDiscSystems = new Set();
+
+async function checkAndAnnounceLiveFirstDiscovery(sysAddr, defaultName = '') {
+  if (!ttsState.enabled || !sysAddr) return;
+  if (announcedFirstDiscSystems.has(String(sysAddr))) return;
+
+  try {
+    const res = await fetch(`/api/system/${sysAddr}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.system && (data.system.has_first_discover || (data.system.first_discovered_bodies && data.system.first_discovered_bodies > 0))) {
+      announcedFirstDiscSystems.add(String(sysAddr));
+      announceFirstDiscovery(data.system.star_system || defaultName, data.system.first_discovered_bodies || 1);
+    }
+  } catch (e) {
+    console.warn('Failed to check live first discovery:', e);
+  }
+}
+
 function handleLiveJournalEvent(eventName, eventData) {
   if (!state.liveSyncEnabled) return;
 
@@ -1912,6 +1925,7 @@ function handleLiveJournalEvent(eventName, eventData) {
 
     if (eventData.SystemAddress) {
       selectSystem(eventData.SystemAddress, false, false);
+      checkAndAnnounceLiveFirstDiscovery(eventData.SystemAddress, eventData.StarSystem);
     } else {
       renderCurrentView();
     }
@@ -1923,6 +1937,7 @@ function handleLiveJournalEvent(eventName, eventData) {
     const sysAddr = eventData.SystemAddress || (state.selectedSystem ? state.selectedSystem.system_address : null);
     if (sysAddr) {
       selectSystem(sysAddr, false, false);
+      checkAndAnnounceLiveFirstDiscovery(sysAddr, eventData.StarSystem || (state.selectedSystem ? state.selectedSystem.star_system : ''));
     } else {
       triggerLiveRefresh();
     }
@@ -1933,6 +1948,7 @@ function handleLiveJournalEvent(eventName, eventData) {
 
     if (sysAddr && state.selectedSystem && String(state.selectedSystem.system_address) === String(sysAddr)) {
       selectSystem(sysAddr, true, false);
+      checkAndAnnounceLiveFirstDiscovery(sysAddr, eventData.StarSystem || (state.selectedSystem ? state.selectedSystem.star_system : ''));
     } else {
       triggerLiveRefresh();
     }
