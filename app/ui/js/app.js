@@ -2115,8 +2115,6 @@ const ttsState = {
   rate: 1.0
 };
 
-const announcedFirstDiscSystems = new Set();
-
 async function loadTTSSettings() {
   try {
     const res = await fetch('/api/tts_settings');
