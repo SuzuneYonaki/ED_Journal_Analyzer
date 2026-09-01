@@ -9,7 +9,7 @@ All code, strings, and comments in this module are strictly English ASCII.
 import json
 import re
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple, Set
 
 from app.parser.exobiology_rules import EXOBIOLOGY_RULES, GENUS_DEFAULTS
 
@@ -244,10 +244,14 @@ def match_parent_star(rule: Dict[str, Any], star_type: str, luminosity: Optional
     return True
 
 
-def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
+def predict_exobiology_candidates(
+    body: Dict[str, Any],
+    system_context_species: Optional[Set[str]] = None
+) -> List[Dict[str, Any]]:
     """
     Predict possible Exobiology candidate species for a body using
-    strict physical parameter matrix filtering and Canonn Top X+1 signal budget ranking.
+    strict physical parameter matrix filtering, distinct Species signal budgeting (Z signals -> Z species),
+    and system-level co-occurrence weighting under the same stellar spectrum.
     """
     is_landable = body.get("landable") or body.get("Landable")
     if is_landable is False:
@@ -316,8 +320,16 @@ def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
         if not match_parent_star(rule, star_type, luminosity):
             continue
 
-        # Calculate fit score
+        # Calculate base fit score
         fit_score = calculate_environment_fit_score(rule, temp_k, press_atm, grav_g)
+
+        # Apply System-level Co-occurrence & Consistency Weighting
+        # If this species is already present or prominent on other bodies in the same system, boost its weight
+        is_coherent = False
+        if system_context_species and species_name in system_context_species:
+            fit_score = min(1.0, fit_score + 0.15)
+            is_coherent = True
+
         match_pct = round(fit_score * 100)
         primary_color, alt_colors = determine_variant_info(rule, star_type, fit_score)
         base_val = rule.get("base_value", 1000000)
@@ -338,64 +350,105 @@ def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
             "fit_score": fit_score,
             "match_percentage": match_pct,
             "possible_pct": match_pct,
+            "is_system_coherent": is_coherent,
             "confidence": "possible"
         })
 
     # Sort candidates by fit score descending, then base value descending
     candidates.sort(key=lambda x: (x["fit_score"], x["base_value"]), reverse=True)
 
-    # Signal Budget Ranking: If BioSignals is X, emit top X definite candidates,
-    # and at most 1 runner-up (X+1) IF its score is not more than 10% lower than definite candidates.
+    # Signal Budget Ranking: If BioSignals is Z, emit up to Z distinct species candidates
     if bio_signals > 0:
-        x_budget = int(bio_signals)
-        top_limit = x_budget + 1
+        z_budget = int(bio_signals)
+        top_limit = z_budget + 1
         budget_candidates: List[Dict[str, Any]] = []
+        species_selected = set()
         genus_selected = set()
 
         # Pass 1: Prioritize distinct genus diversity for top candidates
         for c in candidates:
             if len(budget_candidates) >= top_limit:
                 break
-            if c["genus"] not in genus_selected:
+            if c["genus"] not in genus_selected and c["species"] not in species_selected:
                 genus_selected.add(c["genus"])
+                species_selected.add(c["species"])
                 budget_candidates.append(c)
 
-        # Pass 2: Fill remaining slots up to X+1 from highest fit scores
+        # Pass 2: Fill remaining slots up to Z+1 from highest fit scores with distinct Species
         if len(budget_candidates) < top_limit:
             for c in candidates:
                 if len(budget_candidates) >= top_limit:
                     break
-                if c not in budget_candidates:
+                if c["species"] not in species_selected:
+                    species_selected.add(c["species"])
                     budget_candidates.append(c)
 
         if not budget_candidates:
             return []
 
-        # Split into definite (top X) and candidate runner-up (+1)
-        definite_list = budget_candidates[:x_budget]
+        # Split into definite (top Z) and candidate runner-up (+1)
+        definite_list = budget_candidates[:z_budget]
         for d in definite_list:
             d["confidence"] = "definite"
 
         result_candidates = list(definite_list)
 
-        # Check if X+1 runner-up candidate qualifies (must not be >=10% below minimum definite score)
-        if len(budget_candidates) > x_budget:
-            runner_up = budget_candidates[x_budget]
+        # Include qualifying runner-up (+1) if within 10% score threshold
+        if len(budget_candidates) > z_budget:
+            runner_up = budget_candidates[z_budget]
             min_definite_score = min(d["fit_score"] for d in definite_list) if definite_list else 1.0
             score_diff = min_definite_score - runner_up["fit_score"]
 
-            # If runner-up score is within 10% (0.10) threshold, include as possible candidate
             if score_diff < 0.10:
                 runner_up["confidence"] = "possible"
                 result_candidates.append(runner_up)
 
         return result_candidates
     else:
-        # If no explicit bio signals are known yet, return top matches with high fit scores
+        # If no explicit bio signals are known yet, return top distinct matches with high fit scores
         top_matches = candidates[:3]
         for m in top_matches:
             m["confidence"] = "possible"
         return top_matches
+
+
+def predict_system_exobiology_candidates(
+    bodies: List[Dict[str, Any]],
+    system_info: Optional[Dict[str, Any]] = None
+) -> List[Dict[str, Any]]:
+    """
+    Predict exobiology candidates across all bodies in a system simultaneously,
+    applying cross-body co-occurrence & consistency weighting under the same stellar spectrum.
+    """
+    if not bodies:
+        return []
+
+    # Step 1: Preliminary pass to gather prominent / scanned species across the system
+    system_known_species: Set[str] = set()
+
+    for b in bodies:
+        # Include already scanned or organic-analyzed species
+        scanned_list = b.get("scanned_species") or b.get("scanned_species_list") or []
+        for s in scanned_list:
+            if isinstance(s, dict) and s.get("species"):
+                system_known_species.add(s["species"])
+            elif isinstance(s, str):
+                system_known_species.add(s)
+
+        # Preliminary candidate evaluation for high-signal or high-confidence bodies
+        bio_sig = b.get("bio_signals") or b.get("BioSignals") or 0
+        if bio_sig > 0:
+            prelim_cands = predict_exobiology_candidates(b, system_context_species=None)
+            # Add definite high-fit species (fit_score >= 0.70) to system context
+            for c in prelim_cands:
+                if c.get("confidence") == "definite" and c.get("fit_score", 0) >= 0.70:
+                    system_known_species.add(c["species"])
+
+    # Step 2: Final pass applying system-level co-occurrence weighting to each body
+    for b in bodies:
+        b["exobiology"] = predict_exobiology_candidates(b, system_context_species=system_known_species)
+
+    return bodies
 
 
 def get_species_value(species_name: str, genus_name: Optional[str] = None) -> Dict[str, Any]:

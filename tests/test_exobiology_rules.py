@@ -203,3 +203,48 @@ def test_electricae_parent_star_and_gravity_rules():
     cand_high_g = predict_exobiology_candidates(body_high_g)
     high_g_electricae = [c["species"] for c in cand_high_g if "Electricae" in c["species"]]
     assert len(high_g_electricae) == 0, "Electricae should not spawn on high gravity (> 0.27 G)"
+
+
+def test_system_level_co_occurrence_weighting():
+    """Verify that species present on other bodies in the same system receive co-occurrence weight boost."""
+    from app.parser.exobiology import predict_system_exobiology_candidates
+
+    # Body 1 has 2 signals: Bacterium and Stratum Cucumisis
+    body_1 = {
+        "body_name": "Test Star 1",
+        "landable": True,
+        "planet_class": "High metal content body",
+        "atmosphere": "Carbon dioxide",
+        "surface_temperature": 230.0,
+        "surface_gravity_g": 0.25,
+        "surface_pressure": 0.030 * 101325,
+        "bio_signals": 2,
+        "star_type": "G",
+        "scanned_species": ["Stratum Cucumisis"] # Scanned on Body 1
+    }
+
+    # Body 2 has 1 signal, where Stratum Cucumisis is an eligible candidate
+    body_2 = {
+        "body_name": "Test Star 2",
+        "landable": True,
+        "planet_class": "High metal content body",
+        "atmosphere": "Carbon dioxide",
+        "surface_temperature": 230.0,
+        "surface_gravity_g": 0.25,
+        "surface_pressure": 0.030 * 101325,
+        "bio_signals": 1,
+        "star_type": "G"
+    }
+
+    # Isolated candidate prediction without system context
+    cand_isolated = predict_exobiology_candidates(body_2)
+
+    # System-wide prediction with co-occurrence weighting
+    bodies = [body_1, body_2]
+    predict_system_exobiology_candidates(bodies)
+
+    cand_system = body_2["exobiology"]
+    assert len(cand_system) >= 1
+    top_species = cand_system[0]["species"]
+    assert top_species == "Stratum Cucumisis", "Stratum Cucumisis should be prioritized as top candidate due to system co-occurrence weighting"
+    assert cand_system[0]["is_system_coherent"] is True

@@ -1298,6 +1298,9 @@ function renderBodyInspector() {
         const pctBadge = (matchPct !== null && matchPct !== undefined) 
           ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.65rem;" title="環境適合度 (Possible %)">📊 Possible: ${matchPct}%</span>` 
           : '';
+        const coherentBadge = bio.is_system_coherent 
+          ? `<span class="tag-badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); font-size: 0.65rem;" title="同一星系内で他天体と同一種として共起重み付け">🪐 同星系共起</span>` 
+          : '';
         const isDefinite = bio.confidence === 'definite';
         const statusLabel = isDefinite ? (t('bio_status_definite') || '有力候補') : (t('bio_status_potential') || '次点候補');
         const icon = isDefinite ? '🌱' : '🌿';
@@ -1321,6 +1324,7 @@ function renderBodyInspector() {
               <div class="bio-pred-header">
                 <span class="bio-species-name" style="${isDefinite ? 'color: var(--ed-green); font-weight: bold;' : ''}">${icon} [${statusLabel}] ${spName} ${bio.genus && !spName.includes(bio.genus) ? `(${bio.genus})` : ''}</span>
                 ${pctBadge}
+                ${coherentBadge}
                 ${colorBadges}
                 <span class="bio-sample-dist">📍 ${bio.colony_distance_m || 500}m</span>
               </div>

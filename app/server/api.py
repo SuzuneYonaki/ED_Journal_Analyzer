@@ -15,7 +15,7 @@ from app.db.database import get_db_connection, init_db
 from app.parser.journal_parser import JournalParser
 from app.parser.watcher import JournalWatcher
 from app.analyzer.orbit_analyzer import build_system_hierarchy
-from app.parser.exobiology import predict_exobiology_candidates
+from app.parser.exobiology import predict_exobiology_candidates, predict_system_exobiology_candidates
 from app.services.edsm_service import edsm_service
 
 app = FastAPI(title="Elite Dangerous Journal Analyzer")
@@ -612,6 +612,17 @@ def get_system_detail(system_address: int):
         b_scanned_list = list(body_scanned_map.values())
         b["scanned_organics"] = b_scanned_list
         b["scanned_count"] = len(b_scanned_list)
+        b["scanned_species"] = [s.get("species_localised") or s.get("species") for s in b_scanned_list if s.get("species_localised") or s.get("species")]
+
+    # Run system-wide exobiology prediction with cross-body co-occurrence & consistency weighting
+    predict_system_exobiology_candidates(bodies, system_data)
+
+    # Attach Exobiology totals and potential predictions to each body
+    for b in bodies:
+        b_id = b.get("body_id")
+        b_name = b.get("body_name")
+        bio_sig = b.get("bio_signals") or 0
+        b_scanned_list = b.get("scanned_organics", [])
 
         completed_count = sum(1 for s in b_scanned_list if s.get("is_completed"))
         b["completed_bio_count"] = completed_count
