@@ -168,9 +168,9 @@ def calculate_environment_fit_score(rule: Dict[str, Any], temp_k: float, press_a
         score -= min(0.35, 0.35 * dist)
 
     # Gravity fit
-    g_min = rule.get("grav_min", 0.0)
-    g_max = rule.get("grav_max", 5.0)
-    if g_max > g_min:
+    g_min = rule.get("grav_min")
+    g_max = rule.get("grav_max")
+    if g_min is not None and g_max is not None and g_max > g_min:
         g_center = (g_min + g_max) / 2.0
         g_radius = (g_max - g_min) / 2.0
         dist = abs(grav_g - g_center) / g_radius
@@ -211,6 +211,39 @@ def determine_variant_info(rule: Dict[str, Any], star_type: str, fit_score: floa
     return primary_color, alt_colors
 
 
+def match_parent_star(rule: Dict[str, Any], star_type: str, luminosity: Optional[str] = None) -> bool:
+    """Check if primary/parent star satisfies star type and luminosity class restrictions."""
+    allowed_types = rule.get("parent_star_types")
+    if not allowed_types:
+        return True
+
+    clean_star = star_type.split()[0].upper() if star_type else ""
+    if not clean_star:
+        return True
+
+    # Check star type match (exact or prefix match, e.g. DA -> D or DAB -> DA)
+    type_matched = False
+    for req_type in allowed_types:
+        req_u = req_type.upper()
+        if clean_star == req_u or clean_star.startswith(req_u) or req_u.startswith(clean_star):
+            type_matched = True
+            break
+
+    if not type_matched:
+        return False
+
+    # Check luminosity restrictions if specified
+    lum_rules = rule.get("parent_star_luminosities")
+    if lum_rules and isinstance(lum_rules, dict) and luminosity:
+        clean_lum = luminosity.strip().upper()
+        for s_type, valid_lums in lum_rules.items():
+            if clean_star.startswith(s_type.upper()):
+                if clean_lum not in [v.upper() for v in valid_lums]:
+                    return False
+
+    return True
+
+
 def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Predict possible Exobiology candidate species for a body using
@@ -228,6 +261,7 @@ def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
     grav_g = get_gravity_g(body)
     volcanism = get_volcanism_string(body)
     star_type = get_star_type_string(body)
+    luminosity = body.get("luminosity") or body.get("Luminosity")
     bio_signals = body.get("bio_signals") or body.get("BioSignals") or 0
 
     # Gas giant exclusion
@@ -263,12 +297,13 @@ def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
         if p_max is not None and press_atm > p_max:
             continue
 
-        # 5. Gravity check
+        # 5. Gravity check (considering Any Gravity and Low Gravity g < 0.27)
+        any_grav = rule.get("any_gravity", False)
         g_min = rule.get("grav_min")
         g_max = rule.get("grav_max")
         if g_min is not None and grav_g < g_min:
             continue
-        if g_max is not None and grav_g > g_max:
+        if not any_grav and g_max is not None and grav_g > g_max:
             continue
 
         # 6. Volcanism requirement check
@@ -276,6 +311,10 @@ def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
         if volc_req:
             if not volcanism or volcanism in ["none", "no volcanism"]:
                 continue
+
+        # 7. Parent star type & luminosity check (e.g. Electricae)
+        if not match_parent_star(rule, star_type, luminosity):
+            continue
 
         # Calculate fit score
         fit_score = calculate_environment_fit_score(rule, temp_k, press_atm, grav_g)

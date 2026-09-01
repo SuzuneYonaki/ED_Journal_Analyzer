@@ -35,7 +35,11 @@
       "N": "Ocher",
       "O": "Yellow",
       "G": "Teal"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Aleoida Coronamus": {
     "genus": "Aleoida",
@@ -73,7 +77,11 @@
       "N": "Ocher",
       "O": "Yellow",
       "G": "Teal"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Aleoida Gravis": {
     "genus": "Aleoida",
@@ -112,7 +120,11 @@
       "N": "Ocher",
       "O": "Yellow",
       "G": "Teal"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Aleoida Laminata": {
     "genus": "Aleoida",
@@ -150,7 +162,11 @@
       "N": "Ocher",
       "O": "Yellow",
       "G": "Teal"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Aleoida Spica": {
     "genus": "Aleoida",
@@ -188,7 +204,11 @@
       "N": "Ocher",
       "O": "Yellow",
       "G": "Teal"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Aleoida Viride": {
     "genus": "Aleoida",
@@ -226,7 +246,11 @@
       "N": "Ocher",
       "O": "Yellow",
       "G": "Teal"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Acis": {
     "genus": "Bacterium",
@@ -249,7 +273,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -266,7 +290,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Alcyoneum": {
     "genus": "Bacterium",
@@ -289,7 +317,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -306,7 +334,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Aurasus": {
     "genus": "Bacterium",
@@ -329,7 +361,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -346,7 +378,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Bullaris": {
     "genus": "Bacterium",
@@ -369,7 +405,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -386,7 +422,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Cerbrus": {
     "genus": "Bacterium",
@@ -409,7 +449,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -426,7 +466,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Informis": {
     "genus": "Bacterium",
@@ -449,7 +493,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -466,7 +510,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Nebulus": {
     "genus": "Bacterium",
@@ -489,7 +537,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -506,7 +554,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Omentum": {
     "genus": "Bacterium",
@@ -531,7 +583,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -548,7 +600,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Scopulum": {
     "genus": "Bacterium",
@@ -573,7 +629,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -590,7 +646,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Verrata": {
     "genus": "Bacterium",
@@ -613,7 +673,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -630,7 +690,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Vesicula": {
     "genus": "Bacterium",
@@ -653,7 +717,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -670,7 +734,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Bacterium Volu": {
     "genus": "Bacterium",
@@ -693,7 +761,7 @@
     "press_min": 0.001,
     "press_max": 0.15,
     "grav_min": 0.01,
-    "grav_max": 0.6,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "O": "Teal",
@@ -710,7 +778,11 @@
       "W": "White",
       "D": "Grey",
       "N": "Cyan"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Cactoida Cortexum": {
     "genus": "Cactoida",
@@ -745,7 +817,11 @@
       "T": "Amethyst",
       "Y": "Indigo",
       "W": "Grey"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Cactoida Lapis": {
     "genus": "Cactoida",
@@ -780,7 +856,11 @@
       "T": "Amethyst",
       "Y": "Indigo",
       "W": "Grey"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Cactoida Peperistis": {
     "genus": "Cactoida",
@@ -815,7 +895,11 @@
       "T": "Amethyst",
       "Y": "Indigo",
       "W": "Grey"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Cactoida Proteus": {
     "genus": "Cactoida",
@@ -850,7 +934,11 @@
       "T": "Amethyst",
       "Y": "Indigo",
       "W": "Grey"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Cactoida Pulverulentus": {
     "genus": "Cactoida",
@@ -885,7 +973,11 @@
       "T": "Amethyst",
       "Y": "Indigo",
       "W": "Grey"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Cactoida Vermis": {
     "genus": "Cactoida",
@@ -920,7 +1012,11 @@
       "T": "Amethyst",
       "Y": "Indigo",
       "W": "Grey"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Clypeus Lacrimata": {
     "genus": "Clypeus",
@@ -954,7 +1050,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Clypeus Margaritus": {
     "genus": "Clypeus",
@@ -988,7 +1088,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Clypeus Speculumi": {
     "genus": "Clypeus",
@@ -1022,7 +1126,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Concha Aureolas": {
     "genus": "Concha",
@@ -1044,7 +1152,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.35,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -1056,7 +1164,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Concha Biconvexi": {
     "genus": "Concha",
@@ -1078,7 +1190,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.35,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -1090,7 +1202,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Concha Labiata": {
     "genus": "Concha",
@@ -1111,7 +1227,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.35,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -1123,7 +1239,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Concha Renibus": {
     "genus": "Concha",
@@ -1144,7 +1264,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.35,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -1156,7 +1276,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Electricae Pluma": {
     "genus": "Electricae",
@@ -1181,7 +1305,7 @@
     "press_min": 0.001,
     "press_max": 0.1,
     "grav_min": 0.01,
-    "grav_max": 0.45,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Cyan",
@@ -1193,7 +1317,45 @@
       "L": "Purple",
       "T": "Magenta",
       "Y": "Violet"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": [
+      "A",
+      "B",
+      "O",
+      "N",
+      "H",
+      "D",
+      "DA",
+      "DAB",
+      "DAO",
+      "DAZ",
+      "DAV",
+      "DB",
+      "DBZ",
+      "DBV",
+      "DO",
+      "DOV",
+      "DQ",
+      "DC",
+      "DCV",
+      "DX"
+    ],
+    "parent_star_luminosities": {
+      "A": [
+        "V",
+        "Va",
+        "Vb",
+        "IV",
+        "III",
+        "II",
+        "Ib",
+        "Ia",
+        "0",
+        "VII"
+      ]
+    },
+    "volcanism_required": false
   },
   "Electricae Radial": {
     "genus": "Electricae",
@@ -1218,7 +1380,7 @@
     "press_min": 0.001,
     "press_max": 0.1,
     "grav_min": 0.01,
-    "grav_max": 0.45,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Cyan",
@@ -1230,7 +1392,45 @@
       "L": "Purple",
       "T": "Magenta",
       "Y": "Violet"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": [
+      "A",
+      "B",
+      "O",
+      "N",
+      "H",
+      "D",
+      "DA",
+      "DAB",
+      "DAO",
+      "DAZ",
+      "DAV",
+      "DB",
+      "DBZ",
+      "DBV",
+      "DO",
+      "DOV",
+      "DQ",
+      "DC",
+      "DCV",
+      "DX"
+    ],
+    "parent_star_luminosities": {
+      "A": [
+        "V",
+        "Va",
+        "Vb",
+        "IV",
+        "III",
+        "II",
+        "Ib",
+        "Ia",
+        "0",
+        "VII"
+      ]
+    },
+    "volcanism_required": false
   },
   "Fonticulua Campestris": {
     "genus": "Fonticulua",
@@ -1252,7 +1452,7 @@
     "press_min": 0.001,
     "press_max": 0.08,
     "grav_min": 0.01,
-    "grav_max": 0.35,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Amethyst",
@@ -1264,7 +1464,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Fonticulua Cuniculum": {
     "genus": "Fonticulua",
@@ -1285,7 +1489,7 @@
     "press_min": 0.001,
     "press_max": 0.08,
     "grav_min": 0.01,
-    "grav_max": 0.35,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Amethyst",
@@ -1297,7 +1501,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Fonticulua Digitatum": {
     "genus": "Fonticulua",
@@ -1318,7 +1526,7 @@
     "press_min": 0.001,
     "press_max": 0.08,
     "grav_min": 0.01,
-    "grav_max": 0.35,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Amethyst",
@@ -1330,7 +1538,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Fonticulua Fluctus": {
     "genus": "Fonticulua",
@@ -1351,7 +1563,7 @@
     "press_min": 0.001,
     "press_max": 0.08,
     "grav_min": 0.01,
-    "grav_max": 0.35,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Amethyst",
@@ -1363,7 +1575,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Fonticulua Lapida": {
     "genus": "Fonticulua",
@@ -1383,7 +1599,7 @@
     "press_min": 0.001,
     "press_max": 0.08,
     "grav_min": 0.01,
-    "grav_max": 0.35,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Amethyst",
@@ -1395,7 +1611,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Fonticulua Segmentatus": {
     "genus": "Fonticulua",
@@ -1416,7 +1636,7 @@
     "press_min": 0.001,
     "press_max": 0.08,
     "grav_min": 0.01,
-    "grav_max": 0.35,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Amethyst",
@@ -1428,7 +1648,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Fonticulua Upupam": {
     "genus": "Fonticulua",
@@ -1449,7 +1673,7 @@
     "press_min": 0.001,
     "press_max": 0.08,
     "grav_min": 0.01,
-    "grav_max": 0.35,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Amethyst",
@@ -1461,7 +1685,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Frutexa Aculeata": {
     "genus": "Frutexa",
@@ -1482,7 +1710,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Teal",
@@ -1494,7 +1722,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Frutexa Collum": {
     "genus": "Frutexa",
@@ -1516,7 +1748,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Teal",
@@ -1528,7 +1760,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Frutexa Flabellum": {
     "genus": "Frutexa",
@@ -1549,7 +1785,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Teal",
@@ -1561,7 +1797,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Frutexa Flecto": {
     "genus": "Frutexa",
@@ -1582,7 +1822,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Teal",
@@ -1594,7 +1834,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Frutexa Metallicum": {
     "genus": "Frutexa",
@@ -1614,7 +1858,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Teal",
@@ -1626,7 +1870,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Frutexa Sannio": {
     "genus": "Frutexa",
@@ -1647,7 +1895,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Teal",
@@ -1659,7 +1907,11 @@
       "L": "Violet",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Fumerola Aquatis": {
     "genus": "Fumerola",
@@ -1694,7 +1946,10 @@
       "L": "Red",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null
   },
   "Fumerola Carbosis": {
     "genus": "Fumerola",
@@ -1728,7 +1983,10 @@
       "L": "Red",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null
   },
   "Fumerola Extremus": {
     "genus": "Fumerola",
@@ -1764,7 +2022,10 @@
       "L": "Red",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null
   },
   "Fumerola Nitris": {
     "genus": "Fumerola",
@@ -1799,7 +2060,10 @@
       "L": "Red",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null
   },
   "Fumerola Pinnata": {
     "genus": "Fumerola",
@@ -1833,7 +2097,10 @@
       "L": "Red",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null
   },
   "Fumerola Polinices": {
     "genus": "Fumerola",
@@ -1868,7 +2135,10 @@
       "L": "Red",
       "T": "Mauve",
       "Y": "Magenta"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null
   },
   "Osseus Cornibus": {
     "genus": "Osseus",
@@ -1889,7 +2159,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -1901,7 +2171,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Osseus Discus": {
     "genus": "Osseus",
@@ -1923,7 +2197,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -1935,7 +2209,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Osseus Fractus": {
     "genus": "Osseus",
@@ -1956,7 +2234,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -1968,7 +2246,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Osseus Pelleas": {
     "genus": "Osseus",
@@ -1989,7 +2271,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2001,7 +2283,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Osseus Pumice": {
     "genus": "Osseus",
@@ -2022,7 +2308,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2034,7 +2320,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Osseus Spiralis": {
     "genus": "Osseus",
@@ -2055,7 +2345,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2067,7 +2357,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Radicoida Coronamus": {
     "genus": "Radicoida",
@@ -2101,7 +2395,11 @@
       "L": "Red",
       "T": "Red",
       "Y": "Red"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Radicoida Unica": {
     "genus": "Radicoida",
@@ -2135,7 +2433,11 @@
       "L": "Red",
       "T": "Red",
       "Y": "Red"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Recepta Condensata": {
     "genus": "Recepta",
@@ -2157,7 +2459,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2169,7 +2471,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Recepta Delta": {
     "genus": "Recepta",
@@ -2190,7 +2496,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2202,7 +2508,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Recepta Umbrux": {
     "genus": "Recepta",
@@ -2224,7 +2534,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2236,7 +2546,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Stratum Araneamus": {
     "genus": "Stratum",
@@ -2257,7 +2571,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2269,7 +2583,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Stratum Cucumisis": {
     "genus": "Stratum",
@@ -2291,7 +2609,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2303,7 +2621,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Stratum Excutitus": {
     "genus": "Stratum",
@@ -2324,7 +2646,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2336,7 +2658,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Stratum Frigus": {
     "genus": "Stratum",
@@ -2357,7 +2683,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2369,7 +2695,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Stratum Laminascis": {
     "genus": "Stratum",
@@ -2390,7 +2720,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2402,7 +2732,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Stratum Limax": {
     "genus": "Stratum",
@@ -2423,7 +2757,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2435,7 +2769,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Stratum Paleas": {
     "genus": "Stratum",
@@ -2456,7 +2794,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2468,7 +2806,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Stratum Tectonicas": {
     "genus": "Stratum",
@@ -2489,7 +2831,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": null,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2501,7 +2843,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tubus Cava": {
     "genus": "Tubus",
@@ -2522,7 +2868,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2534,7 +2880,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tubus Clipeus": {
     "genus": "Tubus",
@@ -2555,7 +2905,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2567,7 +2917,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tubus Conifer": {
     "genus": "Tubus",
@@ -2588,7 +2942,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2600,7 +2954,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tubus Dilatus": {
     "genus": "Tubus",
@@ -2621,7 +2979,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2633,7 +2991,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tubus Rosarium": {
     "genus": "Tubus",
@@ -2654,7 +3016,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2666,7 +3028,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tubus Sororibus": {
     "genus": "Tubus",
@@ -2687,7 +3053,7 @@
     "press_min": 0.005,
     "press_max": 0.12,
     "grav_min": 0.05,
-    "grav_max": 0.45,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2699,7 +3065,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Albireo": {
     "genus": "Tussock",
@@ -2720,7 +3090,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2732,7 +3102,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Capillum": {
     "genus": "Tussock",
@@ -2754,7 +3128,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2766,7 +3140,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Caputis": {
     "genus": "Tussock",
@@ -2787,7 +3165,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2799,7 +3177,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Catena": {
     "genus": "Tussock",
@@ -2820,7 +3202,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2832,7 +3214,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Cultris": {
     "genus": "Tussock",
@@ -2853,7 +3239,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2865,7 +3251,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Divisa": {
     "genus": "Tussock",
@@ -2886,7 +3276,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2898,7 +3288,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Ignis": {
     "genus": "Tussock",
@@ -2919,7 +3313,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2931,7 +3325,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Pennata": {
     "genus": "Tussock",
@@ -2952,7 +3350,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2964,7 +3362,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Pennatis": {
     "genus": "Tussock",
@@ -2985,7 +3387,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -2997,7 +3399,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Propinquus": {
     "genus": "Tussock",
@@ -3018,7 +3424,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -3030,7 +3436,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Serratus": {
     "genus": "Tussock",
@@ -3051,7 +3461,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -3063,7 +3473,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Staveley": {
     "genus": "Tussock",
@@ -3084,7 +3498,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -3096,7 +3510,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Triticum": {
     "genus": "Tussock",
@@ -3117,7 +3535,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -3129,7 +3547,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Ventusa": {
     "genus": "Tussock",
@@ -3150,7 +3572,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -3162,7 +3584,11 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
-    }
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
   },
   "Tussock Viridis": {
     "genus": "Tussock",
@@ -3183,7 +3609,7 @@
     "press_min": 0.005,
     "press_max": 0.1,
     "grav_min": 0.05,
-    "grav_max": 0.4,
+    "grav_max": 0.27,
     "volcanism": null,
     "star_color_map": {
       "B": "Yellow",
@@ -3195,6 +3621,413 @@
       "L": "Sage",
       "T": "Mauve",
       "Y": "Indigo"
+    },
+    "any_gravity": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "volcanism_required": false
+  },
+  "Fungoida Setisis": {
+    "genus": "Fungoida",
+    "species": "Fungoida Setisis",
+    "base_value": 3105000,
+    "colony_distance_m": 300,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body"
+    ],
+    "atmosphere_types": [
+      "ammonia",
+      "ammonia-rich",
+      "water",
+      "water-rich",
+      "carbon dioxide",
+      "carbon dioxide-rich"
+    ],
+    "temp_min": 140.0,
+    "temp_max": 240.0,
+    "press_min": 0.005,
+    "press_max": 0.1,
+    "grav_min": 0.01,
+    "grav_max": 0.27,
+    "any_gravity": false,
+    "volcanism_required": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "B": "Yellow",
+      "A": "Green",
+      "F": "Teal",
+      "G": "Turquoise",
+      "K": "Emerald",
+      "M": "Lime",
+      "L": "Sage",
+      "T": "Mauve",
+      "Y": "Indigo"
+    }
+  },
+  "Fungoida Gelata": {
+    "genus": "Fungoida",
+    "species": "Fungoida Gelata",
+    "base_value": 3415000,
+    "colony_distance_m": 300,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body",
+      "icy body"
+    ],
+    "atmosphere_types": [
+      "argon",
+      "argon-rich",
+      "methane",
+      "methane-rich"
+    ],
+    "temp_min": 50.0,
+    "temp_max": 140.0,
+    "press_min": 0.001,
+    "press_max": 0.1,
+    "grav_min": 0.01,
+    "grav_max": 0.27,
+    "any_gravity": false,
+    "volcanism_required": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "B": "Yellow",
+      "A": "Green",
+      "F": "Teal",
+      "G": "Turquoise",
+      "K": "Emerald",
+      "M": "Lime",
+      "L": "Sage",
+      "T": "Mauve",
+      "Y": "Indigo"
+    }
+  },
+  "Fungoida Bullata": {
+    "genus": "Fungoida",
+    "species": "Fungoida Bullata",
+    "base_value": 3725000,
+    "colony_distance_m": 300,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body"
+    ],
+    "atmosphere_types": [
+      "ammonia",
+      "ammonia-rich",
+      "carbon dioxide",
+      "carbon dioxide-rich"
+    ],
+    "temp_min": 140.0,
+    "temp_max": 230.0,
+    "press_min": 0.005,
+    "press_max": 0.1,
+    "grav_min": 0.01,
+    "grav_max": 0.27,
+    "any_gravity": false,
+    "volcanism_required": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "B": "Yellow",
+      "A": "Green",
+      "F": "Teal",
+      "G": "Turquoise",
+      "K": "Emerald",
+      "M": "Lime",
+      "L": "Sage",
+      "T": "Mauve",
+      "Y": "Indigo"
+    }
+  },
+  "Fungoida Apparata": {
+    "genus": "Fungoida",
+    "species": "Fungoida Apparata",
+    "base_value": 3570000,
+    "colony_distance_m": 300,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body"
+    ],
+    "atmosphere_types": [
+      "water",
+      "water-rich",
+      "ammonia",
+      "ammonia-rich"
+    ],
+    "temp_min": 160.0,
+    "temp_max": 260.0,
+    "press_min": 0.005,
+    "press_max": 0.1,
+    "grav_min": 0.01,
+    "grav_max": 0.27,
+    "any_gravity": false,
+    "volcanism_required": false,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "B": "Yellow",
+      "A": "Green",
+      "F": "Teal",
+      "G": "Turquoise",
+      "K": "Emerald",
+      "M": "Lime",
+      "L": "Sage",
+      "T": "Mauve",
+      "Y": "Indigo"
+    }
+  },
+  "Brain Tree Ostrinus": {
+    "genus": "Brain Tree",
+    "species": "Brain Tree Ostrinus",
+    "base_value": 1500000,
+    "colony_distance_m": 500,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body",
+      "rocky ice world"
+    ],
+    "atmosphere_types": [],
+    "temp_min": 100.0,
+    "temp_max": 500.0,
+    "press_min": 0.0,
+    "press_max": 0.2,
+    "grav_min": 0.01,
+    "grav_max": null,
+    "any_gravity": true,
+    "volcanism_required": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "G": "Purple",
+      "M": "Purple",
+      "K": "Purple",
+      "F": "Purple",
+      "A": "Purple",
+      "B": "Purple"
+    }
+  },
+  "Brain Tree Puniceus": {
+    "genus": "Brain Tree",
+    "species": "Brain Tree Puniceus",
+    "base_value": 1500000,
+    "colony_distance_m": 500,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body",
+      "rocky ice world"
+    ],
+    "atmosphere_types": [],
+    "temp_min": 100.0,
+    "temp_max": 500.0,
+    "press_min": 0.0,
+    "press_max": 0.2,
+    "grav_min": 0.01,
+    "grav_max": null,
+    "any_gravity": true,
+    "volcanism_required": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "G": "Crimson",
+      "M": "Crimson",
+      "K": "Crimson",
+      "F": "Crimson",
+      "A": "Crimson",
+      "B": "Crimson"
+    }
+  },
+  "Brain Tree Lindigoticus": {
+    "genus": "Brain Tree",
+    "species": "Brain Tree Lindigoticus",
+    "base_value": 1500000,
+    "colony_distance_m": 500,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body",
+      "rocky ice world"
+    ],
+    "atmosphere_types": [],
+    "temp_min": 100.0,
+    "temp_max": 500.0,
+    "press_min": 0.0,
+    "press_max": 0.2,
+    "grav_min": 0.01,
+    "grav_max": null,
+    "any_gravity": true,
+    "volcanism_required": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "G": "Indigo",
+      "M": "Indigo",
+      "K": "Indigo",
+      "F": "Indigo",
+      "A": "Indigo",
+      "B": "Indigo"
+    }
+  },
+  "Brain Tree Roseum": {
+    "genus": "Brain Tree",
+    "species": "Brain Tree Roseum",
+    "base_value": 1500000,
+    "colony_distance_m": 500,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body",
+      "rocky ice world"
+    ],
+    "atmosphere_types": [],
+    "temp_min": 100.0,
+    "temp_max": 500.0,
+    "press_min": 0.0,
+    "press_max": 0.2,
+    "grav_min": 0.01,
+    "grav_max": null,
+    "any_gravity": true,
+    "volcanism_required": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "G": "Rose",
+      "M": "Rose",
+      "K": "Rose",
+      "F": "Rose",
+      "A": "Rose",
+      "B": "Rose"
+    }
+  },
+  "Brain Tree Viride": {
+    "genus": "Brain Tree",
+    "species": "Brain Tree Viride",
+    "base_value": 1500000,
+    "colony_distance_m": 500,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body",
+      "rocky ice world"
+    ],
+    "atmosphere_types": [],
+    "temp_min": 100.0,
+    "temp_max": 500.0,
+    "press_min": 0.0,
+    "press_max": 0.2,
+    "grav_min": 0.01,
+    "grav_max": null,
+    "any_gravity": true,
+    "volcanism_required": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "G": "Green",
+      "M": "Green",
+      "K": "Green",
+      "F": "Green",
+      "A": "Green",
+      "B": "Green"
+    }
+  },
+  "Brain Tree Gypseeum": {
+    "genus": "Brain Tree",
+    "species": "Brain Tree Gypseeum",
+    "base_value": 1500000,
+    "colony_distance_m": 500,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body",
+      "rocky ice world"
+    ],
+    "atmosphere_types": [],
+    "temp_min": 100.0,
+    "temp_max": 500.0,
+    "press_min": 0.0,
+    "press_max": 0.2,
+    "grav_min": 0.01,
+    "grav_max": null,
+    "any_gravity": true,
+    "volcanism_required": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "G": "White",
+      "M": "White",
+      "K": "White",
+      "F": "White",
+      "A": "White",
+      "B": "White"
+    }
+  },
+  "Brain Tree Lividum": {
+    "genus": "Brain Tree",
+    "species": "Brain Tree Lividum",
+    "base_value": 1500000,
+    "colony_distance_m": 500,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body",
+      "rocky ice world"
+    ],
+    "atmosphere_types": [],
+    "temp_min": 100.0,
+    "temp_max": 500.0,
+    "press_min": 0.0,
+    "press_max": 0.2,
+    "grav_min": 0.01,
+    "grav_max": null,
+    "any_gravity": true,
+    "volcanism_required": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "G": "Blue",
+      "M": "Blue",
+      "K": "Blue",
+      "F": "Blue",
+      "A": "Blue",
+      "B": "Blue"
+    }
+  },
+  "Brain Tree Aureum": {
+    "genus": "Brain Tree",
+    "species": "Brain Tree Aureum",
+    "base_value": 1500000,
+    "colony_distance_m": 500,
+    "body_types": [
+      "high metal content body",
+      "high metal content world",
+      "rocky body",
+      "rocky ice world"
+    ],
+    "atmosphere_types": [],
+    "temp_min": 100.0,
+    "temp_max": 500.0,
+    "press_min": 0.0,
+    "press_max": 0.2,
+    "grav_min": 0.01,
+    "grav_max": null,
+    "any_gravity": true,
+    "volcanism_required": true,
+    "parent_star_types": null,
+    "parent_star_luminosities": null,
+    "star_color_map": {
+      "G": "Gold",
+      "M": "Gold",
+      "K": "Gold",
+      "F": "Gold",
+      "A": "Gold",
+      "B": "Gold"
     }
   }
 }

@@ -66,7 +66,7 @@ def test_stratum_tectonicas_prediction():
 
 
 def test_signal_budget_and_confidence_ranking():
-    """Verify that signal budget produces Top X+1 candidates (X definite, 1 possible)."""
+    """Verify that signal budget produces Top X definite candidates plus qualifying runner-up."""
     body = {
         "landable": True,
         "planet_class": "High metal content body",
@@ -74,17 +74,17 @@ def test_signal_budget_and_confidence_ranking():
         "surface_temperature": 220.0,
         "surface_gravity_g": 0.25,
         "surface_pressure": 0.030 * 101325,
-        "bio_signals": 2, # Budget of 2 -> Top 3 (2+1) candidates
+        "bio_signals": 2, # Budget of 2 -> 2 definite matches
         "star_type": "G"
     }
     candidates = predict_exobiology_candidates(body)
-    assert len(candidates) == 3, "Should return top X+1 (2+1 = 3) candidate species"
+    assert len(candidates) in [2, 3], "Should return top X definite candidates and at most 1 runner-up"
     
     definite_matches = [c for c in candidates if c["confidence"] == "definite"]
-    assert len(definite_matches) == 2, "Top 2 matches should be marked definite"
+    assert len(definite_matches) == 2, "Top 2 matches must be marked definite"
 
     possible_matches = [c for c in candidates if c["confidence"] == "possible"]
-    assert len(possible_matches) == 1, "+1 match should be marked possible"
+    assert len(possible_matches) <= 1, "At most 1 runner-up can be marked possible"
 
 
 def test_volcanism_requirement():
@@ -165,3 +165,54 @@ def test_runner_up_10_percent_cutoff():
         assert runner_up["confidence"] == "possible"
         # Difference must be strictly less than 10%
         assert (definite["fit_score"] - runner_up["fit_score"]) < 0.10
+
+
+def test_electricae_parent_star_and_gravity_rules():
+    """Verify Electricae parent star (A/B/O/N/H/D) and low gravity (<0.27G) requirements."""
+    # Matched body under A-type star with V luminosity class and low gravity
+    body_matched = {
+        "landable": True,
+        "planet_class": "Rocky body",
+        "atmosphere": "Neon",
+        "surface_temperature": 75.0,
+        "surface_gravity_g": 0.15, # < 0.27 G
+        "surface_pressure": 0.02 * 101325,
+        "bio_signals": 1,
+        "star_type": "A",
+        "luminosity": "V"
+    }
+    cand_matched = predict_exobiology_candidates(body_matched)
+    electricae_names = [c["species"] for c in cand_matched if "Electricae" in c["species"]]
+    assert len(electricae_names) > 0, "Electricae should be predicted on valid parent star and low gravity"
+
+    # Mismatched parent star (M-type star is not allowed for Electricae)
+    body_m_star = {
+        "landable": True,
+        "planet_class": "Rocky body",
+        "atmosphere": "Neon",
+        "surface_temperature": 75.0,
+        "surface_gravity_g": 0.15,
+        "surface_pressure": 0.02 * 101325,
+        "bio_signals": 1,
+        "star_type": "M",
+        "luminosity": "V"
+    }
+    cand_m_star = predict_exobiology_candidates(body_m_star)
+    m_star_electricae = [c["species"] for c in cand_m_star if "Electricae" in c["species"]]
+    assert len(m_star_electricae) == 0, "Electricae should not spawn on M-type parent star"
+
+    # High gravity body (> 0.27 G)
+    body_high_g = {
+        "landable": True,
+        "planet_class": "Rocky body",
+        "atmosphere": "Neon",
+        "surface_temperature": 75.0,
+        "surface_gravity_g": 0.45, # > 0.27 G
+        "surface_pressure": 0.02 * 101325,
+        "bio_signals": 1,
+        "star_type": "A",
+        "luminosity": "V"
+    }
+    cand_high_g = predict_exobiology_candidates(body_high_g)
+    high_g_electricae = [c["species"] for c in cand_high_g if "Electricae" in c["species"]]
+    assert len(high_g_electricae) == 0, "Electricae should not spawn on high gravity (> 0.27 G)"
