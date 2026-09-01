@@ -16,6 +16,7 @@ from app.parser.journal_parser import JournalParser
 from app.parser.watcher import JournalWatcher
 from app.analyzer.orbit_analyzer import build_system_hierarchy
 from app.parser.exobiology import predict_exobiology_candidates
+from app.services.edsm_service import edsm_service
 
 app = FastAPI(title="Elite Dangerous Journal Analyzer")
 
@@ -461,6 +462,12 @@ def get_system_detail(system_address: int):
         return JSONResponse({"error": "System not found"}, status_code=404)
 
     system_data = dict(sys_row)
+
+    # Queue EDSM verification if not yet checked
+    if not system_data.get("edsm_checked"):
+        sys_name = system_data.get("star_system")
+        if sys_name:
+            edsm_service.queue_system_check(system_address, sys_name)
 
     # Fetch bodies
     c.execute("""

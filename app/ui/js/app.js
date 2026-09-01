@@ -414,6 +414,16 @@ function renderSystemList() {
       tags.push(`<span class="tag-badge tag-sol-dist">Sol: ${Math.round(sys.sol_distance_ly).toLocaleString()} Ly</span>`);
     }
 
+    // EDSM Discovery Status Badges
+    if (sys.edsm_checked === 1) {
+      if (sys.edsm_registered === 1) {
+        const discText = sys.edsm_first_discoverer ? `⭐ EDSM: ${sys.edsm_first_discoverer}` : '⭐ EDSM登録済';
+        tags.push(`<span class="tag-badge tag-edsm-found" title="EDSM登録済 / 発見者: ${sys.edsm_first_discoverer || '不明'}">${discText}</span>`);
+      } else {
+        tags.push('<span class="tag-badge tag-edsm-unreg" title="EDSM未登録 (完全未踏破・初発見候補)">✨ EDSM未登録</span>');
+      }
+    }
+
     if (sys.has_high_g) tags.push('<span class="tag-badge tag-high-g">High-G</span>');
     if (sys.has_anomalies) tags.push('<span class="tag-badge tag-anomaly">Rare/Orbit</span>');
 
@@ -1904,6 +1914,19 @@ async function checkAndAnnounceLiveFirstDiscovery(sysAddr, defaultName = '') {
   }
 }
 
+function clearSystemBioSummary() {
+  const bioBox = document.getElementById('system-bio-payout-box');
+  if (bioBox) bioBox.style.display = 'none';
+  const bioScannedBaseEl = document.getElementById('current-system-bio-scanned-base');
+  const bioScannedFirstEl = document.getElementById('current-system-bio-scanned-first');
+  const bioBaseEl = document.getElementById('current-system-bio-base');
+  const bioFirstEl = document.getElementById('current-system-bio-first');
+  if (bioScannedBaseEl) bioScannedBaseEl.innerText = '0 Cr';
+  if (bioScannedFirstEl) bioScannedFirstEl.innerText = '0 Cr';
+  if (bioBaseEl) bioBaseEl.innerText = '-- Cr';
+  if (bioFirstEl) bioFirstEl.innerText = '-- Cr';
+}
+
 function handleLiveJournalEvent(eventName, eventData) {
   if (!state.liveSyncEnabled) return;
 
@@ -1912,12 +1935,14 @@ function handleLiveJournalEvent(eventName, eventData) {
     if (jumpType === 'Hyperspace') {
       state.jumpState = 'hyperspace';
       state.targetJumpSystem = eventData.StarSystem || 'Unknown';
+      clearSystemBioSummary();
       clearBodyInspector();
       renderCurrentView();
     }
   } else if (eventName === 'FSDJump' || eventName === 'Location' || eventName === 'CarrierJump') {
     state.jumpState = 'arrived_waiting_fss';
     state.targetJumpSystem = eventData.StarSystem || '';
+    clearSystemBioSummary();
     
     // Refresh global stats & systems list
     fetchGlobalStats();

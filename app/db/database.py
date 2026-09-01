@@ -176,6 +176,11 @@ def init_db(conn=None):
         ("has_first_discover", "INTEGER DEFAULT 0"),
         ("first_discovered_bodies", "INTEGER DEFAULT 0"),
         ("last_targeted_body_id", "INTEGER"),
+        ("edsm_checked", "INTEGER DEFAULT 0"),
+        ("edsm_registered", "INTEGER DEFAULT 0"),
+        ("edsm_first_discoverer", "TEXT"),
+        ("edsm_submitted_at", "TEXT"),
+        ("edsm_body_count", "INTEGER DEFAULT 0"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE systems ADD COLUMN {col_def[0]} {col_def[1]};")
@@ -194,6 +199,8 @@ def init_db(conn=None):
 
     for col_def in [
         ("confirmed_genuses", "TEXT"),
+        ("edsm_discovered_by", "TEXT"),
+        ("edsm_discovered_at", "TEXT"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE bodies ADD COLUMN {col_def[0]} {col_def[1]};")

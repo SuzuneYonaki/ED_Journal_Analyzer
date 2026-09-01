@@ -9,6 +9,7 @@ from app.db.database import get_db_connection
 from app.parser.value_calculator import calculate_body_value
 from app.parser.exobiology import predict_exobiology_candidates, get_species_value
 from app.analyzer.anomaly_finder import detect_anomalies
+from app.services.edsm_service import edsm_service
 
 class JournalParser:
     def __init__(self, db_conn=None, event_callback=None):
@@ -142,6 +143,13 @@ class JournalParser:
                 INSERT INTO visits (system_address, star_system, timestamp, star_pos_x, star_pos_y, star_pos_z, jump_dist, fuel_used, is_taxi)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (sys_addr, star_sys, timestamp, pos_x, pos_y, pos_z, jump_dist, fuel, taxi))
+
+        # Queue background EDSM discovery verification
+        if sys_addr and star_sys:
+            try:
+                edsm_service.queue_system_check(sys_addr, star_sys)
+            except Exception:
+                pass
 
     def _handle_fss_discovery_scan(self, data: dict):
         sys_addr = data.get("SystemAddress")

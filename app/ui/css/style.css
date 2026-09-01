@@ -575,8 +575,10 @@ header {
 .tag-sol-dist { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
 .tag-high-g { background: rgba(255, 51, 68, 0.2); color: var(--ed-red); border: 1px solid rgba(255, 51, 68, 0.5); font-weight: bold; }
 .tag-landable { background: rgba(255, 204, 0, 0.15); color: var(--ed-gold); border: 1px solid rgba(255, 204, 0, 0.4); }
-.tag-tf { background: rgba(187, 85, 255, 0.2); color: var(--ed-purple); border: 1px solid rgba(187, 85, 255, 0.5); }
 .tag-anomaly { background: rgba(255, 113, 0, 0.2); color: var(--ed-orange); border: 1px solid rgba(255, 113, 0, 0.4); }
+.tag-edsm-found { background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-weight: bold; }
+.tag-edsm-unreg { background: rgba(234, 179, 8, 0.18); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.5); font-weight: bold; }
+.tag-edsm-checking { background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
 
 .system-coords {
   display: inline-block;
