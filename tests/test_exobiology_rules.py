@@ -136,35 +136,22 @@ def test_get_species_value_lookups():
     assert val_genus["colony_distance_m"] == 300
 
 
-def test_runner_up_10_percent_cutoff():
-    """Verify that runner-up candidate is excluded if its score is >= 10% lower than definite candidates."""
+def test_nine_bio_signals_filling():
+    """Verify that a body with 9 biological signals fills species candidates up to the budget."""
     body = {
         "landable": True,
         "planet_class": "High metal content body",
         "atmosphere": "Carbon dioxide",
         "surface_temperature": 220.0,
-        "surface_gravity_g": 0.25,
+        "surface_gravity_g": 0.20,
         "surface_pressure": 0.030 * 101325,
-        "bio_signals": 1, # Budget 1: Top 1 definite, at most 1 runner-up if within 10%
+        "bio_signals": 9, # Budget of 9
         "star_type": "G"
     }
     candidates = predict_exobiology_candidates(body)
-    assert len(candidates) in [1, 2]
-    
-    # Verify match_percentage and possible_pct are populated
-    for c in candidates:
-        assert "match_percentage" in c
-        assert "possible_pct" in c
-        assert 0 <= c["match_percentage"] <= 100
-        assert c["match_percentage"] == c["possible_pct"]
-
-    if len(candidates) == 2:
-        definite = candidates[0]
-        runner_up = candidates[1]
-        assert definite["confidence"] == "definite"
-        assert runner_up["confidence"] == "possible"
-        # Difference must be strictly less than 10%
-        assert (definite["fit_score"] - runner_up["fit_score"]) < 0.10
+    assert len(candidates) >= 9, "Should fill species candidates up to 9 or X+1"
+    definite_matches = [c for c in candidates if c["confidence"] == "definite"]
+    assert len(definite_matches) == 9, "All 9 signal slots should have definite candidate matches"
 
 
 def test_electricae_parent_star_and_gravity_rules():

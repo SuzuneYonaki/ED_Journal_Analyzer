@@ -361,6 +361,13 @@ async function selectSystem(systemAddress, preserveSelectedBody = false, resetJu
       } else {
         state.selectedBody = data.bodies[0];
       }
+
+      // Check high value bio alert (40M+ Cr) on 1st discover systems
+      if (ttsState.highBioEnabled) {
+        data.bodies.forEach(b => {
+          checkAndAnnounceHighBioBody(data.system, b);
+        });
+      }
     } else {
       state.selectedBody = null;
     }
@@ -2166,6 +2173,9 @@ function pollScanProgress() {
 
 const ttsState = {
   enabled: false,
+  highBioEnabled: true,
+  highBioMode: 'both', // 'both' | 'tts' | 'buzzer'
+  highBioText: '{body}、高額生物反応です。見込額{value}クレジット。',
   engine: 'web_speech', // 'web_speech' | 'voicevox'
   webVoiceURI: '',
   voicevoxSpeakerId: '3', // ずんだもん (ノーマル)
@@ -2174,6 +2184,109 @@ const ttsState = {
   volume: 1.0,
   rate: 1.0
 };
+
+const announcedHighBioBodies = new Set();
+
+function playHighBioBuzzer() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const now = ctx.currentTime;
+
+    // Harmonic 3-tone chime: 587.33Hz (D5) -> 880Hz (A5) -> 1174.66Hz (D6)
+    const notes = [
+      { freq: 587.33, start: 0, dur: 0.12 },
+      { freq: 880.00, start: 0.12, dur: 0.14 },
+      { freq: 1174.66, start: 0.26, dur: 0.35 }
+    ];
+
+    notes.forEach(n => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(n.freq, now + n.start);
+
+      gain.gain.setValueAtTime(0, now + n.start);
+      gain.gain.linearRampToValueAtTime(0.3 * (ttsState.volume || 1.0), now + n.start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + n.start);
+      osc.stop(now + n.start + n.dur);
+    });
+  } catch (e) {
+    console.warn('Audio buzzer failed:', e);
+  }
+}
+
+function checkAndAnnounceHighBioBody(sysData, bodyData) {
+  if (!ttsState.highBioEnabled) return;
+  if (!bodyData) return;
+
+  const bodyName = bodyData.body_name || bodyData.BodyName;
+  const sysAddr = bodyData.system_address || (sysData ? sysData.system_address : null);
+  if (!bodyName) return;
+
+  const alertKey = `${sysAddr || 'sys'}_${bodyName}`;
+  if (announcedHighBioBodies.has(alertKey)) return;
+
+  // Check if system is 1st Discover or currently unvisited / has undiscovered bodies
+  const isFirstDiscoverSystem = sysData && (
+    sysData.has_first_discover === 1 || 
+    sysData.has_first_discover === true || 
+    sysData.edsm_registered === 0 || 
+    sysData.edsm_registered === false ||
+    !sysData.edsm_registered
+  );
+
+  if (!isFirstDiscoverSystem) return;
+
+  // Calculate estimated Exobiology total payout with 1st Discover bonus (5x multiplier)
+  let predictedCandidates = [];
+  if (bodyData.predicted_bio_candidates && Array.isArray(bodyData.predicted_bio_candidates)) {
+    predictedCandidates = bodyData.predicted_bio_candidates;
+  }
+
+  if (!predictedCandidates || predictedCandidates.length === 0) return;
+
+  // Sum top definite candidates' first_discovery_value (or base_value * 5)
+  let totalEstimatedBio = 0;
+  const bioBudget = bodyData.bio_signals || predictedCandidates.length;
+  const definiteCandidates = predictedCandidates.slice(0, bioBudget);
+
+  definiteCandidates.forEach(cand => {
+    const bonusVal = cand.first_discovery_value || ((cand.base_value || 1000000) * 5);
+    totalEstimatedBio += bonusVal;
+  });
+
+  // Threshold: 40,000,000 Cr (40M)
+  if (totalEstimatedBio >= 40000000) {
+    announcedHighBioBodies.add(alertKey);
+
+    const formattedPayout = (totalEstimatedBio / 1000000).toFixed(1) + 'M';
+    const msg = (ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。')
+      .replace(/\{body\}/gi, bodyName)
+      .replace(/\{value\}/gi, formattedPayout)
+      .replace(/\{payout\}/gi, formattedPayout)
+      .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
+
+    // Trigger Mode
+    if (ttsState.highBioMode === 'buzzer' || ttsState.highBioMode === 'both') {
+      playHighBioBuzzer();
+    }
+    if (ttsState.highBioMode === 'tts' || ttsState.highBioMode === 'both') {
+      setTimeout(() => {
+        if (ttsState.engine === 'voicevox') {
+          playVoicevoxSpeech(msg);
+        } else {
+          playWebSpeech(msg);
+        }
+      }, ttsState.highBioMode === 'both' ? 600 : 0);
+    }
+  }
+}
 
 async function loadTTSSettings() {
   try {
@@ -2494,6 +2607,9 @@ async function initSettingsModal() {
 
   // TTS Controls
   const enabledToggle = document.getElementById('tts-enabled-toggle');
+  const highBioToggle = document.getElementById('tts-high-bio-toggle');
+  const highBioModeSelect = document.getElementById('tts-high-bio-mode');
+  const highBioTextInput = document.getElementById('tts-high-bio-text');
   const engineSelect = document.getElementById('tts-engine-select');
   const webVoiceSelect = document.getElementById('tts-web-voice-select');
   const voicevoxSpeakerSelect = document.getElementById('tts-voicevox-speaker-select');
@@ -2507,6 +2623,9 @@ async function initSettingsModal() {
 
   function updateTTSModalFields() {
     if (enabledToggle) enabledToggle.checked = Boolean(ttsState.enabled);
+    if (highBioToggle) highBioToggle.checked = Boolean(ttsState.highBioEnabled !== false);
+    if (highBioModeSelect) highBioModeSelect.value = ttsState.highBioMode || 'both';
+    if (highBioTextInput) highBioTextInput.value = ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。';
     if (engineSelect) engineSelect.value = ttsState.engine;
     if (customTextInput) customTextInput.value = ttsState.customText;
     if (volumeRange) {
@@ -2557,6 +2676,9 @@ async function initSettingsModal() {
 
       // Save TTS
       if (enabledToggle) ttsState.enabled = enabledToggle.checked;
+      if (highBioToggle) ttsState.highBioEnabled = highBioToggle.checked;
+      if (highBioModeSelect) ttsState.highBioMode = highBioModeSelect.value;
+      if (highBioTextInput) ttsState.highBioText = highBioTextInput.value || '{body}、高額生物反応です。見込額{value}クレジット。';
       if (engineSelect) ttsState.engine = engineSelect.value;
       if (webVoiceSelect) ttsState.webVoiceURI = webVoiceSelect.value;
       if (voicevoxSpeakerSelect) ttsState.voicevoxSpeakerId = voicevoxSpeakerSelect.value;

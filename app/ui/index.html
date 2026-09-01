@@ -482,6 +482,34 @@
             </label>
           </div>
 
+          <!-- High-Value Bio Planet Alert (40M+ Cr) -->
+          <div style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); background: rgba(0, 255, 136, 0.04); padding: 10px; border-radius: 6px; border: 1px solid rgba(0, 255, 136, 0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: bold; color: var(--ed-green);">🌿 高額生物天体通知 (40M+ Cr)</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">1st Discover星系で単一天体のBio予測総額が40M Crを超える場合にお知らせ</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="tts-high-bio-toggle" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+              <div>
+                <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">通知音タイプ:</label>
+                <select id="tts-high-bio-mode" class="sort-select" style="width: 100%; padding: 4px 8px; font-size: 0.78rem;">
+                  <option value="both">TTS音声 + ブザーチャイム</option>
+                  <option value="tts">TTS音声のみ</option>
+                  <option value="buzzer">ブザーチャイムのみ</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">読み上げテキスト:</label>
+                <input type="text" id="tts-high-bio-text" class="search-input" value="{body}、高額生物反応です。見込額{value}クレジット。" style="width: 100%; padding: 4px 8px; font-size: 0.75rem;">
+              </div>
+            </div>
+          </div>
+
           <!-- Engine Selector -->
           <div>
             <label style="font-size: 0.78rem; font-weight: bold; color: var(--ed-orange); margin-bottom: 4px; display: block;">
