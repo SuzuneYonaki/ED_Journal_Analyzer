@@ -134,3 +134,34 @@ def test_get_species_value_lookups():
     val_genus = get_species_value("UnknownFlora", genus_name="Cactoida")
     assert val_genus["base_value"] == 3667600
     assert val_genus["colony_distance_m"] == 300
+
+
+def test_runner_up_10_percent_cutoff():
+    """Verify that runner-up candidate is excluded if its score is >= 10% lower than definite candidates."""
+    body = {
+        "landable": True,
+        "planet_class": "High metal content body",
+        "atmosphere": "Carbon dioxide",
+        "surface_temperature": 220.0,
+        "surface_gravity_g": 0.25,
+        "surface_pressure": 0.030 * 101325,
+        "bio_signals": 1, # Budget 1: Top 1 definite, at most 1 runner-up if within 10%
+        "star_type": "G"
+    }
+    candidates = predict_exobiology_candidates(body)
+    assert len(candidates) in [1, 2]
+    
+    # Verify match_percentage and possible_pct are populated
+    for c in candidates:
+        assert "match_percentage" in c
+        assert "possible_pct" in c
+        assert 0 <= c["match_percentage"] <= 100
+        assert c["match_percentage"] == c["possible_pct"]
+
+    if len(candidates) == 2:
+        definite = candidates[0]
+        runner_up = candidates[1]
+        assert definite["confidence"] == "definite"
+        assert runner_up["confidence"] == "possible"
+        # Difference must be strictly less than 10%
+        assert (definite["fit_score"] - runner_up["fit_score"]) < 0.10

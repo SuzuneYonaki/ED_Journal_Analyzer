@@ -1287,12 +1287,20 @@ function renderBodyInspector() {
           `).join('');
         }
         const isExcluded = scannedGenusSet.has(gen) || isFullyScanned;
+        const matchPct = bio.possible_pct !== undefined ? bio.possible_pct : (bio.match_percentage !== undefined ? bio.match_percentage : (bio.fit_score ? Math.round(bio.fit_score * 100) : null));
+        const pctBadge = (matchPct !== null && matchPct !== undefined) 
+          ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.65rem;" title="環境適合度 (Possible %)">📊 Possible: ${matchPct}%</span>` 
+          : '';
+        const isDefinite = bio.confidence === 'definite';
+        const statusLabel = isDefinite ? (t('bio_status_definite') || '有力候補') : (t('bio_status_potential') || '次点候補');
+        const icon = isDefinite ? '🌱' : '🌿';
 
         if (isExcluded) {
           html += `
             <div class="bio-pred-card" style="opacity: 0.45; filter: grayscale(40%);">
               <div class="bio-pred-header">
                 <span class="bio-species-name" style="color: #94a3b8; text-decoration: line-through;">✕ [${t('bio_status_excluded') || '除外'}] ${spName}</span>
+                ${pctBadge}
                 <span class="bio-sample-dist">📍 ${bio.colony_distance_m || 500}m</span>
               </div>
               <div class="bio-payout-row">
@@ -1302,9 +1310,10 @@ function renderBodyInspector() {
           `;
         } else {
           html += `
-            <div class="bio-pred-card">
+            <div class="bio-pred-card" style="${isDefinite ? 'border-color: rgba(0, 255, 136, 0.25);' : ''}">
               <div class="bio-pred-header">
-                <span class="bio-species-name">🌱 [${t('bio_status_potential')}] ${spName} ${bio.genus && !spName.includes(bio.genus) ? `(${bio.genus})` : ''}</span>
+                <span class="bio-species-name" style="${isDefinite ? 'color: var(--ed-green); font-weight: bold;' : ''}">${icon} [${statusLabel}] ${spName} ${bio.genus && !spName.includes(bio.genus) ? `(${bio.genus})` : ''}</span>
+                ${pctBadge}
                 ${colorBadges}
                 <span class="bio-sample-dist">📍 ${bio.colony_distance_m || 500}m</span>
               </div>

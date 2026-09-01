@@ -279,6 +279,7 @@ def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
 
         # Calculate fit score
         fit_score = calculate_environment_fit_score(rule, temp_k, press_atm, grav_g)
+        match_pct = round(fit_score * 100)
         primary_color, alt_colors = determine_variant_info(rule, star_type, fit_score)
         base_val = rule.get("base_value", 1000000)
         genus_name = rule.get("genus", species_name.split()[0])
@@ -296,15 +297,19 @@ def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
             "first_discovery_value": base_val * 5,
             "colony_distance_m": colony_dist,
             "fit_score": fit_score,
+            "match_percentage": match_pct,
+            "possible_pct": match_pct,
             "confidence": "possible"
         })
 
     # Sort candidates by fit score descending, then base value descending
     candidates.sort(key=lambda x: (x["fit_score"], x["base_value"]), reverse=True)
 
-    # Signal Budget Ranking: If BioSignals is X, emit top X+1 species candidates (diverse genera)
+    # Signal Budget Ranking: If BioSignals is X, emit top X definite candidates,
+    # and at most 1 runner-up (X+1) IF its score is not more than 10% lower than definite candidates.
     if bio_signals > 0:
-        top_limit = int(bio_signals) + 1
+        x_budget = int(bio_signals)
+        top_limit = x_budget + 1
         budget_candidates: List[Dict[str, Any]] = []
         genus_selected = set()
 
@@ -324,17 +329,34 @@ def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
                 if c not in budget_candidates:
                     budget_candidates.append(c)
 
-        # Assign confidence: Top X are definite, the +1th is possible
-        for idx, c in enumerate(budget_candidates):
-            if idx < bio_signals:
-                c["confidence"] = "definite"
-            else:
-                c["confidence"] = "possible"
+        if not budget_candidates:
+            return []
 
-        return budget_candidates
+        # Split into definite (top X) and candidate runner-up (+1)
+        definite_list = budget_candidates[:x_budget]
+        for d in definite_list:
+            d["confidence"] = "definite"
+
+        result_candidates = list(definite_list)
+
+        # Check if X+1 runner-up candidate qualifies (must not be >=10% below minimum definite score)
+        if len(budget_candidates) > x_budget:
+            runner_up = budget_candidates[x_budget]
+            min_definite_score = min(d["fit_score"] for d in definite_list) if definite_list else 1.0
+            score_diff = min_definite_score - runner_up["fit_score"]
+
+            # If runner-up score is within 10% (0.10) threshold, include as possible candidate
+            if score_diff < 0.10:
+                runner_up["confidence"] = "possible"
+                result_candidates.append(runner_up)
+
+        return result_candidates
     else:
         # If no explicit bio signals are known yet, return top matches with high fit scores
-        return candidates[:3]
+        top_matches = candidates[:3]
+        for m in top_matches:
+            m["confidence"] = "possible"
+        return top_matches
 
 
 def get_species_value(species_name: str, genus_name: Optional[str] = None) -> Dict[str, Any]:
