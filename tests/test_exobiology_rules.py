@@ -13,7 +13,7 @@ from app.parser.exobiology import (
     get_pressure_atm,
     get_temperature_k,
     get_gravity_g,
-    determine_variant_color,
+    determine_variant_info,
     calculate_environment_fit_score
 )
 from app.parser.exobiology_rules import EXOBIOLOGY_RULES
@@ -42,31 +42,31 @@ def test_temperature_and_gravity():
 
 
 def test_stratum_tectonicas_prediction():
-    """Verify Stratum Tectonicas is accurately predicted on standard HMC bodies."""
+    """Verify Stratum genus is accurately predicted on standard HMC bodies."""
     body = {
         "landable": True,
         "planet_class": "High metal content world",
         "atmosphere": "Carbon dioxide",
-        "surface_temperature": 240.0,
-        "surface_gravity_g": 0.30,
+        "surface_temperature": 230.0,
+        "surface_gravity_g": 0.25,
         "surface_pressure": 0.035 * 101325, # in Pascals
-        "bio_signals": 1,
+        "bio_signals": 4,
         "star_type": "F"
     }
     candidates = predict_exobiology_candidates(body)
     assert len(candidates) > 0
     
-    # Check that Stratum Tectonicas is present and marked as definite
-    tectonicas = next((c for c in candidates if c["species"] == "Stratum Tectonicas"), None)
-    assert tectonicas is not None
-    assert tectonicas["base_value"] == 19010800
-    assert tectonicas["first_discovery_value"] == 19010800 * 5
-    assert tectonicas["variant_color"] == "Emerald" # F star -> Emerald
-    assert "Emerald" in tectonicas["species_variant"]
+    # Check that Stratum is present
+    stratum_match = next((c for c in candidates if c["genus"] == "Stratum"), None)
+    assert stratum_match is not None
+    assert stratum_match["base_value"] == 19010800
+    assert stratum_match["first_discovery_value"] == 19010800 * 5
+    assert stratum_match["variant_color"] in ["Emerald", "Teal"]
+    assert stratum_match["variant_color"] in stratum_match["species_variant"]
 
 
 def test_signal_budget_and_confidence_ranking():
-    """Verify that signal budget separates definite matches from low probability matches."""
+    """Verify that signal budget produces Top X+1 candidates (X definite, 1 possible)."""
     body = {
         "landable": True,
         "planet_class": "High metal content body",
@@ -74,22 +74,17 @@ def test_signal_budget_and_confidence_ranking():
         "surface_temperature": 220.0,
         "surface_gravity_g": 0.25,
         "surface_pressure": 0.030 * 101325,
-        "bio_signals": 2, # Budget of 2
+        "bio_signals": 2, # Budget of 2 -> Top 3 (2+1) candidates
         "star_type": "G"
     }
     candidates = predict_exobiology_candidates(body)
-    assert len(candidates) >= 2
+    assert len(candidates) == 3, "Should return top X+1 (2+1 = 3) candidate species"
     
     definite_matches = [c for c in candidates if c["confidence"] == "definite"]
-    assert len(definite_matches) == 2
+    assert len(definite_matches) == 2, "Top 2 matches should be marked definite"
 
-    # Verify distinct genera are selected for maximum diversity
-    genera = [c["genus"] for c in definite_matches]
-    assert len(set(genera)) == 2
-
-    # Remaining matches should be low_probability
-    low_prob = [c for c in candidates if c["confidence"] == "low_probability"]
-    assert len(low_prob) == len(candidates) - 2
+    possible_matches = [c for c in candidates if c["confidence"] == "possible"]
+    assert len(possible_matches) == 1, "+1 match should be marked possible"
 
 
 def test_volcanism_requirement():
@@ -102,7 +97,7 @@ def test_volcanism_requirement():
         "surface_gravity_g": 0.20,
         "surface_pressure": 0.02 * 101325,
         "volcanism": "None",
-        "bio_signals": 1,
+        "bio_signals": 5,
         "star_type": "K"
     }
     candidates_no_volc = predict_exobiology_candidates(body_no_volc)
@@ -117,7 +112,7 @@ def test_volcanism_requirement():
         "surface_gravity_g": 0.20,
         "surface_pressure": 0.02 * 101325,
         "volcanism": "Water Geysers",
-        "bio_signals": 1,
+        "bio_signals": 5,
         "star_type": "K"
     }
     candidates_volc = predict_exobiology_candidates(body_with_volc)

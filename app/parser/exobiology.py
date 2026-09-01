@@ -9,7 +9,7 @@ All code, strings, and comments in this module are strictly English ASCII.
 import json
 import re
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 
 from app.parser.exobiology_rules import EXOBIOLOGY_RULES, GENUS_DEFAULTS
 
@@ -179,29 +179,42 @@ def calculate_environment_fit_score(rule: Dict[str, Any], temp_k: float, press_a
     return max(0.1, score)
 
 
-def determine_variant_color(rule: Dict[str, Any], star_type: str) -> str:
-    """Determine color variant name based on star type mapping."""
+def determine_variant_info(rule: Dict[str, Any], star_type: str, fit_score: float) -> Tuple[str, List[str]]:
+    """
+    Determine primary color variant based on star type, and collect
+    all threshold-passing alternate color variants from Canonn star color mapping.
+    """
     color_map = rule.get("star_color_map", {})
     if not color_map:
-        return ""
-    
+        return "", []
+
     clean_star = star_type.split()[0] if star_type else "G"
+    primary_color = ""
+
     if clean_star in color_map:
-        return color_map[clean_star]
-    
-    # Prefix match (e.g. M1 -> M)
-    for k, v in color_map.items():
-        if clean_star.startswith(k):
-            return v
-            
-    # Default fallback
-    return color_map.get("G") or color_map.get("M") or next(iter(color_map.values()), "")
+        primary_color = color_map[clean_star]
+    else:
+        for k, v in color_map.items():
+            if clean_star.startswith(k):
+                primary_color = v
+                break
+        if not primary_color:
+            primary_color = color_map.get("G") or color_map.get("M") or next(iter(color_map.values()), "")
+
+    # Collect alternate color variants if fit_score exceeds acceptable threshold
+    alt_colors = []
+    if fit_score >= 0.50:
+        for st, col in color_map.items():
+            if col and col != primary_color and col not in alt_colors:
+                alt_colors.append(col)
+
+    return primary_color, alt_colors
 
 
 def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Predict possible Exobiology candidate species for a body using
-    strict physical parameter matrix filtering and confidence budget ranking.
+    strict physical parameter matrix filtering and Canonn Top X+1 signal budget ranking.
     """
     is_landable = body.get("landable") or body.get("Landable")
     if is_landable is False:
@@ -266,19 +279,19 @@ def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
 
         # Calculate fit score
         fit_score = calculate_environment_fit_score(rule, temp_k, press_atm, grav_g)
-        variant_color = determine_variant_color(rule, star_type)
+        primary_color, alt_colors = determine_variant_info(rule, star_type, fit_score)
         base_val = rule.get("base_value", 1000000)
         genus_name = rule.get("genus", species_name.split()[0])
         colony_dist = rule.get("colony_distance_m", 500)
 
-        species_display = species_name
-        variant_full = f"{species_name} - {variant_color}" if variant_color else species_name
+        variant_display = f"{species_name} - {primary_color}" if primary_color else species_name
 
         candidates.append({
             "species": species_name,
             "genus": genus_name,
-            "species_variant": variant_full,
-            "variant_color": variant_color,
+            "species_variant": variant_display,
+            "variant_color": primary_color,
+            "alternate_variants": alt_colors,
             "base_value": base_val,
             "first_discovery_value": base_val * 5,
             "colony_distance_m": colony_dist,
@@ -289,35 +302,39 @@ def predict_exobiology_candidates(body: Dict[str, Any]) -> List[Dict[str, Any]]:
     # Sort candidates by fit score descending, then base value descending
     candidates.sort(key=lambda x: (x["fit_score"], x["base_value"]), reverse=True)
 
-    # Signal Budget and Genus Diversity Ranking Logic
+    # Signal Budget Ranking: If BioSignals is X, emit top X+1 species candidates (diverse genera)
     if bio_signals > 0:
-        definite_list: List[Dict[str, Any]] = []
+        top_limit = int(bio_signals) + 1
+        budget_candidates: List[Dict[str, Any]] = []
         genus_selected = set()
 
-        # Pass 1: Select top candidate per distinct genus up to bio_signals count
+        # Pass 1: Prioritize distinct genus diversity for top candidates
         for c in candidates:
-            if len(definite_list) >= bio_signals:
+            if len(budget_candidates) >= top_limit:
                 break
             if c["genus"] not in genus_selected:
                 genus_selected.add(c["genus"])
-                c["confidence"] = "definite"
-                definite_list.append(c)
+                budget_candidates.append(c)
 
-        # Pass 2: If budget remains, select remaining highest scoring candidates
-        if len(definite_list) < bio_signals:
+        # Pass 2: Fill remaining slots up to X+1 from highest fit scores
+        if len(budget_candidates) < top_limit:
             for c in candidates:
-                if len(definite_list) >= bio_signals:
+                if len(budget_candidates) >= top_limit:
                     break
-                if c not in definite_list:
-                    c["confidence"] = "definite"
-                    definite_list.append(c)
+                if c not in budget_candidates:
+                    budget_candidates.append(c)
 
-        # Mark remaining candidates as low_probability or possible
-        for c in candidates:
-            if c not in definite_list:
-                c["confidence"] = "low_probability"
+        # Assign confidence: Top X are definite, the +1th is possible
+        for idx, c in enumerate(budget_candidates):
+            if idx < bio_signals:
+                c["confidence"] = "definite"
+            else:
+                c["confidence"] = "possible"
 
-    return candidates
+        return budget_candidates
+    else:
+        # If no explicit bio signals are known yet, return top matches with high fit scores
+        return candidates[:3]
 
 
 def get_species_value(species_name: str, genus_name: Optional[str] = None) -> Dict[str, Any]:

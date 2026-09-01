@@ -1277,8 +1277,15 @@ function renderBodyInspector() {
 
         if (scannedSpeciesSet.has(sp)) return; // Already rendered above
 
-        const spName = bio.species_variant || bio.species;
-        const colorBadge = bio.variant_color ? `<span class="tag-badge" style="background: rgba(250, 204, 21, 0.15); color: #fde047; border: 1px solid rgba(250, 204, 21, 0.35); font-size: 0.65rem;">🎨 ${bio.variant_color}</span>` : '';
+        let colorBadges = '';
+        if (bio.variant_color) {
+          colorBadges += `<span class="tag-badge" style="background: rgba(250, 204, 21, 0.15); color: #fde047; border: 1px solid rgba(250, 204, 21, 0.35); font-size: 0.65rem;" title="恒星スペクトル型による主要カラー">🎨 ${bio.variant_color}</span>`;
+        }
+        if (bio.alternate_variants && bio.alternate_variants.length > 0) {
+          colorBadges += bio.alternate_variants.slice(0, 3).map(c => `
+            <span class="tag-badge" style="background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.62rem;" title="可能性のある他カラー候補">🎨 ${c}</span>
+          `).join('');
+        }
         const isExcluded = scannedGenusSet.has(gen) || isFullyScanned;
 
         if (isExcluded) {
@@ -1298,7 +1305,7 @@ function renderBodyInspector() {
             <div class="bio-pred-card">
               <div class="bio-pred-header">
                 <span class="bio-species-name">🌱 [${t('bio_status_potential')}] ${spName} ${bio.genus && !spName.includes(bio.genus) ? `(${bio.genus})` : ''}</span>
-                ${colorBadge}
+                ${colorBadges}
                 <span class="bio-sample-dist">📍 ${bio.colony_distance_m || 500}m</span>
               </div>
               ${bio.description ? `<div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">${bio.description}</div>` : ''}
