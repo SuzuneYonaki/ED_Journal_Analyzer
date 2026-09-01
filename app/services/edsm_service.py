@@ -20,18 +20,20 @@ from app.db.database import get_db_connection
 EDSM_SYSTEM_API = "https://www.edsm.net/api-v1/system"
 EDSM_BODIES_API = "https://www.edsm.net/api-system-v1/bodies"
 REQUEST_DELAY_SEC = 1.0  # Respectful community delay between external API calls
+UNREGISTERED_RECHECK_COOLDOWN_SEC = 1800.0  # 30-minute in-memory cooldown before re-querying unregistered system
 
 
 class EDSMService:
     def __init__(self):
         self.request_queue: queue.Queue = queue.Queue()
         self.queued_systems = set()
+        self.recent_unregistered_cache: Dict[int, float] = {}
         self.last_request_time = 0.0
         self.is_running = True
         self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
         self.worker_thread.start()
 
-    def queue_system_check(self, system_address: int, system_name: str):
+    def queue_system_check(self, system_address: int, system_name: str, force_recheck: bool = False):
         """Queue a system for EDSM registration and discovery verification."""
         if not system_address or not system_name:
             return
@@ -39,14 +41,21 @@ class EDSMService:
         if system_address in self.queued_systems:
             return
 
-        # Check if already cached in DB
+        # Check in-memory cooldown for recent unregistered checks
+        now = time.time()
+        if not force_recheck and system_address in self.recent_unregistered_cache:
+            if (now - self.recent_unregistered_cache[system_address]) < UNREGISTERED_RECHECK_COOLDOWN_SEC:
+                return
+
+        # Check if already cached in DB as REGISTERED
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT edsm_checked FROM systems WHERE system_address = ?", (system_address,))
+        c.execute("SELECT edsm_checked, edsm_registered FROM systems WHERE system_address = ?", (system_address,))
         row = c.fetchone()
         conn.close()
 
-        if row and row["edsm_checked"] == 1:
+        # If already registered on EDSM (edsm_registered == 1), keep permanent cache
+        if not force_recheck and row and row["edsm_checked"] == 1 and row["edsm_registered"] == 1:
             return
 
         self.queued_systems.add(system_address)
@@ -165,6 +174,7 @@ class EDSMService:
 
     def _mark_checked_unregistered(self, system_address: int):
         """Mark system as checked and unregistered on EDSM in SQLite."""
+        self.recent_unregistered_cache[system_address] = time.time()
         conn = get_db_connection()
         c = conn.cursor()
         c.execute("""

@@ -414,14 +414,16 @@ function renderSystemList() {
       tags.push(`<span class="tag-badge tag-sol-dist">Sol: ${Math.round(sys.sol_distance_ly).toLocaleString()} Ly</span>`);
     }
 
-    // EDSM Discovery Status Badges
+    // EDSM Discovery Status Badges & 1st Discover Registerable Announcement
     if (sys.edsm_checked === 1) {
       if (sys.edsm_registered === 1) {
         const discText = sys.edsm_first_discoverer ? `⭐ EDSM: ${sys.edsm_first_discoverer}` : '⭐ EDSM登録済';
         tags.push(`<span class="tag-badge tag-edsm-found" title="EDSM登録済 / 発見者: ${sys.edsm_first_discoverer || '不明'}">${discText}</span>`);
       } else {
-        tags.push('<span class="tag-badge tag-edsm-unreg" title="EDSM未登録 (完全未踏破・初発見候補)">✨ EDSM未登録</span>');
+        tags.push('<span class="tag-badge tag-edsm-unreg" title="EDSM未登録 / あなたの探査データを提出して1st Discoverを登録できます！">✨ 1st Discover 登録可能 (EDSM未登録)</span>');
       }
+    } else if (sys.has_first_discover || (sys.first_discovered_bodies && sys.first_discovered_bodies > 0)) {
+      tags.push('<span class="tag-badge tag-edsm-unreg" title="ゲーム内初発見 / EDSM 1st Discover 登録可能">✨ 1st Discover 登録可能</span>');
     }
 
     if (sys.has_high_g) tags.push('<span class="tag-badge tag-high-g">High-G</span>');
@@ -487,6 +489,23 @@ function renderSystemHeader() {
   document.getElementById('current-system-coords').innerText = coords;
   document.getElementById('current-system-fss-value').innerText = formatCredits(sys.total_fss_value || 0);
   document.getElementById('current-system-value').innerText = formatCredits(sys.total_potential_value || 0);
+  
+  // EDSM Discovery Badge in Header
+  const edsmBadgeEl = document.getElementById('current-system-edsm-badge');
+  if (edsmBadgeEl) {
+    if (sys.edsm_checked === 1) {
+      if (sys.edsm_registered === 1) {
+        const discText = sys.edsm_first_discoverer ? `⭐ EDSM: ${sys.edsm_first_discoverer}` : '⭐ EDSM登録済';
+        edsmBadgeEl.innerHTML = `<span class="tag-badge tag-edsm-found" title="EDSM登録済 / 発見者: ${sys.edsm_first_discoverer || '不明'}">${discText}</span>`;
+      } else {
+        edsmBadgeEl.innerHTML = '<span class="tag-badge tag-edsm-unreg" title="EDSM未登録 / 探査データを提出して1st Discoverを登録できます！">✨ 1st Discover 登録可能 (EDSM未登録)</span>';
+      }
+    } else if (sys.has_first_discover || (sys.first_discovered_bodies && sys.first_discovered_bodies > 0)) {
+      edsmBadgeEl.innerHTML = '<span class="tag-badge tag-edsm-unreg" title="ゲーム内初発見 / EDSM 1st Discover 登録可能">✨ 1st Discover 登録可能</span>';
+    } else {
+      edsmBadgeEl.innerHTML = '';
+    }
+  }
   
   // Exobiology System Summary
   const bioBox = document.getElementById('system-bio-payout-box');
