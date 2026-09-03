@@ -119,3 +119,48 @@ def test_journal_parser_in_memory():
     assert sys_row["star_system"] == "Test System Prime"
     assert sys_row["has_elw"] == 1
     assert sys_row["total_potential_value"] > 0
+
+
+def test_planetary_mining_signals():
+    from app.db.database import init_db
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    init_db(conn)
+
+    parser = JournalParser(conn)
+    # 1. FSSBodySignals with Planetary Mining Location
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-02T21:35:02Z",
+        "event": "FSSBodySignals",
+        "BodyName": "Byeia Ain YP-M d8-326 2 a",
+        "BodyID": 16,
+        "SystemAddress": 11211987177419,
+        "Signals": [
+            { "Type": "$PlanetaryMiningLocation_Name;", "Type_Localised": "Planetary Mining Location", "Count": 7 }
+        ]
+    }))
+
+    # 2. Detailed Scan
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-02T21:35:03Z",
+        "event": "Scan",
+        "ScanType": "Detailed",
+        "BodyName": "Byeia Ain YP-M d8-326 2 a",
+        "BodyID": 16,
+        "Parents": [ {"Planet": 14}, {"Star": 0} ],
+        "StarSystem": "Byeia Ain YP-M d8-326",
+        "SystemAddress": 11211987177419,
+        "DistanceFromArrivalLS": 1875.859928,
+        "PlanetClass": "Rocky body",
+        "Landable": True
+    }))
+    parser.flush_dirty_systems()
+
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM bodies WHERE system_address = ? AND body_id = ?", (11211987177419, 16))
+    body = cursor.fetchone()
+    assert body is not None
+    assert body["mining_signals"] == 7
+    assert body["bio_signals"] == 0
+    assert body["geo_signals"] == 0
+

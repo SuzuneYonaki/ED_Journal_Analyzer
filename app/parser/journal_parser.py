@@ -247,14 +247,16 @@ class JournalParser:
             "bio_signals": 0
         }
 
-        # Check if already had bio_signals / confirmed_genuses in existing body record
-        self.cursor.execute("SELECT bio_signals, geo_signals, is_mapped_by_user, confirmed_genuses FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
+        # Check if already had bio_signals / geo_signals / mining_signals / confirmed_genuses in existing body record
+        self.cursor.execute("SELECT bio_signals, geo_signals, mining_signals, is_mapped_by_user, confirmed_genuses FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
         existing_b = self.cursor.fetchone()
         existing_bio = existing_b["bio_signals"] if existing_b else 0
         existing_geo = existing_b["geo_signals"] if existing_b else 0
+        existing_mining = existing_b["mining_signals"] if (existing_b and "mining_signals" in existing_b.keys()) else 0
         existing_mapped = existing_b["is_mapped_by_user"] if existing_b else 0
         existing_genuses = existing_b["confirmed_genuses"] if existing_b else None
         body_dict["bio_signals"] = existing_bio
+        body_dict["mining_signals"] = existing_mining
         if existing_genuses:
             body_dict["confirmed_genuses"] = existing_genuses
 
@@ -283,11 +285,11 @@ class JournalParser:
                 volcanism, terraforming_state, tidal_lock, semi_major_axis, eccentricity,
                 orbital_inclination, periapsis, orbital_period, ascending_node, mean_anomaly,
                 rotation_period, axial_tilt, rings, materials, parents, was_discovered, was_mapped,
-                is_mapped_by_user, bio_signals, geo_signals, fss_value, dss_value,
+                is_mapped_by_user, bio_signals, geo_signals, mining_signals, fss_value, dss_value,
                 first_discovered_fss, first_mapped_dss, max_potential_value,
                 confirmed_genuses, exobiology_predictions, anomalies_json, scan_timestamp, updated_timestamp
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             ON CONFLICT(system_address, body_id) DO UPDATE SET
                 body_name = excluded.body_name,
@@ -335,7 +337,7 @@ class JournalParser:
             volcanism, terraforming, tidal_lock, semi_major_axis, eccentricity,
             inclination, periapsis, orbital_period, ascending_node, mean_anomaly,
             rotation_period, axial_tilt, rings, materials, parents, was_discovered, was_mapped,
-            existing_mapped, existing_bio, existing_geo, fss_val, dss_val,
+            existing_mapped, existing_bio, existing_geo, existing_mining, fss_val, dss_val,
             fd_fss, fm_dss, max_pot,
             existing_genuses, bio_pred_json, anomalies_json, timestamp, timestamp
         ))
@@ -354,6 +356,7 @@ class JournalParser:
 
         bio_count = 0
         geo_count = 0
+        mining_count = 0
         for s in signals:
             stype = s.get("Type", "")
             scount = s.get("Count", 0)
@@ -361,6 +364,8 @@ class JournalParser:
                 bio_count += scount
             elif "$SAA_SignalType_Geological" in stype or "geological" in stype.lower() or "geo" in stype.lower():
                 geo_count += scount
+            elif "$PlanetaryMiningLocation" in stype or "mining" in stype.lower():
+                mining_count += scount
 
         # Extract confirmed Genuses from SAASignalsFound if present
         confirmed_genuses_list = []
@@ -388,6 +393,7 @@ class JournalParser:
             b_dict = dict(existing)
             b_dict["bio_signals"] = bio_count
             b_dict["geo_signals"] = geo_count
+            b_dict["mining_signals"] = mining_count
             if is_saa_signals:
                 b_dict["is_mapped_by_user"] = 1
 
@@ -407,12 +413,13 @@ class JournalParser:
                 UPDATE bodies SET
                     bio_signals = ?,
                     geo_signals = ?,
+                    mining_signals = ?,
                     is_mapped_by_user = ?,
                     confirmed_genuses = COALESCE(?, confirmed_genuses),
                     exobiology_predictions = ?,
                     anomalies_json = ?
                 WHERE id = ?
-            """, (bio_count, geo_count, mapped_val, confirmed_genuses_json, bio_pred_json, anomalies_json, existing["id"]))
+            """, (bio_count, geo_count, mining_count, mapped_val, confirmed_genuses_json, bio_pred_json, anomalies_json, existing["id"]))
         else:
             # Insert stub body record if Scan hasn't occurred yet
             b_dict = {
@@ -421,6 +428,7 @@ class JournalParser:
                 "body_name": body_name or f"Body {body_id}",
                 "bio_signals": bio_count,
                 "geo_signals": geo_count,
+                "mining_signals": mining_count,
                 "is_mapped_by_user": 1 if is_saa_signals else 0,
                 "confirmed_genuses": confirmed_genuses_list if confirmed_genuses_list else None
             }
@@ -432,17 +440,18 @@ class JournalParser:
 
             self.cursor.execute("""
                 INSERT INTO bodies (
-                    system_address, body_id, body_name, bio_signals, geo_signals,
+                    system_address, body_id, body_name, bio_signals, geo_signals, mining_signals,
                     is_mapped_by_user, confirmed_genuses, exobiology_predictions, anomalies_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(system_address, body_id) DO UPDATE SET
                     bio_signals = excluded.bio_signals,
                     geo_signals = excluded.geo_signals,
+                    mining_signals = excluded.mining_signals,
                     is_mapped_by_user = CASE WHEN excluded.is_mapped_by_user = 1 THEN 1 ELSE bodies.is_mapped_by_user END,
                     confirmed_genuses = COALESCE(excluded.confirmed_genuses, bodies.confirmed_genuses),
                     exobiology_predictions = excluded.exobiology_predictions,
                     anomalies_json = excluded.anomalies_json
-            """, (sys_addr, body_id or 0, body_name or f"Body {body_id}", bio_count, geo_count, 1 if is_saa_signals else 0, confirmed_genuses_json, bio_pred_json, anomalies_json))
+            """, (sys_addr, body_id or 0, body_name or f"Body {body_id}", bio_count, geo_count, mining_count, 1 if is_saa_signals else 0, confirmed_genuses_json, bio_pred_json, anomalies_json))
 
         self.dirty_systems.add(sys_addr)
 

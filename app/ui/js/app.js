@@ -828,6 +828,21 @@ function renderBodyGeoBlock(node) {
   `;
 }
 
+function renderBodyMiningBlock(node) {
+  const miningSig = node.mining_signals || 0;
+  if (miningSig === 0) return '';
+
+  return `
+    <div class="body-geo-panel" style="border-left-color: #38bdf8; background: rgba(56, 189, 248, 0.06);">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span style="font-weight: bold; color: #38bdf8;">⛏️ ${t('mining_signals') || '惑星採掘拠点'} (${miningSig}):</span>
+        <span style="color: #cbd5e1;">Planetary Mining Locations</span>
+      </div>
+      <span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.68rem;">MINING: ${miningSig}</span>
+    </div>
+  `;
+}
+
 function focusAndScrollToTargetBody(bodyId) {
   const targetId = (bodyId !== null && bodyId !== undefined) ? bodyId : (state.selectedBody ? state.selectedBody.body_id : state.targetBodyId);
   if (targetId === null || targetId === undefined) return;
@@ -971,6 +986,7 @@ function renderHierarchyTree(container, nodes) {
     }
 
     if (node.geo_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(255,113,0,0.2); color: var(--ed-orange);">GEO: ${node.geo_signals}</span>`);
+    if (node.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${node.mining_signals}</span>`);
     if (node.anomalies && node.anomalies.length > 0) {
       node.anomalies.forEach(a => badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`));
     }
@@ -1048,6 +1064,7 @@ function renderFlatBodiesList(container, bodies) {
       else badges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.1);">${body.surface_gravity_g.toFixed(2)}G</span>`);
     }
     if (body.geo_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(255,113,0,0.2); color: var(--ed-orange);">GEO: ${body.geo_signals}</span>`);
+    if (body.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${body.mining_signals}</span>`);
     if (body.anomalies && body.anomalies.length > 0) {
       body.anomalies.forEach(a => badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`));
     }
@@ -1127,6 +1144,7 @@ function renderBioOnlyView(container, bodies) {
     const iconLabel = getBodyIconLabel(body);
     const bioHtml = renderBodyExobiologyBlock(body);
     const geoHtml = renderBodyGeoBlock(body);
+    const miningHtml = renderBodyMiningBlock(body);
 
     const completionBadge = body.is_bio_completed
       ? `<span class="tag-badge" style="background: rgba(0, 255, 136, 0.2); color: var(--ed-green); border: 1px solid rgba(0, 255, 136, 0.4); font-size: 0.72rem;">✅ ${t('bio_body_all_completed')}</span>`
@@ -1152,6 +1170,7 @@ function renderBioOnlyView(container, bodies) {
         </div>
       </div>
       ${geoHtml}
+      ${miningHtml}
       ${bioHtml}
     `;
     list.appendChild(card);
@@ -1426,6 +1445,22 @@ function renderBodyInspector() {
   document.getElementById('prop-pressure').innerText = formatSurfacePressure(b.surface_pressure);
   document.getElementById('prop-atmosphere').innerText = formatAtmosphereDescription(b.atmosphere);
   document.getElementById('prop-volcanism').innerText = b.volcanism || 'None';
+
+  // Planetary Mining Locations Section & Property Card (Separate from Biology & Volcanism)
+  const miningSec = document.getElementById('section-mining');
+  const miningCountEl = document.getElementById('inspect-mining-count');
+  const propCardMining = document.getElementById('prop-card-mining');
+  const propMining = document.getElementById('prop-mining');
+  const miningSigCount = b.mining_signals || 0;
+  if (miningSigCount > 0) {
+    if (miningSec) miningSec.style.display = 'block';
+    if (miningCountEl) miningCountEl.innerText = miningSigCount;
+    if (propCardMining) propCardMining.style.display = 'block';
+    if (propMining) propMining.innerText = `${miningSigCount} 箇所 (Planetary Mining Locations)`;
+  } else {
+    if (miningSec) miningSec.style.display = 'none';
+    if (propCardMining) propCardMining.style.display = 'none';
+  }
 
   // Orbit parameters
   document.getElementById('prop-semi-major').innerText = b.semi_major_axis ? `${(b.semi_major_axis / 149597870700).toFixed(3)} AU (${formatDistance(b.semi_major_axis / 299792458)})` : '--';
