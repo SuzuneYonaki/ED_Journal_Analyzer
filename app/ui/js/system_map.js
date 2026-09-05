@@ -417,8 +417,30 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   const iconLabel = getBodyIconLabel(body);
   const iconClass = getBodyIconClass(body);
 
-  // Check planetary rings
-  const hasRings = (body.rings_list && body.rings_list.length > 0) || (body.rings && body.rings !== '[]');
+  // Check planetary rings and asteroid belts
+  let rawRings = body.rings_list;
+  if (!rawRings && body.rings && body.rings !== '[]' && body.rings !== '""') {
+    try {
+      rawRings = typeof body.rings === 'string' ? JSON.parse(body.rings) : body.rings;
+    } catch (e) {
+      rawRings = [];
+    }
+  }
+  rawRings = Array.isArray(rawRings) ? rawRings : [];
+
+  const beltItems = rawRings.filter(r => (r.Name || '').toLowerCase().includes('belt'));
+  const ringItems = rawRings.filter(r => !(r.Name || '').toLowerCase().includes('belt'));
+  const hasPlanetaryRings = ringItems.length > 0;
+  const hasAsteroidBelts = beltItems.length > 0;
+
+  const ringParser = window.parseRingClass || ((cls) => {
+    const l = (cls || '').toLowerCase();
+    if (l.includes('icy')) return { key: 'icy', nameJa: '氷', icon: '❄️', color: '#38bdf8', bg: 'rgba(56,189,248,0.18)', border: 'rgba(56,189,248,0.45)' };
+    if (l.includes('metallic') || l.includes('metalic')) return { key: 'metallic', nameJa: '金属質', icon: '🪙', color: '#facc15', bg: 'rgba(250,204,21,0.18)', border: 'rgba(250,204,21,0.5)' };
+    if (l.includes('metal')) return { key: 'metal_rich', nameJa: '金属豊富', icon: '🪐', color: '#fb923c', bg: 'rgba(251,146,60,0.18)', border: 'rgba(251,146,60,0.5)' };
+    if (l.includes('rocky')) return { key: 'rocky', nameJa: '岩石', icon: '🪨', color: '#cbd5e1', bg: 'rgba(203,213,225,0.18)', border: 'rgba(203,213,225,0.45)' };
+    return { key: 'other', nameJa: cls || '環', icon: '💍', color: '#a78bfa', bg: 'rgba(167,139,250,0.18)', border: 'rgba(167,139,250,0.45)' };
+  });
 
   // Check Landable (Blue crescent arc in ED)
   const isLandable = Boolean(body.landable);
@@ -441,13 +463,32 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     badgeList.push('<span class="sysmap-mini-badge first-disc">⭐ 1st</span>');
   }
 
-  // Sphere HTML with optional ring and landable arc
+  // Ring & Belt Badges
+  let primaryRingKey = 'icy';
+  if (hasPlanetaryRings) {
+    const primaryInfo = ringParser(ringItems[0].RingClass);
+    primaryRingKey = primaryInfo.key;
+    const ringLabels = Array.from(new Set(ringItems.map(r => ringParser(r.RingClass).nameJa)));
+    badgeList.push(`<span class="sysmap-mini-badge ring-${primaryRingKey}" style="background: ${primaryInfo.bg}; color: ${primaryInfo.color}; border: 1px solid ${primaryInfo.border};">💍 ${primaryInfo.icon} ${ringLabels.join('/')}</span>`);
+  }
+
+  let primaryBeltKey = 'metal_rich';
+  if (hasAsteroidBelts) {
+    const primaryBeltInfo = ringParser(beltItems[0].RingClass);
+    primaryBeltKey = primaryBeltInfo.key;
+    const beltLabels = Array.from(new Set(beltItems.map(r => ringParser(r.RingClass).nameJa)));
+    badgeList.push(`<span class="sysmap-mini-badge belt" style="background: ${primaryBeltInfo.bg}; color: ${primaryBeltInfo.color}; border: 1px solid ${primaryBeltInfo.border};">🪐 ${primaryBeltInfo.icon} ${beltLabels.join('/')}ベルト</span>`);
+  }
+
+  // Sphere HTML with optional ring, belt, and landable arc
   const landableArcHtml = isLandable ? '<div class="sysmap-landable-arc"></div>' : '';
-  const ringHtml = hasRings ? '<div class="sysmap-ring-system"></div>' : '';
+  const ringHtml = hasPlanetaryRings ? `<div class="sysmap-ring-system ${primaryRingKey}"></div>` : '';
+  const beltHtml = (hasAsteroidBelts && (role === 'root-star' || body.isStar)) ? `<div class="sysmap-belt-system ${primaryBeltKey}"></div>` : '';
 
   sphere.innerHTML = `
     ${landableArcHtml}
     ${ringHtml}
+    ${beltHtml}
     <div class="sysmap-sphere ${iconClass} ${role}">
       <span class="sysmap-icon-label">${iconLabel}</span>
     </div>
@@ -464,7 +505,14 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     ? `Star (${body.star_type})` 
     : (body.planet_class || 'Planet');
 
-  card.title = `${body.body_name} - ${typeDesc}`;
+  let ringDesc = '';
+  if (hasPlanetaryRings) {
+    ringDesc = ` [Ring: ${ringItems.map(r => ringParser(r.RingClass).nameJa).join('/')}]`;
+  } else if (hasAsteroidBelts) {
+    ringDesc = ` [Belt: ${beltItems.map(r => ringParser(r.RingClass).nameJa).join('/')}]`;
+  }
+
+  card.title = `${body.body_name} - ${typeDesc}${ringDesc}`;
 
   const distStr = body.distance_from_arrival_ls 
     ? formatDistance(body.distance_from_arrival_ls) 

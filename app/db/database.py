@@ -15,6 +15,7 @@ def init_db(conn=None):
     if conn is None:
         conn = get_db_connection()
         close_after = True
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     # Systems table
@@ -98,6 +99,7 @@ def init_db(conn=None):
         bio_signals INTEGER DEFAULT 0,
         geo_signals INTEGER DEFAULT 0,
         mining_signals INTEGER DEFAULT 0,
+        reserve_level TEXT,
         fss_value INTEGER DEFAULT 0,
         dss_value INTEGER DEFAULT 0,
         first_discovered_fss INTEGER DEFAULT 0,
@@ -240,6 +242,7 @@ def init_db(conn=None):
         ("edsm_discovered_by", "TEXT"),
         ("edsm_discovered_at", "TEXT"),
         ("mining_signals", "INTEGER DEFAULT 0"),
+        ("reserve_level", "TEXT"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE bodies ADD COLUMN {col_def[0]} {col_def[1]};")

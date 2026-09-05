@@ -79,6 +79,85 @@ function formatSecondsToDaysOrHours(sec) {
   return `${days.toFixed(1)} ${t('days_unit')}`;
 }
 
+function parseRingClass(rawClass) {
+  if (!rawClass) return { key: 'unknown', nameEn: 'Unknown', nameJa: '不明', color: '#94a3b8', icon: '💍', bg: 'rgba(148,163,184,0.15)', border: 'rgba(148,163,184,0.4)', description: '' };
+  const lower = rawClass.toLowerCase();
+  if (lower.includes('icy')) {
+    return {
+      key: 'icy',
+      nameEn: 'Icy',
+      nameJa: '氷',
+      icon: '❄️',
+      color: '#38bdf8',
+      bg: 'rgba(56, 189, 248, 0.18)',
+      border: 'rgba(56, 189, 248, 0.45)',
+      description: 'Fleet Carrier燃料 (Tritium) / 低温ダイヤモンド (LTD) 産地'
+    };
+  }
+  if (lower.includes('metallic') || lower.includes('metalic')) {
+    return {
+      key: 'metallic',
+      nameEn: 'Metallic',
+      nameJa: '金属質',
+      icon: '🪙',
+      color: '#facc15',
+      bg: 'rgba(250, 204, 21, 0.18)',
+      border: 'rgba(250, 204, 21, 0.5)',
+      description: 'プラチナ (Platinum) / ペイン石 (Painite) 等 最も高価値なレーザー採掘適性'
+    };
+  }
+  if (lower.includes('metal')) {
+    return {
+      key: 'metal_rich',
+      nameEn: 'Metal Rich',
+      nameJa: '金属豊富',
+      icon: '🪐',
+      color: '#fb923c',
+      bg: 'rgba(251, 146, 60, 0.18)',
+      border: 'rgba(251, 146, 60, 0.5)',
+      description: '各種工業用・貴金属素材'
+    };
+  }
+  if (lower.includes('rocky')) {
+    return {
+      key: 'rocky',
+      nameEn: 'Rocky',
+      nameJa: '岩石',
+      icon: '🪨',
+      color: '#cbd5e1',
+      bg: 'rgba(203, 213, 225, 0.18)',
+      border: 'rgba(203, 213, 225, 0.45)',
+      description: 'マスグラバイト / アレキサンドライト等 高額深部鉱石コア採掘適性'
+    };
+  }
+  const cleanName = rawClass.replace('eRingClass_', '');
+  return {
+    key: 'other',
+    nameEn: cleanName,
+    nameJa: cleanName,
+    icon: '💍',
+    color: '#a78bfa',
+    bg: 'rgba(167, 139, 250, 0.18)',
+    border: 'rgba(167, 139, 250, 0.45)',
+    description: ''
+  };
+}
+window.parseRingClass = parseRingClass;
+
+function parseReserveLevel(reserve) {
+  if (!reserve) return null;
+  const map = {
+    'pristineresources': { en: 'Pristine', ja: '無傷 (最高)', color: '#22c55e', icon: '💎' },
+    'majorresources': { en: 'Major', ja: '主要', color: '#38bdf8', icon: '✨' },
+    'commonresources': { en: 'Common', ja: '普通', color: '#94a3b8', icon: '⚖️' },
+    'lowresources': { en: 'Low', ja: '低', color: '#f59e0b', icon: '⚠️' },
+    'depletedresources': { en: 'Depleted', ja: '枯渇', color: '#ef4444', icon: '🚫' },
+  };
+  const key = reserve.toLowerCase().replace(/[^a-z]/g, '');
+  return map[key] || { en: reserve, ja: reserve, color: '#94a3b8', icon: '📊' };
+}
+window.parseReserveLevel = parseReserveLevel;
+
 function getStarTypeStyle(starType) {
   if (!starType) return { bg: '#181e2b', text: '#e6edf3', border: '#2a3449' };
   const st = starType.toUpperCase();
@@ -1131,8 +1210,21 @@ function renderFlatBodiesList(container, bodies) {
       const rKm = Math.round(body.radius / 1000);
       badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);" title="半径: ${rKm.toLocaleString()} km (直径: ${(rKm*2).toLocaleString()} km)">🪐 R: ${rKm.toLocaleString()}km</span>`);
     }
-    if (body.landable && body.rings && body.rings !== '[]' && body.rings !== '""') {
-      badges.push('<span class="tag-badge" style="background: rgba(244, 114, 182, 0.15); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.5);">💍 Ringed</span>');
+    let bRings = body.rings_list;
+    if (!bRings && body.rings && body.rings !== '[]' && body.rings !== '""') {
+      try { bRings = typeof body.rings === 'string' ? JSON.parse(body.rings) : body.rings; } catch (e) { bRings = []; }
+    }
+    bRings = Array.isArray(bRings) ? bRings : [];
+    if (bRings.length > 0) {
+      bRings.forEach(r => {
+        const isB = (r.Name || '').toLowerCase().includes('belt');
+        const info = parseRingClass(r.RingClass);
+        if (isB) {
+          badges.push(`<span class="tag-badge" style="background: ${info.bg}; color: ${info.color}; border: 1px solid ${info.border}; font-weight: bold;" title="${r.Name || ''} - ${info.description}">🪐 ${info.icon} ${info.nameJa}ベルト</span>`);
+        } else {
+          badges.push(`<span class="tag-badge" style="background: ${info.bg}; color: ${info.color}; border: 1px solid ${info.border}; font-weight: bold;" title="${r.Name || ''} - ${info.description}">💍 ${info.icon} ${info.nameJa}環</span>`);
+        }
+      });
     }
     if (body.landable && body.surface_gravity_g) {
       if (body.surface_gravity_g >= 3.0) badges.push(`<span class="tag-badge tag-high-g">${body.surface_gravity_g.toFixed(2)}G !</span>`);
@@ -1477,7 +1569,24 @@ function renderMiningView(container, bodies) {
               <!-- Main Badges Row -->
               <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; align-items: center;">
                 <span class="tag-badge" style="${typeStyle} font-weight: bold;">${typeName}</span>
-                ${isRinged ? '<span class="tag-badge" style="background: rgba(244, 114, 182, 0.2); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.6); font-weight: bold; box-shadow: 0 0 4px rgba(244, 114, 182, 0.3);">💍 環付き (Ringed Landable)</span>' : ''}
+                ${(() => {
+                  if (!isRinged) return '';
+                  let rList = body.rings_list;
+                  if (!rList && body.rings) {
+                    try { rList = typeof body.rings === 'string' ? JSON.parse(body.rings) : body.rings; } catch (e) { rList = []; }
+                  }
+                  rList = Array.isArray(rList) ? rList : [];
+                  if (rList.length > 0) {
+                    return rList.map(r => {
+                      const info = parseRingClass(r.RingClass);
+                      const isB = (r.Name || '').toLowerCase().includes('belt');
+                      return `<span class="tag-badge" style="background: ${info.bg}; color: ${info.color}; border: 1px solid ${info.border}; font-weight: bold; box-shadow: 0 0 4px ${info.bg};" title="${r.Name || ''} - ${info.description}">
+                        💍 環: ${info.icon} ${info.nameJa} (${info.nameEn}${isB ? ' Belt' : ''})
+                      </span>`;
+                    }).join(' ');
+                  }
+                  return '<span class="tag-badge" style="background: rgba(244, 114, 182, 0.2); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.6); font-weight: bold;">💍 環付き (Ringed Landable)</span>';
+                })()}
                 <span class="tag-badge" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: bold;">
                   🪐 半径: ${radKm.toLocaleString()} km (直径: ${diamKm.toLocaleString()} km)
                 </span>
@@ -1880,42 +1989,94 @@ function renderBodyInspector() {
   document.getElementById('prop-inclination').innerText = b.orbital_inclination !== null && b.orbital_inclination !== undefined ? `${b.orbital_inclination.toFixed(2)}°` : '--';
   document.getElementById('prop-tidal-lock').innerText = b.tidal_lock ? t('tidal_locked_yes') : t('tidal_locked_no');
 
-  // Rings & Fleet Carrier Fuel (Tritium Mining in Icy Rings)
+  // Rings & Asteroid Belts Section
   const ringsSection = document.getElementById('section-rings');
   const ringsList = document.getElementById('inspect-rings-list');
-  if (b.rings_list && b.rings_list.length > 0) {
+  let ringsData = b.rings_list;
+  if (!ringsData && b.rings && b.rings !== '[]' && b.rings !== '""') {
+    try { ringsData = typeof b.rings === 'string' ? JSON.parse(b.rings) : b.rings; } catch (e) { ringsData = []; }
+  }
+  ringsData = Array.isArray(ringsData) ? ringsData : [];
+
+  if (ringsData && ringsData.length > 0) {
     ringsSection.style.display = 'block';
 
-    const hasIcyRing = b.rings_list.some(r => (r.RingClass || '').toLowerCase().includes('icy'));
-    const fcMiningBadge = hasIcyRing 
-      ? `<div style="background: rgba(0, 210, 255, 0.12); border: 1px solid rgba(0, 210, 255, 0.4); border-radius: 4px; padding: 6px 10px; margin-bottom: 8px; font-size: 0.78rem; color: #a5f3fc; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-          <span>💎 Fleet Carrier 燃料 (Tritium) 採掘適性:</span>
-          <span style="color: #38bdf8;">✓ 採掘可能 (Icy Ring 検出)</span>
-         </div>`
-      : `<div style="background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 4px; padding: 6px 10px; margin-bottom: 8px; font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-          <span>💎 Fleet Carrier 燃料 (Tritium) 採掘適性:</span>
-          <span>氷リングなし (Icy Ring Not Found)</span>
-         </div>`;
+    const hasBelts = ringsData.some(r => (r.Name || '').toLowerCase().includes('belt'));
+    const hasRings = ringsData.some(r => !(r.Name || '').toLowerCase().includes('belt'));
+    const headingEl = ringsSection.querySelector('.section-heading');
+    if (headingEl) {
+      if (hasBelts && !hasRings) {
+        headingEl.innerText = t('section_rings_belts') || '🪐 アステロイドベルト (Asteroid Belts)';
+      } else if (hasRings && !hasBelts) {
+        headingEl.innerText = t('section_rings_planet') || '💍 プラネタリーリング (Planetary Rings)';
+      } else {
+        headingEl.innerText = t('section_rings') || '💍 リング / アステロイドベルト';
+      }
+    }
 
-    ringsList.innerHTML = fcMiningBadge + b.rings_list.map(r => {
-      const rClass = (r.RingClass || '').replace('eRingClass_', '');
-      const isIcy = rClass.toLowerCase().includes('icy');
-      const classBadge = isIcy 
-        ? `<span class="tag-badge" style="background: rgba(0, 210, 255, 0.2); color: #38bdf8; border: 1px solid rgba(0, 210, 255, 0.4); font-weight: bold;">❄️ Icy Ring (氷)</span>`
-        : `<span class="tag-badge">${rClass || 'Ring'}</span>`;
+    // Reserve Level Badge
+    const reserveInfo = parseReserveLevel(b.reserve_level);
+    const reserveBadge = reserveInfo ? `
+      <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.35); border-radius: 4px; padding: 6px 10px; margin-bottom: 8px; font-size: 0.78rem; display: flex; align-items: center; justify-content: space-between;">
+        <span style="color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+          <span>${reserveInfo.icon}</span> <span>資源埋蔵量 (Reserve Level):</span>
+        </span>
+        <span style="color: ${reserveInfo.color}; font-weight: bold;">${reserveInfo.en} (${reserveInfo.ja})</span>
+      </div>
+    ` : '';
+
+    const itemsHtml = ringsData.map(r => {
+      const isBelt = (r.Name || '').toLowerCase().includes('belt');
+      const rInfo = parseRingClass(r.RingClass);
+      const innerKm = Math.round((r.InnerRad || 0) / 1000);
+      const outerKm = Math.round((r.OuterRad || 0) / 1000);
+      const widthKm = Math.max(0, outerKm - innerKm);
+      const massMt = r.MassMT || 0;
+      const massStr = massMt >= 1e6 
+        ? `${(massMt / 1e6).toLocaleString(undefined, {maximumFractionDigits: 1})} M MT` 
+        : `${Math.round(massMt).toLocaleString()} MT`;
+
+      const typeBadge = `<span class="tag-badge" style="background: ${rInfo.bg}; color: ${rInfo.color}; border: 1px solid ${rInfo.border}; font-weight: bold; font-size: 0.72rem;">
+        ${rInfo.icon} ${rInfo.nameJa} (${rInfo.nameEn} ${isBelt ? 'Belt' : 'Ring'})
+      </span>`;
+
+      let miningHint = '';
+      if (rInfo.key === 'icy') {
+        miningHint = `<div style="margin-top: 5px; font-size: 0.72rem; color: #7dd3fc; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; padding: 3px 6px; border-radius: 2px;">
+          💎 Fleet Carrier燃料（トリチウム / Tritium）採掘適性あり
+        </div>`;
+      } else if (rInfo.key === 'metallic') {
+        miningHint = `<div style="margin-top: 5px; font-size: 0.72rem; color: #fde047; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #facc15; padding: 3px 6px; border-radius: 2px;">
+          🪙 プラチナ / ペイン石 / オスミウム等 高額金属レーザー採掘の最重要スポット
+        </div>`;
+      } else if (rInfo.key === 'rocky') {
+        miningHint = `<div style="margin-top: 5px; font-size: 0.72rem; color: #e2e8f0; background: rgba(203, 213, 225, 0.1); border-left: 3px solid #cbd5e1; padding: 3px 6px; border-radius: 2px;">
+          🪨 マスグラバイト / アレキサンドライト等 高額深部鉱石のコア破砕採掘適性
+        </div>`;
+      } else if (rInfo.key === 'metal_rich') {
+        miningHint = `<div style="margin-top: 5px; font-size: 0.72rem; color: #fdba74; background: rgba(251, 146, 60, 0.1); border-left: 3px solid #fb923c; padding: 3px 6px; border-radius: 2px;">
+          🪐 金属豊富ベルト/リング (各種工業用・貴金属素材)
+        </div>`;
+      }
 
       return `
-        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px 10px; margin-bottom: 6px; font-size: 0.75rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: bold; color: var(--ed-gold);">${r.Name || 'Ring'}</span>
-            ${classBadge}
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 5px; padding: 8px 10px; margin-bottom: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span style="font-weight: bold; color: var(--ed-gold); font-size: 0.8rem;">${r.Name || (isBelt ? 'Asteroid Belt' : 'Ring')}</span>
+            ${typeBadge}
           </div>
-          <div style="color: var(--text-secondary); margin-top: 4px;">
-            外径: ${(r.OuterRad / 1000).toLocaleString()} km / 質量: ${(r.MassMT || 0).toLocaleString()} MT
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; font-size: 0.72rem; color: var(--text-secondary); background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 4px;">
+            <span>内径: <b style="color: #e2e8f0;">${innerKm.toLocaleString()} km</b></span>
+            <span>外径: <b style="color: #e2e8f0;">${outerKm.toLocaleString()} km</b></span>
+            <span>幅: <b style="color: #e2e8f0;">${widthKm.toLocaleString()} km</b></span>
+            <span>総質量: <b style="color: #e2e8f0;">${massStr}</b></span>
           </div>
+          ${miningHint}
         </div>
       `;
     }).join('');
+
+    ringsList.innerHTML = reserveBadge + itemsHtml;
   } else {
     ringsSection.style.display = 'none';
   }

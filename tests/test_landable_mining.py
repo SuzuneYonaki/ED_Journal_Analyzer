@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from app.db.database import init_db
 from app.server.api import app
+from app.parser.journal_parser import JournalParser
 
 
 def test_landable_mining_filters_and_radius_summary(tmp_path):
@@ -234,4 +235,136 @@ def test_surface_mining_activities_parsing_and_api(tmp_path):
         body1 = data["bodies"][0]
         assert body1["mining_activities_count"] == 2
         assert len(body1["mining_activities"]) == 2
+
+
+def test_rings_and_asteroid_belts_parsing(tmp_path):
+    db_path = str(tmp_path / "test_rings.db")
+
+    def get_test_db():
+        c = sqlite3.connect(db_path)
+        c.row_factory = sqlite3.Row
+        return c
+
+    conn = get_test_db()
+    init_db(conn)
+
+    parser = JournalParser(db_conn=conn)
+
+    # 1. Star scan with Asteroid Belts
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-06T05:00:00Z",
+        "event": "Scan",
+        "SystemAddress": 88001,
+        "StarSystem": "Belts Star System",
+        "BodyID": 1,
+        "BodyName": "Belts Star System A",
+        "StarType": "M",
+        "DistanceFromArrivalLS": 0.0,
+        "Rings": [
+            {
+                "Name": "Belts Star System A Belt",
+                "RingClass": "eRingClass_MetalRich",
+                "MassMT": 1234500000.0,
+                "InnerRad": 500000000.0,
+                "OuterRad": 1200000000.0
+            }
+        ]
+    }))
+
+    # 2. Planet scan with Icy Ring and ReserveLevel
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-06T05:01:00Z",
+        "event": "Scan",
+        "SystemAddress": 88001,
+        "StarSystem": "Belts Star System",
+        "BodyID": 2,
+        "BodyName": "Belts Star System A 1",
+        "PlanetClass": "Icy body",
+        "DistanceFromArrivalLS": 350.0,
+        "Landable": True,
+        "Radius": 4500000.0,
+        "ReserveLevel": "PristineResources",
+        "Rings": [
+            {
+                "Name": "Belts Star System A 1 A Ring",
+                "RingClass": "eRingClass_Icy",
+                "MassMT": 54321000.0,
+                "InnerRad": 12000000.0,
+                "OuterRad": 38000000.0
+            }
+        ]
+    }))
+
+    # 3. Planet scan with Metallic Ring
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-06T05:02:00Z",
+        "event": "Scan",
+        "SystemAddress": 88001,
+        "StarSystem": "Belts Star System",
+        "BodyID": 3,
+        "BodyName": "Belts Star System A 2",
+        "PlanetClass": "High metal content body",
+        "DistanceFromArrivalLS": 720.0,
+        "Landable": True,
+        "Radius": 6000000.0,
+        "ReserveLevel": "MajorResources",
+        "Rings": [
+            {
+                "Name": "Belts Star System A 2 A Ring",
+                "RingClass": "eRingClass_Metallic",
+                "MassMT": 98765400.0,
+                "InnerRad": 20000000.0,
+                "OuterRad": 65000000.0
+            }
+        ]
+    }))
+
+    parser.flush_dirty_systems()
+
+    # Verify DB records
+    c = conn.cursor()
+    c.execute("SELECT body_id, body_name, rings, reserve_level FROM bodies WHERE system_address = 88001 ORDER BY body_id ASC")
+    rows = [dict(r) for r in c.fetchall()]
+    assert len(rows) == 3
+
+    # Star check
+    assert rows[0]["body_id"] == 1
+    assert "Belt" in rows[0]["rings"]
+    assert "eRingClass_MetalRich" in rows[0]["rings"]
+
+    # Planet 1 check
+    assert rows[1]["body_id"] == 2
+    assert rows[1]["reserve_level"] == "PristineResources"
+    assert "eRingClass_Icy" in rows[1]["rings"]
+
+    # Planet 2 check
+    assert rows[2]["body_id"] == 3
+    assert rows[2]["reserve_level"] == "MajorResources"
+    assert "eRingClass_Metallic" in rows[2]["rings"]
+
+    conn.close()
+
+    # Test API endpoint
+    with patch("app.server.api.get_db_connection", side_effect=get_test_db):
+        client = TestClient(app)
+        res = client.get("/api/system/88001")
+        assert res.status_code == 200
+        data = res.json()
+        bodies = data["bodies"]
+        assert len(bodies) == 3
+
+        star = next(b for b in bodies if b["body_id"] == 1)
+        assert len(star["rings_list"]) == 1
+        assert star["rings_list"][0]["RingClass"] == "eRingClass_MetalRich"
+
+        p1 = next(b for b in bodies if b["body_id"] == 2)
+        assert p1["reserve_level"] == "PristineResources"
+        assert len(p1["rings_list"]) == 1
+        assert p1["rings_list"][0]["RingClass"] == "eRingClass_Icy"
+
+        p2 = next(b for b in bodies if b["body_id"] == 3)
+        assert p2["reserve_level"] == "MajorResources"
+        assert len(p2["rings_list"]) == 1
+        assert p2["rings_list"][0]["RingClass"] == "eRingClass_Metallic"
+
 

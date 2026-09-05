@@ -261,6 +261,8 @@ class JournalParser:
         was_discovered = 1 if data.get("WasDiscovered", False) else 0
         was_mapped = 1 if data.get("WasMapped", False) else 0
 
+        reserve_level = data.get("ReserveLevel")
+
         # Calculate values
         body_dict = {
             "system_address": sys_addr,
@@ -290,6 +292,7 @@ class JournalParser:
             "rotation_period": rotation_period,
             "orbital_inclination": inclination,
             "rings": rings,
+            "reserve_level": reserve_level,
             "bio_signals": 0
         }
 
@@ -331,11 +334,11 @@ class JournalParser:
                 volcanism, terraforming_state, tidal_lock, semi_major_axis, eccentricity,
                 orbital_inclination, periapsis, orbital_period, ascending_node, mean_anomaly,
                 rotation_period, axial_tilt, rings, materials, parents, was_discovered, was_mapped,
-                is_mapped_by_user, bio_signals, geo_signals, mining_signals, fss_value, dss_value,
+                is_mapped_by_user, bio_signals, geo_signals, mining_signals, reserve_level, fss_value, dss_value,
                 first_discovered_fss, first_mapped_dss, max_potential_value,
                 confirmed_genuses, exobiology_predictions, anomalies_json, scan_timestamp, updated_timestamp
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             ON CONFLICT(system_address, body_id) DO UPDATE SET
                 body_name = excluded.body_name,
@@ -367,6 +370,7 @@ class JournalParser:
                 parents = COALESCE(excluded.parents, bodies.parents),
                 was_discovered = excluded.was_discovered,
                 was_mapped = excluded.was_mapped,
+                reserve_level = COALESCE(excluded.reserve_level, bodies.reserve_level),
                 fss_value = excluded.fss_value,
                 dss_value = excluded.dss_value,
                 first_discovered_fss = excluded.first_discovered_fss,
@@ -383,7 +387,7 @@ class JournalParser:
             volcanism, terraforming, tidal_lock, semi_major_axis, eccentricity,
             inclination, periapsis, orbital_period, ascending_node, mean_anomaly,
             rotation_period, axial_tilt, rings, materials, parents, was_discovered, was_mapped,
-            existing_mapped, existing_bio, existing_geo, existing_mining, fss_val, dss_val,
+            existing_mapped, existing_bio, existing_geo, existing_mining, reserve_level, fss_val, dss_val,
             fd_fss, fm_dss, max_pot,
             existing_genuses, bio_pred_json, anomalies_json, timestamp, timestamp
         ))
