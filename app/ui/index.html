@@ -206,6 +206,33 @@
               <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
             </select>
           </div>
+          <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+            <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_tertiary">3次ソート:</span>
+            <select id="sort-select-3" class="sort-select" style="flex: 1; font-size: 0.78rem;">
+              <option value="none" data-i18n="sort_none">（指定なし）</option>
+              <option value="avg_landable_radius-desc" data-i18n="sort_landable_radius_desc">Landable平均サイズ (大きい順)</option>
+              <option value="avg_landable_radius-asc" data-i18n="sort_landable_radius_asc">Landable平均サイズ (小さい順)</option>
+              <option value="cmdr_distance_ly-asc" data-i18n="sort_cmdr_dist_asc">現在地からの距離 (近い順)</option>
+              <option value="cmdr_distance_ly-desc" data-i18n="sort_cmdr_dist_desc">現在地からの距離 (遠い順)</option>
+              <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
+              <option value="sol_distance_ly-desc" data-i18n="sort_sol_dist_desc">Sol距離 (遠い順)</option>
+              <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
+              <option value="first_discovered_bodies-desc" data-i18n="sort_first_disc_desc">初発見天体数 (多い順)</option>
+              <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
+              <option value="total_fss_value-desc" data-i18n="sort_fss_desc">FSS合計 (高い順)</option>
+              <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
+              <option value="last_visited-asc" data-i18n="sort_visited_asc">最新訪問日時 (古い順)</option>
+              <option value="scanned_bodies-desc" data-i18n="sort_bodies_desc">スキャン天体数 (多い順)</option>
+              <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 2px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; cursor: pointer; color: #a5f3fc;" title="1次〜3次の各項目を総合スコアリング（加重ブレンド）して並び替えます">
+              <input type="checkbox" id="cb-sort-composite" checked style="cursor: pointer;">
+              <span data-i18n="sort_composite_mode">⚡ 総合スコア（加重ブレンド）</span>
+            </label>
+            <span style="font-size: 0.65rem; color: var(--text-dim);">1次 50% / 2次 35% / 3次 15%</span>
+          </div>
         </div>
       </div>
 

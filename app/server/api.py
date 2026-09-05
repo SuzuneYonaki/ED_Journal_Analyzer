@@ -311,6 +311,9 @@ def get_systems(
     sort_order: Optional[str] = "desc",
     sort_by_2: Optional[str] = None,
     sort_order_2: Optional[str] = "desc",
+    sort_by_3: Optional[str] = None,
+    sort_order_3: Optional[str] = "desc",
+    sort_mode: Optional[str] = "composite",
     page: int = 1,
     limit: int = 50
 ):
@@ -395,52 +398,135 @@ def get_systems(
         "avg_landable_radius": "avg_landable_radius"
     }
 
-    def build_order_clause(col_name, direction):
-        if col_name == "cmdr_distance_ly":
-            return f"cmdr_distance_ly IS NULL ASC, cmdr_distance_ly {direction}"
-        if col_name == "avg_landable_radius":
-            return f"(avg_landable_radius IS NULL OR avg_landable_radius = 0) ASC, avg_landable_radius {direction}"
-        return f"{col_name} {direction}"
+    # Gather active sort criteria
+    valid_sorts = []
+    for s_col, s_ord in [
+        (sort_by, sort_order),
+        (sort_by_2, sort_order_2),
+        (sort_by_3, sort_order_3)
+    ]:
+        if s_col and s_col in allowed_sort and s_col != "none":
+            if not any(v[0] == s_col for v in valid_sorts):
+                valid_sorts.append((s_col, "asc" if s_ord and s_ord.lower() == "asc" else "desc"))
 
-    sort_col_1 = allowed_sort.get(sort_by, "total_potential_value")
-    order_dir_1 = "ASC" if sort_order and sort_order.lower() == "asc" else "DESC"
-    order_clauses = [build_order_clause(sort_col_1, order_dir_1)]
+    if not valid_sorts:
+        valid_sorts = [("total_potential_value", "desc")]
 
-    if sort_by_2 and sort_by_2 in allowed_sort and sort_by_2 != sort_by:
-        sort_col_2 = allowed_sort[sort_by_2]
-        order_dir_2 = "ASC" if sort_order_2 and sort_order_2.lower() == "asc" else "DESC"
-        order_clauses.append(build_order_clause(sort_col_2, order_dir_2))
-
-    # Fallback deterministic order
-    if "star_system" not in [sort_by, sort_by_2]:
-        order_clauses.append("star_system ASC")
-
-    order_sql = "ORDER BY " + ", ".join(order_clauses)
-
-    # Count total
+    # Count total matching systems
     c.execute(f"SELECT COUNT(*) as cnt FROM systems {where_clause}", params)
     total_count = c.fetchone()["cnt"]
 
     offset = (page - 1) * limit
-    
-    # Select with dynamic cmdr_distance_ly
+
+    # CMDR Distance expression
     cmdr_dist_expr = "NULL"
     dist_params = []
     if cx is not None and cy is not None and cz is not None:
         cmdr_dist_expr = "CASE WHEN star_pos_x IS NOT NULL THEN ROUND(SQRT((star_pos_x - ?)*(star_pos_x - ?)+(star_pos_y - ?)*(star_pos_y - ?)+(star_pos_z - ?)*(star_pos_z - ?)), 1) ELSE NULL END"
         dist_params = [cx, cx, cy, cy, cz, cz]
 
-    select_sql = f"""
-        SELECT 
-            systems.*,
-            {cmdr_dist_expr} AS cmdr_distance_ly
-        FROM systems
-        {where_clause}
-        {order_sql}
-        LIMIT ? OFFSET ?
-    """
+    is_composite_mode = (sort_mode == "composite")
 
-    c.execute(select_sql, dist_params + params + [limit, offset])
+    if is_composite_mode and len(valid_sorts) > 1:
+        # Weighted Composite Scoring (Method B)
+        # Allocate weights based on number of active criteria
+        if len(valid_sorts) == 2:
+            weights = [0.65, 0.35]
+        else:
+            weights = [0.50, 0.35, 0.15]
+
+        def get_score_subexpr(col_name: str, direction: str) -> str:
+            if col_name == "total_potential_value":
+                return "CASE WHEN stats.max_val > stats.min_val THEN (base.total_potential_value - stats.min_val) * 1.0 / (stats.max_val - stats.min_val) ELSE 1.0 END" if direction == "desc" else "CASE WHEN stats.max_val > stats.min_val THEN (stats.max_val - base.total_potential_value) * 1.0 / (stats.max_val - stats.min_val) ELSE 1.0 END"
+            elif col_name == "total_fss_value":
+                return "CASE WHEN stats.max_fss > stats.min_fss THEN (base.total_fss_value - stats.min_fss) * 1.0 / (stats.max_fss - stats.min_fss) ELSE 1.0 END" if direction == "desc" else "CASE WHEN stats.max_fss > stats.min_fss THEN (stats.max_fss - base.total_fss_value) * 1.0 / (stats.max_fss - stats.min_fss) ELSE 1.0 END"
+            elif col_name == "total_bio_signals":
+                return "CASE WHEN stats.max_bio > stats.min_bio THEN (base.total_bio_signals - stats.min_bio) * 1.0 / (stats.max_bio - stats.min_bio) ELSE (CASE WHEN base.total_bio_signals > 0 THEN 1.0 ELSE 0.0 END) END" if direction == "desc" else "CASE WHEN stats.max_bio > stats.min_bio THEN (stats.max_bio - base.total_bio_signals) * 1.0 / (stats.max_bio - stats.min_bio) ELSE 1.0 END"
+            elif col_name == "first_discovered_bodies":
+                return "CASE WHEN stats.max_fd > stats.min_fd THEN (base.first_discovered_bodies - stats.min_fd) * 1.0 / (stats.max_fd - stats.min_fd) ELSE (CASE WHEN base.first_discovered_bodies > 0 THEN 1.0 ELSE 0.0 END) END" if direction == "desc" else "CASE WHEN stats.max_fd > stats.min_fd THEN (stats.max_fd - base.first_discovered_bodies) * 1.0 / (stats.max_fd - stats.min_fd) ELSE 1.0 END"
+            elif col_name == "cmdr_distance_ly":
+                return "CASE WHEN base.cmdr_distance_ly IS NOT NULL AND stats.max_cmdr > stats.min_cmdr THEN (stats.max_cmdr - base.cmdr_distance_ly) * 1.0 / (stats.max_cmdr - stats.min_cmdr) WHEN base.cmdr_distance_ly IS NOT NULL THEN 1.0 ELSE 0.0 END" if direction == "asc" else "CASE WHEN base.cmdr_distance_ly IS NOT NULL AND stats.max_cmdr > stats.min_cmdr THEN (base.cmdr_distance_ly - stats.min_cmdr) * 1.0 / (stats.max_cmdr - stats.min_cmdr) WHEN base.cmdr_distance_ly IS NOT NULL THEN 1.0 ELSE 0.0 END"
+            elif col_name == "sol_distance_ly":
+                return "CASE WHEN stats.max_sol > stats.min_sol THEN (stats.max_sol - base.sol_distance_ly) * 1.0 / (stats.max_sol - stats.min_sol) ELSE 1.0 END" if direction == "asc" else "CASE WHEN stats.max_sol > stats.min_sol THEN (base.sol_distance_ly - stats.min_sol) * 1.0 / (stats.max_sol - stats.min_sol) ELSE 1.0 END"
+            elif col_name == "avg_landable_radius":
+                return "CASE WHEN base.avg_landable_radius > 0 AND stats.max_rad > stats.min_rad THEN (base.avg_landable_radius - stats.min_rad) * 1.0 / (stats.max_rad - stats.min_rad) WHEN base.avg_landable_radius > 0 THEN 1.0 ELSE 0.0 END" if direction == "desc" else "CASE WHEN base.avg_landable_radius > 0 AND stats.max_rad > stats.min_rad THEN (stats.max_rad - base.avg_landable_radius) * 1.0 / (stats.max_rad - stats.min_rad) WHEN base.avg_landable_radius > 0 THEN 1.0 ELSE 0.0 END"
+            elif col_name == "scanned_bodies":
+                return "CASE WHEN stats.max_sb > stats.min_sb THEN (base.scanned_bodies - stats.min_sb) * 1.0 / (stats.max_sb - stats.min_sb) ELSE 1.0 END" if direction == "desc" else "CASE WHEN stats.max_sb > stats.min_sb THEN (stats.max_sb - base.scanned_bodies) * 1.0 / (stats.max_sb - stats.min_sb) ELSE 1.0 END"
+            elif col_name == "visit_count":
+                return "CASE WHEN stats.max_vc > stats.min_vc THEN (base.visit_count - stats.min_vc) * 1.0 / (stats.max_vc - stats.min_vc) ELSE 1.0 END" if direction == "desc" else "CASE WHEN stats.max_vc > stats.min_vc THEN (stats.max_vc - base.visit_count) * 1.0 / (stats.max_vc - stats.min_vc) ELSE 1.0 END"
+            elif col_name in ["last_visited", "first_visited"]:
+                col = "last_visited" if col_name == "last_visited" else "first_visited"
+                return f"CASE WHEN stats.max_{col} > stats.min_{col} THEN (julianday(base.{col}) - stats.min_{col}) * 1.0 / (stats.max_{col} - stats.min_{col}) ELSE 1.0 END" if direction == "desc" else f"CASE WHEN stats.max_{col} > stats.min_{col} THEN (stats.max_{col} - julianday(base.{col})) * 1.0 / (stats.max_{col} - stats.min_{col}) ELSE 1.0 END"
+            return "0.0"
+
+        score_terms = []
+        for i, (col, direction) in enumerate(valid_sorts):
+            w = weights[i]
+            sub = get_score_subexpr(col, direction)
+            score_terms.append(f"({sub}) * {w}")
+
+        score_formula = " + ".join(score_terms)
+
+        select_sql = f"""
+            WITH base AS (
+                SELECT 
+                    systems.*,
+                    {cmdr_dist_expr} AS cmdr_distance_ly
+                FROM systems
+                {where_clause}
+            ),
+            stats AS (
+                SELECT 
+                    COALESCE(MIN(total_potential_value), 0) AS min_val, COALESCE(MAX(total_potential_value), 0) AS max_val,
+                    COALESCE(MIN(total_fss_value), 0) AS min_fss, COALESCE(MAX(total_fss_value), 0) AS max_fss,
+                    COALESCE(MIN(total_bio_signals), 0) AS min_bio, COALESCE(MAX(total_bio_signals), 0) AS max_bio,
+                    COALESCE(MIN(first_discovered_bodies), 0) AS min_fd, COALESCE(MAX(first_discovered_bodies), 0) AS max_fd,
+                    COALESCE(MIN(cmdr_distance_ly), 0) AS min_cmdr, COALESCE(MAX(cmdr_distance_ly), 0) AS max_cmdr,
+                    COALESCE(MIN(sol_distance_ly), 0) AS min_sol, COALESCE(MAX(sol_distance_ly), 0) AS max_sol,
+                    COALESCE(MIN(CASE WHEN avg_landable_radius > 0 THEN avg_landable_radius ELSE NULL END), 0) AS min_rad,
+                    COALESCE(MAX(CASE WHEN avg_landable_radius > 0 THEN avg_landable_radius ELSE NULL END), 0) AS max_rad,
+                    COALESCE(MIN(scanned_bodies), 0) AS min_sb, COALESCE(MAX(scanned_bodies), 0) AS max_sb,
+                    COALESCE(MIN(visit_count), 0) AS min_vc, COALESCE(MAX(visit_count), 0) AS max_vc,
+                    COALESCE(MIN(julianday(last_visited)), 0) AS min_last_visited, COALESCE(MAX(julianday(last_visited)), 0) AS max_last_visited,
+                    COALESCE(MIN(julianday(first_visited)), 0) AS min_first_visited, COALESCE(MAX(julianday(first_visited)), 0) AS max_first_visited
+                FROM base
+            )
+            SELECT 
+                base.*,
+                ROUND(({score_formula}) * 100.0, 1) AS composite_score
+            FROM base, stats
+            ORDER BY composite_score DESC, base.total_potential_value DESC, base.star_system ASC
+            LIMIT ? OFFSET ?
+        """
+        c.execute(select_sql, dist_params + params + [limit, offset])
+    else:
+        # Strict hierarchical multi-column sorting (Method A / Standard)
+        def build_order_clause(col_name, direction):
+            if col_name == "cmdr_distance_ly":
+                return f"cmdr_distance_ly IS NULL ASC, cmdr_distance_ly {direction.upper()}"
+            if col_name == "avg_landable_radius":
+                return f"(avg_landable_radius IS NULL OR avg_landable_radius = 0) ASC, avg_landable_radius {direction.upper()}"
+            return f"{col_name} {direction.upper()}"
+
+        order_clauses = [build_order_clause(col, direction) for col, direction in valid_sorts]
+
+        # Fallback deterministic order
+        if not any(v[0] == "star_system" for v in valid_sorts):
+            order_clauses.append("star_system ASC")
+
+        order_sql = "ORDER BY " + ", ".join(order_clauses)
+
+        select_sql = f"""
+            SELECT 
+                systems.*,
+                {cmdr_dist_expr} AS cmdr_distance_ly,
+                NULL AS composite_score
+            FROM systems
+            {where_clause}
+            {order_sql}
+            LIMIT ? OFFSET ?
+        """
+        c.execute(select_sql, dist_params + params + [limit, offset])
 
     rows = [dict(r) for r in c.fetchall()]
     conn.close()

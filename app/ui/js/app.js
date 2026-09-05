@@ -21,10 +21,15 @@ let state = {
   sortOrder: 'desc',
   sortBy2: null,
   sortOrder2: 'desc',
+  sortBy3: null,
+  sortOrder3: 'desc',
   savedSortBy: 'total_potential_value',
   savedSortOrder: 'desc',
   savedSortBy2: null,
   savedSortOrder2: 'desc',
+  savedSortBy3: null,
+  savedSortOrder3: 'desc',
+  sortMode: 'composite',
   datePreset: 'all',
   dateFrom: '',
   dateTo: '',
@@ -255,11 +260,15 @@ async function fetchSystems() {
   const activeSortOrder = state.liveSyncEnabled ? 'desc' : (state.savedSortOrder || 'desc');
   const activeSortBy2 = state.liveSyncEnabled ? null : state.savedSortBy2;
   const activeSortOrder2 = state.liveSyncEnabled ? 'desc' : state.savedSortOrder2;
+  const activeSortBy3 = state.liveSyncEnabled ? null : state.savedSortBy3;
+  const activeSortOrder3 = state.liveSyncEnabled ? 'desc' : state.savedSortOrder3;
+  const activeSortMode = state.liveSyncEnabled ? 'strict' : (state.sortMode || 'composite');
 
   const params = new URLSearchParams({
     q: state.searchQuery || '',
     sort_by: activeSortBy,
     sort_order: activeSortOrder,
+    sort_mode: activeSortMode,
     page: state.page || 1,
     limit: state.limit || 50
   });
@@ -267,6 +276,11 @@ async function fetchSystems() {
   if (activeSortBy2 && activeSortBy2 !== 'none') {
     params.append('sort_by_2', activeSortBy2);
     params.append('sort_order_2', activeSortOrder2);
+  }
+
+  if (activeSortBy3 && activeSortBy3 !== 'none') {
+    params.append('sort_by_3', activeSortBy3);
+    params.append('sort_order_3', activeSortOrder3);
   }
 
   if (state.dateFrom) {
@@ -438,6 +452,9 @@ function renderSystemList() {
     if (sys.avg_landable_radius && sys.avg_landable_radius > 0) {
       const radKm = Math.round(sys.avg_landable_radius / 1000);
       tags.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);" title="Landable天体の平均半径: ${radKm.toLocaleString()} km (平均直径: ${(radKm * 2).toLocaleString()} km)">🪐 着陸平均: ${radKm.toLocaleString()}km</span>`);
+    }
+    if (sys.composite_score !== null && sys.composite_score !== undefined) {
+      tags.push(`<span class="tag-badge" style="background: rgba(0, 255, 136, 0.18); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.5); font-weight: bold;" title="総合ブレンドスコア: ${sys.composite_score}pt">★ スコア: ${Math.round(sys.composite_score)}pt</span>`);
     }
 
     const visitedDate = sys.last_visited ? sys.last_visited.substring(0, 10) : '--';
@@ -1722,6 +1739,36 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Sort select 3 for systems
+  const sortSelect3 = document.getElementById('sort-select-3');
+  if (sortSelect3) {
+    sortSelect3.addEventListener('change', (e) => {
+      if (state.liveSyncEnabled) return;
+      if (e.target.value === 'none') {
+        state.savedSortBy3 = null;
+        state.sortBy3 = null;
+      } else {
+        const [by, order] = e.target.value.split('-');
+        state.savedSortBy3 = by;
+        state.savedSortOrder3 = order;
+        state.sortBy3 = by;
+        state.sortOrder3 = order;
+      }
+      state.page = 1;
+      fetchSystems();
+    });
+  }
+
+  // Composite sort mode toggle checkbox
+  const cbSortComposite = document.getElementById('cb-sort-composite');
+  if (cbSortComposite) {
+    cbSortComposite.addEventListener('change', (e) => {
+      state.sortMode = e.target.checked ? 'composite' : 'strict';
+      state.page = 1;
+      fetchSystems();
+    });
+  }
+
   // Copy System Name
   function copySelectedSystem() {
     if (!state.selectedSystem || !state.selectedSystem.star_system) return;
@@ -1900,11 +1947,15 @@ function updateLiveSyncButtonUI() {
 function updateSortControlsUI() {
   const sortSelect1 = document.getElementById('sort-select');
   const sortSelect2 = document.getElementById('sort-select-2');
+  const sortSelect3 = document.getElementById('sort-select-3');
+  const cbSortComposite = document.getElementById('cb-sort-composite');
   if (!sortSelect1) return;
 
   if (state.liveSyncEnabled) {
     sortSelect1.disabled = true;
     if (sortSelect2) sortSelect2.disabled = true;
+    if (sortSelect3) sortSelect3.disabled = true;
+    if (cbSortComposite) cbSortComposite.disabled = true;
 
     // Insert or update live-locked option at the top
     let optLocked = sortSelect1.querySelector('option[value="live-locked"]');
@@ -1916,11 +1967,14 @@ function updateSortControlsUI() {
     optLocked.innerText = t('sort_live_locked');
     sortSelect1.value = 'live-locked';
     if (sortSelect2) sortSelect2.value = 'none';
+    if (sortSelect3) sortSelect3.value = 'none';
 
     document.querySelectorAll('.sort-row').forEach(el => el.classList.add('sort-locked'));
   } else {
     sortSelect1.disabled = false;
     if (sortSelect2) sortSelect2.disabled = false;
+    if (sortSelect3) sortSelect3.disabled = false;
+    if (cbSortComposite) cbSortComposite.disabled = false;
 
     // Remove live-locked option
     const optLocked = sortSelect1.querySelector('option[value="live-locked"]');
@@ -1933,6 +1987,12 @@ function updateSortControlsUI() {
     sortSelect1.value = savedVal1;
     if (sortSelect2) {
       sortSelect2.value = state.savedSortBy2 ? `${state.savedSortBy2}-${state.savedSortOrder2}` : 'none';
+    }
+    if (sortSelect3) {
+      sortSelect3.value = state.savedSortBy3 ? `${state.savedSortBy3}-${state.savedSortOrder3}` : 'none';
+    }
+    if (cbSortComposite) {
+      cbSortComposite.checked = (state.sortMode === 'composite');
     }
 
     document.querySelectorAll('.sort-row').forEach(el => el.classList.remove('sort-locked'));

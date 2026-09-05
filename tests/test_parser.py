@@ -270,3 +270,117 @@ def test_avg_landable_radius_calculation_and_sorting():
     assert asc_systems == ["System A", "System B", "System C"]
 
 
+def test_composite_and_tertiary_sorting(tmp_path):
+    from fastapi.testclient import TestClient
+    from app.server.api import app
+    from unittest.mock import patch
+
+    db_path = str(tmp_path / "test_sorting.db")
+
+    def get_test_db():
+        c = sqlite3.connect(db_path)
+        c.row_factory = sqlite3.Row
+        return c
+
+    conn = get_test_db()
+    from app.db.database import init_db
+    init_db(conn)
+
+    cursor = conn.cursor()
+    # Insert 3 systems for composite and multi-tier testing
+    # System Alpha: highest value, but lowest radius and bio
+    cursor.execute("""
+        INSERT INTO systems (
+            system_address, star_system, total_potential_value, total_fss_value, 
+            avg_landable_radius, total_bio_signals, first_discovered_bodies, 
+            sol_distance_ly, scanned_bodies, visit_count, last_visited, first_visited
+        ) VALUES (
+            2001, 'System Alpha', 10000000, 500000, 
+            1000000.0, 1, 0, 
+            100.0, 10, 1, '2026-09-01T10:00:00', '2026-09-01T10:00:00'
+        )
+    """)
+    # System Beta: almost same value as Alpha (9.9M), but max radius (5M) and moderate bio (5)
+    cursor.execute("""
+        INSERT INTO systems (
+            system_address, star_system, total_potential_value, total_fss_value, 
+            avg_landable_radius, total_bio_signals, first_discovered_bodies, 
+            sol_distance_ly, scanned_bodies, visit_count, last_visited, first_visited
+        ) VALUES (
+            2002, 'System Beta', 9900000, 500000, 
+            5000000.0, 5, 2, 
+            200.0, 15, 1, '2026-09-02T10:00:00', '2026-09-02T10:00:00'
+        )
+    """)
+    # System Gamma: lower value (1M), medium radius (2M), highest bio (10)
+    cursor.execute("""
+        INSERT INTO systems (
+            system_address, star_system, total_potential_value, total_fss_value, 
+            avg_landable_radius, total_bio_signals, first_discovered_bodies, 
+            sol_distance_ly, scanned_bodies, visit_count, last_visited, first_visited
+        ) VALUES (
+            2003, 'System Gamma', 1000000, 500000, 
+            2000000.0, 10, 5, 
+            300.0, 20, 1, '2026-09-03T10:00:00', '2026-09-03T10:00:00'
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+    with patch("app.server.api.get_db_connection", side_effect=get_test_db):
+        client = TestClient(app)
+
+        # 1. Strict mode: 1st=total_potential_value DESC, 2nd=avg_landable_radius DESC, 3rd=total_bio_signals DESC
+        # System Alpha (10M) > Beta (9.9M) > Gamma (1M)
+        res_strict = client.get("/api/systems", params={
+            "sort_by": "total_potential_value",
+            "sort_order": "desc",
+            "sort_by_2": "avg_landable_radius",
+            "sort_order_2": "desc",
+            "sort_by_3": "total_bio_signals",
+            "sort_order_3": "desc",
+            "sort_mode": "strict"
+        })
+        assert res_strict.status_code == 200
+        data_strict = res_strict.json()
+        strict_names = [s["star_system"] for s in data_strict["systems"]]
+        assert strict_names == ["System Alpha", "System Beta", "System Gamma"]
+
+        # 2. Composite mode (Method B weighted blending):
+        # Even though Alpha has slightly higher value (10M vs 9.9M),
+        # Beta has drastically larger landable radius (5M vs 1M) and higher bio (5 vs 1).
+        # Composite score blends 50% 1st + 35% 2nd + 15% 3rd, making Beta the winner!
+        res_comp = client.get("/api/systems", params={
+            "sort_by": "total_potential_value",
+            "sort_order": "desc",
+            "sort_by_2": "avg_landable_radius",
+            "sort_order_2": "desc",
+            "sort_by_3": "total_bio_signals",
+            "sort_order_3": "desc",
+            "sort_mode": "composite"
+        })
+        assert res_comp.status_code == 200
+        data_comp = res_comp.json()
+        comp_systems = data_comp["systems"]
+        comp_names = [s["star_system"] for s in comp_systems]
+
+        # Beta should rank #1 thanks to composite weighting
+        assert comp_names[0] == "System Beta"
+        assert comp_systems[0]["composite_score"] is not None
+        assert comp_systems[0]["composite_score"] > comp_systems[1]["composite_score"]
+
+        # 3. Composite mode with 2 criteria
+        res_comp2 = client.get("/api/systems", params={
+            "sort_by": "total_potential_value",
+            "sort_order": "desc",
+            "sort_by_2": "avg_landable_radius",
+            "sort_order_2": "desc",
+            "sort_mode": "composite"
+        })
+        assert res_comp2.status_code == 200
+        data_comp2 = res_comp2.json()
+        assert data_comp2["systems"][0]["star_system"] == "System Beta"
+        assert "composite_score" in data_comp2["systems"][0]
+
+
+
