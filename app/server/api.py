@@ -301,6 +301,13 @@ def get_systems(
     has_high_g: Optional[bool] = False,
     has_anomalies: Optional[bool] = False,
     has_first_discover: Optional[bool] = False,
+    has_landable_hmc: Optional[bool] = False,
+    has_landable_metal_rich: Optional[bool] = False,
+    has_landable_rocky: Optional[bool] = False,
+    has_landable_icy: Optional[bool] = False,
+    has_landable_rocky_ice: Optional[bool] = False,
+    has_landable_ringed: Optional[bool] = False,
+    has_mining_signals: Optional[bool] = False,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     date_field: Optional[str] = "last_visited",
@@ -354,6 +361,22 @@ def get_systems(
         conditions.append("has_anomalies = 1")
     if has_first_discover:
         conditions.append("has_first_discover = 1")
+
+    # Landable Mining Target Class & Feature Filtering (ignores non-landable bodies)
+    if has_landable_hmc:
+        conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%high metal%')")
+    if has_landable_metal_rich:
+        conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%metal rich%')")
+    if has_landable_rocky:
+        conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%rocky body%')")
+    if has_landable_icy:
+        conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%icy body%')")
+    if has_landable_rocky_ice:
+        conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND (LOWER(b.planet_class) LIKE '%rocky ice%' OR LOWER(b.planet_class) LIKE '%icy rocky%'))")
+    if has_landable_ringed:
+        conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND b.rings IS NOT NULL AND b.rings != '' AND b.rings != '[]' AND b.rings != '\"\"')")
+    if has_mining_signals:
+        conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.mining_signals > 0)")
 
     # Date range filtering
     target_date_col = "first_visited" if date_field == "first_visited" else "last_visited"
@@ -529,6 +552,54 @@ def get_systems(
         c.execute(select_sql, dist_params + params + [limit, offset])
 
     rows = [dict(r) for r in c.fetchall()]
+
+    if rows:
+        sys_addrs = [r["system_address"] for r in rows]
+        placeholders = ",".join("?" * len(sys_addrs))
+        c.execute(f"""
+            SELECT system_address, body_id, body_name, planet_class, radius, surface_gravity_g, rings, mining_signals
+            FROM bodies
+            WHERE system_address IN ({placeholders}) AND landable = 1
+            ORDER BY radius DESC
+        """, sys_addrs)
+        summary_by_sys = {}
+        for b in c.fetchall():
+            s_addr = b["system_address"]
+            if s_addr not in summary_by_sys:
+                summary_by_sys[s_addr] = []
+            p_class = b["planet_class"] or ""
+            p_lower = p_class.lower()
+
+            short_type = "Landable"
+            if "high metal" in p_lower:
+                short_type = "HMC"
+            elif "metal rich" in p_lower:
+                short_type = "Metal Rich"
+            elif "rocky ice" in p_lower or "icy rocky" in p_lower:
+                short_type = "Icy Rocky"
+            elif "rocky" in p_lower:
+                short_type = "Rocky"
+            elif "icy" in p_lower:
+                short_type = "Icy"
+
+            is_ringed = bool(b["rings"] and b["rings"] != "[]" and b["rings"] != '""')
+            rad = b["radius"]
+            rad_km = round(rad / 1000) if rad else None
+
+            summary_by_sys[s_addr].append({
+                "body_id": b["body_id"],
+                "body_name": b["body_name"],
+                "type": short_type,
+                "planet_class": p_class,
+                "radius": rad,
+                "radius_km": rad_km,
+                "gravity_g": b["surface_gravity_g"],
+                "is_ringed": is_ringed,
+                "mining_signals": b["mining_signals"] or 0
+            })
+        for r in rows:
+            r["landable_bodies"] = summary_by_sys.get(r["system_address"], [])
+
     conn.close()
 
     return {

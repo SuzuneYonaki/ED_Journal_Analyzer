@@ -125,6 +125,17 @@
           <button class="chip" data-filter="has_anomalies" data-i18n="filter_anomalies">特殊・レア</button>
         </div>
 
+        <div class="filter-chips mining-filter-chips" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.08);">
+          <span style="font-size: 0.68rem; color: #38bdf8; width: 100%; font-weight: bold; letter-spacing: 0.3px;" data-i18n="filter_mining_group">⛏️ 採掘・Landable天体で絞込 (他天体除外):</span>
+          <button class="chip" data-filter="has_landable_hmc" data-i18n="filter_l_hmc" style="color: #60a5fa; border-color: rgba(96, 165, 250, 0.4);">🪐 HMC</button>
+          <button class="chip" data-filter="has_landable_metal_rich" data-i18n="filter_l_mr" style="color: #fb923c; border-color: rgba(251, 146, 60, 0.4);">🪐 Metal Rich</button>
+          <button class="chip" data-filter="has_landable_rocky" data-i18n="filter_l_rocky" style="color: #cbd5e1; border-color: rgba(203, 213, 225, 0.4);">🪐 Rocky</button>
+          <button class="chip" data-filter="has_landable_icy" data-i18n="filter_l_icy" style="color: #67e8f9; border-color: rgba(103, 232, 249, 0.4);">❄️ Icy</button>
+          <button class="chip" data-filter="has_landable_rocky_ice" data-i18n="filter_l_rocky_ice" style="color: #93c5fd; border-color: rgba(147, 197, 253, 0.4);">🧊 Icy Rocky</button>
+          <button class="chip" data-filter="has_landable_ringed" data-i18n="filter_l_ringed" style="color: #f472b6; border-color: rgba(244, 114, 182, 0.4);">💍 Ringed</button>
+          <button class="chip" data-filter="has_mining_signals" data-i18n="filter_mining_sig" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.5);">⛏️ 採掘地点</button>
+        </div>
+
         <!-- Date Range & Fuzzy Filtering Section -->
         <div class="date-filter-section" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.25); border-radius: 4px; border: 1px solid var(--border-color);">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
@@ -298,6 +309,7 @@
         <button id="btn-view-sysmap" class="view-btn active" style="color: var(--ed-cyan); border-color: rgba(0, 210, 255, 0.4);" data-i18n="view_sysmap">🌌 System Map</button>
         <button id="btn-view-flat" class="view-btn" data-i18n="view_flat">天体一覧</button>
         <button id="btn-view-bio" class="view-btn" style="color: var(--ed-green); border-color: rgba(0, 255, 136, 0.4);" data-i18n="view_bio">🌱 Bio天体のみ</button>
+        <button id="btn-view-mining" class="view-btn" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" data-i18n="view_mining">⛏️ 採掘・Landable</button>
         <button id="btn-view-visits" class="view-btn" data-i18n="view_visits">過去訪問履歴</button>
         
         <!-- Bio-only view filter -->
@@ -310,10 +322,13 @@
         <span style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="body_sort_label">天体ソート:</span>
         <select id="body-sort-select" class="sort-select" style="font-size: 0.75rem; padding: 2px 6px;">
           <option value="distance-asc" data-i18n="body_sort_dist">到着距離順 (近い順)</option>
+          <option value="radius-desc" data-i18n="body_sort_radius_desc">半径・サイズ (大きい順)</option>
+          <option value="radius-asc" data-i18n="body_sort_radius_asc">半径・サイズ (小さい順)</option>
           <option value="value-desc" data-i18n="body_sort_val_desc">探査価値 (高い順)</option>
           <option value="value-asc" data-i18n="body_sort_val_asc">探査価値 (低い順)</option>
           <option value="bio-desc" data-i18n="body_sort_bio_desc">Bioシグナル数 (多い順)</option>
           <option value="gravity-desc" data-i18n="body_sort_g_desc">重力 (高い順)</option>
+          <option value="gravity-asc" data-i18n="body_sort_g_asc">重力 (低い順)</option>
         </select>
         <span id="body-count-badge" style="font-family: var(--font-mono); color: var(--text-secondary); margin-left: 8px;"></span>
       </div>

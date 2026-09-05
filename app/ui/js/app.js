@@ -15,8 +15,16 @@ let state = {
     has_bio: false,
     has_first_discover: false,
     has_high_g: false,
-    has_anomalies: false
+    has_anomalies: false,
+    has_landable_hmc: false,
+    has_landable_metal_rich: false,
+    has_landable_rocky: false,
+    has_landable_icy: false,
+    has_landable_rocky_ice: false,
+    has_landable_ringed: false,
+    has_mining_signals: false
   },
+  miningSubFilter: 'all',
   sortBy: 'last_visited',
   sortOrder: 'desc',
   sortBy2: null,
@@ -469,6 +477,38 @@ function renderSystemList() {
       ? `[${sys.star_pos_x.toFixed(6)}, ${sys.star_pos_y.toFixed(6)}, ${sys.star_pos_z.toFixed(6)}]`
       : '';
 
+    let landableHtml = '';
+    if (sys.landable_bodies && sys.landable_bodies.length > 0) {
+      const landableBadges = sys.landable_bodies.slice(0, 4).map(lb => {
+        const isRing = lb.is_ringed;
+        const icon = isRing ? '💍' : '🪐';
+        const rText = lb.radius_km ? `${lb.radius_km.toLocaleString()}km` : '';
+        let colorStyle = 'background: rgba(203, 213, 225, 0.12); color: #cbd5e1; border: 1px solid rgba(203, 213, 225, 0.3);';
+        if (lb.type === 'HMC') {
+          colorStyle = 'background: rgba(96, 165, 250, 0.15); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.4);';
+        } else if (lb.type === 'Metal Rich') {
+          colorStyle = 'background: rgba(251, 146, 60, 0.15); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.4);';
+        } else if (lb.type === 'Icy') {
+          colorStyle = 'background: rgba(103, 232, 249, 0.15); color: #67e8f9; border: 1px solid rgba(103, 232, 249, 0.4);';
+        } else if (lb.type === 'Icy Rocky') {
+          colorStyle = 'background: rgba(147, 197, 253, 0.15); color: #93c5fd; border: 1px solid rgba(147, 197, 253, 0.4);';
+        }
+        if (isRing) {
+          colorStyle += ' border-color: rgba(244, 114, 182, 0.7); box-shadow: 0 0 3px rgba(244, 114, 182, 0.3);';
+        }
+        const tip = `${lb.body_name} (${lb.type}) - 半径: ${rText} | 重力: ${lb.gravity_g ? lb.gravity_g.toFixed(2) + 'G' : '--'}${isRing ? ' | 環付き (Ringed)' : ''}${lb.mining_signals > 0 ? ' | 採掘拠点: ' + lb.mining_signals + '箇所' : ''}`;
+        return `<span class="tag-badge" style="${colorStyle} font-size: 0.67rem; padding: 1px 4px; margin-right: 2px;" title="${tip}">${icon} ${lb.type}${rText ? ': ' + rText : ''}</span>`;
+      });
+      if (sys.landable_bodies.length > 4) {
+        landableBadges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.06); color: var(--text-dim); font-size: 0.65rem; padding: 1px 4px;" title="他 ${sys.landable_bodies.length - 4} 天体のLandable天体">+${sys.landable_bodies.length - 4}</span>`);
+      }
+      landableHtml = `
+        <div class="system-landable-bar" style="display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; padding-top: 3px; border-top: 1px dashed rgba(255,255,255,0.07);">
+          ${landableBadges.join('')}
+        </div>
+      `;
+    }
+
     card.innerHTML = `
       <div class="system-card-header">
         <div class="system-card-title-group">
@@ -484,6 +524,7 @@ function renderSystemList() {
       <div class="system-card-tags">
         ${tags.join('')}
       </div>
+      ${landableHtml}
     `;
 
     container.appendChild(card);
@@ -579,6 +620,9 @@ function getSortedBodies(bodies) {
     } else if (by === 'bio') {
       valA = a.bio_signals || 0;
       valB = b.bio_signals || 0;
+    } else if (by === 'radius') {
+      valA = a.radius || 0;
+      valB = b.radius || 0;
     } else if (by === 'gravity') {
       valA = a.surface_gravity_g || 0;
       valB = b.surface_gravity_g || 0;
@@ -960,6 +1004,9 @@ function renderCurrentView() {
   } else if (state.currentView === 'bio') {
     const sorted = getSortedBodies(state.currentSystemData.bodies);
     renderBioOnlyView(container, sorted);
+  } else if (state.currentView === 'mining') {
+    const sorted = getSortedBodies(state.currentSystemData.bodies);
+    renderMiningView(container, sorted);
   } else if (state.currentView === 'visits') {
     renderVisitsTimeline(container, state.currentSystemData.visits);
   }
@@ -1080,6 +1127,13 @@ function renderFlatBodiesList(container, bodies) {
     const badges = [];
     if (isTarget) badges.push('<span class="tag-badge" style="background: rgba(0, 210, 255, 0.2); color: var(--ed-cyan); border: 1px solid rgba(0, 210, 255, 0.6); font-weight: bold;">📍 ACTIVE TARGET</span>');
     if (body.landable) badges.push('<span class="tag-badge tag-landable">LANDABLE</span>');
+    if (body.landable && body.radius) {
+      const rKm = Math.round(body.radius / 1000);
+      badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);" title="半径: ${rKm.toLocaleString()} km (直径: ${(rKm*2).toLocaleString()} km)">🪐 R: ${rKm.toLocaleString()}km</span>`);
+    }
+    if (body.landable && body.rings && body.rings !== '[]' && body.rings !== '""') {
+      badges.push('<span class="tag-badge" style="background: rgba(244, 114, 182, 0.15); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.5);">💍 Ringed</span>');
+    }
     if (body.landable && body.surface_gravity_g) {
       if (body.surface_gravity_g >= 3.0) badges.push(`<span class="tag-badge tag-high-g">${body.surface_gravity_g.toFixed(2)}G !</span>`);
       else badges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.1);">${body.surface_gravity_g.toFixed(2)}G</span>`);
@@ -1197,6 +1251,250 @@ function renderBioOnlyView(container, bodies) {
     list.appendChild(card);
   });
   container.appendChild(list);
+}
+
+function renderMiningView(container, bodies) {
+  if (!bodies) return;
+  const landableBodies = bodies.filter(b => b.landable === 1);
+
+  if (landableBodies.length === 0) {
+    container.innerHTML = `
+      <div style="color: var(--text-secondary); text-align: center; margin-top: 40px; padding: 20px;">
+        <div style="font-size: 2rem; margin-bottom: 8px;">⛏️</div>
+        <div style="font-size: 1.1rem; font-weight: bold; color: #fff;">${t('no_landable_bodies')}</div>
+        <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 6px;">この星系には着陸（Landable）可能な天体、およびRhino SRV採掘対象天体は存在しません。</div>
+      </div>
+    `;
+    return;
+  }
+
+  // Count statistics
+  const totalLandable = landableBodies.length;
+  const totalMiningSignals = landableBodies.reduce((acc, b) => acc + (b.mining_signals || 0), 0);
+  const ringedBodies = landableBodies.filter(b => b.rings && b.rings !== '[]' && b.rings !== '""');
+
+  const hmcCount = landableBodies.filter(b => (b.planet_class || '').toLowerCase().includes('high metal')).length;
+  const mrCount = landableBodies.filter(b => (b.planet_class || '').toLowerCase().includes('metal rich')).length;
+  const rockyCount = landableBodies.filter(b => (b.planet_class || '').toLowerCase().includes('rocky body')).length;
+  const icyCount = landableBodies.filter(b => (b.planet_class || '').toLowerCase().includes('icy body')).length;
+  const rockyIceCount = landableBodies.filter(b => (b.planet_class || '').toLowerCase().includes('rocky ice') || (b.planet_class || '').toLowerCase().includes('icy rocky')).length;
+
+  // Filter based on state.miningSubFilter
+  let displayBodies = [...landableBodies];
+  if (state.miningSubFilter === 'hmc') {
+    displayBodies = displayBodies.filter(b => (b.planet_class || '').toLowerCase().includes('high metal'));
+  } else if (state.miningSubFilter === 'metal_rich') {
+    displayBodies = displayBodies.filter(b => (b.planet_class || '').toLowerCase().includes('metal rich'));
+  } else if (state.miningSubFilter === 'rocky') {
+    displayBodies = displayBodies.filter(b => (b.planet_class || '').toLowerCase().includes('rocky body'));
+  } else if (state.miningSubFilter === 'icy') {
+    displayBodies = displayBodies.filter(b => (b.planet_class || '').toLowerCase().includes('icy body'));
+  } else if (state.miningSubFilter === 'rocky_ice') {
+    displayBodies = displayBodies.filter(b => (b.planet_class || '').toLowerCase().includes('rocky ice') || (b.planet_class || '').toLowerCase().includes('icy rocky'));
+  } else if (state.miningSubFilter === 'ringed') {
+    displayBodies = displayBodies.filter(b => b.rings && b.rings !== '[]' && b.rings !== '""');
+  } else if (state.miningSubFilter === 'has_mining') {
+    displayBodies = displayBodies.filter(b => (b.mining_signals || 0) > 0);
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.style.display = 'flex';
+  wrapper.style.flexDirection = 'column';
+  wrapper.style.gap = '12px';
+
+  // Field Guide & Summary Banner
+  const guideCard = document.createElement('div');
+  guideCard.className = 'rhino-field-guide-card';
+  guideCard.style.cssText = 'background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.45)); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 10px 14px; font-size: 0.78rem;';
+  guideCard.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+      <span style="font-weight: bold; color: #38bdf8; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+        <span>🦏</span> ${t('mining_field_guide_title')}
+      </span>
+      <span style="color: var(--text-dim); font-size: 0.7rem; font-family: var(--font-mono);">ED 2026.09 Surface Mining</span>
+    </div>
+    <div style="color: var(--text-secondary); margin-top: 6px; line-height: 1.45; font-size: 0.74rem;">
+      ・<b>推奨天体</b>: <b>Rocky / Metal Rich / HMC</b> はバストネサイト（Bastnäsite）や高価値鉱石・宝石の主産地。平坦な大平原やクレーター底が6基リグ同時稼働に最適。<br>
+      ・<b>天体半径(Radius) & 重力</b>: 大半径天体は平野が広大で操縦しやすく、極端な低G・高G(3G+)は重型Rhinoの挙動やリグ展開安定性に影響。<br>
+      ・<b>💍 環付きLandable</b>: 景観美に加え、固有の鉱物密集帯としてコミュニティで最重要探索対象。
+    </div>
+    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 6px;">
+      <span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">🪐 着陸可能: ${totalLandable} 天体</span>
+      <span class="tag-badge" style="background: rgba(0, 255, 136, 0.15); color: #00ff88;">⛏️ 採掘ロケーション: ${totalMiningSignals} 箇所</span>
+      ${ringedBodies.length > 0 ? `<span class="tag-badge" style="background: rgba(244, 114, 182, 0.2); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.4);">💍 環付きLandable: ${ringedBodies.length} 天体</span>` : ''}
+    </div>
+  `;
+  wrapper.appendChild(guideCard);
+
+  // Sub-filter button bar
+  const subFilterBar = document.createElement('div');
+  subFilterBar.style.cssText = 'display: flex; align-items: center; gap: 6px; flex-wrap: wrap; background: rgba(0,0,0,0.25); padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border-color);';
+  
+  const subFilters = [
+    { key: 'all', label: `すべて (${totalLandable})`, icon: '🪐' },
+    { key: 'hmc', label: `HMC (${hmcCount})`, icon: '🪐', color: '#60a5fa' },
+    { key: 'metal_rich', label: `Metal Rich (${mrCount})`, icon: '🪐', color: '#fb923c' },
+    { key: 'rocky', label: `Rocky (${rockyCount})`, icon: '🪐', color: '#cbd5e1' },
+    { key: 'icy', label: `Icy (${icyCount})`, icon: '❄️', color: '#67e8f9' },
+    { key: 'rocky_ice', label: `Icy Rocky (${rockyIceCount})`, icon: '🧊', color: '#93c5fd' },
+    { key: 'ringed', label: `💍 Ringed (${ringedBodies.length})`, icon: '', color: '#f472b6' },
+    { key: 'has_mining', label: `⛏️ 採掘地点あり (${landableBodies.filter(b => (b.mining_signals || 0) > 0).length})`, icon: '', color: '#38bdf8' }
+  ];
+
+  subFilters.forEach(sf => {
+    const btn = document.createElement('button');
+    btn.className = `view-btn ${state.miningSubFilter === sf.key ? 'active' : ''}`;
+    btn.style.cssText = `padding: 2px 8px; font-size: 0.72rem; ${sf.color ? 'color: ' + sf.color + ';' : ''}`;
+    btn.innerText = sf.label;
+    btn.onclick = () => {
+      state.miningSubFilter = sf.key;
+      renderCurrentView();
+    };
+    subFilterBar.appendChild(btn);
+  });
+  wrapper.appendChild(subFilterBar);
+
+  // Body Cards list
+  if (displayBodies.length === 0) {
+    const emptySub = document.createElement('div');
+    emptySub.style.cssText = 'color: var(--text-secondary); text-align: center; padding: 25px;';
+    emptySub.innerText = '選択された絞り込み条件に一致するLandable天体はありません。';
+    wrapper.appendChild(emptySub);
+  } else {
+    displayBodies.forEach(body => {
+      const isTarget = state.targetBodyId !== null && body.body_id === state.targetBodyId;
+      const card = document.createElement('div');
+      card.className = `node-card ${state.selectedBody && state.selectedBody.body_id === body.body_id ? 'selected' : ''} ${isTarget ? 'is-current-target' : ''}`;
+      card.dataset.bodyId = body.body_id;
+      card.onclick = () => {
+        state.selectedBody = body;
+        state.targetBodyId = body.body_id;
+        renderBodyInspector();
+        document.querySelectorAll('.node-card').forEach(nc => nc.classList.remove('selected'));
+        card.classList.add('selected');
+      };
+
+      const iconClass = getBodyIconClass(body);
+      const iconLabel = getBodyIconLabel(body);
+      const rad = body.radius || 0;
+      const radKm = Math.round(rad / 1000);
+      const diamKm = radKm * 2;
+      const isRinged = Boolean(body.rings && body.rings !== '[]' && body.rings !== '""');
+
+      // Classify type
+      const pLower = (body.planet_class || '').toLowerCase();
+      let typeName = 'Landable';
+      let typeStyle = 'background: rgba(203, 213, 225, 0.15); color: #cbd5e1; border: 1px solid rgba(203, 213, 225, 0.4);';
+      let suitabilityBadge = '';
+
+      if (pLower.includes('high metal')) {
+        typeName = 'High Metal Content (HMC)';
+        typeStyle = 'background: rgba(96, 165, 250, 0.18); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.5);';
+        suitabilityBadge = `<span class="tag-badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); font-weight: bold;">${t('rhino_suitability_high')}</span>`;
+      } else if (pLower.includes('metal rich')) {
+        typeName = 'Metal Rich body';
+        typeStyle = 'background: rgba(251, 146, 60, 0.18); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.5);';
+        suitabilityBadge = `<span class="tag-badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); font-weight: bold;">${t('rhino_suitability_high')}</span>`;
+      } else if (pLower.includes('rocky body') || (pLower.includes('rocky') && !pLower.includes('ice'))) {
+        typeName = 'Rocky body';
+        typeStyle = 'background: rgba(203, 213, 225, 0.18); color: #cbd5e1; border: 1px solid rgba(203, 213, 225, 0.5);';
+        suitabilityBadge = `<span class="tag-badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); font-weight: bold;">${t('rhino_suitability_high')}</span>`;
+      } else if (pLower.includes('rocky ice') || pLower.includes('icy rocky')) {
+        typeName = 'Rocky Ice body';
+        typeStyle = 'background: rgba(147, 197, 253, 0.18); color: #93c5fd; border: 1px solid rgba(147, 197, 253, 0.5);';
+        suitabilityBadge = `<span class="tag-badge" style="background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3);">${t('rhino_suitability_moderate')}</span>`;
+      } else if (pLower.includes('icy')) {
+        typeName = 'Icy body';
+        typeStyle = 'background: rgba(103, 232, 249, 0.18); color: #67e8f9; border: 1px solid rgba(103, 232, 249, 0.5);';
+        suitabilityBadge = `<span class="tag-badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3);">${t('rhino_suitability_low')}</span>`;
+      }
+
+      // Gravity style
+      const gVal = body.surface_gravity_g || 0;
+      let gStyle = 'background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3);';
+      if (gVal >= 3.0) {
+        gStyle = 'background: rgba(239, 68, 68, 0.25); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.6); font-weight: bold;';
+      } else if (gVal >= 1.5) {
+        gStyle = 'background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4);';
+      }
+
+      // Materials chips
+      let matHtml = '';
+      if (body.materials) {
+        try {
+          const mats = typeof body.materials === 'string' ? JSON.parse(body.materials) : body.materials;
+          if (Array.isArray(mats) && mats.length > 0) {
+            const matChips = mats.slice(0, 8).map(m => {
+              const mName = m.Name || m.name || '';
+              const mPct = m.Percent !== undefined ? m.Percent.toFixed(1) + '%' : '';
+              return `<span class="tag-badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0; font-size: 0.65rem; padding: 1px 4px;">${mName} ${mPct}</span>`;
+            });
+            matHtml = `
+              <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.06); align-items: center;">
+                <span style="font-size: 0.68rem; color: var(--text-dim); margin-right: 2px;">マテリアル:</span>
+                ${matChips.join('')}
+              </div>
+            `;
+          }
+        } catch (e) {}
+      }
+
+      card.innerHTML = `
+        <div class="node-card-top">
+          <div class="node-info-left" style="width: 100%;">
+            <div class="body-icon ${iconClass}">${iconLabel}</div>
+            <div class="node-details" style="flex: 1;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="node-name" style="font-size: 0.95rem; ${isTarget ? 'color: var(--ed-cyan); font-weight: bold;' : ''}">${body.body_name}</span>
+                  <button class="view-btn btn-copy-body-sub" style="padding: 1px 5px; font-size: 0.68rem;" title="天体名をクリップボードにコピー">📋</button>
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary);">
+                  ${formatDistance(body.distance_from_arrival_ls)} LS
+                </div>
+              </div>
+
+              <!-- Main Badges Row -->
+              <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; align-items: center;">
+                <span class="tag-badge" style="${typeStyle} font-weight: bold;">${typeName}</span>
+                ${isRinged ? '<span class="tag-badge" style="background: rgba(244, 114, 182, 0.2); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.6); font-weight: bold; box-shadow: 0 0 4px rgba(244, 114, 182, 0.3);">💍 環付き (Ringed Landable)</span>' : ''}
+                <span class="tag-badge" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: bold;">
+                  🪐 半径: ${radKm.toLocaleString()} km (直径: ${diamKm.toLocaleString()} km)
+                </span>
+                <span class="tag-badge" style="${gStyle}">${gVal.toFixed(2)} G</span>
+                ${body.mining_signals > 0 ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.25); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;">⛏️ 採掘地点: ${body.mining_signals} 箇所 (Rhino適格)</span>` : ''}
+                ${suitabilityBadge}
+              </div>
+
+              <!-- Physical Details & Atmosphere -->
+              <div style="display: flex; gap: 12px; margin-top: 5px; font-size: 0.72rem; color: var(--text-secondary); flex-wrap: wrap;">
+                <span>表面温度: <b style="color: #fff;">${Math.round(body.surface_temperature || 0)} K (${Math.round((body.surface_temperature || 0) - 273.15)} °C)</b></span>
+                <span>大気: <b style="color: #fff;">${body.atmosphere || 'None'}</b></span>
+                ${body.volcanism ? `<span>火山活動: <b style="color: #fff;">${body.volcanism}</b></span>` : ''}
+              </div>
+
+              ${matHtml}
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Copy body name button handler
+      const btnCopy = card.querySelector('.btn-copy-body-sub');
+      if (btnCopy) {
+        btnCopy.addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(body.body_name);
+          btnCopy.innerText = '✓';
+          setTimeout(() => { btnCopy.innerText = '📋'; }, 1200);
+        });
+      }
+
+      wrapper.appendChild(card);
+    });
+  }
+
+  container.appendChild(wrapper);
 }
 
 function renderVisitsTimeline(container, visits) {
@@ -1844,6 +2142,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const btnViewMining = document.getElementById('btn-view-mining');
+  if (btnViewMining) {
+    btnViewMining.addEventListener('click', () => {
+      state.currentView = 'mining';
+      updateViewButtons();
+      renderCurrentView();
+    });
+  }
+
   document.getElementById('btn-view-visits').addEventListener('click', () => {
     state.currentView = 'visits';
     updateViewButtons();
@@ -1854,11 +2161,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSys = document.getElementById('btn-view-sysmap');
     const btnFlat = document.getElementById('btn-view-flat');
     const btnBio = document.getElementById('btn-view-bio');
+    const btnMining = document.getElementById('btn-view-mining');
     const btnVis = document.getElementById('btn-view-visits');
 
     if (btnSys) btnSys.classList.toggle('active', state.currentView === 'sysmap');
     if (btnFlat) btnFlat.classList.toggle('active', state.currentView === 'flat');
     if (btnBio) btnBio.classList.toggle('active', state.currentView === 'bio');
+    if (btnMining) btnMining.classList.toggle('active', state.currentView === 'mining');
     if (btnVis) btnVis.classList.toggle('active', state.currentView === 'visits');
 
     // Show completed bio filter container only on bio view
