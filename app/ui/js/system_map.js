@@ -360,6 +360,10 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
     if (isDown) {
       isDown = false;
       mapWrapper.classList.remove('is-dragging');
+      // Reset hasDragged shortly after current event loop cycle so click handler can read it once
+      setTimeout(() => {
+        hasDragged = false;
+      }, 50);
     }
   });
 
@@ -369,7 +373,7 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
     const y = e.pageY - mapWrapper.offsetTop;
     const walkX = x - startX;
     const walkY = y - startY;
-    if (Math.abs(walkX) > 4 || Math.abs(walkY) > 4) {
+    if (Math.hypot(walkX, walkY) > 8) {
       hasDragged = true;
     }
     mapWrapper.scrollLeft = scrollLeft - walkX;
@@ -397,7 +401,11 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     }
     state.selectedBody = body;
     state.targetBodyId = body.body_id;
-    renderBodyInspector();
+    try {
+      renderBodyInspector();
+    } catch (err) {
+      console.error('Failed to render body inspector:', err);
+    }
     document.querySelectorAll('.sysmap-body-node').forEach(n => n.classList.remove('selected'));
     card.classList.add('selected');
   };
@@ -455,6 +463,8 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   const typeDesc = body.star_type 
     ? `Star (${body.star_type})` 
     : (body.planet_class || 'Planet');
+
+  card.title = `${body.body_name} - ${typeDesc}`;
 
   const distStr = body.distance_from_arrival_ls 
     ? formatDistance(body.distance_from_arrival_ls) 

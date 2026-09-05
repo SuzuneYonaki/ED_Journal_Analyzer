@@ -1640,6 +1640,7 @@ function renderBodyInspector() {
       allBio.forEach(bio => {
         const sp = (bio.species || '').toLowerCase();
         const gen = (bio.genus || '').toLowerCase();
+        const spName = bio.species_variant || bio.species_localised || bio.species || bio.genus_localised || bio.genus || 'Candidate';
 
         if (scannedSpeciesSet.has(sp)) return; // Already rendered above
 
