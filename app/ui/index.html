@@ -170,6 +170,8 @@
               <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
               <option value="total_bio_signals-asc" data-i18n="sort_bio_asc">生体シグナル数 (少ない順)</option>
               <option value="first_discovered_bodies-desc" data-i18n="sort_first_disc_desc">初発見天体数 (多い順)</option>
+              <option value="avg_landable_radius-desc" data-i18n="sort_landable_radius_desc">Landable平均サイズ (大きい順)</option>
+              <option value="avg_landable_radius-asc" data-i18n="sort_landable_radius_asc">Landable平均サイズ (小さい順)</option>
               <option value="cmdr_distance_ly-asc" data-i18n="sort_cmdr_dist_asc">現在地からの距離 (近い順)</option>
               <option value="cmdr_distance_ly-desc" data-i18n="sort_cmdr_dist_desc">現在地からの距離 (遠い順)</option>
               <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
@@ -188,6 +190,8 @@
             <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_secondary">2次ソート:</span>
             <select id="sort-select-2" class="sort-select" style="flex: 1; font-size: 0.78rem;">
               <option value="none" data-i18n="sort_none">（指定なし）</option>
+              <option value="avg_landable_radius-desc" data-i18n="sort_landable_radius_desc">Landable平均サイズ (大きい順)</option>
+              <option value="avg_landable_radius-asc" data-i18n="sort_landable_radius_asc">Landable平均サイズ (小さい順)</option>
               <option value="cmdr_distance_ly-asc" data-i18n="sort_cmdr_dist_asc">現在地からの距離 (近い順)</option>
               <option value="cmdr_distance_ly-desc" data-i18n="sort_cmdr_dist_desc">現在地からの距離 (遠い順)</option>
               <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
@@ -354,6 +358,14 @@
             <div class="prop-card">
               <div class="prop-label" data-i18n="prop_gravity">表面重力</div>
               <div id="prop-gravity" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_radius">天体半径 (Radius)</div>
+              <div id="prop-radius" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_diameter">天体直径 (Diameter)</div>
+              <div id="prop-diameter" class="prop-val">--</div>
             </div>
             <div class="prop-card">
               <div class="prop-label" data-i18n="prop_temp">表面温度</div>

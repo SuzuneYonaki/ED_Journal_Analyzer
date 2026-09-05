@@ -48,7 +48,8 @@ def init_db(conn=None):
         has_bio INTEGER DEFAULT 0,
         has_landable INTEGER DEFAULT 0,
         has_high_g INTEGER DEFAULT 0,
-        has_anomalies INTEGER DEFAULT 0
+        has_anomalies INTEGER DEFAULT 0,
+        avg_landable_radius REAL DEFAULT 0
     );
     """)
 
@@ -182,6 +183,7 @@ def init_db(conn=None):
         ("edsm_first_discoverer", "TEXT"),
         ("edsm_submitted_at", "TEXT"),
         ("edsm_body_count", "INTEGER DEFAULT 0"),
+        ("avg_landable_radius", "REAL DEFAULT 0"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE systems ADD COLUMN {col_def[0]} {col_def[1]};")
@@ -261,6 +263,13 @@ def init_db(conn=None):
                 SELECT MAX(CASE WHEN b.was_discovered = 0 THEN 1 ELSE 0 END)
                 FROM bodies b WHERE b.system_address = systems.system_address
                   AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
+            ), 0),
+            avg_landable_radius = COALESCE((
+                SELECT ROUND(AVG(b.radius), 1)
+                FROM bodies b WHERE b.system_address = systems.system_address
+                  AND b.landable = 1
+                  AND b.radius IS NOT NULL
+                  AND b.radius > 0
             ), 0);
     """)
 

@@ -164,3 +164,109 @@ def test_planetary_mining_signals():
     assert body["bio_signals"] == 0
     assert body["geo_signals"] == 0
 
+
+def test_avg_landable_radius_calculation_and_sorting():
+    from app.db.database import init_db
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    init_db(conn)
+
+    parser = JournalParser(conn)
+
+    # System A has two landable bodies: radius 1,000,000 m (1,000 km) and 2,000,000 m (2,000 km) -> avg = 1,500,000 m
+    # and one non-landable body with radius 10,000,000 m (should be ignored)
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-05T01:00:00Z",
+        "event": "Scan",
+        "StarSystem": "System A",
+        "SystemAddress": 1001,
+        "BodyName": "System A 1",
+        "BodyID": 1,
+        "PlanetClass": "Rocky body",
+        "Landable": True,
+        "Radius": 1000000.0
+    }))
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-05T01:01:00Z",
+        "event": "Scan",
+        "StarSystem": "System A",
+        "SystemAddress": 1001,
+        "BodyName": "System A 2",
+        "BodyID": 2,
+        "PlanetClass": "High metal content body",
+        "Landable": True,
+        "Radius": 2000000.0
+    }))
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-05T01:02:00Z",
+        "event": "Scan",
+        "StarSystem": "System A",
+        "SystemAddress": 1001,
+        "BodyName": "System A 3",
+        "BodyID": 3,
+        "PlanetClass": "Gas giant with water based life",
+        "Landable": False,
+        "Radius": 10000000.0
+    }))
+
+    # System B has one landable body: radius 3,000,000 m (3,000 km) -> avg = 3,000,000 m
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-05T01:05:00Z",
+        "event": "Scan",
+        "StarSystem": "System B",
+        "SystemAddress": 1002,
+        "BodyName": "System B 1",
+        "BodyID": 1,
+        "PlanetClass": "Rocky body",
+        "Landable": True,
+        "Radius": 3000000.0
+    }))
+
+    # System C has NO landable bodies
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-05T01:10:00Z",
+        "event": "Scan",
+        "StarSystem": "System C",
+        "SystemAddress": 1003,
+        "BodyName": "System C 1",
+        "BodyID": 1,
+        "PlanetClass": "Gas giant",
+        "Landable": False,
+        "Radius": 50000000.0
+    }))
+
+    parser.flush_dirty_systems()
+
+    cursor = conn.cursor()
+    cursor.execute("SELECT star_system, avg_landable_radius FROM systems WHERE system_address = 1001")
+    row_a = cursor.fetchone()
+    assert row_a is not None
+    assert row_a["avg_landable_radius"] == 1500000.0
+
+    cursor.execute("SELECT star_system, avg_landable_radius FROM systems WHERE system_address = 1002")
+    row_b = cursor.fetchone()
+    assert row_b is not None
+    assert row_b["avg_landable_radius"] == 3000000.0
+
+    cursor.execute("SELECT star_system, avg_landable_radius FROM systems WHERE system_address = 1003")
+    row_c = cursor.fetchone()
+    assert row_c is not None
+    assert row_c["avg_landable_radius"] == 0.0
+
+    # Test sorting: DESC should give System B (3,000km) -> System A (1,500km) -> System C (0km)
+    cursor.execute("""
+        SELECT star_system FROM systems 
+        ORDER BY (avg_landable_radius IS NULL OR avg_landable_radius = 0) ASC, avg_landable_radius DESC
+    """)
+    desc_systems = [r["star_system"] for r in cursor.fetchall()]
+    assert desc_systems == ["System B", "System A", "System C"]
+
+    # Test sorting: ASC should give System A (1,500km) -> System B (3,000km) -> System C (0km at end)
+    cursor.execute("""
+        SELECT star_system FROM systems 
+        ORDER BY (avg_landable_radius IS NULL OR avg_landable_radius = 0) ASC, avg_landable_radius ASC
+    """)
+    asc_systems = [r["star_system"] for r in cursor.fetchall()]
+    assert asc_systems == ["System A", "System B", "System C"]
+
+

@@ -391,12 +391,15 @@ def get_systems(
         "cmdr_distance_ly": "cmdr_distance_ly",
         "first_discovered_bodies": "first_discovered_bodies",
         "scanned_bodies": "scanned_bodies",
-        "visit_count": "visit_count"
+        "visit_count": "visit_count",
+        "avg_landable_radius": "avg_landable_radius"
     }
 
     def build_order_clause(col_name, direction):
         if col_name == "cmdr_distance_ly":
             return f"cmdr_distance_ly IS NULL ASC, cmdr_distance_ly {direction}"
+        if col_name == "avg_landable_radius":
+            return f"(avg_landable_radius IS NULL OR avg_landable_radius = 0) ASC, avg_landable_radius {direction}"
         return f"{col_name} {direction}"
 
     sort_col_1 = allowed_sort.get(sort_by, "total_potential_value")

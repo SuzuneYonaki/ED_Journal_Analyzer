@@ -634,7 +634,8 @@ class JournalParser:
                 MAX(CASE WHEN landable = 1 AND surface_gravity_g >= 3.0 THEN 1 ELSE 0 END) as high_g,
                 MAX(CASE WHEN anomalies_json != '[]' AND anomalies_json IS NOT NULL THEN 1 ELSE 0 END) as anomalies,
                 SUM(CASE WHEN was_discovered = 0 THEN 1 ELSE 0 END) as first_disc_count,
-                MAX(CASE WHEN was_discovered = 0 THEN 1 ELSE 0 END) as has_first_disc
+                MAX(CASE WHEN was_discovered = 0 THEN 1 ELSE 0 END) as has_first_disc,
+                ROUND(AVG(CASE WHEN landable = 1 AND radius IS NOT NULL AND radius > 0 THEN radius ELSE NULL END), 1) as avg_landable_radius
             FROM bodies 
             WHERE system_address = ? 
               AND (star_type IS NOT NULL OR planet_class IS NOT NULL)
@@ -650,8 +651,9 @@ class JournalParser:
                     scanned_bodies, main_star_type, total_fss_value, total_dss_value,
                     total_potential_value, total_bio_signals, has_elw,
                     has_water_world, has_ammonia, has_terraformable, has_bio,
-                    has_landable, has_high_g, has_anomalies, first_discovered_bodies, has_first_discover
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    has_landable, has_high_g, has_anomalies, first_discovered_bodies, has_first_discover,
+                    avg_landable_radius
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(system_address) DO UPDATE SET
                     scanned_bodies = excluded.scanned_bodies,
                     main_star_type = COALESCE(excluded.main_star_type, systems.main_star_type),
@@ -668,14 +670,16 @@ class JournalParser:
                     has_high_g = excluded.has_high_g,
                     has_anomalies = excluded.has_anomalies,
                     first_discovered_bodies = excluded.first_discovered_bodies,
-                    has_first_discover = excluded.has_first_discover
+                    has_first_discover = excluded.has_first_discover,
+                    avg_landable_radius = excluded.avg_landable_radius
             """, (
                 sys_addr, sys_name, ts, ts,
                 row["count"], main_star, row["sum_fss"] or 0, row["sum_dss"] or 0,
                 row["sum_max"] or 0, row["sum_bio"] or 0, row["elw"] or 0,
                 row["ww"] or 0, row["ammonia"] or 0, row["tf"] or 0, row["bio"] or 0,
                 row["landable"] or 0, row["high_g"] or 0, row["anomalies"] or 0,
-                row["first_disc_count"] or 0, row["has_first_disc"] or 0
+                row["first_disc_count"] or 0, row["has_first_disc"] or 0,
+                row["avg_landable_radius"] or 0
             ))
 
     def parse_file(self, filepath: str, progress_callback=None):

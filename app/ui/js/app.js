@@ -435,6 +435,10 @@ function renderSystemList() {
 
     if (sys.has_high_g) tags.push('<span class="tag-badge tag-high-g">High-G</span>');
     if (sys.has_anomalies) tags.push('<span class="tag-badge tag-anomaly">Rare/Orbit</span>');
+    if (sys.avg_landable_radius && sys.avg_landable_radius > 0) {
+      const radKm = Math.round(sys.avg_landable_radius / 1000);
+      tags.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);" title="Landable天体の平均半径: ${radKm.toLocaleString()} km (平均直径: ${(radKm * 2).toLocaleString()} km)">🪐 着陸平均: ${radKm.toLocaleString()}km</span>`);
+    }
 
     const visitedDate = sys.last_visited ? sys.last_visited.substring(0, 10) : '--';
     let mainStar = '';
@@ -1400,6 +1404,19 @@ function renderBodyInspector() {
   } else {
     gravEl.innerText = '--';
     gravEl.className = 'prop-val';
+  }
+
+  // Radius & Diameter
+  const radiusEl = document.getElementById('prop-radius');
+  const diamEl = document.getElementById('prop-diameter');
+  if (b.radius !== null && b.radius !== undefined && b.radius > 0) {
+    const radKm = b.radius / 1000;
+    const diamKm = (b.radius * 2) / 1000;
+    if (radiusEl) radiusEl.innerText = `${radKm.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} km`;
+    if (diamEl) diamEl.innerText = `${diamKm.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} km`;
+  } else {
+    if (radiusEl) radiusEl.innerText = '--';
+    if (diamEl) diamEl.innerText = '--';
   }
 
   const ATMOSPHERE_JA_MAP = {
