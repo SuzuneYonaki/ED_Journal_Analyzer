@@ -1305,23 +1305,22 @@ function renderMiningView(container, bodies) {
   // Field Guide & Summary Banner
   const guideCard = document.createElement('div');
   guideCard.className = 'rhino-field-guide-card';
-  guideCard.style.cssText = 'background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.45)); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 10px 14px; font-size: 0.78rem;';
+  guideCard.style.cssText = 'background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 10px 14px; font-size: 0.78rem;';
   guideCard.innerHTML = `
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-      <span style="font-weight: bold; color: #38bdf8; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
-        <span>🦏</span> ${t('mining_field_guide_title')}
+      <span style="font-weight: bold; color: #38bdf8; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+        <span>⛏️</span> <span>${t('mining_field_guide_title') || '採掘・Landable天体サマリー'}</span>
       </span>
-      <span style="color: var(--text-dim); font-size: 0.7rem; font-family: var(--font-mono);">ED 2026.09 Surface Mining</span>
+      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <span class="tag-badge" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">🪐 着陸可能: ${totalLandable} 天体</span>
+        <span class="tag-badge" style="background: rgba(0, 255, 136, 0.15); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.35);">⛏️ 採掘地点: ${totalMiningSignals} 箇所</span>
+        ${ringedBodies.length > 0 ? `<span class="tag-badge" style="background: rgba(244, 114, 182, 0.18); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.4);">💍 環付きLandable: ${ringedBodies.length} 天体</span>` : ''}
+      </div>
     </div>
-    <div style="color: var(--text-secondary); margin-top: 6px; line-height: 1.45; font-size: 0.74rem;">
-      ・<b>推奨天体</b>: <b>Rocky / Metal Rich / HMC</b> はバストネサイト（Bastnäsite）や高価値鉱石・宝石の主産地。平坦な大平原やクレーター底が6基リグ同時稼働に最適。<br>
-      ・<b>天体半径(Radius) & 重力</b>: 大半径天体は平野が広大で操縦しやすく、極端な低G・高G(3G+)は重型Rhinoの挙動やリグ展開安定性に影響。<br>
-      ・<b>💍 環付きLandable</b>: 景観美に加え、固有の鉱物密集帯としてコミュニティで最重要探索対象。
-    </div>
-    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 6px;">
-      <span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">🪐 着陸可能: ${totalLandable} 天体</span>
-      <span class="tag-badge" style="background: rgba(0, 255, 136, 0.15); color: #00ff88;">⛏️ 採掘ロケーション: ${totalMiningSignals} 箇所</span>
-      ${ringedBodies.length > 0 ? `<span class="tag-badge" style="background: rgba(244, 114, 182, 0.2); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.4);">💍 環付きLandable: ${ringedBodies.length} 天体</span>` : ''}
+    <div style="color: var(--text-secondary); margin-top: 6px; line-height: 1.45; font-size: 0.73rem; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 6px;">
+      ・<b>推奨天体</b>: <b>Rocky / Metal Rich / HMC</b> はバストネサイト（Bastnäsite）等の希少鉱石・高価値素材の主産地。<br>
+      ・<b>天体半径 & 重力</b>: 大半径天体は平坦な平原が広がりやすく操縦・リグ展開に有利。高重力(3G+)での着陸には注意。<br>
+      ・<b>環付きLandable</b>: 景観美に加え、固有の鉱物密集地帯としてコミュニティで最重要探索対象。
     </div>
   `;
   wrapper.appendChild(guideCard);
@@ -1690,7 +1689,7 @@ function renderBodyInspector() {
   // Surface & Landable
   const landableEl = document.getElementById('prop-landable');
   if (b.landable) {
-    landableEl.innerText = t('landable_yes');
+    landableEl.innerHTML = `<span>✓</span> <span>${t('landable_yes')}</span>`;
     landableEl.className = 'prop-val landable';
   } else {
     landableEl.innerText = t('landable_no');

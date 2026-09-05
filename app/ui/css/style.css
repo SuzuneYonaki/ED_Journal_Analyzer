@@ -450,6 +450,63 @@ header {
   font-weight: bold;
 }
 
+/* Mining / Landable Filter Chips Active States */
+.chip.active[data-filter="has_landable_hmc"] {
+  background: #2563eb !important;
+  border-color: #60a5fa !important;
+  color: #ffffff !important;
+  font-weight: bold;
+  box-shadow: 0 0 8px rgba(96, 165, 250, 0.6);
+}
+
+.chip.active[data-filter="has_landable_metal_rich"] {
+  background: #ea580c !important;
+  border-color: #fb923c !important;
+  color: #ffffff !important;
+  font-weight: bold;
+  box-shadow: 0 0 8px rgba(251, 146, 60, 0.6);
+}
+
+.chip.active[data-filter="has_landable_rocky"] {
+  background: #475569 !important;
+  border-color: #cbd5e1 !important;
+  color: #ffffff !important;
+  font-weight: bold;
+  box-shadow: 0 0 8px rgba(203, 213, 225, 0.5);
+}
+
+.chip.active[data-filter="has_landable_icy"] {
+  background: #0891b2 !important;
+  border-color: #67e8f9 !important;
+  color: #ffffff !important;
+  font-weight: bold;
+  box-shadow: 0 0 8px rgba(103, 232, 249, 0.6);
+}
+
+.chip.active[data-filter="has_landable_rocky_ice"] {
+  background: #2563eb !important;
+  border-color: #93c5fd !important;
+  color: #ffffff !important;
+  font-weight: bold;
+  box-shadow: 0 0 8px rgba(147, 197, 253, 0.6);
+}
+
+.chip.active[data-filter="has_landable_ringed"] {
+  background: #db2777 !important;
+  border-color: #f472b6 !important;
+  color: #ffffff !important;
+  font-weight: bold;
+  box-shadow: 0 0 8px rgba(244, 114, 182, 0.6);
+}
+
+.chip.active[data-filter="has_mining_signals"] {
+  background: #0284c7 !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  font-weight: bold;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
 .sort-row {
   display: flex;
   justify-content: space-between;
@@ -1041,8 +1098,16 @@ header {
 }
 
 .prop-val.landable {
-  color: var(--ed-green);
+  color: #00ff88;
   font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 255, 136, 0.15);
+  border: 1px solid rgba(0, 255, 136, 0.45);
+  padding: 2px 8px;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.25);
 }
 
 .prop-val.danger {
@@ -1295,11 +1360,17 @@ header {
   overflow-x: auto;
   overflow-y: auto;
   min-height: 100%;
+  cursor: grab;
+  user-select: none;
   background-image: 
     radial-gradient(circle at center, rgba(255, 113, 0, 0.03) 0%, transparent 70%),
     linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 100% 100%, 40px 40px, 40px 40px;
+}
+
+.ed-system-map-container.is-dragging {
+  cursor: grabbing !important;
 }
 
 .sysmap-star-system-section {

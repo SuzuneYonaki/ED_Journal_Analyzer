@@ -329,6 +329,55 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
     mapWrapper.appendChild(starSectionEl);
   });
 
+  // Enable mouse left-click drag panning
+  let isDown = false;
+  let startX = 0;
+  let startY = 0;
+  let scrollLeft = 0;
+  let scrollTop = 0;
+  let hasDragged = false;
+
+  mapWrapper.addEventListener('mousedown', (e) => {
+    // Only primary (left) button
+    if (e.button !== 0) return;
+    isDown = true;
+    hasDragged = false;
+    mapWrapper.classList.add('is-dragging');
+    startX = e.pageX - mapWrapper.offsetLeft;
+    startY = e.pageY - mapWrapper.offsetTop;
+    scrollLeft = mapWrapper.scrollLeft;
+    scrollTop = mapWrapper.scrollTop;
+  });
+
+  mapWrapper.addEventListener('mouseleave', () => {
+    if (isDown) {
+      isDown = false;
+      mapWrapper.classList.remove('is-dragging');
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isDown) {
+      isDown = false;
+      mapWrapper.classList.remove('is-dragging');
+    }
+  });
+
+  mapWrapper.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    const x = e.pageX - mapWrapper.offsetLeft;
+    const y = e.pageY - mapWrapper.offsetTop;
+    const walkX = x - startX;
+    const walkY = y - startY;
+    if (Math.abs(walkX) > 4 || Math.abs(walkY) > 4) {
+      hasDragged = true;
+    }
+    mapWrapper.scrollLeft = scrollLeft - walkX;
+    mapWrapper.scrollTop = scrollTop - walkY;
+  });
+
+  mapWrapper._hasDragged = () => hasDragged;
+
   container.appendChild(mapWrapper);
 }
 
@@ -342,6 +391,10 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
 
   card.onclick = (e) => {
     e.stopPropagation();
+    const mapWrapper = card.closest('.ed-system-map-container');
+    if (mapWrapper && mapWrapper._hasDragged && mapWrapper._hasDragged()) {
+      return; // Suppress click when user was dragging/panning
+    }
     state.selectedBody = body;
     state.targetBodyId = body.body_id;
     renderBodyInspector();
