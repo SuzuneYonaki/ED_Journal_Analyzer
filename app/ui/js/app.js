@@ -1430,12 +1430,33 @@ function renderMiningView(container, bodies) {
             });
             matHtml = `
               <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.06); align-items: center;">
-                <span style="font-size: 0.68rem; color: var(--text-dim); margin-right: 2px;">マテリアル:</span>
+                <span style="font-size: 0.68rem; color: var(--text-dim); margin-right: 2px;">地表含有素材:</span>
                 ${matChips.join('')}
               </div>
             `;
           }
         } catch (e) {}
+      }
+
+      // Rhino mined activities chips if present on this body
+      let minedActHtml = '';
+      if (body.mining_activities && body.mining_activities.length > 0) {
+        const minedMap = {};
+        body.mining_activities.forEach(a => {
+          const mName = a.material_name_localised || a.material_name;
+          minedMap[mName] = (minedMap[mName] || 0) + (a.count || 1);
+        });
+        const minedBadges = Object.entries(minedMap).map(([mName, count]) => `
+          <span class="tag-badge" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.68rem; padding: 1px 5px;">
+            ⛏️ ${mName} ×${count}
+          </span>
+        `).join('');
+        minedActHtml = `
+          <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(56, 189, 248, 0.2); align-items: center;">
+            <span style="font-size: 0.68rem; color: #38bdf8; font-weight: bold; margin-right: 2px;">🦏 Rhino採掘実績:</span>
+            ${minedBadges}
+          </div>
+        `;
       }
 
       card.innerHTML = `
@@ -1473,6 +1494,7 @@ function renderMiningView(container, bodies) {
               </div>
 
               ${matHtml}
+              ${minedActHtml}
             </div>
           </div>
         </div>
@@ -1782,12 +1804,59 @@ function renderBodyInspector() {
   const miningCountEl = document.getElementById('inspect-mining-count');
   const propCardMining = document.getElementById('prop-card-mining');
   const propMining = document.getElementById('prop-mining');
+  const miningActivitiesEl = document.getElementById('inspect-mining-activities');
   const miningSigCount = b.mining_signals || 0;
-  if (miningSigCount > 0) {
+  const miningActs = b.mining_activities || [];
+
+  if (miningSigCount > 0 || miningActs.length > 0) {
     if (miningSec) miningSec.style.display = 'block';
     if (miningCountEl) miningCountEl.innerText = miningSigCount;
     if (propCardMining) propCardMining.style.display = 'block';
     if (propMining) propMining.innerText = `${miningSigCount} 箇所 (Planetary Mining Locations)`;
+
+    if (miningActivitiesEl) {
+      if (miningActs.length > 0) {
+        // Aggregate materials
+        const matSummary = {};
+        miningActs.forEach(act => {
+          const mName = act.material_name_localised || act.material_name;
+          const cat = act.category || 'Raw';
+          const bType = act.body_type || 'Unknown';
+          const key = `${mName}|${cat}|${bType}`;
+          if (!matSummary[key]) {
+            matSummary[key] = { name: mName, cat, body_type: bType, count: 0, srv_type: act.srv_type };
+          }
+          matSummary[key].count += (act.count || 1);
+        });
+
+        const sortedMats = Object.values(matSummary).sort((a, b) => b.count - a.count);
+        miningActivitiesEl.innerHTML = `
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 10px; margin-top: 6px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <span style="font-size: 0.78rem; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
+                <span>🦏</span> <span>Rhino採掘実績 (採取・精製済み素材)</span>
+              </span>
+              <span style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">実績: ${miningActs.length} 回</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+              ${sortedMats.map(m => `
+                <div class="tag-badge" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); color: #e0f2fe; padding: 3px 6px; font-size: 0.72rem; display: flex; align-items: center; gap: 4px;" title="天体種別: ${m.body_type} / 分類: ${m.cat}">
+                  <span style="color: #38bdf8; font-weight: bold;">${m.name}</span>
+                  <span style="background: rgba(255,255,255,0.1); border-radius: 3px; padding: 0 4px; font-family: var(--font-mono); font-size: 0.68rem;">×${m.count}</span>
+                  <span style="font-size: 0.62rem; color: #94a3b8; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 4px;">${m.body_type}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else {
+        miningActivitiesEl.innerHTML = `
+          <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 6px; padding: 4px 6px;">
+            まだこの天体でのRhino採掘実績（素材採取ログ）はありません。
+          </div>
+        `;
+      }
+    }
   } else {
     if (miningSec) miningSec.style.display = 'none';
     if (propCardMining) propCardMining.style.display = 'none';

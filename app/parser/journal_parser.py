@@ -17,6 +17,17 @@ class JournalParser:
         self.cursor = self.conn.cursor()
         self.dirty_systems = set()
         self.event_callback = event_callback
+        
+        # State tracking for SRV and surface activities
+        self.current_system_address = None
+        self.current_star_system = None
+        self.current_body_id = None
+        self.current_body_name = None
+        self.current_body_type = None
+        self.in_srv = False
+        self.srv_type = None
+        self.current_latitude = None
+        self.current_longitude = None
 
     def flush_dirty_systems(self):
         """Update system-level stats for all modified systems during parsing."""
@@ -37,6 +48,23 @@ class JournalParser:
 
         event = event_data.get("event")
         timestamp = event_data.get("timestamp", "")
+
+        # Update context if present
+        if event_data.get("SystemAddress"):
+            self.current_system_address = event_data["SystemAddress"]
+        if event_data.get("StarSystem"):
+            self.current_star_system = event_data["StarSystem"]
+        if "BodyID" in event_data:
+            self.current_body_id = event_data["BodyID"]
+        if event_data.get("BodyName"):
+            self.current_body_name = event_data["BodyName"]
+        elif event_data.get("Body") and isinstance(event_data.get("Body"), str):
+            self.current_body_name = event_data["Body"]
+
+        if "Latitude" in event_data:
+            self.current_latitude = event_data["Latitude"]
+        if "Longitude" in event_data:
+            self.current_longitude = event_data["Longitude"]
 
         if event == "StartJump":
             if self.event_callback:
@@ -75,6 +103,24 @@ class JournalParser:
                 self.event_callback("CodexEntry", event_data)
         elif event in ["ApproachBody", "Touchdown"]:
             self._update_last_targeted_body(event_data.get("SystemAddress"), event_data.get("BodyID"), event_data.get("Body"))
+        elif event == "LaunchSRV":
+            self.in_srv = True
+            self.srv_type = event_data.get("SRVType") or "srv"
+            if self.event_callback:
+                self.event_callback("LaunchSRV", event_data)
+        elif event == "DockSRV":
+            self.in_srv = False
+            self.srv_type = None
+            if self.event_callback:
+                self.event_callback("DockSRV", event_data)
+        elif event == "MaterialCollected":
+            self._handle_material_collected(event_data, timestamp)
+            if self.event_callback:
+                self.event_callback("MaterialCollected", event_data)
+        elif event == "MiningRefined":
+            self._handle_mining_refined(event_data, timestamp)
+            if self.event_callback:
+                self.event_callback("MiningRefined", event_data)
 
     def _update_last_targeted_body(self, sys_addr: int, body_id=None, body_name=None):
         if not sys_addr:
@@ -343,6 +389,17 @@ class JournalParser:
         ))
 
         self.dirty_systems.add(sys_addr)
+
+        # Backfill body_type for any prior mining activity recorded before Scan arrived
+        if planet_class:
+            b_type = self._get_body_type_category(sys_addr, body_id, body_name)
+            self.cursor.execute("""
+                UPDATE surface_mining_activities 
+                SET body_type = ? 
+                WHERE system_address = ? 
+                  AND (body_id = ? OR body_name = ?)
+                  AND (body_type IS NULL OR body_type = 'Unknown')
+            """, (b_type, sys_addr, body_id, body_name))
 
     def _handle_signals(self, data: dict):
         sys_addr = data.get("SystemAddress")
@@ -613,6 +670,99 @@ class JournalParser:
                     "", species_loc, "", entry_name_loc, base_val, fd_val
                 ))
                 self.dirty_systems.add(sys_addr)
+
+    def _get_body_type_category(self, sys_addr: int, body_id=None, body_name=None) -> str:
+        """Classifies body into one of: 'HMC', 'Metal Rich', 'Rocky', 'Icy', 'Icy Rocky', or fallback."""
+        if not sys_addr:
+            return "Unknown"
+        p_class = None
+        if body_id is not None:
+            self.cursor.execute("SELECT planet_class FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
+            row = self.cursor.fetchone()
+            if row and row["planet_class"]:
+                p_class = row["planet_class"]
+        if not p_class and body_name:
+            self.cursor.execute("SELECT planet_class FROM bodies WHERE system_address = ? AND body_name = ?", (sys_addr, body_name))
+            row = self.cursor.fetchone()
+            if row and row["planet_class"]:
+                p_class = row["planet_class"]
+
+        if not p_class:
+            return "Unknown"
+
+        p_lower = p_class.lower()
+        if "high metal" in p_lower:
+            return "HMC"
+        elif "metal rich" in p_lower:
+            return "Metal Rich"
+        elif "rocky ice" in p_lower or "icy rocky" in p_lower:
+            return "Icy Rocky"
+        elif "rocky" in p_lower:
+            return "Rocky"
+        elif "icy" in p_lower:
+            return "Icy"
+        return p_class
+
+    def _handle_material_collected(self, data: dict, timestamp: str):
+        # Record surface raw material extraction
+        cat = data.get("Category", "Raw")
+        name = data.get("Name", "")
+        name_loc = data.get("Name_Localised") or name
+        count = data.get("Count", 1)
+
+        sys_addr = self.current_system_address
+        star_sys = self.current_star_system
+        body_id = self.current_body_id
+        body_name = self.current_body_name
+        srv_type = self.srv_type or ("mev_rhino" if self.in_srv else None)
+
+        # Classify body_type (Icy, Rocky, Icy Rocky, HMC, Metal Rich)
+        body_type = self._get_body_type_category(sys_addr, body_id, body_name)
+
+        if sys_addr and name:
+            self.cursor.execute("""
+                INSERT INTO surface_mining_activities (
+                    system_address, star_system, body_id, body_name, body_type,
+                    srv_type, material_name, material_name_localised, category,
+                    count, latitude, longitude, timestamp
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                sys_addr, star_sys, body_id, body_name, body_type,
+                srv_type, name, name_loc, cat,
+                count, self.current_latitude, self.current_longitude, timestamp
+            ))
+            self.dirty_systems.add(sys_addr)
+
+    def _handle_mining_refined(self, data: dict, timestamp: str):
+        # Only track surface/SRV mining refined commodities
+        if not self.in_srv:
+            return
+
+        raw_type = data.get("Type", "")
+        clean_type = raw_type.replace("$", "").replace("_name;", "").replace(";", "").strip()
+        type_loc = data.get("Type_Localised") or clean_type
+
+        sys_addr = self.current_system_address
+        star_sys = self.current_star_system
+        body_id = self.current_body_id
+        body_name = self.current_body_name
+        srv_type = self.srv_type or "mev_rhino"
+
+        body_type = self._get_body_type_category(sys_addr, body_id, body_name)
+
+        if sys_addr and clean_type:
+            self.cursor.execute("""
+                INSERT INTO surface_mining_activities (
+                    system_address, star_system, body_id, body_name, body_type,
+                    srv_type, material_name, material_name_localised, category,
+                    count, latitude, longitude, timestamp
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                sys_addr, star_sys, body_id, body_name, body_type,
+                srv_type, clean_type, type_loc, "Refined",
+                1, self.current_latitude, self.current_longitude, timestamp
+            ))
+            self.dirty_systems.add(sys_addr)
 
     def _update_system_stats(self, sys_addr: int):
         self.cursor.execute("""

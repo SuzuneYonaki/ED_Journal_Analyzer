@@ -132,3 +132,106 @@ def test_landable_mining_filters_and_radius_summary(tmp_path):
         assert b2["radius_km"] == 1200
         assert b2["is_ringed"] is True
         assert b2["mining_signals"] == 7
+
+
+def test_surface_mining_activities_parsing_and_api(tmp_path):
+    from app.parser.journal_parser import JournalParser
+
+    db_path = str(tmp_path / "test_mining_act.db")
+
+    def get_test_db():
+        c = sqlite3.connect(db_path)
+        c.row_factory = sqlite3.Row
+        return c
+
+    conn = get_test_db()
+    init_db(conn)
+
+    parser = JournalParser(db_conn=conn)
+
+    # 1. Scan a Metal rich planet
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-05T05:00:00Z",
+        "event": "Scan",
+        "StarSystem": "Pru Euq Mining",
+        "SystemAddress": 99001,
+        "BodyName": "Pru Euq Mining A 1",
+        "BodyID": 5,
+        "PlanetClass": "Metal rich body",
+        "Landable": True
+    }))
+
+    # 2. Launch SRV
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-05T05:01:00Z",
+        "event": "LaunchSRV",
+        "SRVType": "mev_rhino",
+        "SRVType_Localised": "SRV Rhino",
+        "ID": 130
+    }))
+
+    # 3. MaterialCollected (Raw)
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-05T05:05:00Z",
+        "event": "MaterialCollected",
+        "Category": "Raw",
+        "Name": "ruthenium",
+        "Count": 1
+    }))
+
+    # 4. MiningRefined (Refined commodity during surface mining)
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-05T05:06:00Z",
+        "event": "MiningRefined",
+        "Type": "$platinum_name;",
+        "Type_Localised": "Platinum"
+    }))
+
+    # 5. Dock SRV
+    parser.process_journal_line(json.dumps({
+        "timestamp": "2026-09-05T05:10:00Z",
+        "event": "DockSRV",
+        "SRVType": "mev_rhino"
+    }))
+
+    parser.flush_dirty_systems()
+
+    # Verify DB records
+    c = conn.cursor()
+    c.execute("SELECT * FROM surface_mining_activities ORDER BY id ASC")
+    rows = [dict(r) for r in c.fetchall()]
+    assert len(rows) == 2
+
+    # Check MaterialCollected record with body_type
+    r1 = rows[0]
+    assert r1["system_address"] == 99001
+    assert r1["star_system"] == "Pru Euq Mining"
+    assert r1["body_name"] == "Pru Euq Mining A 1"
+    assert r1["body_type"] == "Metal Rich"
+    assert r1["srv_type"] == "mev_rhino"
+    assert r1["material_name"] == "ruthenium"
+    assert r1["category"] == "Raw"
+    assert r1["count"] == 1
+
+    # Check MiningRefined record with body_type
+    r2 = rows[1]
+    assert r2["system_address"] == 99001
+    assert r2["body_type"] == "Metal Rich"
+    assert r2["srv_type"] == "mev_rhino"
+    assert r2["material_name"] == "platinum"
+    assert r2["material_name_localised"] == "Platinum"
+    assert r2["category"] == "Refined"
+
+    conn.close()
+
+    # Test API endpoint attachment
+    with patch("app.server.api.get_db_connection", side_effect=get_test_db):
+        client = TestClient(app)
+        res = client.get("/api/system/99001")
+        assert res.status_code == 200
+        data = res.json()
+        assert len(data["mining_activities"]) == 2
+        body1 = data["bodies"][0]
+        assert body1["mining_activities_count"] == 2
+        assert len(body1["mining_activities"]) == 2
+

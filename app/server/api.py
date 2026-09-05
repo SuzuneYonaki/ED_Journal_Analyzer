@@ -689,7 +689,25 @@ def get_system_detail(system_address: int):
     c.execute("SELECT * FROM scanned_organics WHERE system_address = ? ORDER BY timestamp DESC", (system_address,))
     raw_organics = [dict(r) for r in c.fetchall()]
 
+    # Fetch surface mining activities
+    c.execute("""
+        SELECT * FROM surface_mining_activities 
+        WHERE system_address = ? 
+        ORDER BY timestamp DESC
+    """, (system_address,))
+    raw_mining = [dict(r) for r in c.fetchall()]
+
     conn.close()
+
+    # Group mining activities by body
+    mining_by_body = {}
+    for act in raw_mining:
+        b_id = act.get("body_id")
+        b_name = act.get("body_name")
+        if b_id is not None:
+            mining_by_body.setdefault(b_id, []).append(act)
+        if b_name:
+            mining_by_body.setdefault(b_name, []).append(act)
 
     # Process and deduplicate scanned organics
     organics_by_body = {}
@@ -784,6 +802,16 @@ def get_system_detail(system_address: int):
         bio_sig = b.get("bio_signals") or 0
         b_scanned_list = b.get("scanned_organics", [])
 
+        # Attach surface mining activities
+        b_mining_list = (
+            mining_by_body.get(b_id) or 
+            mining_by_body.get(str(b_id)) or 
+            mining_by_body.get(b_name) or 
+            []
+        )
+        b["mining_activities"] = b_mining_list
+        b["mining_activities_count"] = len(b_mining_list)
+
         completed_count = sum(1 for s in b_scanned_list if s.get("is_completed"))
         b["completed_bio_count"] = completed_count
         # A body is fully completed if it has bio signals and all are analysed, OR if bio_sig == 0 but scanned >= 1 completed
@@ -856,6 +884,7 @@ def get_system_detail(system_address: int):
         "hierarchy": hierarchy,
         "visits": visits,
         "organics": raw_organics,
+        "mining_activities": raw_mining,
         "system_bio_summary": {
             "total_base_value": system_bio_total_base,
             "total_first_value": system_bio_total_first,

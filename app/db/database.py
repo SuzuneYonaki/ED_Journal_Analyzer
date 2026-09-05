@@ -150,6 +150,26 @@ def init_db(conn=None):
     );
     """)
 
+    # Surface mining activities (Rhino SRV & surface mining tracking)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS surface_mining_activities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        system_address INTEGER NOT NULL,
+        star_system TEXT,
+        body_id INTEGER,
+        body_name TEXT,
+        body_type TEXT,
+        srv_type TEXT,
+        material_name TEXT NOT NULL,
+        material_name_localised TEXT,
+        category TEXT,
+        count INTEGER DEFAULT 1,
+        latitude REAL,
+        longitude REAL,
+        timestamp TEXT NOT NULL
+    );
+    """)
+
     # Parsed files tracker
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS parsed_files (
@@ -169,6 +189,21 @@ def init_db(conn=None):
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_visits_sys_addr ON visits(system_address);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_visits_ts ON visits(timestamp DESC);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_organics_sys ON scanned_organics(system_address);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_mining_act_sys ON surface_mining_activities(system_address);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_mining_act_body ON surface_mining_activities(system_address, body_id);")
+
+    # Migration for surface_mining_activities columns if table already existed
+    for col_def in [
+        ("body_type", "TEXT"),
+        ("star_system", "TEXT"),
+        ("material_name_localised", "TEXT"),
+        ("latitude", "REAL"),
+        ("longitude", "REAL"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE surface_mining_activities ADD COLUMN {col_def[0]} {col_def[1]};")
+        except Exception:
+            pass
 
     for col_def in [
         ("total_bio_signals", "INTEGER DEFAULT 0"),
