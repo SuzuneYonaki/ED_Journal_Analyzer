@@ -206,6 +206,9 @@ const i18n = {
     bio_status_sample_1: "サンプル採取中 (1/3)",
     bio_body_all_completed: "全Bioスキャン完了",
     
+    // Settings
+    settings_lang_label: "🌐 表示言語 / Display Language",
+
     // Credits
     credits_title: "謝辞 & クレジット",
     credits_fdev: "Frontier Developments: Elite Dangerous の世界とジャーナルAPI",
@@ -420,6 +423,9 @@ const i18n = {
     bio_status_sample_1: "Sampling Logged (1/3)",
     bio_body_all_completed: "All Bio Scanned",
     
+    // Settings
+    settings_lang_label: "🌐 Display Language",
+
     // Credits
     credits_title: "Credits & Acknowledgements",
     credits_fdev: "Frontier Developments: Elite Dangerous universe & Journal API",
@@ -428,17 +434,60 @@ const i18n = {
   }
 };
 
-let currentLang = localStorage.getItem("ed_lang") || "ja";
+let currentLang = 'ja';
+try {
+  const saved = localStorage.getItem("ed_lang");
+  if (saved === 'ja' || saved === 'en') {
+    currentLang = saved;
+  }
+} catch (e) {
+  console.warn("Could not read localStorage for ed_lang:", e);
+}
 
 function t(key) {
   if (i18n[currentLang] && i18n[currentLang][key]) {
     return i18n[currentLang][key];
   }
-  return i18n.ja[key] || key;
+  return (i18n.ja && i18n.ja[key]) || key;
 }
 
-function setLanguage(lang) {
+function setLanguage(lang, skipServerSync = false) {
+  if (lang !== 'ja' && lang !== 'en') return;
   currentLang = lang;
-  localStorage.setItem("ed_lang", lang);
-  updateStaticTexts();
+  try {
+    localStorage.setItem("ed_lang", lang);
+  } catch (e) {
+    console.warn("Could not save language to localStorage:", e);
+  }
+  if (document.documentElement) {
+    document.documentElement.lang = lang;
+  }
+
+  if (!skipServerSync) {
+    fetch('/api/app_settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: lang })
+    }).catch(err => console.warn('Could not save language to server:', err));
+  }
+
+  if (typeof updateStaticTexts === 'function') {
+    updateStaticTexts();
+  }
+}
+
+async function syncLanguageFromServer() {
+  try {
+    const res = await fetch('/api/app_settings');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.language && (data.language === 'ja' || data.language === 'en')) {
+        if (data.language !== currentLang) {
+          setLanguage(data.language, true);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('syncLanguageFromServer error:', e);
+  }
 }

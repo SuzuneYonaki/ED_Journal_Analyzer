@@ -15,6 +15,10 @@
       } else {
         document.documentElement.style.fontSize = '18px';
       }
+      var savedLang = localStorage.getItem('ed_lang');
+      if (savedLang === 'en' || savedLang === 'ja') {
+        document.documentElement.lang = savedLang;
+      }
     })();
   </script>
 </head>
@@ -607,8 +611,19 @@
           </div>
         </div>
 
-        <!-- Tab: UI Scaling & Font Size -->
+        <!-- Tab: UI Scaling & Font Size & Language -->
         <div id="tab-pane-ui" class="settings-tab-pane" style="display: none; flex-direction: column; gap: 14px;">
+          <!-- Language Selector -->
+          <div style="padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.85rem; margin-bottom: 6px; display: block;" data-i18n="settings_lang_label">
+              🌐 表示言語 / Display Language
+            </label>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="btn-modal-lang-ja" class="view-btn active" style="padding: 6px 14px; font-size: 0.82rem;">日本語 (Japanese)</button>
+              <button type="button" id="btn-modal-lang-en" class="view-btn" style="padding: 6px 14px; font-size: 0.82rem;">English (英語)</button>
+            </div>
+          </div>
+
           <div>
             <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.85rem; margin-bottom: 6px; display: block;">
               🖥️ 基本文字サイズ / UI表示スケール

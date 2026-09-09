@@ -14,7 +14,7 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = io.StringIO()
 
-from app.config import HOST, BASE_DIR
+from app.config import HOST, BASE_DIR, DATA_DIR
 from app.server.api import app
 
 def find_free_port(start_port=8686):
@@ -80,7 +80,9 @@ def main():
             min_size=(1024, 700),
             background_color="#0a0c10"
         )
-        webview.start(debug=False)
+        storage_dir = DATA_DIR / "webview"
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        webview.start(debug=False, private_mode=False, storage_path=str(storage_dir))
 
 if __name__ == "__main__":
     main()

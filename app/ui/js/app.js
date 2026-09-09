@@ -301,6 +301,12 @@ function updateStaticTexts() {
     btnJa.classList.toggle('active', currentLang === 'ja');
     btnEn.classList.toggle('active', currentLang === 'en');
   }
+  const modalBtnJa = document.getElementById('btn-modal-lang-ja');
+  const modalBtnEn = document.getElementById('btn-modal-lang-en');
+  if (modalBtnJa && modalBtnEn) {
+    modalBtnJa.classList.toggle('active', currentLang === 'ja');
+    modalBtnEn.classList.toggle('active', currentLang === 'en');
+  }
 
   // Re-render dynamic components with translated labels
   updateLiveSyncButtonUI();
@@ -2472,14 +2478,21 @@ function renderBodyInspector() {
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
   updateStaticTexts();
+  if (typeof syncLanguageFromServer === 'function') {
+    syncLanguageFromServer();
+  }
   initSettingsModal();
   fetchGlobalStats();
   fetchSystems();
   checkScanOnStartup();
 
-  // Language Switchers
-  document.getElementById('btn-lang-ja').addEventListener('click', () => setLanguage('ja'));
-  document.getElementById('btn-lang-en').addEventListener('click', () => setLanguage('en'));
+  // Language Switchers (Header)
+  document.getElementById('btn-lang-ja')?.addEventListener('click', () => setLanguage('ja'));
+  document.getElementById('btn-lang-en')?.addEventListener('click', () => setLanguage('en'));
+
+  // Language Switchers (Settings Modal)
+  document.getElementById('btn-modal-lang-ja')?.addEventListener('click', () => setLanguage('ja'));
+  document.getElementById('btn-modal-lang-en')?.addEventListener('click', () => setLanguage('en'));
 
   // Search input
   let searchTimeout = null;

@@ -1019,17 +1019,29 @@ def get_system_detail(system_address: int):
 
 APP_SETTINGS_FILE = DATA_DIR / "app_settings.json"
 
-def get_saved_journal_dir() -> Path:
+def load_app_settings_data() -> dict:
     if APP_SETTINGS_FILE.exists():
         try:
             with open(APP_SETTINGS_FILE, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-                if cfg.get("journal_dir"):
-                    p = Path(cfg["journal_dir"])
-                    if p.exists() and p.is_dir():
-                        return p
+                return json.load(f)
         except Exception:
-            pass
+            return {}
+    return {}
+
+def save_app_settings_data(data: dict) -> dict:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    current = load_app_settings_data()
+    current.update(data)
+    with open(APP_SETTINGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(current, f, ensure_ascii=False, indent=2)
+    return current
+
+def get_saved_journal_dir() -> Path:
+    cfg = load_app_settings_data()
+    if cfg.get("journal_dir"):
+        p = Path(cfg["journal_dir"])
+        if p.exists() and p.is_dir():
+            return p
     return DEFAULT_JOURNAL_DIR
 
 def run_background_parse():
@@ -1069,20 +1081,21 @@ def run_background_parse():
 @app.get("/api/app_settings")
 def get_app_settings():
     current_dir = get_saved_journal_dir()
+    cfg = load_app_settings_data()
     return {
         "journal_dir": str(current_dir),
         "default_journal_dir": str(DEFAULT_JOURNAL_DIR),
-        "is_default": str(current_dir) == str(DEFAULT_JOURNAL_DIR)
+        "is_default": str(current_dir) == str(DEFAULT_JOURNAL_DIR),
+        "language": cfg.get("language", "ja")
     }
 
 @app.post("/api/app_settings")
 def save_app_settings_endpoint(settings: dict):
     try:
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        with open(APP_SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(settings, f, ensure_ascii=False, indent=2)
-        start_watcher()
-        return {"status": "saved", "settings": settings}
+        updated = save_app_settings_data(settings)
+        if "journal_dir" in settings:
+            start_watcher()
+        return {"status": "saved", "settings": updated}
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
