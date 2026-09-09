@@ -6,6 +6,17 @@
   <title>Elite Dangerous Journal Analyzer</title>
   <link rel="icon" type="image/png" href="/static/icon.png">
   <link rel="stylesheet" href="/static/css/style.css">
+  <script>
+    (function() {
+      var saved = localStorage.getItem('app_base_font_size');
+      var size = saved ? parseInt(saved, 10) : 18;
+      if (!isNaN(size) && size >= 8 && size <= 60) {
+        document.documentElement.style.fontSize = size + 'px';
+      } else {
+        document.documentElement.style.fontSize = '18px';
+      }
+    })();
+  </script>
 </head>
 <body>
   <!-- Global Scan Banner (hidden by default) -->
@@ -36,7 +47,7 @@
       <div class="brand">
         <img src="/static/icon.png" alt="Logo" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 6px;">
         <span class="logo-text">ED Journal Explorer</span>
-        <span class="version-badge">v0.0.4</span>
+        <span class="version-badge">v0.0.5</span>
       </div>
     </div>
 
@@ -86,14 +97,8 @@
     </div>
 
     <div class="header-actions">
-      <!-- Real-time Live Sync Toggle Button -->
-      <button id="btn-live-toggle" class="btn-live active" title="リアルタイム自動更新の有効/無効を切り替え">
-        <span class="live-indicator-dot"></span>
-        <span id="live-status-text" data-i18n="live_sync_on">LIVE (リアルタイム)</span>
-      </button>
-
-      <!-- Unified Settings Modal Button (Logs, TTS, Credits) -->
-      <button id="btn-settings-open" class="view-btn" style="padding: 4px 10px; font-size: 0.78rem; color: var(--text-primary); border-color: var(--border-color); display: flex; align-items: center; gap: 4px;" title="⚙️ 設定 & ログスキャン & TTS & 謝辞">
+      <!-- Unified Settings Modal Button (Logs, UI Scaling, TTS, Credits) -->
+      <button id="btn-settings-open" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #fff; background: rgba(255, 113, 0, 0.15); border: 1px solid var(--ed-orange); display: flex; align-items: center; gap: 5px; z-index: 9999; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px; box-shadow: 0 0 6px rgba(255, 113, 0, 0.2);" title="⚙️ 設定 & 文字サイズ & ログ同期 & TTS & 謝辞">
         <span>⚙️ 設定</span>
       </button>
 
@@ -156,7 +161,7 @@
               📅 訪問期間:
             </span>
             <select id="date-preset-select" class="sort-select" style="flex: 1; font-size: 0.78rem;">
-              <option value="all" data-i18n="preset_all">全期間 (すべて)</option>
+              <option value="all" data-i18n="preset_all">全期間</option>
               <option value="before_today" data-i18n="preset_before_today">今日より前</option>
               <option value="last_7_days" data-i18n="preset_last_7">過去7日間</option>
               <option value="last_30_days" data-i18n="preset_last_30">過去30日間</option>
@@ -182,6 +187,14 @@
               <button id="btn-clear-date" class="btn-page" style="padding: 2px 8px; font-size: 0.72rem;" data-i18n="btn_clear_date">クリア</button>
             </div>
           </div>
+        </div>
+
+        <!-- Real-time Live Sync Toggle Button (Between Visit Period & 1st Sort) -->
+        <div class="live-toggle-container" style="margin-top: 6px;">
+          <button id="btn-live-toggle" class="btn-live active" style="width: 100%; justify-content: center; padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px;" title="リアルタイム自動更新の有効/無効を切り替え（ジャンプ到着待機時は最新星系の現状データを即時表示）">
+            <span class="live-indicator-dot"></span>
+            <span id="live-status-text" data-i18n="live_sync_on">LIVE (リアルタイム)</span>
+          </button>
         </div>
 
         <div class="sort-section" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid var(--border-color);">
@@ -552,6 +565,9 @@
         <button id="tab-btn-logs" class="view-btn active" style="border-bottom: 2px solid var(--ed-orange); border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;">
           📁 ログ同期 & パス
         </button>
+        <button id="tab-btn-ui" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;">
+          🖥️ 画面・文字サイズ
+        </button>
         <button id="tab-btn-tts" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;">
           🔊 音声読み上げ (TTS)
         </button>
@@ -588,6 +604,52 @@
               </button>
             </div>
             <div id="modal-scan-status-text" style="font-size: 0.75rem; color: var(--ed-cyan); font-family: monospace;"></div>
+          </div>
+        </div>
+
+        <!-- Tab: UI Scaling & Font Size -->
+        <div id="tab-pane-ui" class="settings-tab-pane" style="display: none; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.85rem; margin-bottom: 6px; display: block;">
+              🖥️ 基本文字サイズ / UI表示スケール
+            </label>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">
+              アプリ全体の基準文字サイズをピクセル (px) 単位で直接指定・微調整できます。<br>
+              文字数や情報はそのままに、バッジやカードが自然に折り返されて見やすくなります。<br>
+              基準中間サイズは <b>18px</b>（推奨標準）、最小目安は <b>14px</b> です。
+            </div>
+            
+            <!-- Direct Numeric Input & Step Buttons -->
+            <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap;">
+              <span style="font-size: 0.85rem; color: #fff; font-weight: bold;">文字サイズ指定:</span>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <button id="btn-font-dec" class="view-btn" style="padding: 4px 10px; font-size: 0.85rem; font-weight: bold;" title="1px小さく">－</button>
+                <input type="number" id="input-font-size" min="10" max="40" step="1" value="18" class="search-input" style="width: 70px; text-align: center; font-size: 0.95rem; font-weight: bold; color: var(--ed-cyan);" title="実数値（px）を直接入力できます">
+                <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: bold;">px</span>
+                <button id="btn-font-inc" class="view-btn" style="padding: 4px 10px; font-size: 0.85rem; font-weight: bold;" title="1px大きく">＋</button>
+              </div>
+              <button id="btn-reset-font-size" class="btn-primary" style="margin-left: auto; padding: 5px 12px; font-size: 0.78rem; background: rgba(251, 146, 60, 0.2); border-color: var(--ed-orange); color: var(--ed-orange);" title="標準の中間サイズ (18px) にリセット">
+                🔄 標準 (18px) にリセット
+              </button>
+            </div>
+
+            <!-- Quick Presets -->
+            <div style="margin-top: 10px;">
+              <span style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-bottom: 6px;">クイックプリセット:</span>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="font-presets-container">
+                <button class="view-btn btn-font-preset" data-size="14" style="padding: 4px 8px; font-size: 0.75rem;">14px (最小目安)</button>
+                <button class="view-btn btn-font-preset" data-size="16" style="padding: 4px 8px; font-size: 0.75rem;">16px (やや小さめ)</button>
+                <button class="view-btn btn-font-preset active" data-size="18" style="padding: 4px 10px; font-size: 0.78rem; font-weight: bold; border-color: var(--ed-cyan); color: var(--ed-cyan);">18px (標準・推奨)</button>
+                <button class="view-btn btn-font-preset" data-size="20" style="padding: 4px 8px; font-size: 0.75rem;">20px (見やすさ重視)</button>
+                <button class="view-btn btn-font-preset" data-size="22" style="padding: 4px 8px; font-size: 0.75rem;">22px (特大)</button>
+                <button class="view-btn btn-font-preset" data-size="24" style="padding: 4px 8px; font-size: 0.75rem;">24px (最大目安)</button>
+              </div>
+            </div>
+
+            <!-- Emergency Safety Notice -->
+            <div style="margin-top: 14px; padding: 8px 12px; background: rgba(251, 191, 36, 0.08); border-left: 3px solid #fbbf24; font-size: 0.72rem; color: #fbbf24; border-radius: 0 4px 4px 0; line-height: 1.5;">
+              🛡️ <b>セーフティ機構</b>: 極端な数値の入力により画面が崩れた場合でも、ヘッダー右上の「⚙️ 設定」ボタンは常に最前面に表示されます。また、キーボードの <kbd style="background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 3px; border: 1px solid #fbbf24; font-family: monospace;">Ctrl + 0</kbd> を押すことでいつでも即座に標準 (18px) にリセットできます。
+            </div>
           </div>
         </div>
 

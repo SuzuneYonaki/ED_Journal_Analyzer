@@ -53,7 +53,8 @@ let state = {
   lastEventVersion: 0,
   lastJournalEventVersion: 0,
   jumpState: 'idle', // 'idle' | 'hyperspace' | 'arrived_waiting_fss' | 'scanned'
-  targetJumpSystem: ''
+  targetJumpSystem: '',
+  autoSelectTopNext: false
 };
 
 // Utilities
@@ -373,7 +374,10 @@ async function fetchGlobalStats() {
   }
 }
 
-async function fetchSystems() {
+async function fetchSystems(options = {}) {
+  const autoSelectTop = (options && options.autoSelectTop) || state.autoSelectTopNext || false;
+  state.autoSelectTopNext = false;
+
   const activeSortBy = state.liveSyncEnabled ? 'last_visited' : (state.savedSortBy || 'total_potential_value');
   const activeSortOrder = state.liveSyncEnabled ? 'desc' : (state.savedSortOrder || 'desc');
   const activeSortBy2 = state.liveSyncEnabled ? null : state.savedSortBy2;
@@ -447,9 +451,12 @@ async function fetchSystems() {
     renderSystemList();
     renderPagination(data.total);
 
-    // Auto select first system if none selected or not in current list (and not just jumped)
+    // Auto select first system if requested by user sort/filter, or if none selected or not in current list (and not just jumped)
     if (!jumpedToNewSystem && state.systems && state.systems.length > 0) {
-      if (!state.selectedSystem || !state.systems.some(s => s.system_address === state.selectedSystem.system_address)) {
+      if (autoSelectTop) {
+        state.jumpState = 'idle';
+        selectSystem(state.systems[0].system_address);
+      } else if (!state.selectedSystem || !state.systems.some(s => s.system_address === state.selectedSystem.system_address)) {
         const targetAddress = (state.currentCmdrSystemAddress && state.systems.some(s => s.system_address === state.currentCmdrSystemAddress))
           ? state.currentCmdrSystemAddress
           : state.systems[0].system_address;
@@ -635,44 +642,68 @@ function renderSystemList() {
     }
 
     let landableHtml = '';
-    if (sys.landable_bodies && sys.landable_bodies.length > 0) {
-      const landableBadges = sys.landable_bodies.slice(0, 4).map(lb => {
-        const isRing = lb.is_ringed;
-        const icon = isRing ? '💍' : '🪐';
-        let colorStyle = 'background: rgba(203, 213, 225, 0.12); color: #cbd5e1; border: 1px solid rgba(203, 213, 225, 0.3);';
-        if (lb.type === 'HMC') {
-          colorStyle = 'background: rgba(96, 165, 250, 0.15); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.4);';
-        } else if (lb.type === 'Metal Rich') {
-          colorStyle = 'background: rgba(251, 146, 60, 0.15); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.4);';
-        } else if (lb.type === 'Icy') {
-          colorStyle = 'background: rgba(103, 232, 249, 0.15); color: #67e8f9; border: 1px solid rgba(103, 232, 249, 0.4);';
-        } else if (lb.type === 'Icy Rocky') {
-          colorStyle = 'background: rgba(147, 197, 253, 0.15); color: #93c5fd; border: 1px solid rgba(147, 197, 253, 0.4);';
-        }
-        if (isRing) {
-          colorStyle += ' border-color: rgba(244, 114, 182, 0.7); box-shadow: 0 0 3px rgba(244, 114, 182, 0.3);';
-        }
+    const activeMiningFilters = {
+      hmc: !!state.filters.has_landable_hmc,
+      metal_rich: !!state.filters.has_landable_metal_rich,
+      rocky: !!state.filters.has_landable_rocky,
+      icy: !!state.filters.has_landable_icy,
+      rocky_ice: !!state.filters.has_landable_rocky_ice,
+      ringed: !!state.filters.has_landable_ringed,
+      mining: !!state.filters.has_mining_signals
+    };
+    const hasAnyMiningFilter = Object.values(activeMiningFilters).some(Boolean);
 
-        const statParts = [];
-        if (state.showMiningGravity && lb.gravity_g !== null && lb.gravity_g !== undefined) {
-          statParts.push(`${lb.gravity_g.toFixed(2)}G`);
-        }
-        if (state.showMiningTemp && lb.temp_k !== null && lb.temp_k !== undefined) {
-          statParts.push(`${lb.temp_k}K`);
-        }
-        const statSuffix = statParts.length > 0 ? ` [${statParts.join(' | ')}]` : '';
-
-        const tip = `${lb.body_name} (${lb.type}) - 重力: ${lb.gravity_g ? lb.gravity_g.toFixed(2) + 'G' : '--'} | 温度: ${lb.temp_k ? lb.temp_k + 'K' : '--'}${isRing ? ' | 環付き (Ringed)' : ''}${lb.mining_signals > 0 ? ' | 採掘拠点: ' + lb.mining_signals + '箇所' : ''}`;
-        return `<span class="tag-badge" style="${colorStyle} font-size: 0.67rem; padding: 1px 4px; margin-right: 2px;" title="${tip}">${icon} ${lb.type}${statSuffix}</span>`;
+    if (hasAnyMiningFilter && sys.landable_bodies && sys.landable_bodies.length > 0) {
+      const matchedBodies = sys.landable_bodies.filter(lb => {
+        if (activeMiningFilters.hmc && lb.type === 'HMC') return true;
+        if (activeMiningFilters.metal_rich && lb.type === 'Metal Rich') return true;
+        if (activeMiningFilters.rocky && lb.type === 'Rocky') return true;
+        if (activeMiningFilters.icy && lb.type === 'Icy') return true;
+        if (activeMiningFilters.rocky_ice && lb.type === 'Icy Rocky') return true;
+        if (activeMiningFilters.ringed && lb.is_ringed) return true;
+        if (activeMiningFilters.mining && lb.mining_signals > 0) return true;
+        return false;
       });
-      if (sys.landable_bodies.length > 4) {
-        landableBadges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.06); color: var(--text-dim); font-size: 0.65rem; padding: 1px 4px;" title="他 ${sys.landable_bodies.length - 4} 天体のLandable天体">+${sys.landable_bodies.length - 4}</span>`);
+
+      if (matchedBodies.length > 0) {
+        const landableBadges = matchedBodies.slice(0, 6).map(lb => {
+          const isRing = lb.is_ringed;
+          const icon = isRing ? '💍' : '🪐';
+          let colorStyle = 'background: rgba(203, 213, 225, 0.12); color: #cbd5e1; border: 1px solid rgba(203, 213, 225, 0.3);';
+          if (lb.type === 'HMC') {
+            colorStyle = 'background: rgba(96, 165, 250, 0.15); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.4);';
+          } else if (lb.type === 'Metal Rich') {
+            colorStyle = 'background: rgba(251, 146, 60, 0.15); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.4);';
+          } else if (lb.type === 'Icy') {
+            colorStyle = 'background: rgba(103, 232, 249, 0.15); color: #67e8f9; border: 1px solid rgba(103, 232, 249, 0.4);';
+          } else if (lb.type === 'Icy Rocky') {
+            colorStyle = 'background: rgba(147, 197, 253, 0.15); color: #93c5fd; border: 1px solid rgba(147, 197, 253, 0.4);';
+          }
+          if (isRing) {
+            colorStyle += ' border-color: rgba(244, 114, 182, 0.7); box-shadow: 0 0 3px rgba(244, 114, 182, 0.3);';
+          }
+
+          const statParts = [];
+          if (state.showMiningGravity && lb.gravity_g !== null && lb.gravity_g !== undefined) {
+            statParts.push(`${lb.gravity_g.toFixed(2)}G`);
+          }
+          if (state.showMiningTemp && lb.temp_k !== null && lb.temp_k !== undefined) {
+            statParts.push(`${lb.temp_k}K`);
+          }
+          const statSuffix = statParts.length > 0 ? ` [${statParts.join(' | ')}]` : '';
+
+          const tip = `${lb.body_name} (${lb.type}) - 重力: ${lb.gravity_g ? lb.gravity_g.toFixed(2) + 'G' : '--'} | 温度: ${lb.temp_k ? lb.temp_k + 'K' : '--'}${isRing ? ' | 環付き (Ringed)' : ''}${lb.mining_signals > 0 ? ' | 採掘拠点: ' + lb.mining_signals + '箇所' : ''}`;
+          return `<span class="tag-badge" style="${colorStyle} font-size: 0.67rem; padding: 1px 4px; margin-right: 2px;" title="${tip}">${icon} ${lb.type}${statSuffix}</span>`;
+        });
+        if (matchedBodies.length > 6) {
+          landableBadges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.06); color: var(--text-dim); font-size: 0.65rem; padding: 1px 4px;" title="他 ${matchedBodies.length - 6} 件のマッチ天体">+${matchedBodies.length - 6}</span>`);
+        }
+        landableHtml = `
+          <div class="system-landable-bar" style="display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; padding-top: 3px; border-top: 1px dashed rgba(255,255,255,0.07);">
+            ${landableBadges.join('')}
+          </div>
+        `;
       }
-      landableHtml = `
-        <div class="system-landable-bar" style="display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; padding-top: 3px; border-top: 1px dashed rgba(255,255,255,0.07);">
-          ${landableBadges.join('')}
-        </div>
-      `;
     }
 
     card.innerHTML = `
@@ -1153,6 +1184,18 @@ function clearBodyInspector() {
   if (ringsSection) ringsSection.style.display = 'none';
 }
 
+async function dismissHonkWaitingAndShowCurrent() {
+  state.jumpState = 'idle';
+  const targetAddress = state.currentCmdrSystemAddress 
+    || (state.selectedSystem ? state.selectedSystem.system_address : null)
+    || (state.systems && state.systems.length > 0 ? state.systems[0].system_address : null);
+  if (targetAddress) {
+    await selectSystem(targetAddress, false, false);
+  } else {
+    renderCurrentView();
+  }
+}
+
 function renderCurrentView() {
   const container = document.getElementById('map-content');
   container.innerHTML = '';
@@ -1180,8 +1223,17 @@ function renderCurrentView() {
         <div style="font-size: 1.2rem; font-weight: bold; letter-spacing: 1.5px; color: #fff;">ARRIVED: ${curSys}</div>
         <div style="font-size: 0.9rem; color: var(--ed-cyan); margin-top: 8px;">FSS ディスカバリースキャン (Honk) 待機中...</div>
         <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 14px;">Discovery Scanner (Honk) を実行すると System Map の確定描画を開始します</div>
+        <button id="btn-dismiss-honk" class="btn-page" style="margin-top: 16px; padding: 6px 14px; font-size: 0.8rem; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px;">
+          <span>▶ 現状判明している星系マップを表示 (Live)</span>
+        </button>
       </div>
     `;
+    const btnDismiss = document.getElementById('btn-dismiss-honk');
+    if (btnDismiss) {
+      btnDismiss.addEventListener('click', () => {
+        dismissHonkWaitingAndShowCurrent();
+      });
+    }
     return;
   }
 
@@ -1739,8 +1791,9 @@ function renderMiningView(container, bodies) {
               </div>
 
               <!-- Physical Details & Atmosphere -->
-              <div style="display: flex; gap: 12px; margin-top: 5px; font-size: 0.72rem; color: var(--text-secondary); flex-wrap: wrap;">
-                <span style="${state.showMiningTemp ? 'color: #38bdf8; font-weight: bold;' : ''}">表面温度: <b style="color: #fff;">${Math.round(body.surface_temperature || 0)} K (${Math.round((body.surface_temperature || 0) - 273.15)} °C)</b></span>
+              <div style="display: flex; gap: 12px; margin-top: 5px; font-size: 0.72rem; color: var(--text-secondary); flex-wrap: wrap; align-items: center;">
+                <span style="${state.showMiningTemp ? 'color: #38bdf8; font-weight: bold;' : ''}">表面温度: <b style="color: #fff;">${Math.round(body.surface_temperature || 0)} K (${Math.round((body.surface_temperature || 0) - 273.15)} ℃)</b></span>
+                <span style="${state.showMiningGravity ? 'color: var(--ed-orange); font-weight: bold;' : ''}">重力: <b style="color: #fff;">${gVal.toFixed(2)} G</b></span>
                 <span>大気: <b style="color: #fff;">${body.atmosphere || 'None'}</b></span>
                 ${body.volcanism ? `<span>火山活動: <b style="color: #fff;">${body.volcanism}</b></span>` : ''}
               </div>
@@ -2155,7 +2208,7 @@ function renderBodyInspector() {
   // Surface & Landable
   const landableEl = document.getElementById('prop-landable');
   if (b.landable) {
-    landableEl.innerHTML = `<span>✓</span> <span>${t('landable_yes')}</span>`;
+    landableEl.innerHTML = `<span>✓</span> <span>Landable</span>`;
     landableEl.className = 'prop-val landable';
   } else {
     landableEl.innerText = t('landable_no');
@@ -2435,7 +2488,7 @@ document.addEventListener('DOMContentLoaded', () => {
     searchTimeout = setTimeout(() => {
       state.searchQuery = e.target.value;
       state.page = 1;
-      fetchSystems();
+      fetchSystems({ autoSelectTop: true });
     }, 300);
   });
 
@@ -2446,7 +2499,7 @@ document.addEventListener('DOMContentLoaded', () => {
       state.filters[filterKey] = !state.filters[filterKey];
       chip.classList.toggle('active', state.filters[filterKey]);
       state.page = 1;
-      fetchSystems();
+      fetchSystems({ autoSelectTop: true });
     });
   });
 
@@ -2547,7 +2600,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     state.datePreset = preset;
     state.page = 1;
-    fetchSystems();
+    fetchSystems({ autoSelectTop: true });
     fetchGlobalStats();
   }
 
@@ -2562,7 +2615,7 @@ document.addEventListener('DOMContentLoaded', () => {
       state.dateFrom = e.target.value;
       presetSelect.value = 'custom';
       state.page = 1;
-      fetchSystems();
+      fetchSystems({ autoSelectTop: true });
       fetchGlobalStats();
     });
   }
@@ -2572,7 +2625,7 @@ document.addEventListener('DOMContentLoaded', () => {
       state.dateTo = e.target.value;
       presetSelect.value = 'custom';
       state.page = 1;
-      fetchSystems();
+      fetchSystems({ autoSelectTop: true });
     });
   }
 
@@ -2580,7 +2633,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dateFieldSelect.addEventListener('change', (e) => {
       state.dateField = e.target.value;
       state.page = 1;
-      fetchSystems();
+      fetchSystems({ autoSelectTop: true });
     });
   }
 
@@ -2600,7 +2653,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.sortBy = by;
     state.sortOrder = order;
     state.page = 1;
-    fetchSystems();
+    fetchSystems({ autoSelectTop: true });
   });
 
   // Sort select 2 for systems
@@ -2619,7 +2672,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.sortOrder2 = order;
       }
       state.page = 1;
-      fetchSystems();
+      fetchSystems({ autoSelectTop: true });
     });
   }
 
@@ -2639,7 +2692,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.sortOrder3 = order;
       }
       state.page = 1;
-      fetchSystems();
+      fetchSystems({ autoSelectTop: true });
     });
   }
 
@@ -2649,7 +2702,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cbSortComposite.addEventListener('change', (e) => {
       state.sortMode = e.target.checked ? 'composite' : 'strict';
       state.page = 1;
-      fetchSystems();
+      fetchSystems({ autoSelectTop: true });
     });
   }
 
@@ -2797,12 +2850,31 @@ document.addEventListener('DOMContentLoaded', () => {
   // Live Sync Toggle Button
   const btnLiveToggle = document.getElementById('btn-live-toggle');
   if (btnLiveToggle) {
-    btnLiveToggle.addEventListener('click', () => {
+    btnLiveToggle.addEventListener('click', async () => {
+      // If currently on Honk waiting screen or hyperspace, dismiss it and show current known system
+      if (state.jumpState === 'arrived_waiting_fss' || state.jumpState === 'hyperspace') {
+        state.liveSyncEnabled = true;
+        updateLiveSyncButtonUI();
+        updateSortControlsUI();
+        await dismissHonkWaitingAndShowCurrent();
+        return;
+      }
+
       state.liveSyncEnabled = !state.liveSyncEnabled;
       state.page = 1;
       updateLiveSyncButtonUI();
       updateSortControlsUI();
-      fetchSystems();
+      if (state.liveSyncEnabled) {
+        state.jumpState = 'idle';
+        await fetchSystems({ autoSelectTop: false });
+        if (state.currentCmdrSystemAddress) {
+          selectSystem(state.currentCmdrSystemAddress, false, false);
+        } else if (state.systems && state.systems.length > 0) {
+          selectSystem(state.systems[0].system_address, false, false);
+        }
+      } else {
+        fetchSystems();
+      }
     });
   }
 
@@ -3514,6 +3586,97 @@ async function initSettingsModal() {
     setTimeout(populateWebVoices, 2500);
   }
 
+  // UI Font Size / Scaling Control
+  function initFontSizeControl() {
+    const inputSize = document.getElementById('input-font-size');
+    const btnDec = document.getElementById('btn-font-dec');
+    const btnInc = document.getElementById('btn-font-inc');
+    const btnReset = document.getElementById('btn-reset-font-size');
+    const presetBtns = document.querySelectorAll('.btn-font-preset');
+
+    function getCurrentFontSize() {
+      const saved = localStorage.getItem('app_base_font_size');
+      const parsed = saved ? parseInt(saved, 10) : 18;
+      return (!isNaN(parsed) && parsed >= 8 && parsed <= 60) ? parsed : 18;
+    }
+
+    function setFontSize(sizePx) {
+      const clamped = Math.max(8, Math.min(60, sizePx));
+      document.documentElement.style.fontSize = `${clamped}px`;
+      localStorage.setItem('app_base_font_size', clamped);
+      if (inputSize) inputSize.value = clamped;
+
+      if (presetBtns) {
+        presetBtns.forEach(btn => {
+          const bSize = parseInt(btn.dataset.size, 10);
+          if (bSize === clamped) {
+            btn.classList.add('active');
+            btn.style.borderColor = 'var(--ed-cyan)';
+            btn.style.color = 'var(--ed-cyan)';
+            btn.style.fontWeight = 'bold';
+          } else {
+            btn.classList.remove('active');
+            btn.style.borderColor = 'var(--border-color)';
+            btn.style.color = 'var(--text-primary)';
+            btn.style.fontWeight = 'normal';
+          }
+        });
+      }
+    }
+
+    // Initial apply
+    const curSize = getCurrentFontSize();
+    setFontSize(curSize);
+
+    if (inputSize) {
+      inputSize.addEventListener('change', (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (!isNaN(val)) setFontSize(val);
+      });
+      inputSize.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (!isNaN(val) && val >= 8 && val <= 60) setFontSize(val);
+      });
+    }
+
+    if (btnDec) {
+      btnDec.addEventListener('click', () => {
+        const current = getCurrentFontSize();
+        setFontSize(current - 1);
+      });
+    }
+
+    if (btnInc) {
+      btnInc.addEventListener('click', () => {
+        const current = getCurrentFontSize();
+        setFontSize(current + 1);
+      });
+    }
+
+    if (btnReset) {
+      btnReset.addEventListener('click', () => {
+        setFontSize(18);
+      });
+    }
+
+    if (presetBtns) {
+      presetBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetSize = parseInt(btn.dataset.size, 10);
+          if (!isNaN(targetSize)) setFontSize(targetSize);
+        });
+      });
+    }
+
+    // Emergency safety keyboard shortcut: Ctrl + 0 or Alt + 0 resets font size to standard 18px
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === '0' || e.code === 'Digit0' || e.code === 'Numpad0')) {
+        e.preventDefault();
+        setFontSize(18);
+      }
+    });
+  }
+
   // Bind Unified Settings Modal & Tabs
   const modal = document.getElementById('settings-modal');
   const btnOpen = document.getElementById('btn-settings-open');
@@ -3521,21 +3684,23 @@ async function initSettingsModal() {
   const btnSave = document.getElementById('btn-settings-save');
 
   const tabBtnLogs = document.getElementById('tab-btn-logs');
+  const tabBtnUI = document.getElementById('tab-btn-ui');
   const tabBtnTTS = document.getElementById('tab-btn-tts');
   const tabBtnCredits = document.getElementById('tab-btn-credits');
 
   const tabPaneLogs = document.getElementById('tab-pane-logs');
+  const tabPaneUI = document.getElementById('tab-pane-ui');
   const tabPaneTTS = document.getElementById('tab-pane-tts');
   const tabPaneCredits = document.getElementById('tab-pane-credits');
 
   function switchTab(tabName) {
-    [tabBtnLogs, tabBtnTTS, tabBtnCredits].forEach(btn => {
+    [tabBtnLogs, tabBtnUI, tabBtnTTS, tabBtnCredits].forEach(btn => {
       if (btn) {
         btn.classList.remove('active');
         btn.style.borderBottom = 'none';
       }
     });
-    [tabPaneLogs, tabPaneTTS, tabPaneCredits].forEach(pane => {
+    [tabPaneLogs, tabPaneUI, tabPaneTTS, tabPaneCredits].forEach(pane => {
       if (pane) pane.style.display = 'none';
     });
 
@@ -3546,6 +3711,12 @@ async function initSettingsModal() {
       }
       if (tabPaneLogs) tabPaneLogs.style.display = 'flex';
       loadAppSettingsToUI();
+    } else if (tabName === 'ui') {
+      if (tabBtnUI) {
+        tabBtnUI.classList.add('active');
+        tabBtnUI.style.borderBottom = '2px solid var(--ed-cyan)';
+      }
+      if (tabPaneUI) tabPaneUI.style.display = 'flex';
     } else if (tabName === 'tts') {
       if (tabBtnTTS) {
         tabBtnTTS.classList.add('active');
@@ -3563,8 +3734,11 @@ async function initSettingsModal() {
   }
 
   if (tabBtnLogs) tabBtnLogs.addEventListener('click', () => switchTab('logs'));
+  if (tabBtnUI) tabBtnUI.addEventListener('click', () => switchTab('ui'));
   if (tabBtnTTS) tabBtnTTS.addEventListener('click', () => switchTab('tts'));
   if (tabBtnCredits) tabBtnCredits.addEventListener('click', () => switchTab('credits'));
+
+  initFontSizeControl();
 
   // App Settings (Journal Dir)
   const inputJournalDir = document.getElementById('setting-journal-dir');
