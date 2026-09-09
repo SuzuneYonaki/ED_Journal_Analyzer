@@ -720,6 +720,58 @@ def get_systems(
         "systems": rows
     }
 
+def extract_rhino_mining_sites(mining_acts: list) -> list:
+    """
+    Extract distinct Rhino mining sites with coordinates (lat/lon) and refined commodities.
+    Filters out raw engineering materials and quantities as per user requirements.
+    """
+    if not mining_acts:
+        return []
+
+    refined_acts = [a for a in mining_acts if a.get("category") == "Refined"]
+    if not refined_acts:
+        return []
+
+    sites_map = {}
+    for act in refined_acts:
+        lat = act.get("latitude")
+        lon = act.get("longitude")
+        if lat is not None and lon is not None:
+            coord_key = (round(float(lat), 4), round(float(lon), 4))
+        else:
+            coord_key = (None, None)
+
+        m_name = act.get("material_name_localised") or act.get("material_name")
+        if not m_name:
+            continue
+
+        ts = act.get("timestamp") or ""
+        if coord_key not in sites_map:
+            sites_map[coord_key] = {
+                "latitude": coord_key[0],
+                "longitude": coord_key[1],
+                "commodities": set(),
+                "last_mined": ts,
+                "first_mined": ts,
+                "body_name": act.get("body_name"),
+                "body_id": act.get("body_id"),
+                "srv_type": act.get("srv_type") or "mev_rhino"
+            }
+        sites_map[coord_key]["commodities"].add(m_name)
+        if ts > sites_map[coord_key]["last_mined"]:
+            sites_map[coord_key]["last_mined"] = ts
+        if ts < sites_map[coord_key]["first_mined"] or not sites_map[coord_key]["first_mined"]:
+            sites_map[coord_key]["first_mined"] = ts
+
+    result = []
+    for site in sites_map.values():
+        site["commodities"] = sorted(list(site["commodities"]))
+        result.append(site)
+
+    result.sort(key=lambda s: (1 if s["latitude"] is not None else 0, s["last_mined"] or ""), reverse=True)
+    return result
+
+
 @app.get("/api/system/{system_address}")
 def get_system_detail(system_address: int):
     conn = get_db_connection()
@@ -932,6 +984,7 @@ def get_system_detail(system_address: int):
         )
         b["mining_activities"] = b_mining_list
         b["mining_activities_count"] = len(b_mining_list)
+        b["rhino_mining_sites"] = extract_rhino_mining_sites(b_mining_list)
 
         completed_count = sum(1 for s in b_scanned_list if s.get("is_completed"))
         b["completed_bio_count"] = completed_count
@@ -1006,6 +1059,7 @@ def get_system_detail(system_address: int):
         "visits": visits,
         "organics": raw_organics,
         "mining_activities": raw_mining,
+        "rhino_mining_sites": extract_rhino_mining_sites(raw_mining),
         "system_bio_summary": {
             "total_base_value": system_bio_total_base,
             "total_first_value": system_bio_total_first,

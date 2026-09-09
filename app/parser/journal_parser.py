@@ -61,9 +61,18 @@ class JournalParser:
         elif event_data.get("Body") and isinstance(event_data.get("Body"), str):
             self.current_body_name = event_data["Body"]
 
-        if "Latitude" in event_data:
+        if "Latitude" in event_data and "Longitude" in event_data:
             self.current_latitude = event_data["Latitude"]
-        if "Longitude" in event_data:
+            self.current_longitude = event_data["Longitude"]
+            if self.current_system_address and self.current_body_id is not None:
+                self.cursor.execute("""
+                    UPDATE surface_mining_activities
+                    SET latitude = ?, longitude = ?
+                    WHERE system_address = ? AND body_id = ? AND latitude IS NULL
+                """, (self.current_latitude, self.current_longitude, self.current_system_address, self.current_body_id))
+        elif "Latitude" in event_data:
+            self.current_latitude = event_data["Latitude"]
+        elif "Longitude" in event_data:
             self.current_longitude = event_data["Longitude"]
 
         if event == "StartJump":
@@ -140,6 +149,14 @@ class JournalParser:
         star_sys = data.get("StarSystem")
         if not sys_addr or not star_sys:
             return
+
+        if data.get("event") in ["FSDJump", "CarrierJump"]:
+            self.current_latitude = None
+            self.current_longitude = None
+            self.in_srv = False
+            self.srv_type = None
+            self.current_body_id = None
+            self.current_body_name = None
 
         star_pos = data.get("StarPos", [0, 0, 0])
         pos_x, pos_y, pos_z = (star_pos[0], star_pos[1], star_pos[2]) if len(star_pos) >= 3 else (0, 0, 0)

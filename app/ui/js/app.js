@@ -1721,23 +1721,38 @@ function renderMiningView(container, bodies) {
         } catch (e) {}
       }
 
-      // Rhino mined activities chips if present on this body
+      // Rhino mined activities: show WHERE (Lat/Lon) and WHAT (mined commodities), omit counts and raw materials
       let minedActHtml = '';
-      if (body.mining_activities && body.mining_activities.length > 0) {
-        const minedMap = {};
-        body.mining_activities.forEach(a => {
-          const mName = a.material_name_localised || a.material_name;
-          minedMap[mName] = (minedMap[mName] || 0) + (a.count || 1);
+      const miningSites = body.rhino_mining_sites || [];
+      if (miningSites.length > 0) {
+        const allCommodities = new Set();
+        const coordBadges = [];
+        miningSites.forEach(s => {
+          (s.commodities || []).forEach(c => allCommodities.add(c));
+          if (s.latitude !== null && s.longitude !== null) {
+            const latStr = (s.latitude >= 0 ? '+' : '') + s.latitude.toFixed(2);
+            const lonStr = (s.longitude >= 0 ? '+' : '') + s.longitude.toFixed(2);
+            coordBadges.push(`📍 ${latStr}°, ${lonStr}°`);
+          }
         });
-        const minedBadges = Object.entries(minedMap).map(([mName, count]) => `
-          <span class="tag-badge" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.68rem; padding: 1px 5px;">
-            ⛏️ ${mName} ×${count}
+
+        const commBadges = Array.from(allCommodities).map(cName => `
+          <span class="tag-badge" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.68rem; padding: 1px 5px; font-weight: bold;">
+            💎 ${cName}
           </span>
         `).join('');
+
+        const locBadges = coordBadges.slice(0, 3).map(cStr => `
+          <span class="tag-badge" style="background: rgba(251, 146, 60, 0.15); color: #fed7aa; border: 1px solid rgba(251, 146, 60, 0.4); font-size: 0.65rem; padding: 1px 4px; font-family: var(--font-mono);">
+            ${cStr}
+          </span>
+        `).join('');
+
         minedActHtml = `
-          <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(56, 189, 248, 0.2); align-items: center;">
-            <span style="font-size: 0.68rem; color: #38bdf8; font-weight: bold; margin-right: 2px;">🦏 Rhino採掘実績:</span>
-            ${minedBadges}
+          <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(56, 189, 248, 0.25); align-items: center;">
+            <span style="font-size: 0.68rem; color: #38bdf8; font-weight: bold; margin-right: 2px;">🦏 Rhino採掘:</span>
+            ${commBadges}
+            ${locBadges}
           </div>
         `;
       }
@@ -2302,60 +2317,183 @@ function renderBodyInspector() {
   document.getElementById('prop-atmosphere').innerText = formatAtmosphereDescription(b.atmosphere);
   document.getElementById('prop-volcanism').innerText = b.volcanism || 'None';
 
-  // Planetary Mining Locations Section & Property Card (Separate from Biology & Volcanism)
-  const miningSec = document.getElementById('section-mining');
+  // Planetary Mining Locations Section & Property Card
+  const miningSec = document.getElementById('section-mining-activities') || document.getElementById('section-mining');
   const miningCountEl = document.getElementById('inspect-mining-count');
   const propCardMining = document.getElementById('prop-card-mining');
   const propMining = document.getElementById('prop-mining');
   const miningActivitiesEl = document.getElementById('inspect-mining-activities');
   const miningSigCount = b.mining_signals || 0;
-  const miningActs = b.mining_activities || [];
+  const miningSites = b.rhino_mining_sites || [];
 
-  if (miningSigCount > 0 || miningActs.length > 0) {
+  if (miningSigCount > 0 || miningSites.length > 0) {
     if (miningSec) miningSec.style.display = 'block';
     if (miningCountEl) miningCountEl.innerText = miningSigCount;
     if (propCardMining) propCardMining.style.display = 'block';
     if (propMining) propMining.innerText = `${miningSigCount} 箇所 (Planetary Mining Locations)`;
 
     if (miningActivitiesEl) {
-      if (miningActs.length > 0) {
-        // Aggregate materials
-        const matSummary = {};
-        miningActs.forEach(act => {
-          const mName = act.material_name_localised || act.material_name;
-          const cat = act.category || 'Raw';
-          const bType = act.body_type || 'Unknown';
-          const key = `${mName}|${cat}|${bType}`;
-          if (!matSummary[key]) {
-            matSummary[key] = { name: mName, cat, body_type: bType, count: 0, srv_type: act.srv_type };
-          }
-          matSummary[key].count += (act.count || 1);
-        });
+      if (miningSites.length > 0) {
+        // Build SVG markers for sites with coordinates
+        const markersSvg = miningSites.map((site, idx) => {
+          if (site.latitude === null || site.longitude === null) return '';
+          const cx = site.longitude;
+          const cy = -site.latitude;
+          const commNames = (site.commodities || []).join(', ');
+          const latFmt = (site.latitude >= 0 ? '+' : '') + site.latitude.toFixed(4);
+          const lonFmt = (site.longitude >= 0 ? '+' : '') + site.longitude.toFixed(4);
+          return `
+            <g class="mining-map-marker" data-site-idx="${idx}" style="cursor: pointer;">
+              <circle cx="${cx}" cy="${cy}" r="6" fill="none" stroke="#38bdf8" stroke-width="1.2" class="pulse-marker" />
+              <circle cx="${cx}" cy="${cy}" r="3" fill="#38bdf8" stroke="#ffffff" stroke-width="0.8" />
+              <title>${commNames} (Lat: ${latFmt}°, Lon: ${lonFmt}°)</title>
+            </g>
+          `;
+        }).join('');
 
-        const sortedMats = Object.values(matSummary).sort((a, b) => b.count - a.count);
-        miningActivitiesEl.innerHTML = `
-          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 10px; margin-top: 6px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-              <span style="font-size: 0.78rem; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
-                <span>🦏</span> <span>Rhino採掘実績 (採取・精製済み素材)</span>
+        const hasAnyCoords = miningSites.some(s => s.latitude !== null && s.longitude !== null);
+
+        const mapHtml = hasAnyCoords ? `
+          <div class="mining-map-container" style="background: radial-gradient(circle at center, #0e1b2e 0%, #060913 100%); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 8px; position: relative; margin-top: 6px; box-shadow: inset 0 0 16px rgba(0,0,0,0.6);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.72rem;">
+              <span style="color: #38bdf8; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+                <span>🌐</span> <span>惑星表面 採掘座標マップ (2D Grid)</span>
               </span>
-              <span style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">実績: ${miningActs.length} 回</span>
+              <span style="color: var(--text-dim); font-family: var(--font-mono); font-size: 0.68rem;">記録地点: ${miningSites.length} 箇所</span>
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-              ${sortedMats.map(m => `
-                <div class="tag-badge" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); color: #e0f2fe; padding: 3px 6px; font-size: 0.72rem; display: flex; align-items: center; gap: 4px;" title="天体種別: ${m.body_type} / 分類: ${m.cat}">
-                  <span style="color: #38bdf8; font-weight: bold;">${m.name}</span>
-                  <span style="background: rgba(255,255,255,0.1); border-radius: 3px; padding: 0 4px; font-family: var(--font-mono); font-size: 0.68rem;">×${m.count}</span>
-                  <span style="font-size: 0.62rem; color: #94a3b8; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 4px;">${m.body_type}</span>
-                </div>
-              `).join('')}
+            <div style="position: relative; width: 100%;">
+              <svg viewBox="-180 -90 360 180" style="width: 100%; height: auto; max-height: 150px; display: block; background: rgba(5, 10, 20, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px;">
+                <!-- Latitudes -->
+                <line x1="-180" y1="0" x2="180" y2="0" stroke="rgba(56, 189, 248, 0.45)" stroke-width="0.8" stroke-dasharray="2,2" />
+                <line x1="-180" y1="-45" x2="180" y2="-45" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
+                <line x1="-180" y1="45" x2="180" y2="45" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
+                <!-- Longitudes -->
+                <line x1="0" y1="-90" x2="0" y2="90" stroke="rgba(56, 189, 248, 0.45)" stroke-width="0.8" stroke-dasharray="2,2" />
+                <line x1="-90" y1="-90" x2="-90" y2="90" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
+                <line x1="90" y1="-90" x2="90" y2="90" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
+                <!-- Labels -->
+                <text x="-176" y="-76" fill="#64748b" font-size="7" font-family="sans-serif">N 90°</text>
+                <text x="-176" y="86" fill="#64748b" font-size="7" font-family="sans-serif">S -90°</text>
+                <text x="-176" y="-3" fill="#38bdf8" font-size="6.5" font-family="sans-serif" opacity="0.8">0° (赤道)</text>
+                <text x="2" y="-76" fill="#38bdf8" font-size="6.5" font-family="sans-serif" opacity="0.8">0° (子午線)</text>
+                <text x="-176" y="12" fill="#64748b" font-size="6" font-family="sans-serif">-180°</text>
+                <text x="154" y="12" fill="#64748b" font-size="6" font-family="sans-serif">+180°</text>
+                <!-- Markers -->
+                ${markersSvg}
+              </svg>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.62rem; color: var(--text-dim);">
+              <span>西半球 (-180° ~ 0°)</span>
+              <span>子午線 (0°) / 赤道 (0°)</span>
+              <span>東半球 (0° ~ +180°)</span>
             </div>
           </div>
+        ` : '';
+
+        // Build Cards List
+        const cardsHtml = `
+          <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+            ${miningSites.map((site, idx) => {
+              const hasCoord = site.latitude !== null && site.longitude !== null;
+              const latStr = hasCoord ? `${site.latitude >= 0 ? '+' : ''}${site.latitude.toFixed(4)}°` : '--';
+              const lonStr = hasCoord ? `${site.longitude >= 0 ? '+' : ''}${site.longitude.toFixed(4)}°` : '--';
+              const copyVal = hasCoord ? `${site.latitude.toFixed(4)}, ${site.longitude.toFixed(4)}` : '';
+              const minerals = (site.commodities || []).map(m => `
+                <span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #e0f2fe; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.72rem; padding: 2px 6px; font-weight: bold;">
+                  💎 ${m}
+                </span>
+              `).join('');
+              const lastTime = site.last_mined ? site.last_mined.replace('T', ' ').replace('Z', '') : '';
+
+              return `
+                <div class="mining-site-card" id="mining-site-card-${idx}" style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 8px 10px; transition: all 0.2s;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; margin-bottom: 5px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="color: var(--ed-orange); font-size: 0.85rem;">📍</span>
+                      <span style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: bold; color: #fff;">
+                        ${hasCoord ? `緯度: ${latStr}  経度: ${lonStr}` : '<span style="color: var(--text-dim);">座標記録なし</span>'}
+                      </span>
+                    </div>
+                    ${hasCoord ? `
+                      <button type="button" class="view-btn btn-copy-coords" data-coords="${copyVal}" style="padding: 2px 8px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="クリップボードに座標 (${copyVal}) をコピー">
+                        📋 座標コピー
+                      </button>
+                    ` : ''}
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                      ${minerals || '<span style="color: var(--text-dim); font-size: 0.7rem;">精製鉱物なし</span>'}
+                    </div>
+                    ${lastTime ? `
+                      <span style="font-size: 0.65rem; color: var(--text-dim); font-family: var(--font-mono);">
+                        🕒 ${lastTime}
+                      </span>
+                    ` : ''}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
         `;
+
+        miningActivitiesEl.innerHTML = `
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 10px; margin-top: 6px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+              <span style="font-size: 0.78rem; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
+                <span>🦏</span> <span>Rhino 惑星表面採掘地点 & 鉱物</span>
+              </span>
+              <span style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">採掘地点: ${miningSites.length} 箇所</span>
+            </div>
+            ${mapHtml}
+            ${cardsHtml}
+          </div>
+        `;
+
+        // Bind copy buttons
+        miningActivitiesEl.querySelectorAll('.btn-copy-coords').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const coords = btn.dataset.coords;
+            if (coords && navigator.clipboard) {
+              navigator.clipboard.writeText(coords).then(() => {
+                const orig = btn.innerHTML;
+                btn.innerHTML = '✓ コピー済';
+                btn.style.color = '#38bdf8';
+                btn.style.borderColor = '#38bdf8';
+                setTimeout(() => {
+                  btn.innerHTML = orig;
+                  btn.style.color = '';
+                  btn.style.borderColor = '';
+                }, 1800);
+              });
+            }
+          });
+        });
+
+        // Bind map markers hover/click to highlight cards
+        miningActivitiesEl.querySelectorAll('.mining-map-marker').forEach(marker => {
+          const sIdx = marker.dataset.siteIdx;
+          const targetCard = document.getElementById(`mining-site-card-${sIdx}`);
+          marker.addEventListener('mouseenter', () => {
+            if (targetCard) targetCard.classList.add('highlighted');
+          });
+          marker.addEventListener('mouseleave', () => {
+            if (targetCard) targetCard.classList.remove('highlighted');
+          });
+          marker.addEventListener('click', () => {
+            if (targetCard) {
+              targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              targetCard.classList.add('highlighted');
+              setTimeout(() => targetCard.classList.remove('highlighted'), 2000);
+            }
+          });
+        });
+
       } else {
         miningActivitiesEl.innerHTML = `
-          <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 6px; padding: 4px 6px;">
-            まだこの天体でのRhino採掘実績（素材採取ログ）はありません。
+          <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 6px; padding: 6px 8px; background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(56, 189, 248, 0.2); border-radius: 4px;">
+            まだこの天体でのRhino採掘ログ（鉱物精製）は記録されていません。<br>
+            現地（PML）でRhino採掘Rigを展開して鉱物精製を行うと、採掘地点（緯度・経度）と鉱物種別が自動マッピングされます。
           </div>
         `;
       }

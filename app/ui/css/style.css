@@ -1816,4 +1816,37 @@ header {
   color: var(--text-secondary);
 }
 
+/* Rhino Planetary Mining Surface Map & Site Cards */
+@keyframes markerPulse {
+  0% { r: 4; opacity: 1; stroke-width: 1.5; }
+  50% { r: 9; opacity: 0.25; stroke-width: 0.8; }
+  100% { r: 4; opacity: 1; stroke-width: 1.5; }
+}
+
+.pulse-marker {
+  animation: markerPulse 2.2s infinite ease-in-out;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.mining-map-marker:hover circle:first-child {
+  stroke: #fed7aa;
+}
+
+.mining-map-marker:hover circle:last-child {
+  fill: var(--ed-orange);
+}
+
+.mining-site-card.highlighted {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.12) !important;
+}
+
+.btn-copy-coords:hover {
+  background: rgba(56, 189, 248, 0.28) !important;
+  color: #fff !important;
+}
+
+
 
