@@ -4,8 +4,7 @@ __pycache__/
 *$py.class
 
 # Local SQLite Database & logs
-data/
-!app/data/canonn_rules.json
+/data/
 *.db
 *.db-journal
 *.db-wal

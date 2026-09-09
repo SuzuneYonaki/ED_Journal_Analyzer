@@ -17,6 +17,7 @@ from app.parser.watcher import JournalWatcher
 from app.analyzer.orbit_analyzer import build_system_hierarchy
 from app.parser.exobiology import predict_exobiology_candidates, predict_system_exobiology_candidates
 from app.services.edsm_service import edsm_service
+from app.services.landmark_service import load_landmarks, calculate_landmark_distances
 
 app = FastAPI(title="Elite Dangerous Journal Analyzer")
 
@@ -214,6 +215,11 @@ def get_current_cmdr_location(conn) -> Optional[dict]:
     except Exception as err:
         print("Warning: get_current_cmdr_location failed:", err)
     return None
+
+@app.get("/api/landmarks")
+def get_landmarks_endpoint():
+    """Return static galactic landmark coordinates and metadata."""
+    return load_landmarks()
 
 @app.get("/api/stats")
 def get_global_stats(
@@ -600,6 +606,12 @@ def get_systems(
         for r in rows:
             r["landable_bodies"] = summary_by_sys.get(r["system_address"], [])
 
+    for r in rows:
+        if "landable_bodies" not in r:
+            r["landable_bodies"] = []
+        lm_dists = calculate_landmark_distances(r.get("star_pos_x"), r.get("star_pos_y"), r.get("star_pos_z"))
+        r.update(lm_dists)
+
     conn.close()
 
     return {
@@ -622,6 +634,8 @@ def get_system_detail(system_address: int):
         return JSONResponse({"error": "System not found"}, status_code=404)
 
     system_data = dict(sys_row)
+    lm_dists = calculate_landmark_distances(system_data.get("star_pos_x"), system_data.get("star_pos_y"), system_data.get("star_pos_z"))
+    system_data.update(lm_dists)
 
     # Queue EDSM verification if not yet checked
     if not system_data.get("edsm_checked"):

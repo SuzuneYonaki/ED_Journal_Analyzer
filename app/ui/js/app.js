@@ -514,12 +514,47 @@ function renderSystemList() {
     if (sys.total_bio_signals > 0) tags.push(`<span class="tag-badge tag-bio">BIO: ${sys.total_bio_signals}</span>`);
     else if (sys.has_bio) tags.push('<span class="tag-badge tag-bio">BIO</span>');
     
-    // Distance badges
+    // 5 Key Galactic Distances (CMDR, Sol, Colonia, Rainbow's End, Explorer's Anchorage)
+    const distanceBadges = [];
     if (sys.cmdr_distance_ly !== null && sys.cmdr_distance_ly !== undefined) {
-      tags.push(`<span class="tag-badge tag-cmdr-dist">📍 CMDR: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly</span>`);
+      const cmdrSys = state.currentLocation && state.currentLocation.star_system ? ` (${state.currentLocation.star_system})` : '';
+      distanceBadges.push(`<span class="tag-badge tag-cmdr-dist" title="現在地${cmdrSys}からの距離: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly">📍 CMDR: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly</span>`);
     }
-    if (sys.sol_distance_ly > 0) {
-      tags.push(`<span class="tag-badge tag-sol-dist">Sol: ${Math.round(sys.sol_distance_ly).toLocaleString()} Ly</span>`);
+
+    const solDist = (sys.sol_distance_ly !== undefined && sys.sol_distance_ly !== null && sys.sol_distance_ly > 0)
+      ? sys.sol_distance_ly
+      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+        ? Math.hypot(sys.star_pos_x, sys.star_pos_y, sys.star_pos_z)
+        : null);
+    if (solDist !== null && solDist !== undefined) {
+      distanceBadges.push(`<span class="tag-badge tag-sol-dist" title="太陽系 (Sol) からの距離: ${Math.round(solDist).toLocaleString()} Ly">Sol: ${Math.round(solDist).toLocaleString()} Ly</span>`);
+    }
+
+    const coloniaDist = (sys.colonia_distance_ly !== undefined && sys.colonia_distance_ly !== null)
+      ? sys.colonia_distance_ly
+      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+        ? Math.hypot(sys.star_pos_x - (-9530.5), sys.star_pos_y - (-910.28125), sys.star_pos_z - 19808.125)
+        : null);
+    if (coloniaDist !== null && coloniaDist !== undefined) {
+      distanceBadges.push(`<span class="tag-badge tag-colonia-dist" title="第2の人類居住圏 (Colonia) からの距離: ${Math.round(coloniaDist).toLocaleString()} Ly">Colonia: ${Math.round(coloniaDist).toLocaleString()} Ly</span>`);
+    }
+
+    const rbDist = (sys.rainbows_end_distance_ly !== undefined && sys.rainbows_end_distance_ly !== null)
+      ? sys.rainbows_end_distance_ly
+      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+        ? Math.hypot(sys.star_pos_x - 21481.40625, sys.star_pos_y - (-1004.5625), sys.star_pos_z - 43369.4375)
+        : null);
+    if (rbDist !== null && rbDist !== undefined) {
+      distanceBadges.push(`<span class="tag-badge tag-rainbow-dist" title="最遠方宇宙港 Rainbow's End (Roefoo ZE-H d10-0 / DW3) からの距離: ${Math.round(rbDist).toLocaleString()} Ly">Rainbow's End: ${Math.round(rbDist).toLocaleString()} Ly</span>`);
+    }
+
+    const eaDist = (sys.explorers_anchorage_distance_ly !== undefined && sys.explorers_anchorage_distance_ly !== null)
+      ? sys.explorers_anchorage_distance_ly
+      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+        ? Math.hypot(sys.star_pos_x - 28.6875, sys.star_pos_y - (-19.78125), sys.star_pos_z - 25899.6875)
+        : null);
+    if (eaDist !== null && eaDist !== undefined) {
+      distanceBadges.push(`<span class="tag-badge tag-eanch-dist" title="銀河中心探査基地 Explorer's Anchorage (Stuemeae FG-Y d7561 / Sgr A*近傍) からの距離: ${Math.round(eaDist).toLocaleString()} Ly">E.Anchorage: ${Math.round(eaDist).toLocaleString()} Ly</span>`);
     }
 
     // EDSM Discovery Status Badges & 1st Discover Registerable Announcement
@@ -555,6 +590,15 @@ function renderSystemList() {
     const coordsStr = (sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
       ? `[${sys.star_pos_x.toFixed(6)}, ${sys.star_pos_y.toFixed(6)}, ${sys.star_pos_z.toFixed(6)}]`
       : '';
+
+    let distanceHtml = '';
+    if (distanceBadges.length > 0) {
+      distanceHtml = `
+        <div class="system-distance-bar">
+          ${distanceBadges.join('')}
+        </div>
+      `;
+    }
 
     let landableHtml = '';
     if (sys.landable_bodies && sys.landable_bodies.length > 0) {
@@ -603,6 +647,7 @@ function renderSystemList() {
       <div class="system-card-tags">
         ${tags.join('')}
       </div>
+      ${distanceHtml}
       ${landableHtml}
     `;
 
@@ -653,6 +698,32 @@ function renderSystemHeader() {
     } else {
       edsmBadgeEl.innerHTML = '';
     }
+  }
+
+  // 5 Key Galactic Distances in Header
+  const distEl = document.getElementById('current-system-distances');
+  if (distEl) {
+    const badges = [];
+    if (sys.cmdr_distance_ly !== null && sys.cmdr_distance_ly !== undefined) {
+      badges.push(`<span class="tag-badge tag-cmdr-dist" title="現在地からの距離">📍 CMDR: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly</span>`);
+    }
+    const solDist = (sys.sol_distance_ly > 0) ? sys.sol_distance_ly : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null) ? Math.hypot(sys.star_pos_x, sys.star_pos_y, sys.star_pos_z) : null);
+    if (solDist !== null) {
+      badges.push(`<span class="tag-badge tag-sol-dist" title="太陽系 (Sol) からの距離">Sol: ${Math.round(solDist).toLocaleString()} Ly</span>`);
+    }
+    const colDist = sys.colonia_distance_ly ?? ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null) ? Math.hypot(sys.star_pos_x - (-9530.5), sys.star_pos_y - (-910.28125), sys.star_pos_z - 19808.125) : null);
+    if (colDist !== null) {
+      badges.push(`<span class="tag-badge tag-colonia-dist" title="第2の人類居住圏 (Colonia) からの距離">Colonia: ${Math.round(colDist).toLocaleString()} Ly</span>`);
+    }
+    const rbDist = sys.rainbows_end_distance_ly ?? ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null) ? Math.hypot(sys.star_pos_x - 21481.40625, sys.star_pos_y - (-1004.5625), sys.star_pos_z - 43369.4375) : null);
+    if (rbDist !== null) {
+      badges.push(`<span class="tag-badge tag-rainbow-dist" title="最遠方宇宙港 Rainbow's End (Roefoo ZE-H d10-0 / DW3) からの距離">Rainbow's End: ${Math.round(rbDist).toLocaleString()} Ly</span>`);
+    }
+    const eaDist = sys.explorers_anchorage_distance_ly ?? ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null) ? Math.hypot(sys.star_pos_x - 28.6875, sys.star_pos_y - (-19.78125), sys.star_pos_z - 25899.6875) : null);
+    if (eaDist !== null) {
+      badges.push(`<span class="tag-badge tag-eanch-dist" title="銀河中心探査基地 Explorer's Anchorage (Stuemeae FG-Y d7561 / Sgr A*近傍) からの距離">E.Anchorage: ${Math.round(eaDist).toLocaleString()} Ly</span>`);
+    }
+    distEl.innerHTML = badges.join('');
   }
   
   // Exobiology System Summary
@@ -1683,10 +1754,20 @@ function renderBodyInspector() {
     ? `${t('star_type_label')}: ${b.star_type}` 
     : `${b.planet_class || 'Body'}${b.terraforming_state ? ' [' + b.terraforming_state + ']' : ''}`;
 
-  // Anomalies
+  // Anomalies & Barycentre Info
   const anomSection = document.getElementById('section-anomalies');
   const anomTags = document.getElementById('inspect-anomaly-tags');
-  if (b.anomalies && b.anomalies.length > 0) {
+  if (b.isBarycentre) {
+    anomSection.style.display = 'block';
+    const starList = (b.barycentreStars || []).map(s => `Star ${s}`).join(' & ');
+    anomTags.innerHTML = `
+      <div style="background: rgba(147, 51, 234, 0.15); border: 1px solid rgba(147, 51, 234, 0.5); padding: 8px; border-radius: 6px; color: #e9d5ff; font-size: 0.8rem; line-height: 1.4;">
+        <div style="font-weight: bold; color: #c084fc; margin-bottom: 4px;">♊ 連星系共通重心（Barycentre）</div>
+        <div>構成恒星: <strong>${starList}</strong></div>
+        <div style="margin-top: 4px; color: var(--text-secondary);">この共通重心軌道上を周回する天体（${b.starGroup} 1, ${b.starGroup} 2...）の親軌道ノードです。</div>
+      </div>
+    `;
+  } else if (b.anomalies && b.anomalies.length > 0) {
     anomSection.style.display = 'block';
     anomTags.innerHTML = b.anomalies.map(a => `
       <div class="tag-badge tag-anomaly" title="${a.desc}" style="padding: 4px 8px; font-size: 0.75rem;">

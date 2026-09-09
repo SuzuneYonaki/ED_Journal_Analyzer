@@ -1,0 +1,26 @@
+{
+  "sol": {
+    "name": "Sol",
+    "system_name": "Sol",
+    "coords": [0.0, 0.0, 0.0],
+    "description": "人類発祥の地 / 太陽系 (Cradle of Humanity)"
+  },
+  "colonia": {
+    "name": "Colonia",
+    "system_name": "Colonia",
+    "coords": [-9530.5, -910.28125, 19808.125],
+    "description": "第2の人類居住圏 / コロニア星系 (Colonia Hub)"
+  },
+  "rainbows_end": {
+    "name": "Rainbow's End",
+    "system_name": "Roefoo ZE-H d10-0",
+    "coords": [21481.40625, -1004.5625, 43369.4375],
+    "description": "Distant Worlds 3 (DW3) 遠征CGで建造された最遠方深宇宙ステーション (Mare Somnium宙域)"
+  },
+  "explorers_anchorage": {
+    "name": "Explorer's Anchorage",
+    "system_name": "Stuemeae FG-Y d7561",
+    "coords": [28.6875, -19.78125, 25899.6875],
+    "description": "銀河中心 Sagittarius A* 近傍の深宇宙探査基地 (Distant Worlds 2建造)"
+  }
+}

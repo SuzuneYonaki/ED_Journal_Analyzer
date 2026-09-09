@@ -629,7 +629,18 @@ header {
 .tag-bio { background: rgba(0, 255, 136, 0.25); color: var(--ed-green); border: 1px solid var(--ed-green); font-weight: bold; }
 .tag-first-disc { background: rgba(255, 215, 0, 0.2); color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.5); font-weight: bold; }
 .tag-cmdr-dist { background: rgba(255, 113, 0, 0.15); color: #ff9d42; border: 1px solid rgba(255, 113, 0, 0.35); font-weight: 500; }
-.tag-sol-dist { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+.tag-sol-dist { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); font-weight: 500; }
+.tag-colonia-dist { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); font-weight: 500; }
+.tag-rainbow-dist { background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.35); font-weight: 500; }
+.tag-eanch-dist { background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.35); font-weight: 500; }
+.system-distance-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 4px;
+  padding-top: 3px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+}
 .tag-high-g { background: rgba(255, 51, 68, 0.2); color: var(--ed-red); border: 1px solid rgba(255, 51, 68, 0.5); font-weight: bold; }
 .tag-landable { background: rgba(255, 204, 0, 0.15); color: var(--ed-gold); border: 1px solid rgba(255, 204, 0, 0.4); }
 .tag-anomaly { background: rgba(255, 113, 0, 0.2); color: var(--ed-orange); border: 1px solid rgba(255, 113, 0, 0.4); }
@@ -1704,5 +1715,28 @@ header {
   background: rgba(251, 146, 60, 0.18);
   color: #fb923c;
   border: 1px solid rgba(251, 146, 60, 0.45);
+}
+
+/* Circumbinary & Multi-Star Barycentre Nodes */
+.sysmap-body-node.barycentre-root {
+  border-color: rgba(168, 85, 247, 0.45);
+  background: linear-gradient(180deg, rgba(147, 51, 234, 0.12) 0%, rgba(15, 23, 42, 0.6) 100%);
+}
+
+.sysmap-body-node.barycentre-root:hover {
+  border-color: rgba(192, 132, 252, 0.85);
+  box-shadow: 0 4px 20px rgba(147, 51, 234, 0.35);
+}
+
+.sysmap-sphere.barycentre-sphere {
+  width: 72px;
+  height: 72px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, rgba(59, 130, 246, 0.15) 65%, transparent 100%);
+  border: 2px dashed rgba(192, 132, 252, 0.8);
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.45), inset 0 0 12px rgba(147, 51, 234, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
