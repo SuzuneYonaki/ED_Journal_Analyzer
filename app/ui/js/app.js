@@ -22,8 +22,11 @@ let state = {
     has_landable_icy: false,
     has_landable_rocky_ice: false,
     has_landable_ringed: false,
-    has_mining_signals: false
+    has_mining_signals: false,
+    has_bookmarks: false
   },
+  showMiningGravity: localStorage.getItem('mining_display_gravity') !== 'false',
+  showMiningTemp: localStorage.getItem('mining_display_temp') !== 'false',
   miningSubFilter: 'all',
   sortBy: 'last_visited',
   sortOrder: 'desc',
@@ -77,6 +80,34 @@ function formatSecondsToDaysOrHours(sec) {
   if (hours < 48) return `${hours.toFixed(1)} ${t('hours_unit')}`;
   const days = hours / 24;
   return `${days.toFixed(1)} ${t('days_unit')}`;
+}
+
+function parseMarkdown(md) {
+  if (!md) return '';
+  let escaped = md
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  escaped = escaped.replace(/```([\s\S]*?)```/g, (match, p1) => `<pre><code>${p1}</code></pre>`);
+  escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+  escaped = escaped.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+  escaped = escaped.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+  escaped = escaped.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+  escaped = escaped.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  escaped = escaped.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
+  escaped = escaped.replace(/^[\*\-] (.*$)/gim, '<li>$1</li>');
+  escaped = escaped.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+  escaped = escaped.replace(/<\/ul>\s*<ul>/g, '');
+  escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: var(--ed-cyan);">$1</a>');
+  escaped = escaped.replace(/\n/g, '<br>');
+  escaped = escaped.replace(/<\/(h[1-3]|pre|ul|blockquote)><br>/g, '</$1>');
+  escaped = escaped.replace(/<br><(h[1-3]|pre|ul|blockquote)/g, '<$1');
+  return escaped;
 }
 
 function parseRingClass(rawClass) {
@@ -571,9 +602,12 @@ function renderSystemList() {
 
     if (sys.has_high_g) tags.push('<span class="tag-badge tag-high-g">High-G</span>');
     if (sys.has_anomalies) tags.push('<span class="tag-badge tag-anomaly">Rare/Orbit</span>');
-    if (sys.avg_landable_radius && sys.avg_landable_radius > 0) {
-      const radKm = Math.round(sys.avg_landable_radius / 1000);
-      tags.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);" title="Landable天体の平均半径: ${radKm.toLocaleString()} km (平均直径: ${(radKm * 2).toLocaleString()} km)">🪐 着陸平均: ${radKm.toLocaleString()}km</span>`);
+    if (sys.bookmarks && sys.bookmarks.length > 0) {
+      const firstBm = sys.bookmarks[0];
+      const bmText = firstBm.alias_name ? `🔖 ${firstBm.alias_name}` : `🔖 ${firstBm.body_name}`;
+      const moreBm = sys.bookmarks.length > 1 ? ` (+${sys.bookmarks.length - 1})` : '';
+      const bmTip = sys.bookmarks.map(b => (b.alias_name ? `[${b.alias_name}] ` : '') + b.body_name + (b.note_snippet ? `: ${b.note_snippet}` : '')).join('\n');
+      tags.push(`<span class="tag-badge tag-bookmark" title="${bmTip}">${bmText}${moreBm}</span>`);
     }
     if (sys.composite_score !== null && sys.composite_score !== undefined) {
       tags.push(`<span class="tag-badge" style="background: rgba(0, 255, 136, 0.18); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.5); font-weight: bold;" title="総合ブレンドスコア: ${sys.composite_score}pt">★ スコア: ${Math.round(sys.composite_score)}pt</span>`);
@@ -605,7 +639,6 @@ function renderSystemList() {
       const landableBadges = sys.landable_bodies.slice(0, 4).map(lb => {
         const isRing = lb.is_ringed;
         const icon = isRing ? '💍' : '🪐';
-        const rText = lb.radius_km ? `${lb.radius_km.toLocaleString()}km` : '';
         let colorStyle = 'background: rgba(203, 213, 225, 0.12); color: #cbd5e1; border: 1px solid rgba(203, 213, 225, 0.3);';
         if (lb.type === 'HMC') {
           colorStyle = 'background: rgba(96, 165, 250, 0.15); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.4);';
@@ -619,8 +652,18 @@ function renderSystemList() {
         if (isRing) {
           colorStyle += ' border-color: rgba(244, 114, 182, 0.7); box-shadow: 0 0 3px rgba(244, 114, 182, 0.3);';
         }
-        const tip = `${lb.body_name} (${lb.type}) - 半径: ${rText} | 重力: ${lb.gravity_g ? lb.gravity_g.toFixed(2) + 'G' : '--'}${isRing ? ' | 環付き (Ringed)' : ''}${lb.mining_signals > 0 ? ' | 採掘拠点: ' + lb.mining_signals + '箇所' : ''}`;
-        return `<span class="tag-badge" style="${colorStyle} font-size: 0.67rem; padding: 1px 4px; margin-right: 2px;" title="${tip}">${icon} ${lb.type}${rText ? ': ' + rText : ''}</span>`;
+
+        const statParts = [];
+        if (state.showMiningGravity && lb.gravity_g !== null && lb.gravity_g !== undefined) {
+          statParts.push(`${lb.gravity_g.toFixed(2)}G`);
+        }
+        if (state.showMiningTemp && lb.temp_k !== null && lb.temp_k !== undefined) {
+          statParts.push(`${lb.temp_k}K`);
+        }
+        const statSuffix = statParts.length > 0 ? ` [${statParts.join(' | ')}]` : '';
+
+        const tip = `${lb.body_name} (${lb.type}) - 重力: ${lb.gravity_g ? lb.gravity_g.toFixed(2) + 'G' : '--'} | 温度: ${lb.temp_k ? lb.temp_k + 'K' : '--'}${isRing ? ' | 環付き (Ringed)' : ''}${lb.mining_signals > 0 ? ' | 採掘拠点: ' + lb.mining_signals + '箇所' : ''}`;
+        return `<span class="tag-badge" style="${colorStyle} font-size: 0.67rem; padding: 1px 4px; margin-right: 2px;" title="${tip}">${icon} ${lb.type}${statSuffix}</span>`;
       });
       if (sys.landable_bodies.length > 4) {
         landableBadges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.06); color: var(--text-dim); font-size: 0.65rem; padding: 1px 4px;" title="他 ${sys.landable_bodies.length - 4} 天体のLandable天体">+${sys.landable_bodies.length - 4}</span>`);
@@ -1194,13 +1237,22 @@ function renderHierarchyTree(container, nodes) {
     const iconLabel = getBodyIconLabel(node);
 
     const badges = [];
+    if (node.bookmark) {
+      const bmTitle = (node.bookmark.alias_name ? `[${node.bookmark.alias_name}] ` : '') + (node.bookmark.note_markdown || '');
+      badges.push(`<span class="tag-badge tag-bookmark" title="${bmTitle}">🔖 ${node.bookmark.alias_name || 'BOOKMARK'}</span>`);
+    }
     if (node.landable) badges.push('<span class="tag-badge tag-landable">LANDABLE</span>');
     
-    // High-G only shown when Landable is true
-    if (node.landable && node.surface_gravity_g) {
+    // Gravity display
+    if (state.showMiningGravity && node.landable && node.surface_gravity_g) {
       if (node.surface_gravity_g >= 3.0) badges.push(`<span class="tag-badge tag-high-g">${node.surface_gravity_g.toFixed(2)}G !</span>`);
       else if (node.surface_gravity_g >= 1.5) badges.push(`<span class="tag-badge" style="background: rgba(255,113,0,0.2); color: var(--ed-orange);">${node.surface_gravity_g.toFixed(2)}G</span>`);
       else badges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.1);">${node.surface_gravity_g.toFixed(2)}G</span>`);
+    }
+
+    // Temperature display
+    if (state.showMiningTemp && node.landable && node.surface_temperature !== null && node.surface_temperature !== undefined) {
+      badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">🌡️ ${Math.round(node.surface_temperature)}K</span>`);
     }
 
     if (node.geo_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(255,113,0,0.2); color: var(--ed-orange);">GEO: ${node.geo_signals}</span>`);
@@ -1210,13 +1262,16 @@ function renderHierarchyTree(container, nodes) {
     }
 
     const typeDesc = node.star_type ? `${t('star_type_label')} (${node.star_type})` : (node.planet_class || 'Planet');
+    const aliasTag = (node.bookmark && node.bookmark.alias_name)
+      ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-size: 0.7rem; margin-left: 6px;">🏷️ ${node.bookmark.alias_name}</span>`
+      : '';
 
     card.innerHTML = `
       <div class="node-card-top">
         <div class="node-info-left">
           <div class="body-icon ${iconClass}">${iconLabel}</div>
           <div class="node-details">
-            <div class="node-name">${node.body_name}</div>
+            <div class="node-name" style="display: flex; align-items: center; flex-wrap: wrap;">${node.body_name}${aliasTag}</div>
             <div class="node-subtext">${typeDesc}</div>
             <div class="node-badges">${badges.join('')}</div>
           </div>
@@ -1276,11 +1331,11 @@ function renderFlatBodiesList(container, bodies) {
 
     const badges = [];
     if (isTarget) badges.push('<span class="tag-badge" style="background: rgba(0, 210, 255, 0.2); color: var(--ed-cyan); border: 1px solid rgba(0, 210, 255, 0.6); font-weight: bold;">📍 ACTIVE TARGET</span>');
-    if (body.landable) badges.push('<span class="tag-badge tag-landable">LANDABLE</span>');
-    if (body.landable && body.radius) {
-      const rKm = Math.round(body.radius / 1000);
-      badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);" title="半径: ${rKm.toLocaleString()} km (直径: ${(rKm*2).toLocaleString()} km)">🪐 R: ${rKm.toLocaleString()}km</span>`);
+    if (body.bookmark) {
+      const bmTitle = (body.bookmark.alias_name ? `[${body.bookmark.alias_name}] ` : '') + (body.bookmark.note_markdown || '');
+      badges.push(`<span class="tag-badge tag-bookmark" title="${bmTitle}">🔖 ${body.bookmark.alias_name || 'BOOKMARK'}</span>`);
     }
+    if (body.landable) badges.push('<span class="tag-badge tag-landable">LANDABLE</span>');
     let bRings = body.rings_list;
     if (!bRings && body.rings && body.rings !== '[]' && body.rings !== '""') {
       try { bRings = typeof body.rings === 'string' ? JSON.parse(body.rings) : body.rings; } catch (e) { bRings = []; }
@@ -1297,21 +1352,28 @@ function renderFlatBodiesList(container, bodies) {
         }
       });
     }
-    if (body.landable && body.surface_gravity_g) {
+    if (state.showMiningGravity && body.landable && body.surface_gravity_g) {
       if (body.surface_gravity_g >= 3.0) badges.push(`<span class="tag-badge tag-high-g">${body.surface_gravity_g.toFixed(2)}G !</span>`);
       else badges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.1);">${body.surface_gravity_g.toFixed(2)}G</span>`);
+    }
+    if (state.showMiningTemp && body.surface_temperature !== null && body.surface_temperature !== undefined && body.landable) {
+      badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">🌡️ ${Math.round(body.surface_temperature)}K</span>`);
     }
     if (body.geo_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(255,113,0,0.2); color: var(--ed-orange);">GEO: ${body.geo_signals}</span>`);
     if (body.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${body.mining_signals}</span>`);
     if (body.anomalies && body.anomalies.length > 0) {
       body.anomalies.forEach(a => badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`));
     }
+    const aliasTag = (body.bookmark && body.bookmark.alias_name)
+      ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-size: 0.7rem; margin-left: 6px;">🏷️ ${body.bookmark.alias_name}</span>`
+      : '';
+
     card.innerHTML = `
       <div class="node-card-top">
         <div class="node-info-left">
           <div class="body-icon ${iconClass}">${iconLabel}</div>
           <div class="node-details">
-            <div class="node-name" style="${isTarget ? 'color: var(--ed-cyan); font-weight: bold;' : ''}">${body.body_name}</div>
+            <div class="node-name" style="display: flex; align-items: center; flex-wrap: wrap; ${isTarget ? 'color: var(--ed-cyan); font-weight: bold;' : ''}">${body.body_name}${aliasTag}</div>
             <div class="node-subtext">${body.star_type ? t('star_type_label') + ' ' + body.star_type : body.planet_class || 'Body'}</div>
             <div class="node-badges">${badges.join('')}</div>
           </div>
@@ -1622,14 +1684,22 @@ function renderMiningView(container, bodies) {
         `;
       }
 
+      const aliasTag = (body.bookmark && body.bookmark.alias_name)
+        ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-size: 0.75rem; font-weight: bold;">🏷️ ${body.bookmark.alias_name}</span>`
+        : '';
+      const bookmarkBadge = body.bookmark
+        ? `<span class="tag-badge tag-bookmark" title="${(body.bookmark.alias_name ? `[${body.bookmark.alias_name}] ` : '') + (body.bookmark.note_markdown || '')}">🔖 ${body.bookmark.alias_name || 'BOOKMARK'}</span>`
+        : '';
+
       card.innerHTML = `
         <div class="node-card-top">
           <div class="node-info-left" style="width: 100%;">
             <div class="body-icon ${iconClass}">${iconLabel}</div>
             <div class="node-details" style="flex: 1;">
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                   <span class="node-name" style="font-size: 0.95rem; ${isTarget ? 'color: var(--ed-cyan); font-weight: bold;' : ''}">${body.body_name}</span>
+                  ${aliasTag}
                   <button class="view-btn btn-copy-body-sub" style="padding: 1px 5px; font-size: 0.68rem;" title="天体名をクリップボードにコピー">📋</button>
                 </div>
                 <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary);">
@@ -1639,6 +1709,7 @@ function renderMiningView(container, bodies) {
 
               <!-- Main Badges Row -->
               <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; align-items: center;">
+                ${bookmarkBadge}
                 <span class="tag-badge" style="${typeStyle} font-weight: bold;">${typeName}</span>
                 ${(() => {
                   if (!isRinged) return '';
@@ -1661,14 +1732,15 @@ function renderMiningView(container, bodies) {
                 <span class="tag-badge" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: bold;">
                   🪐 半径: ${radKm.toLocaleString()} km (直径: ${diamKm.toLocaleString()} km)
                 </span>
-                <span class="tag-badge" style="${gStyle}">${gVal.toFixed(2)} G</span>
+                ${state.showMiningGravity ? `<span class="tag-badge" style="${gStyle}">${gVal.toFixed(2)} G</span>` : ''}
+                ${state.showMiningTemp ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-weight: bold;">🌡️ ${Math.round(body.surface_temperature || 0)} K</span>` : ''}
                 ${body.mining_signals > 0 ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.25); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;">⛏️ 採掘地点: ${body.mining_signals} 箇所 (Rhino適格)</span>` : ''}
                 ${suitabilityBadge}
               </div>
 
               <!-- Physical Details & Atmosphere -->
               <div style="display: flex; gap: 12px; margin-top: 5px; font-size: 0.72rem; color: var(--text-secondary); flex-wrap: wrap;">
-                <span>表面温度: <b style="color: #fff;">${Math.round(body.surface_temperature || 0)} K (${Math.round((body.surface_temperature || 0) - 273.15)} °C)</b></span>
+                <span style="${state.showMiningTemp ? 'color: #38bdf8; font-weight: bold;' : ''}">表面温度: <b style="color: #fff;">${Math.round(body.surface_temperature || 0)} K (${Math.round((body.surface_temperature || 0) - 273.15)} °C)</b></span>
                 <span>大気: <b style="color: #fff;">${body.atmosphere || 'None'}</b></span>
                 ${body.volcanism ? `<span>火山活動: <b style="color: #fff;">${body.volcanism}</b></span>` : ''}
               </div>
@@ -1739,8 +1811,16 @@ function renderVisitsTimeline(container, visits) {
 
 function renderBodyInspector() {
   const inspectorContent = document.getElementById('inspector-content');
+  const btnBmToggle = document.getElementById('btn-inspect-bookmark-toggle');
+  const inspectAlias = document.getElementById('inspect-body-alias');
+
   if (!state.selectedBody) {
     inspectorContent.style.display = 'none';
+    if (btnBmToggle) btnBmToggle.style.display = 'none';
+    if (inspectAlias) {
+      inspectAlias.style.display = 'none';
+      inspectAlias.innerText = '';
+    }
     document.getElementById('inspect-body-name').innerText = t('inspector_title');
     document.getElementById('inspect-body-type').innerText = t('inspector_subtitle');
     return;
@@ -1748,11 +1828,184 @@ function renderBodyInspector() {
 
   inspectorContent.style.display = 'block';
   const b = state.selectedBody;
+  const isBary = Boolean(b.isBarycentre);
 
   document.getElementById('inspect-body-name').innerText = b.body_name;
   document.getElementById('inspect-body-type').innerText = b.star_type 
     ? `${t('star_type_label')}: ${b.star_type}` 
     : `${b.planet_class || 'Body'}${b.terraforming_state ? ' [' + b.terraforming_state + ']' : ''}`;
+
+  // Bookmark UI elements
+  const bmSection = document.getElementById('section-bookmark');
+  const bmStatusIndicator = document.getElementById('bm-status-indicator');
+  const btnBmSave = document.getElementById('btn-save-bookmark');
+  const btnBmDelete = document.getElementById('btn-delete-bookmark');
+  const bmAliasInput = document.getElementById('bm-alias-input');
+  const bmNoteInput = document.getElementById('bm-note-input');
+  const bmNotePreview = document.getElementById('bm-note-preview');
+  const bmTabEdit = document.getElementById('bm-note-tab-edit');
+  const bmTabPreview = document.getElementById('bm-note-tab-preview');
+  const inspectBmIcon = document.getElementById('inspect-bm-icon');
+  const inspectBmText = document.getElementById('inspect-bm-text');
+
+  if (isBary) {
+    if (btnBmToggle) btnBmToggle.style.display = 'none';
+    if (bmSection) bmSection.style.display = 'none';
+    if (inspectAlias) {
+      inspectAlias.style.display = 'none';
+      inspectAlias.innerText = '';
+    }
+  } else {
+    if (btnBmToggle) btnBmToggle.style.display = 'inline-flex';
+    if (bmSection) bmSection.style.display = 'block';
+
+    const isBookmarked = Boolean(b.bookmark);
+    if (isBookmarked) {
+      if (inspectBmIcon) inspectBmIcon.innerText = '★';
+      if (inspectBmText) inspectBmText.innerText = 'ブックマーク中';
+      if (btnBmToggle) {
+        btnBmToggle.classList.add('active');
+        btnBmToggle.style.background = 'rgba(251, 191, 36, 0.2)';
+      }
+      if (bmStatusIndicator) bmStatusIndicator.style.display = 'inline-block';
+      if (btnBmDelete) btnBmDelete.style.display = 'inline-block';
+      if (bmAliasInput) bmAliasInput.value = b.bookmark.alias_name || '';
+      if (bmNoteInput) bmNoteInput.value = b.bookmark.note_markdown || '';
+      if (inspectAlias) {
+        if (b.bookmark.alias_name) {
+          inspectAlias.innerText = `🏷️ ${b.bookmark.alias_name}`;
+          inspectAlias.style.display = 'block';
+        } else {
+          inspectAlias.innerText = '';
+          inspectAlias.style.display = 'none';
+        }
+      }
+    } else {
+      if (inspectBmIcon) inspectBmIcon.innerText = '☆';
+      if (inspectBmText) inspectBmText.innerText = 'ブックマーク';
+      if (btnBmToggle) {
+        btnBmToggle.classList.remove('active');
+        btnBmToggle.style.background = '';
+      }
+      if (bmStatusIndicator) bmStatusIndicator.style.display = 'none';
+      if (btnBmDelete) btnBmDelete.style.display = 'none';
+      if (bmAliasInput) bmAliasInput.value = '';
+      if (bmNoteInput) bmNoteInput.value = '';
+      if (inspectAlias) {
+        inspectAlias.innerText = '';
+        inspectAlias.style.display = 'none';
+      }
+    }
+
+    // Default to Edit tab
+    if (bmTabEdit && bmTabPreview && bmNoteInput && bmNotePreview) {
+      bmTabEdit.classList.add('active');
+      bmTabPreview.classList.remove('active');
+      bmNoteInput.style.display = 'block';
+      bmNotePreview.style.display = 'none';
+
+      bmTabEdit.onclick = () => {
+        bmTabEdit.classList.add('active');
+        bmTabPreview.classList.remove('active');
+        bmNoteInput.style.display = 'block';
+        bmNotePreview.style.display = 'none';
+      };
+
+      bmTabPreview.onclick = () => {
+        bmTabPreview.classList.add('active');
+        bmTabEdit.classList.remove('active');
+        bmNotePreview.innerHTML = parseMarkdown(bmNoteInput.value.trim() || '*メモは入力されていません*');
+        bmNoteInput.style.display = 'none';
+        bmNotePreview.style.display = 'block';
+      };
+    }
+
+    // Save Bookmark Handler
+    if (btnBmSave) {
+      btnBmSave.onclick = async () => {
+        const curSys = state.currentSystemData ? state.currentSystemData.system : state.selectedSystem;
+        if (!curSys || !b) return;
+        const payload = {
+          system_address: curSys.system_address,
+          body_id: b.body_id,
+          body_name: b.body_name,
+          star_system: curSys.star_system,
+          alias_name: (bmAliasInput ? bmAliasInput.value.trim() : ''),
+          note_markdown: (bmNoteInput ? bmNoteInput.value : '')
+        };
+        try {
+          btnBmSave.disabled = true;
+          const res = await fetch('/api/bookmark', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          btnBmSave.disabled = false;
+          if (res.ok) {
+            b.bookmark = payload;
+            if (curSys) {
+              if (!curSys.bookmarks) curSys.bookmarks = [];
+              const existIdx = curSys.bookmarks.findIndex(x => x.body_id === b.body_id);
+              const bmObj = {
+                body_id: b.body_id,
+                body_name: b.body_name,
+                alias_name: payload.alias_name,
+                has_note: Boolean(payload.note_markdown.trim()),
+                note_snippet: payload.note_markdown.trim().substring(0, 60)
+              };
+              if (existIdx >= 0) curSys.bookmarks[existIdx] = bmObj;
+              else curSys.bookmarks.push(bmObj);
+            }
+            renderBodyInspector();
+            renderCurrentView();
+            renderSystemList();
+          }
+        } catch (e) {
+          btnBmSave.disabled = false;
+          console.error('Failed to save bookmark:', e);
+        }
+      };
+    }
+
+    // Delete Bookmark Handler
+    if (btnBmDelete) {
+      btnBmDelete.onclick = async () => {
+        const curSys = state.currentSystemData ? state.currentSystemData.system : state.selectedSystem;
+        if (!curSys || !b) return;
+        try {
+          btnBmDelete.disabled = true;
+          const res = await fetch(`/api/bookmark/${curSys.system_address}/${b.body_id}`, {
+            method: 'DELETE'
+          });
+          btnBmDelete.disabled = false;
+          if (res.ok) {
+            b.bookmark = null;
+            if (curSys && curSys.bookmarks) {
+              curSys.bookmarks = curSys.bookmarks.filter(x => x.body_id !== b.body_id);
+            }
+            renderBodyInspector();
+            renderCurrentView();
+            renderSystemList();
+          }
+        } catch (e) {
+          btnBmDelete.disabled = false;
+          console.error('Failed to delete bookmark:', e);
+        }
+      };
+    }
+
+    // Header Bookmark toggle button
+    if (btnBmToggle) {
+      btnBmToggle.onclick = () => {
+        if (b.bookmark) {
+          if (bmSection) bmSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          if (bmAliasInput) bmAliasInput.focus();
+        } else {
+          if (btnBmSave) btnBmSave.click();
+        }
+      };
+    }
+  }
 
   // Anomalies & Barycentre Info
   const anomSection = document.getElementById('section-anomalies');
@@ -2196,6 +2449,28 @@ document.addEventListener('DOMContentLoaded', () => {
       fetchSystems();
     });
   });
+
+  // Mining display toggles (Gravity & Temperature)
+  const toggleGrav = document.getElementById('toggle-mining-gravity');
+  const toggleTemp = document.getElementById('toggle-mining-temp');
+  if (toggleGrav) {
+    toggleGrav.checked = state.showMiningGravity;
+    toggleGrav.addEventListener('change', () => {
+      state.showMiningGravity = toggleGrav.checked;
+      localStorage.setItem('mining_display_gravity', state.showMiningGravity);
+      renderSystemList();
+      renderCurrentView();
+    });
+  }
+  if (toggleTemp) {
+    toggleTemp.checked = state.showMiningTemp;
+    toggleTemp.addEventListener('change', () => {
+      state.showMiningTemp = toggleTemp.checked;
+      localStorage.setItem('mining_display_temp', state.showMiningTemp);
+      renderSystemList();
+      renderCurrentView();
+    });
+  }
 
   // Date Preset & Filter
   const presetSelect = document.getElementById('date-preset-select');

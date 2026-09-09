@@ -36,7 +36,7 @@
       <div class="brand">
         <img src="/static/icon.png" alt="Logo" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 6px;">
         <span class="logo-text">ED Journal Explorer</span>
-        <span class="version-badge">v0.0.3</span>
+        <span class="version-badge">v0.0.4</span>
       </div>
     </div>
 
@@ -121,12 +121,25 @@
           <button class="chip" data-filter="has_terraformable" data-i18n="filter_tf">TF可能</button>
           <button class="chip bio" data-filter="has_bio" data-i18n="filter_bio">Bio (生体)</button>
           <button class="chip first-disc" data-filter="has_first_discover" data-i18n="filter_first_discover" style="border-color: rgba(255, 215, 0, 0.4);">⭐ 1st Disc (初発見)</button>
+          <button class="chip bookmark-chip" data-filter="has_bookmarks" data-i18n="filter_bookmarks" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.5);">🔖 ブックマーク</button>
           <button class="chip" data-filter="has_high_g" data-i18n="filter_high_g">高重力 (3G+着陸)</button>
           <button class="chip" data-filter="has_anomalies" data-i18n="filter_anomalies">特殊・レア</button>
         </div>
 
         <div class="filter-chips mining-filter-chips" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.08);">
-          <span style="font-size: 0.68rem; color: #38bdf8; width: 100%; font-weight: bold; letter-spacing: 0.3px;" data-i18n="filter_mining_group">⛏️ 採掘・Landable天体で絞込 (他天体除外):</span>
+          <div style="width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 2px;">
+            <span style="font-size: 0.68rem; color: #38bdf8; font-weight: bold; letter-spacing: 0.3px;" data-i18n="filter_mining_group">⛏️ 採掘・Landable天体で絞込 (他天体除外):</span>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.68rem; color: var(--text-secondary);">
+              <label style="display: flex; align-items: center; gap: 3px; cursor: pointer;" title="重力 (G) の表示を切り替え">
+                <input type="checkbox" id="toggle-mining-gravity" checked style="accent-color: var(--ed-orange); cursor: pointer;">
+                <span data-i18n="filter_toggle_gravity">重力 (G)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 3px; cursor: pointer;" title="表面温度 (K) の表示を切り替え">
+                <input type="checkbox" id="toggle-mining-temp" checked style="accent-color: #38bdf8; cursor: pointer;">
+                <span data-i18n="filter_toggle_temp">温度 (K)</span>
+              </label>
+            </div>
+          </div>
           <button class="chip" data-filter="has_landable_hmc" data-i18n="filter_l_hmc" style="color: #60a5fa; border-color: rgba(96, 165, 250, 0.4);">🪐 HMC</button>
           <button class="chip" data-filter="has_landable_metal_rich" data-i18n="filter_l_mr" style="color: #fb923c; border-color: rgba(251, 146, 60, 0.4);">🪐 Metal Rich</button>
           <button class="chip" data-filter="has_landable_rocky" data-i18n="filter_l_rocky" style="color: #cbd5e1; border-color: rgba(203, 213, 225, 0.4);">🪐 Rocky</button>
@@ -345,11 +358,49 @@
     <!-- Right Pane: Body Inspector & Exobiology Predictor -->
     <div class="right-pane" id="right-pane">
       <div class="inspector-header">
-        <div id="inspect-body-name" class="inspector-title" data-i18n="inspector_title">天体詳細インスペクター</div>
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+          <div>
+            <div id="inspect-body-name" class="inspector-title" data-i18n="inspector_title">天体詳細インスペクター</div>
+            <div id="inspect-body-alias" class="inspector-alias" style="display: none; font-size: 0.82rem; color: #38bdf8; font-weight: bold; margin-top: 2px;"></div>
+          </div>
+          <button id="btn-inspect-bookmark-toggle" class="view-btn" style="padding: 3px 8px; font-size: 0.75rem; border-color: rgba(251, 191, 36, 0.4); color: #fbbf24; display: none; align-items: center; gap: 4px; white-space: nowrap;" title="この天体をブックマーク登録/解除">
+            <span id="inspect-bm-icon">☆</span> <span id="inspect-bm-text">ブックマーク</span>
+          </button>
+        </div>
         <div id="inspect-body-type" class="inspector-subtitle" data-i18n="inspector_subtitle">天体をクリックすると詳細が表示されます</div>
       </div>
 
       <div id="inspector-content" style="display: none;">
+        <!-- Bookmark & Custom Notes Section -->
+        <div class="inspector-section" id="section-bookmark" style="display: none; border: 1px solid rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.04); border-radius: 6px; padding: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div class="section-heading" style="margin: 0; color: #fbbf24; font-size: 0.82rem; display: flex; align-items: center; gap: 6px;">
+              <span data-i18n="bm_section_title">🔖 天体ブックマーク & メモ</span>
+              <span id="bm-status-indicator" class="tag-badge" style="display: none; background: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.5); font-size: 0.68rem;" data-i18n="bm_status_active">登録中</span>
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <button id="btn-save-bookmark" class="btn-primary" style="padding: 2px 10px; font-size: 0.72rem; background: #d97706; border-color: #f59e0b;" data-i18n="btn_save_bm">💾 保存</button>
+              <button id="btn-delete-bookmark" class="view-btn" style="padding: 2px 8px; font-size: 0.72rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); display: none;" title="ブックマークを解除" data-i18n="btn_delete_bm">🗑️ 解除</button>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div>
+              <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="bm_alias_label">🏷️ エイリアス (別名・通称):</label>
+              <input type="text" id="bm-alias-input" class="search-input" placeholder="例: 採掘拠点 Alpha, テラフォーミング候補1..." style="width: 100%; padding: 4px 8px; font-size: 0.78rem;">
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                <label style="font-size: 0.7rem; color: var(--text-secondary);" data-i18n="bm_note_label">📝 メモ (Markdown対応・星系検索可能):</label>
+                <div style="display: flex; gap: 4px;">
+                  <button id="bm-note-tab-edit" class="view-btn active" style="padding: 1px 6px; font-size: 0.68rem;">編集</button>
+                  <button id="bm-note-tab-preview" class="view-btn" style="padding: 1px 6px; font-size: 0.68rem;">プレビュー</button>
+                </div>
+              </div>
+              <textarea id="bm-note-input" class="search-input" rows="4" placeholder="採掘Rig耐久値、適性鉱石、メモなどを記述..." style="width: 100%; padding: 6px 8px; font-size: 0.78rem; font-family: inherit; resize: vertical;"></textarea>
+              <div id="bm-note-preview" style="display: none; padding: 6px 8px; font-size: 0.78rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 4px; min-height: 70px; max-height: 180px; overflow-y: auto; line-height: 1.4;"></div>
+            </div>
+          </div>
+        </div>
         <!-- Anomaly Tags -->
         <div class="inspector-section" id="section-anomalies" style="display: none;">
           <div class="section-heading" data-i18n="section_anomalies">★ 特殊周回・レア天体 特性</div>

@@ -548,6 +548,25 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     badgeList.push('<span class="sysmap-mini-badge first-disc">⭐ 1st</span>');
   }
 
+  // Body Bookmark Badge
+  if (body.bookmark) {
+    const bmTitle = (body.bookmark.alias_name ? `[${body.bookmark.alias_name}] ` : '') + (body.bookmark.note_markdown || '');
+    badgeList.push(`<span class="sysmap-mini-badge bookmark" title="${bmTitle}">🔖 ${body.bookmark.alias_name || 'BM'}</span>`);
+  }
+
+  // Gravity & Temperature Display (mining support toggles)
+  const showGrav = (window.state && window.state.showMiningGravity !== undefined) ? window.state.showMiningGravity : true;
+  const showTmp = (window.state && window.state.showMiningTemp !== undefined) ? window.state.showMiningTemp : true;
+  if (showGrav && isLandable && body.surface_gravity_g !== null && body.surface_gravity_g !== undefined) {
+    const gVal = body.surface_gravity_g;
+    const gColor = gVal >= 3.0 ? '#ef4444' : (gVal >= 1.5 ? '#f59e0b' : '#22c55e');
+    badgeList.push(`<span class="sysmap-mini-badge" style="background: rgba(0,0,0,0.4); color: ${gColor}; border: 1px solid ${gColor}; font-weight: bold;">${gVal.toFixed(2)}G</span>`);
+  }
+  if (showTmp && body.surface_temperature !== null && body.surface_temperature !== undefined && isLandable) {
+    const tVal = Math.round(body.surface_temperature || 0);
+    badgeList.push(`<span class="sysmap-mini-badge" style="background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.4);">${tVal}K</span>`);
+  }
+
   // Ring & Belt Badges
   let primaryRingKey = 'icy';
   if (hasPlanetaryRings) {
@@ -613,8 +632,13 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     ? formatDistance(body.distance_from_arrival_ls) 
     : (role === 'root-star' ? '0 Ls' : '--');
 
+  const aliasHtml = (body.bookmark && body.bookmark.alias_name)
+    ? `<div class="sysmap-body-alias" title="エイリアス: ${body.bookmark.alias_name}">🏷️ ${body.bookmark.alias_name}</div>`
+    : '';
+
   info.innerHTML = `
     <div class="sysmap-body-shortname" title="${body.body_name}">${shortName}</div>
+    ${aliasHtml}
     <div class="sysmap-body-type-plate" title="${body.body_name} - ${typeDesc}">
       <span class="sysmap-type-text">${typeDesc}</span>
     </div>

@@ -183,6 +183,22 @@ def init_db(conn=None):
     );
     """)
 
+    # Celestial body bookmarks and markdown notes table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS body_bookmarks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        system_address INTEGER NOT NULL,
+        body_id INTEGER NOT NULL,
+        body_name TEXT NOT NULL,
+        star_system TEXT NOT NULL,
+        alias_name TEXT DEFAULT '',
+        note_markdown TEXT DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(system_address, body_id)
+    );
+    """)
+
     # Indices for performance
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_name ON systems(star_system);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_last_visited ON systems(last_visited DESC);")
@@ -193,6 +209,9 @@ def init_db(conn=None):
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_organics_sys ON scanned_organics(system_address);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_mining_act_sys ON surface_mining_activities(system_address);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_mining_act_body ON surface_mining_activities(system_address, body_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_body_bookmarks_sys ON body_bookmarks(system_address);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_body_bookmarks_body ON body_bookmarks(system_address, body_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_body_bookmarks_alias ON body_bookmarks(alias_name);")
 
     # Migration for surface_mining_activities columns if table already existed
     for col_def in [
@@ -246,6 +265,15 @@ def init_db(conn=None):
     ]:
         try:
             cursor.execute(f"ALTER TABLE bodies ADD COLUMN {col_def[0]} {col_def[1]};")
+        except Exception:
+            pass
+
+    for col_def in [
+        ("alias_name", "TEXT DEFAULT ''"),
+        ("note_markdown", "TEXT DEFAULT ''"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE body_bookmarks ADD COLUMN {col_def[0]} {col_def[1]};")
         except Exception:
             pass
 

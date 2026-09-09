@@ -1,4 +1,4 @@
-# Elite Dangerous Journal Analyzer & Exploration Orrery
+# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.0.4)
 
 [日本語](#日本語) | [English](#english)
 
@@ -7,10 +7,12 @@
 <a name="日本語"></a>
 ## 概要 (日本語)
 
-Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自動解析・リアルタイム監視し、過去に訪れた星系・天体の状態、位置関係・軌道情報、レア天体・特殊周回、着陸可否・重力・火山活動、Exobiology（植物・菌類）の生息予測と報酬額、FSS/DSS探査価値の精密計算を提供するローカルデスクトップGUIアプリケーションです。
+Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自動解析・リアルタイム監視し、過去に訪れた星系・天体の状態、位置関係・軌道情報、レア天体・特殊周回、着陸可否・重力・火山活動、Exobiology（植物・菌類）の生息予測と報酬額、FSS/DSS探査価値の精密計算、Rhino採掘支援（重力・温度表示）、天体ブックマーク・エイリアス・Markdownメモを提供するローカルデスクトップGUIアプリケーションです。
 
 > **「あの時訪れたあの星は、どんな宙域だっただろう？」**  
 > 銀河の遥かなる長旅の記録や、過去の深宇宙探索・初発見の思い出をいつでも鮮明に振り返ることができます。
+
+> **⚠️ 使用上の注意・免責事項**: 本ツールはファンメイドの非公式オープンソースツールです。フロンティア・デベロップメンツ社とは一切関係ありません。ジャーナルログの解釈や探査・採掘データの完全性についてはいかなる保証も致しかねます。本ツールの使用によって生じたゲーム内での損失（機体喪失、採掘リグ耐久値損失、探査データ喪失など）を含むいかなる結果についても開発者は一切の責任を負いません。自己責任においてご利用ください。
 
 ### 🌐 日英バイリンガル対応 (One-Click Language Switch)
 - アプリ画面右上の **`[JP] / [EN]`** ボタンから、日本語・英語をいつでも**ワンクリックで即座に切り替え可能**です。
@@ -22,10 +24,19 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 
 ### 主な機能 (Key Features)
 
+- **天体ブックマーク・エイリアス（別名・通称）・Markdownメモ帳**:
+  - 天体単位でのブックマーク登録、ユーザー定義通称（例: `採掘拠点 Alpha`, `TF候補1`）、Markdown形式メモ（リアルタイムプレビュー対応）。
+  - 星系検索欄で、星系名だけでなく **「天体名」「エイリアス名」「メモ本文」を横断した全文検索** が可能。
+  - フィルターチップ「🔖 ブックマーク」による登録天体星系の瞬時絞り込み。
+- **採掘支援 重力 (G)・温度 (K) 一括トグル表示**:
+  - 採掘Rig耐久値管理に直結する重力 (G)・表面温度 (K) の表示切り替えチェックボックスを新設。
+  - 星系カード（`🪐 HMC [0.15G | 180K]`）、System Map、天体一覧、採掘ビューの全画面で一括連動・可視化。
+- **5大銀河ランドマーク距離表示**:
+  - CMDR現在地、Sol、Colonia、Rainbow's End (DW3)、Explorer's Anchorage (Sgr A*) からの直線距離（Ly）を星系カードおよびヘッダーに自動算出・表示。
 - **星系 & 天体の過去ログ遡り・タイムライン**:
   - 過去に訪れた際のスキャン状況、訪問回数、ジャンプ距離・消費燃料・搭乗船ログの復元。
-- **位置関係 & 軌道階層ツリー**:
-  - 恒星・惑星・衛星の階層親子ツリー構造、軌道長半径（AU / ls）、離心率、公転・自転周期、傾斜角、潮汐固定の可視化。
+- **位置関係 & 軌道階層ツリー & System Map**:
+  - 恒星・惑星・衛星の階層親子ツリー構造、連星系共通重心（Barycentre）、軌道長半径（AU / ls）、離心率、公転・自転周期、傾斜角、潮汐固定の可視化。
 - **レア天体 & 特殊周回の自動検出 (Anomaly Detector)**:
   - ELW (地球型), WW (海洋惑星), Ammonia World, Terraformable, 高離心率 (e >= 0.8), 超短公転周期, 高速自転, 巨大リング等の自動タグ付け。
 - **地表・着陸・重力 & 火山活動**:
@@ -56,10 +67,12 @@ python run.py --browser
 <a name="english"></a>
 ## Overview (English)
 
-A local desktop GUI application that automatically parses and monitors Elite Dangerous flight journals (`Journal.*.log`). It provides comprehensive exploration insights including historical system/body records, orbital hierarchy trees, rare celestial anomalies, surface gravity & volcanism, Exobiology habitat predictions & payouts, and precise FSS/DSS exploration value calculations.
+A local desktop GUI application that automatically parses and monitors Elite Dangerous flight journals (`Journal.*.log`). It provides comprehensive exploration insights including historical system/body records, orbital hierarchy trees, rare celestial anomalies, surface gravity & volcanism, Exobiology habitat predictions & payouts, precise FSS/DSS exploration value calculations, Rhino SRV mining support (gravity & temperature toggles), celestial body bookmarks with custom aliases, and Markdown notes.
 
 > **"What kind of world was that memorable planet I visited long ago?"**  
 > Relive and explore your epic expedition memories, first discoveries, and galaxy travels anytime with complete offline privacy.
+
+> **⚠️ Disclaimer**: This tool is an unofficial, fan-made open-source companion and is not affiliated with or endorsed by Frontier Developments plc. No warranties are provided regarding data accuracy or game log interpretation. The developer assumes no responsibility or liability for any in-game losses or damages (including loss of ships, mining rig durability, or exploration data). Use at your own discretion.
 
 ### 🌐 Instant Bilingual Support (JP / EN Switch)
 - Switch seamlessly between **English** and **Japanese** at any time with a single click on the **`[JP] / [EN]`** toggle in the top-right corner.
@@ -71,10 +84,19 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
 
 ### Key Features
 
+- **Body Bookmarks, Custom Aliases & Markdown Notes**:
+  - Bookmark individual celestial bodies, assign user-defined aliases (e.g. `Mining Base Alpha`), and keep rich Markdown notes with instant live preview.
+  - Search across star systems, body names, custom aliases, and Markdown note contents simultaneously via the global search bar.
+  - Filter chip for quick navigation to bookmarked systems (`🔖 Bookmarks`).
+- **Mining Support: Gravity (G) & Temperature (K) Display Toggles**:
+  - Dedicated checkboxes to toggle surface gravity ($G$) and surface temperature ($K$) across system cards (`🪐 HMC [0.15G | 180K]`), System Map, flat body list, and mining view.
+  - Cleaned up landable tags by removing redundant radius values in favor of vital rig durability metrics.
+- **5 Key Galactic Landmark Distances**:
+  - Instant distance calculations ($Ly$) to CMDR current location, Sol, Colonia, Rainbow's End (DW3), and Explorer's Anchorage (Sgr A*).
 - **Exploration History & Flight Logs**:
   - Track scanned bodies, visit timestamps, jump distance, fuel used, and ship details for every visited system.
-- **Orbital Hierarchy & Planetary Tree**:
-  - Visual hierarchy tree of stars, planets, and moons with orbital semi-major axis (AU / ls), eccentricity, orbital/rotational periods, inclination, and tidal locking.
+- **Orbital Hierarchy & Planetary Tree & System Map**:
+  - Visual hierarchy tree of stars, planets, and moons with circumbinary barycentres, orbital semi-major axis (AU / ls), eccentricity, orbital/rotational periods, inclination, and tidal locking.
 - **Celestial Anomaly & Rare Body Detector**:
   - Automatic detection of Earth-like Worlds (ELW), Water Worlds (WW), Ammonia Worlds, Terraformables, high orbital eccentricity ($e \ge 0.8$), ultra-short orbits, fast rotators, and giant rings.
 - **Surface Conditions, Gravity & Volcanism**:

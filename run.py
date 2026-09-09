@@ -73,7 +73,7 @@ def main():
         # Create Desktop Window with pywebview
         icon_path = str(BASE_DIR / "app" / "ui" / "icon.png")
         window = webview.create_window(
-            title="Elite Dangerous Journal Analyzer & Exploration Orrery",
+            title="Elite Dangerous Journal Analyzer & Exploration Orrery (v0.0.4)",
             url=url,
             width=1400,
             height=900,

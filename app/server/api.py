@@ -3,8 +3,10 @@ import os
 import threading
 import time
 import asyncio
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List
+from pydantic import BaseModel
 from fastapi import FastAPI, Query, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -221,6 +223,66 @@ def get_landmarks_endpoint():
     """Return static galactic landmark coordinates and metadata."""
     return load_landmarks()
 
+class BookmarkPayload(BaseModel):
+    system_address: int
+    body_id: int
+    body_name: str
+    star_system: str
+    alias_name: Optional[str] = ""
+    note_markdown: Optional[str] = ""
+
+@app.get("/api/bookmark/{system_address}/{body_id}")
+def get_body_bookmark(system_address: int, body_id: int):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM body_bookmarks WHERE system_address = ? AND body_id = ?", (system_address, body_id))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    return JSONResponse(status_code=404, content={"message": "Bookmark not found"})
+
+@app.post("/api/bookmark")
+def save_body_bookmark(payload: BookmarkPayload):
+    now = datetime.now(timezone.utc).isoformat()
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO body_bookmarks (system_address, body_id, body_name, star_system, alias_name, note_markdown, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(system_address, body_id) DO UPDATE SET
+            body_name = excluded.body_name,
+            star_system = excluded.star_system,
+            alias_name = excluded.alias_name,
+            note_markdown = excluded.note_markdown,
+            updated_at = excluded.updated_at;
+    """, (payload.system_address, payload.body_id, payload.body_name, payload.star_system, (payload.alias_name or "").strip(), payload.note_markdown or "", now, now))
+    conn.commit()
+    conn.close()
+    return {"status": "ok", "message": "Bookmark saved"}
+
+@app.delete("/api/bookmark/{system_address}/{body_id}")
+def delete_body_bookmark(system_address: int, body_id: int):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM body_bookmarks WHERE system_address = ? AND body_id = ?", (system_address, body_id))
+    conn.commit()
+    conn.close()
+    return {"status": "ok", "message": "Bookmark deleted"}
+
+@app.get("/api/bookmarks")
+def list_bookmarks(q: Optional[str] = None):
+    conn = get_db_connection()
+    c = conn.cursor()
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        c.execute("SELECT * FROM body_bookmarks WHERE star_system LIKE ? OR body_name LIKE ? OR alias_name LIKE ? OR note_markdown LIKE ? ORDER BY updated_at DESC", (term, term, term, term))
+    else:
+        c.execute("SELECT * FROM body_bookmarks ORDER BY updated_at DESC")
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return {"bookmarks": rows}
+
 @app.get("/api/stats")
 def get_global_stats(
     date_from: Optional[str] = None,
@@ -314,6 +376,7 @@ def get_systems(
     has_landable_rocky_ice: Optional[bool] = False,
     has_landable_ringed: Optional[bool] = False,
     has_mining_signals: Optional[bool] = False,
+    has_bookmarks: Optional[bool] = False,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     date_field: Optional[str] = "last_visited",
@@ -346,8 +409,18 @@ def get_systems(
     params = []
 
     if q and q.strip():
-        conditions.append("star_system LIKE ?")
-        params.append(f"%{q.strip()}%")
+        term = f"%{q.strip()}%"
+        conditions.append("""(
+            star_system LIKE ? OR EXISTS (
+                SELECT 1 FROM body_bookmarks bb 
+                WHERE bb.system_address = systems.system_address 
+                AND (bb.alias_name LIKE ? OR bb.note_markdown LIKE ? OR bb.body_name LIKE ?)
+            )
+        )""")
+        params.extend([term, term, term, term])
+
+    if has_bookmarks:
+        conditions.append("EXISTS (SELECT 1 FROM body_bookmarks bb WHERE bb.system_address = systems.system_address)")
 
     if has_elw:
         conditions.append("has_elw = 1")
@@ -563,7 +636,7 @@ def get_systems(
         sys_addrs = [r["system_address"] for r in rows]
         placeholders = ",".join("?" * len(sys_addrs))
         c.execute(f"""
-            SELECT system_address, body_id, body_name, planet_class, radius, surface_gravity_g, rings, mining_signals
+            SELECT system_address, body_id, body_name, planet_class, radius, surface_gravity_g, surface_temperature, rings, mining_signals
             FROM bodies
             WHERE system_address IN ({placeholders}) AND landable = 1
             ORDER BY radius DESC
@@ -591,6 +664,7 @@ def get_systems(
             is_ringed = bool(b["rings"] and b["rings"] != "[]" and b["rings"] != '""')
             rad = b["radius"]
             rad_km = round(rad / 1000) if rad else None
+            temp_k = round(b["surface_temperature"]) if b["surface_temperature"] is not None else None
 
             summary_by_sys[s_addr].append({
                 "body_id": b["body_id"],
@@ -600,15 +674,39 @@ def get_systems(
                 "radius": rad,
                 "radius_km": rad_km,
                 "gravity_g": b["surface_gravity_g"],
+                "surface_temperature": b["surface_temperature"],
+                "temp_k": temp_k,
                 "is_ringed": is_ringed,
                 "mining_signals": b["mining_signals"] or 0
             })
         for r in rows:
             r["landable_bodies"] = summary_by_sys.get(r["system_address"], [])
 
+        # Fetch bookmarks for matching systems
+        c.execute(f"""
+            SELECT system_address, body_id, body_name, alias_name, note_markdown
+            FROM body_bookmarks
+            WHERE system_address IN ({placeholders})
+            ORDER BY updated_at DESC
+        """, sys_addrs)
+        bms_by_sys = {}
+        for bm in c.fetchall():
+            s_addr = bm["system_address"]
+            bms_by_sys.setdefault(s_addr, []).append({
+                "body_id": bm["body_id"],
+                "body_name": bm["body_name"],
+                "alias_name": bm["alias_name"] or "",
+                "has_note": bool(bm["note_markdown"] and bm["note_markdown"].strip()),
+                "note_snippet": (bm["note_markdown"] or "").strip()[:60]
+            })
+        for r in rows:
+            r["bookmarks"] = bms_by_sys.get(r["system_address"], [])
+
     for r in rows:
         if "landable_bodies" not in r:
             r["landable_bodies"] = []
+        if "bookmarks" not in r:
+            r["bookmarks"] = []
         lm_dists = calculate_landmark_distances(r.get("star_pos_x"), r.get("star_pos_y"), r.get("star_pos_z"))
         r.update(lm_dists)
 
@@ -710,6 +808,15 @@ def get_system_detail(system_address: int):
         ORDER BY timestamp DESC
     """, (system_address,))
     raw_mining = [dict(r) for r in c.fetchall()]
+
+    # Fetch body bookmarks
+    c.execute("SELECT * FROM body_bookmarks WHERE system_address = ?", (system_address,))
+    bm_map = {b_row["body_id"]: dict(b_row) for b_row in c.fetchall()}
+    for b in bodies:
+        b_id = b.get("body_id")
+        b["bookmark"] = bm_map.get(b_id)
+    system_data["bookmarks"] = list(bm_map.values())
+    system_data["bookmarks_count"] = len(bm_map)
 
     conn.close()
 

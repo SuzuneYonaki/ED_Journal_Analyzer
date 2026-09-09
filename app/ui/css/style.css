@@ -1740,3 +1740,79 @@ header {
   justify-content: center;
 }
 
+/* ==========================================================================
+   Celestial Body Bookmarks & Markdown Notes
+   ========================================================================== */
+.tag-badge.tag-bookmark {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.6);
+  font-weight: bold;
+}
+
+.chip.bookmark-chip.active {
+  background: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+  border-color: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+
+.sysmap-mini-badge.bookmark {
+  background: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.7);
+  font-weight: bold;
+}
+
+.sysmap-body-alias {
+  font-size: 0.68rem;
+  color: #38bdf8;
+  font-weight: bold;
+  margin-top: 1px;
+  text-shadow: 0 0 4px rgba(56, 189, 248, 0.4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 110px;
+}
+
+#bm-note-preview {
+  color: var(--text-primary);
+  word-break: break-word;
+}
+#bm-note-preview h1, #bm-note-preview h2, #bm-note-preview h3 {
+  color: #38bdf8;
+  margin: 6px 0 3px 0;
+  font-size: 0.88rem;
+}
+#bm-note-preview h1 { font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px; }
+#bm-note-preview p { margin: 4px 0; }
+#bm-note-preview ul, #bm-note-preview ol { margin: 4px 0 4px 16px; padding: 0; }
+#bm-note-preview li { margin-bottom: 2px; }
+#bm-note-preview code {
+  background: rgba(255,255,255,0.1);
+  color: #fde047;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+#bm-note-preview pre {
+  background: rgba(0,0,0,0.4);
+  padding: 6px 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+#bm-note-preview pre code {
+  background: transparent;
+  padding: 0;
+}
+#bm-note-preview blockquote {
+  border-left: 3px solid #fbbf24;
+  margin: 4px 0;
+  padding-left: 8px;
+  color: var(--text-secondary);
+}
+
+
