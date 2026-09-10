@@ -26,6 +26,11 @@ let state = {
     has_bookmarks: false,
     is_shared: false
   },
+  starTypes: [],
+  starMatchMode: 'any',
+  uiLayoutMode: localStorage.getItem('ed_ui_layout') || '1col',
+  headerStatsCollapsed: localStorage.getItem('ed_header_stats_collapsed') === 'true',
+  collapsedGroups: JSON.parse(localStorage.getItem('ed_collapsed_groups') || '{}'),
   showMiningGravity: localStorage.getItem('mining_display_gravity') !== 'false',
   showMiningTemp: localStorage.getItem('mining_display_temp') !== 'false',
   miningSubFilter: 'all',
@@ -295,6 +300,13 @@ function updateStaticTexts() {
     }
   });
 
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.dataset.i18nHtml;
+    if (key) {
+      el.innerHTML = t(key);
+    }
+  });
+
   // Update language buttons
   const btnJa = document.getElementById('btn-lang-ja');
   const btnEn = document.getElementById('btn-lang-en');
@@ -307,6 +319,12 @@ function updateStaticTexts() {
   if (modalBtnJa && modalBtnEn) {
     modalBtnJa.classList.toggle('active', currentLang === 'ja');
     modalBtnEn.classList.toggle('active', currentLang === 'en');
+  }
+
+  // Update layout toggle text
+  const layoutToggleText = document.getElementById('layout-toggle-text');
+  if (layoutToggleText) {
+    layoutToggleText.innerText = state.uiLayoutMode === '2col' ? (t('btn_layout_1col') || '1列表示') : (t('btn_layout_2col') || '2列表示');
   }
 
   // Re-render dynamic components with translated labels
@@ -420,6 +438,11 @@ async function fetchSystems(options = {}) {
   }
   if (state.dateField) {
     params.append('date_field', state.dateField);
+  }
+
+  if (state.starTypes && state.starTypes.length > 0) {
+    params.append('star_types', state.starTypes.join(','));
+    params.append('star_match_mode', state.starMatchMode || 'any');
   }
 
   Object.entries(state.filters).forEach(([k, v]) => {
@@ -850,7 +873,6 @@ function renderSystemHeader() {
 
   if (btnExportHtml) btnExportHtml.style.display = 'inline-flex';
   if (btnExportPkg) btnExportPkg.style.display = 'inline-flex';
-  if (btnToggleShared) btnToggleShared.style.display = 'inline-flex';
 
   if (sharedBadge) {
     if (sys.is_shared) {
@@ -863,15 +885,14 @@ function renderSystemHeader() {
     }
   }
 
-  if (sharedIcon && sharedLabel && btnToggleShared) {
+  if (btnToggleShared) {
     if (sys.is_shared) {
-      sharedIcon.innerText = '✅';
-      sharedLabel.innerText = t('unshare_label') || '共有解除';
-      btnToggleShared.style.background = 'rgba(167, 139, 250, 0.25)';
-      btnToggleShared.style.borderColor = '#a78bfa';
+      // Once shared, "共有解除" is not needed because it doesn't notify counterparty.
+      btnToggleShared.style.display = 'none';
     } else {
-      sharedIcon.innerText = '🤝';
-      sharedLabel.innerText = t('share_label') || '共有マーク';
+      btnToggleShared.style.display = 'inline-flex';
+      if (sharedIcon) sharedIcon.innerText = '🤝';
+      if (sharedLabel) sharedLabel.innerText = t('share_label') || '共有マーク';
       btnToggleShared.style.background = 'rgba(167, 139, 250, 0.1)';
       btnToggleShared.style.borderColor = 'rgba(167, 139, 250, 0.4)';
     }
@@ -2879,6 +2900,146 @@ function renderBodyInspector() {
   }
 }
 
+// Collapsible Groups & Badges
+function updateCollapsibleBadges() {
+  const generalKeys = ['has_elw', 'has_water_world', 'has_ammonia', 'has_terraformable', 'has_bio', 'has_first_discover', 'has_bookmarks', 'is_shared', 'has_high_g', 'has_anomalies'];
+  const generalCount = generalKeys.filter(k => state.filters[k]).length;
+  const badgeGen = document.getElementById('badge-general-filters');
+  if (badgeGen) {
+    badgeGen.innerText = generalCount > 0 ? generalCount : '';
+    badgeGen.classList.toggle('active', generalCount > 0);
+  }
+
+  const miningKeys = ['has_landable_hmc', 'has_landable_metal_rich', 'has_landable_rocky', 'has_landable_icy', 'has_landable_rocky_ice', 'has_landable_ringed', 'has_mining_signals'];
+  const miningCount = miningKeys.filter(k => state.filters[k]).length;
+  const badgeMine = document.getElementById('badge-mining-filters');
+  if (badgeMine) {
+    badgeMine.innerText = miningCount > 0 ? miningCount : '';
+    badgeMine.classList.toggle('active', miningCount > 0);
+  }
+
+  const starCount = (state.starTypes || []).length;
+  const badgeStar = document.getElementById('badge-stars-filters');
+  if (badgeStar) {
+    badgeStar.innerText = starCount > 0 ? starCount : '';
+    badgeStar.classList.toggle('active', starCount > 0);
+  }
+}
+
+function initCollapsibleSections() {
+  const groups = document.querySelectorAll('.collapsible-group');
+  groups.forEach(grp => {
+    const header = grp.querySelector('.collapsible-header');
+    const groupKey = header ? header.dataset.group : null;
+    if (groupKey && state.collapsedGroups[groupKey]) {
+      grp.classList.add('collapsed');
+    }
+    if (header) {
+      header.addEventListener('click', () => {
+        grp.classList.toggle('collapsed');
+        if (groupKey) {
+          state.collapsedGroups[groupKey] = grp.classList.contains('collapsed');
+          try {
+            localStorage.setItem('ed_collapsed_groups', JSON.stringify(state.collapsedGroups));
+          } catch (e) {}
+        }
+      });
+    }
+  });
+  updateCollapsibleBadges();
+}
+
+// Stellar Multi-Search Filters
+function initStellarFilters() {
+  const cbs = document.querySelectorAll('.star-filter-cb');
+  cbs.forEach(cb => {
+    cb.addEventListener('change', () => {
+      const selected = Array.from(document.querySelectorAll('.star-filter-cb:checked')).map(el => el.value);
+      state.starTypes = selected;
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  });
+
+  const modeRadios = document.querySelectorAll('input[name="star-match-mode"]');
+  modeRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      state.starMatchMode = e.target.value;
+      if (state.starTypes.length > 0) {
+        state.page = 1;
+        fetchSystems({ autoSelectTop: true });
+      }
+    });
+  });
+
+  const btnClear = document.getElementById('btn-clear-star-filters');
+  if (btnClear) {
+    btnClear.addEventListener('click', () => {
+      document.querySelectorAll('.star-filter-cb').forEach(cb => { cb.checked = false; });
+      state.starTypes = [];
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  }
+}
+
+// UI Layout Mode Switcher (1-Column vs 2-Column Left Pane)
+function initLayoutSwitcher() {
+  const btnToggleLayout = document.getElementById('btn-toggle-layout');
+  const mainContainer = document.querySelector('.main-container');
+  const layoutIcon = document.getElementById('layout-toggle-icon');
+  const layoutText = document.getElementById('layout-toggle-text');
+
+  function applyLayout(mode) {
+    state.uiLayoutMode = mode;
+    if (mainContainer) {
+      mainContainer.classList.toggle('layout-2col-left', mode === '2col');
+    }
+    if (layoutText) {
+      layoutText.innerText = mode === '2col' ? (t('btn_layout_1col') || '1列表示') : (t('btn_layout_2col') || '2列表示');
+    }
+    if (layoutIcon) {
+      layoutIcon.innerText = mode === '2col' ? '🗖' : '◫';
+    }
+    try {
+      localStorage.setItem('ed_ui_layout', mode);
+    } catch (e) {}
+  }
+
+  // Restore initial layout mode
+  applyLayout(state.uiLayoutMode);
+
+  if (btnToggleLayout) {
+    btnToggleLayout.addEventListener('click', () => {
+      const nextMode = state.uiLayoutMode === '2col' ? '1col' : '2col';
+      applyLayout(nextMode);
+    });
+  }
+}
+
+// Collapsible Header Exploration Stats Panel
+function initHeaderStatsCollapse() {
+  const headerGroup = document.getElementById('header-logged-group');
+  const btnToggle = document.getElementById('btn-toggle-header-stats');
+  if (!headerGroup || !btnToggle) return;
+
+  function applyCollapse(collapsed) {
+    state.headerStatsCollapsed = collapsed;
+    headerGroup.classList.toggle('collapsed', collapsed);
+    try {
+      localStorage.setItem('ed_header_stats_collapsed', collapsed ? 'true' : 'false');
+    } catch (e) {}
+  }
+
+  applyCollapse(state.headerStatsCollapsed);
+
+  btnToggle.addEventListener('click', () => {
+    applyCollapse(!headerGroup.classList.contains('collapsed'));
+  });
+}
+
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
   updateStaticTexts();
@@ -2887,6 +3048,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   initSettingsModal();
   initExportImportModals();
+  initCollapsibleSections();
+  initStellarFilters();
+  initLayoutSwitcher();
+  initHeaderStatsCollapse();
   fetchGlobalStats();
   fetchSystems();
   checkScanOnStartup();
@@ -2917,6 +3082,7 @@ document.addEventListener('DOMContentLoaded', () => {
       state.filters[filterKey] = !state.filters[filterKey];
       chip.classList.toggle('active', state.filters[filterKey]);
       state.page = 1;
+      updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
     });
   });

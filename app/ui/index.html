@@ -55,14 +55,17 @@
       </div>
     </div>
 
-    <!-- Header Logged Exploration Stats Group -->
-    <div class="header-logged-group" style="display: flex; align-items: center; background: rgba(255, 113, 0, 0.06); border: 1px solid rgba(255, 113, 0, 0.3); border-radius: 6px; padding: 2px 6px; gap: 8px;">
-      <div class="stat-prefix-badge" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 2px 6px; background: rgba(255, 113, 0, 0.18); border-radius: 4px; border: 1px solid rgba(255, 113, 0, 0.4); flex-shrink: 0;">
-        <span style="font-size: 0.72rem; color: var(--ed-orange); font-weight: bold; white-space: nowrap;">🚀 探査・記録済み</span>
+    <!-- Header Logged Exploration Stats Group (Collapsible) -->
+    <div class="header-logged-group" id="header-logged-group" style="display: flex; align-items: center; background: rgba(255, 113, 0, 0.06); border: 1px solid rgba(255, 113, 0, 0.3); border-radius: 6px; padding: 2px 6px; gap: 8px; transition: all 0.25s ease;">
+      <div class="stat-prefix-badge" id="btn-toggle-header-stats" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 2px 6px; background: rgba(255, 113, 0, 0.18); border-radius: 4px; border: 1px solid rgba(255, 113, 0, 0.4); flex-shrink: 0; cursor: pointer;" title="クリックして統計パネルを折り畳み / 展開">
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span style="font-size: 0.72rem; color: var(--ed-orange); font-weight: bold; white-space: nowrap;">🚀 探査・記録済み</span>
+          <span id="header-stats-chevron" style="font-size: 0.65rem; color: var(--ed-orange); transition: transform 0.2s;">◀</span>
+        </div>
         <span id="header-logged-period" style="font-size: 0.62rem; color: #fed7aa; white-space: nowrap;">全期間</span>
       </div>
 
-      <div class="header-stats" style="margin: 0; padding: 0; border: none;">
+      <div class="header-stats" id="header-stats-content" style="margin: 0; padding: 0; border: none; display: flex; gap: 20px; align-items: center; transition: all 0.25s ease;">
         <div class="stat-item">
           <span class="stat-label" data-i18n="stat_systems">訪問星系</span>
           <span id="stat-systems" class="stat-value">0</span>
@@ -111,6 +114,12 @@
         <span>⚙️ 設定</span>
       </button>
 
+      <!-- Layout Switcher Button (1-Column / 2-Columns) -->
+      <button id="btn-toggle-layout" class="view-btn" style="padding: 5px 10px; font-size: 0.8rem; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; display: flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" title="UIレイアウト切替 (1列 / 2列)">
+        <span id="layout-toggle-icon">◫</span>
+        <span id="layout-toggle-text" data-i18n="btn_layout_2col">2列表示</span>
+      </button>
+
       <!-- Language Switcher -->
       <div class="lang-switch-group" style="display: flex; gap: 4px; background: var(--bg-card); padding: 2px; border-radius: 4px; border: 1px solid var(--border-color);">
         <button id="btn-lang-ja" class="view-btn active" style="padding: 4px 8px; font-size: 0.75rem;">JP</button>
@@ -122,175 +131,305 @@
   <!-- Main Container (3-pane) -->
   <div class="main-container">
     <!-- Left Pane: Systems Search & History -->
-    <div class="left-pane">
-      <div class="search-section">
-        <div class="search-bar">
-          <input type="text" id="system-search" class="search-input" placeholder="星系名を検索 (例: Sol, Beagle Point)...">
-        </div>
+    <div class="left-pane" id="left-pane">
+      <!-- Left Column 1: Search, Filter, and Sort Controls -->
+      <div class="left-controls-col" id="left-controls-col">
+        <div class="search-section">
+          <div class="search-bar">
+            <input type="text" id="system-search" class="search-input" placeholder="星系名を検索 (例: Sol, Beagle Point)...">
+          </div>
 
-        <div class="filter-chips">
-          <button class="chip" data-filter="has_elw" data-i18n="filter_elw">ELW (地球型)</button>
-          <button class="chip" data-filter="has_water_world" data-i18n="filter_ww">WW (海洋惑星)</button>
-          <button class="chip" data-filter="has_ammonia" data-i18n="filter_ammonia">Ammonia</button>
-          <button class="chip" data-filter="has_terraformable" data-i18n="filter_tf">TF可能</button>
-          <button class="chip bio" data-filter="has_bio" data-i18n="filter_bio">Bio (生体)</button>
-          <button class="chip first-disc" data-filter="has_first_discover" data-i18n="filter_first_discover" style="border-color: rgba(255, 215, 0, 0.4);">⭐ 1st Disc (初発見)</button>
-          <button class="chip bookmark-chip" data-filter="has_bookmarks" data-i18n="filter_bookmarks" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.5);">🔖 ブックマーク</button>
-          <button class="chip shared-chip" data-filter="is_shared" data-i18n="filter_shared" style="color: #c4b5fd; border-color: rgba(167, 139, 250, 0.5);">🤝 Shared (共有)</button>
-          <button class="chip" data-filter="has_high_g" data-i18n="filter_high_g">高重力 (3G+着陸)</button>
-          <button class="chip" data-filter="has_anomalies" data-i18n="filter_anomalies">特殊・レア</button>
-        </div>
-
-        <div class="filter-chips mining-filter-chips" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.08);">
-          <div style="width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 2px;">
-            <span style="font-size: 0.68rem; color: #38bdf8; font-weight: bold; letter-spacing: 0.3px;" data-i18n="filter_mining_group">⛏️ 採掘・Landable天体で絞込 (他天体除外):</span>
-            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.68rem; color: var(--text-secondary);">
-              <label style="display: flex; align-items: center; gap: 3px; cursor: pointer;" title="重力 (G) の表示を切り替え">
-                <input type="checkbox" id="toggle-mining-gravity" checked style="accent-color: var(--ed-orange); cursor: pointer;">
-                <span data-i18n="filter_toggle_gravity">重力 (G)</span>
-              </label>
-              <label style="display: flex; align-items: center; gap: 3px; cursor: pointer;" title="表面温度 (K) の表示を切り替え">
-                <input type="checkbox" id="toggle-mining-temp" checked style="accent-color: #38bdf8; cursor: pointer;">
-                <span data-i18n="filter_toggle_temp">温度 (K)</span>
-              </label>
+          <!-- Collapsible Group 1: General & Planetary Filters -->
+          <div class="collapsible-group" id="group-general-filters">
+            <div class="collapsible-header" data-group="general">
+              <div class="collapsible-title">
+                <span class="collapsible-chevron">▼</span>
+                <span data-i18n="section_general_filters">🪐 一般天体・属性フィルター</span>
+              </div>
+              <span class="collapsible-badge" id="badge-general-filters"></span>
+            </div>
+            <div class="collapsible-body">
+              <div class="filter-chips">
+                <button class="chip" data-filter="has_elw" data-i18n="filter_elw">ELW (地球型)</button>
+                <button class="chip" data-filter="has_water_world" data-i18n="filter_ww">WW (海洋惑星)</button>
+                <button class="chip" data-filter="has_ammonia" data-i18n="filter_ammonia">Ammonia</button>
+                <button class="chip" data-filter="has_terraformable" data-i18n="filter_tf">TF可能</button>
+                <button class="chip bio" data-filter="has_bio" data-i18n="filter_bio">Bio (生体)</button>
+                <button class="chip first-disc" data-filter="has_first_discover" data-i18n="filter_first_discover" style="border-color: rgba(255, 215, 0, 0.4);">⭐ 1st Disc (初発見)</button>
+                <button class="chip bookmark-chip" data-filter="has_bookmarks" data-i18n="filter_bookmarks" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.5);">🔖 ブックマーク</button>
+                <button class="chip shared-chip" data-filter="is_shared" data-i18n="filter_shared" style="color: #c4b5fd; border-color: rgba(167, 139, 250, 0.5);">🤝 Shared (共有)</button>
+                <button class="chip" data-filter="has_high_g" data-i18n="filter_high_g">高重力 (3G+着陸)</button>
+                <button class="chip" data-filter="has_anomalies" data-i18n="filter_anomalies">特殊・レア</button>
+              </div>
             </div>
           </div>
-          <button class="chip" data-filter="has_landable_hmc" data-i18n="filter_l_hmc" style="color: #60a5fa; border-color: rgba(96, 165, 250, 0.4);">🪐 HMC</button>
-          <button class="chip" data-filter="has_landable_metal_rich" data-i18n="filter_l_mr" style="color: #fb923c; border-color: rgba(251, 146, 60, 0.4);">🪐 Metal Rich</button>
-          <button class="chip" data-filter="has_landable_rocky" data-i18n="filter_l_rocky" style="color: #cbd5e1; border-color: rgba(203, 213, 225, 0.4);">🪐 Rocky</button>
-          <button class="chip" data-filter="has_landable_icy" data-i18n="filter_l_icy" style="color: #67e8f9; border-color: rgba(103, 232, 249, 0.4);">❄️ Icy</button>
-          <button class="chip" data-filter="has_landable_rocky_ice" data-i18n="filter_l_rocky_ice" style="color: #93c5fd; border-color: rgba(147, 197, 253, 0.4);">🧊 Icy Rocky</button>
-          <button class="chip" data-filter="has_landable_ringed" data-i18n="filter_l_ringed" style="color: #f472b6; border-color: rgba(244, 114, 182, 0.4);">💍 Ringed</button>
-          <button class="chip" data-filter="has_mining_signals" data-i18n="filter_mining_sig" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.5);">⛏️ 採掘地点</button>
-        </div>
 
-        <!-- Date Range & Fuzzy Filtering Section -->
-        <div class="date-filter-section" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.25); border-radius: 4px; border: 1px solid var(--border-color);">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-            <span style="font-size: 0.75rem; color: var(--ed-cyan); font-weight: bold; display: flex; align-items: center; gap: 4px;" data-i18n="date_filter_title">
-              📅 訪問期間:
-            </span>
-            <select id="date-preset-select" class="sort-select" style="flex: 1; font-size: 0.78rem;">
-              <option value="all" data-i18n="preset_all">全期間</option>
-              <option value="before_today" data-i18n="preset_before_today">今日より前</option>
-              <option value="last_7_days" data-i18n="preset_last_7">過去7日間</option>
-              <option value="last_30_days" data-i18n="preset_last_30">過去30日間</option>
-              <option value="last_90_days" data-i18n="preset_last_90">過去90日間</option>
-              <option value="last_1_year" data-i18n="preset_last_1_year">過去1年間</option>
-              <option value="this_year" data-i18n="preset_this_year">今年 (2026)</option>
-              <option value="last_year" data-i18n="preset_last_year">昨年 (2025)</option>
-              <option value="custom" data-i18n="preset_custom">カスタム範囲指定...</option>
-            </select>
-          </div>
-          <div id="custom-date-inputs" style="display: none; flex-direction: column; gap: 4px; margin-top: 2px;">
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <input type="date" id="filter-date-from" class="search-input" style="padding: 3px 6px; font-size: 0.75rem; flex: 1;" title="開始日">
-              <span style="font-size: 0.75rem; color: var(--text-secondary);">〜</span>
-              <input type="date" id="filter-date-to" class="search-input" style="padding: 3px 6px; font-size: 0.75rem; flex: 1;" title="終了日">
+          <!-- Collapsible Group 2: Mining & Landable Filters -->
+          <div class="collapsible-group" id="group-mining-filters">
+            <div class="collapsible-header" data-group="mining">
+              <div class="collapsible-title">
+                <span class="collapsible-chevron">▼</span>
+                <span data-i18n="section_mining_filters">⛏️ 採掘・Landable天体フィルター</span>
+              </div>
+              <span class="collapsible-badge" id="badge-mining-filters"></span>
             </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
-              <select id="date-field-select" class="sort-select" style="flex: 1; font-size: 0.72rem;">
-                <option value="last_visited" data-i18n="field_last_visited">最新訪問日時を対象</option>
-                <option value="first_visited" data-i18n="field_first_visited">初回訪問日時を対象</option>
-                <option value="any_visit" data-i18n="field_any_visit">全訪問履歴のいずれか</option>
-              </select>
-              <button id="btn-clear-date" class="btn-page" style="padding: 2px 8px; font-size: 0.72rem;" data-i18n="btn_clear_date">クリア</button>
+            <div class="collapsible-body">
+              <div class="filter-chips mining-filter-chips" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                <div style="width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 2px;">
+                  <span style="font-size: 0.68rem; color: #38bdf8; font-weight: bold; letter-spacing: 0.3px;" data-i18n="filter_mining_group">⛏️ 採掘・Landable天体で絞込:</span>
+                  <div style="display: flex; align-items: center; gap: 8px; font-size: 0.68rem; color: var(--text-secondary);">
+                    <label style="display: flex; align-items: center; gap: 3px; cursor: pointer;" title="重力 (G) の表示を切り替え">
+                      <input type="checkbox" id="toggle-mining-gravity" checked style="accent-color: var(--ed-orange); cursor: pointer;">
+                      <span data-i18n="filter_toggle_gravity">重力 (G)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 3px; cursor: pointer;" title="表面温度 (K) の表示を切り替え">
+                      <input type="checkbox" id="toggle-mining-temp" checked style="accent-color: #38bdf8; cursor: pointer;">
+                      <span data-i18n="filter_toggle_temp">温度 (K)</span>
+                    </label>
+                  </div>
+                </div>
+                <button class="chip" data-filter="has_landable_hmc" data-i18n="filter_l_hmc" style="color: #60a5fa; border-color: rgba(96, 165, 250, 0.4);">🪐 HMC</button>
+                <button class="chip" data-filter="has_landable_metal_rich" data-i18n="filter_l_mr" style="color: #fb923c; border-color: rgba(251, 146, 60, 0.4);">🪐 Metal Rich</button>
+                <button class="chip" data-filter="has_landable_rocky" data-i18n="filter_l_rocky" style="color: #cbd5e1; border-color: rgba(203, 213, 225, 0.4);">🪐 Rocky</button>
+                <button class="chip" data-filter="has_landable_icy" data-i18n="filter_l_icy" style="color: #67e8f9; border-color: rgba(103, 232, 249, 0.4);">❄️ Icy</button>
+                <button class="chip" data-filter="has_landable_rocky_ice" data-i18n="filter_l_rocky_ice" style="color: #93c5fd; border-color: rgba(147, 197, 253, 0.4);">🧊 Icy Rocky</button>
+                <button class="chip" data-filter="has_landable_ringed" data-i18n="filter_l_ringed" style="color: #f472b6; border-color: rgba(244, 114, 182, 0.4);">💍 Ringed</button>
+                <button class="chip" data-filter="has_mining_signals" data-i18n="filter_mining_sig" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.5);">⛏️ 採掘地点</button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Real-time Live Sync Toggle Button (Between Visit Period & 1st Sort) -->
-        <div class="live-toggle-container" style="margin-top: 6px;">
-          <button id="btn-live-toggle" class="btn-live active" style="width: 100%; justify-content: center; padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px;" title="リアルタイム自動更新の有効/無効を切り替え（ジャンプ到着待機時は最新星系の現状データを即時表示）">
-            <span class="live-indicator-dot"></span>
-            <span id="live-status-text" data-i18n="live_sync_on">LIVE (リアルタイム)</span>
-          </button>
-        </div>
+          <!-- Collapsible Group 3: Stellar Types Multi-Search Checkboxes -->
+          <div class="collapsible-group" id="group-stars-filters">
+            <div class="collapsible-header" data-group="stars">
+              <div class="collapsible-title">
+                <span class="collapsible-chevron">▼</span>
+                <span data-i18n="section_stars_filters">✨ 星系内恒星 (複数検索)</span>
+              </div>
+              <span class="collapsible-badge" id="badge-stars-filters"></span>
+            </div>
+            <div class="collapsible-body" style="padding: 6px 8px; background: rgba(0,0,0,0.25); border-radius: 4px; border: 1px solid var(--border-color);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 0.72rem;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="color: var(--text-secondary);" data-i18n="star_mode_label">条件:</span>
+                  <label style="display: flex; align-items: center; gap: 2px; cursor: pointer; color: #a5f3fc;" title="選択したいずれかの恒星を含む星系を検索">
+                    <input type="radio" name="star-match-mode" value="any" checked style="cursor: pointer; accent-color: var(--ed-cyan);">
+                    <span data-i18n="star_mode_any">いずれか (OR)</span>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 2px; cursor: pointer; color: #fbcfe8;" title="選択したすべての恒星を含む星系のみを検索">
+                    <input type="radio" name="star-match-mode" value="all" style="cursor: pointer; accent-color: #f472b6;">
+                    <span data-i18n="star_mode_all">すべて一致 (AND)</span>
+                  </label>
+                </div>
+                <button id="btn-clear-star-filters" class="btn-page" style="padding: 1px 6px; font-size: 0.7rem;" data-i18n="star_filter_clear">クリア</button>
+              </div>
 
-        <div class="sort-section" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid var(--border-color);">
-          <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-            <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_primary">1次ソート:</span>
-            <select id="sort-select" class="sort-select" style="flex: 1; font-size: 0.78rem;">
-              <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
-              <option value="total_potential_value-asc" data-i18n="sort_value_asc">推定探査価値 (低い順)</option>
-              <option value="total_fss_value-desc" data-i18n="sort_fss_desc">FSS合計 (高い順)</option>
-              <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
-              <option value="total_bio_signals-asc" data-i18n="sort_bio_asc">生体シグナル数 (少ない順)</option>
-              <option value="first_discovered_bodies-desc" data-i18n="sort_first_disc_desc">初発見天体数 (多い順)</option>
-              <option value="avg_landable_radius-desc" data-i18n="sort_landable_radius_desc">Landable平均サイズ (大きい順)</option>
-              <option value="avg_landable_radius-asc" data-i18n="sort_landable_radius_asc">Landable平均サイズ (小さい順)</option>
-              <option value="cmdr_distance_ly-asc" data-i18n="sort_cmdr_dist_asc">現在地からの距離 (近い順)</option>
-              <option value="cmdr_distance_ly-desc" data-i18n="sort_cmdr_dist_desc">現在地からの距離 (遠い順)</option>
-              <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
-              <option value="sol_distance_ly-desc" data-i18n="sort_sol_dist_desc">Sol距離 (遠い順)</option>
-              <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
-              <option value="last_visited-asc" data-i18n="sort_visited_asc">最新訪問日時 (古い順)</option>
-              <option value="first_visited-asc" data-i18n="sort_first_asc">初回訪問日時 (古い順)</option>
-              <option value="first_visited-desc" data-i18n="sort_first_desc">初回訪問日時 (新しい順)</option>
-              <option value="scanned_bodies-desc" data-i18n="sort_bodies_desc">スキャン天体数 (多い順)</option>
-              <option value="scanned_bodies-asc" data-i18n="sort_bodies_asc">スキャン天体数 (少ない順)</option>
-              <option value="visit_count-desc" data-i18n="sort_visits_desc">訪問回数 (多い順)</option>
-              <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
-            </select>
+              <!-- Stellar Types Checkbox Grid -->
+              <div class="stellar-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; font-size: 0.72rem;">
+                <label class="star-cb-label" title="Class O (青色主系列星)">
+                  <input type="checkbox" class="star-filter-cb" value="O"> <span style="color: #60a5fa; font-weight: bold;">O</span>
+                </label>
+                <label class="star-cb-label" title="Class B (青白色主系列星/超巨星)">
+                  <input type="checkbox" class="star-filter-cb" value="B"> <span style="color: #93c5fd; font-weight: bold;">B</span>
+                </label>
+                <label class="star-cb-label" title="Class A (白色主系列星/超巨星)">
+                  <input type="checkbox" class="star-filter-cb" value="A"> <span style="color: #e2e8f0; font-weight: bold;">A</span>
+                </label>
+                <label class="star-cb-label" title="Class F (黄白色主系列星)">
+                  <input type="checkbox" class="star-filter-cb" value="F"> <span style="color: #fef08a; font-weight: bold;">F</span>
+                </label>
+                <label class="star-cb-label" title="Class G (黄色主系列星/太陽型)">
+                  <input type="checkbox" class="star-filter-cb" value="G"> <span style="color: #facc15; font-weight: bold;">G</span>
+                </label>
+                <label class="star-cb-label" title="Class K (橙色主系列星/巨星)">
+                  <input type="checkbox" class="star-filter-cb" value="K"> <span style="color: #fb923c; font-weight: bold;">K</span>
+                </label>
+                <label class="star-cb-label" title="Class M (赤色矮星/赤色巨星)">
+                  <input type="checkbox" class="star-filter-cb" value="M"> <span style="color: #f87171; font-weight: bold;">M</span>
+                </label>
+                <label class="star-cb-label" title="Class L (褐色矮星)">
+                  <input type="checkbox" class="star-filter-cb" value="L"> <span style="color: #d97706;">L</span>
+                </label>
+                <label class="star-cb-label" title="Class T (メタン褐色矮星)">
+                  <input type="checkbox" class="star-filter-cb" value="T"> <span style="color: #b45309;">T</span>
+                </label>
+                <label class="star-cb-label" title="Class Y (極低温褐色矮星)">
+                  <input type="checkbox" class="star-filter-cb" value="Y"> <span style="color: #92400e;">Y</span>
+                </label>
+                <label class="star-cb-label" title="T Tauri (原始星)">
+                  <input type="checkbox" class="star-filter-cb" value="TTS"> <span style="color: #f472b6;">TTS</span>
+                </label>
+                <label class="star-cb-label" title="Herbig Ae/Be (大質量原始星)">
+                  <input type="checkbox" class="star-filter-cb" value="AeBe"> <span style="color: #c084fc;">AeBe</span>
+                </label>
+                <label class="star-cb-label" title="Wolf-Rayet (ウォルフ・ライエ星: W, WC, WN, WNC, WO)">
+                  <input type="checkbox" class="star-filter-cb" value="W"> <span style="color: #a855f7; font-weight: bold;">W*</span>
+                </label>
+                <label class="star-cb-label" title="Carbon & S-type (炭素星・S型)">
+                  <input type="checkbox" class="star-filter-cb" value="C"> <span style="color: #ef4444; font-weight: bold;">C*</span>
+                </label>
+                <label class="star-cb-label" title="White Dwarf (白色矮星: D, DA, DB, DC, DQ, DX...)">
+                  <input type="checkbox" class="star-filter-cb" value="D"> <span style="color: #38bdf8; font-weight: bold;">D*</span>
+                </label>
+                <label class="star-cb-label" title="Neutron Star (中性子星: N)">
+                  <input type="checkbox" class="star-filter-cb" value="N"> <span style="color: #22d3ee; font-weight: bold;">N</span>
+                </label>
+                <label class="star-cb-label" style="grid-column: span 2;" title="Black Hole (ブラックホール: H, 超大質量)">
+                  <input type="checkbox" class="star-filter-cb" value="H"> <span style="color: #c084fc; font-weight: bold;">H (BlackHole)</span>
+                </label>
+              </div>
+            </div>
           </div>
-          <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-            <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_secondary">2次ソート:</span>
-            <select id="sort-select-2" class="sort-select" style="flex: 1; font-size: 0.78rem;">
-              <option value="none" data-i18n="sort_none">（指定なし）</option>
-              <option value="avg_landable_radius-desc" data-i18n="sort_landable_radius_desc">Landable平均サイズ (大きい順)</option>
-              <option value="avg_landable_radius-asc" data-i18n="sort_landable_radius_asc">Landable平均サイズ (小さい順)</option>
-              <option value="cmdr_distance_ly-asc" data-i18n="sort_cmdr_dist_asc">現在地からの距離 (近い順)</option>
-              <option value="cmdr_distance_ly-desc" data-i18n="sort_cmdr_dist_desc">現在地からの距離 (遠い順)</option>
-              <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
-              <option value="sol_distance_ly-desc" data-i18n="sort_sol_dist_desc">Sol距離 (遠い順)</option>
-              <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
-              <option value="first_discovered_bodies-desc" data-i18n="sort_first_disc_desc">初発見天体数 (多い順)</option>
-              <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
-              <option value="total_fss_value-desc" data-i18n="sort_fss_desc">FSS合計 (高い順)</option>
-              <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
-              <option value="last_visited-asc" data-i18n="sort_visited_asc">最新訪問日時 (古い順)</option>
-              <option value="scanned_bodies-desc" data-i18n="sort_bodies_desc">スキャン天体数 (多い順)</option>
-              <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
-            </select>
-          </div>
-          <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-            <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_tertiary">3次ソート:</span>
-            <select id="sort-select-3" class="sort-select" style="flex: 1; font-size: 0.78rem;">
-              <option value="none" data-i18n="sort_none">（指定なし）</option>
-              <option value="avg_landable_radius-desc" data-i18n="sort_landable_radius_desc">Landable平均サイズ (大きい順)</option>
-              <option value="avg_landable_radius-asc" data-i18n="sort_landable_radius_asc">Landable平均サイズ (小さい順)</option>
-              <option value="cmdr_distance_ly-asc" data-i18n="sort_cmdr_dist_asc">現在地からの距離 (近い順)</option>
-              <option value="cmdr_distance_ly-desc" data-i18n="sort_cmdr_dist_desc">現在地からの距離 (遠い順)</option>
-              <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
-              <option value="sol_distance_ly-desc" data-i18n="sort_sol_dist_desc">Sol距離 (遠い順)</option>
-              <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
-              <option value="first_discovered_bodies-desc" data-i18n="sort_first_disc_desc">初発見天体数 (多い順)</option>
-              <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
-              <option value="total_fss_value-desc" data-i18n="sort_fss_desc">FSS合計 (高い順)</option>
-              <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
-              <option value="last_visited-asc" data-i18n="sort_visited_asc">最新訪問日時 (古い順)</option>
-              <option value="scanned_bodies-desc" data-i18n="sort_bodies_desc">スキャン天体数 (多い順)</option>
-              <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
-            </select>
-          </div>
-          <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 2px;">
-            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; cursor: pointer; color: #a5f3fc;" title="1次〜3次の各項目を総合スコアリング（加重ブレンド）して並び替えます">
-              <input type="checkbox" id="cb-sort-composite" checked style="cursor: pointer;">
-              <span data-i18n="sort_composite_mode">⚡ 総合スコア（加重ブレンド）</span>
-            </label>
-            <span style="font-size: 0.65rem; color: var(--text-dim);">1次 50% / 2次 35% / 3次 15%</span>
+
+          <!-- Collapsible Group 4: Date Range, LIVE & Sort Settings -->
+          <div class="collapsible-group" id="group-sort-filters">
+            <div class="collapsible-header" data-group="sort">
+              <div class="collapsible-title">
+                <span class="collapsible-chevron">▼</span>
+                <span data-i18n="section_sort_filters">⏱️ 期間・LIVE・ソート設定</span>
+              </div>
+            </div>
+            <div class="collapsible-body">
+              <!-- Date Range & Fuzzy Filtering Section -->
+              <div class="date-filter-section" style="display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; background: rgba(0,0,0,0.25); border-radius: 4px; border: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                  <span style="font-size: 0.75rem; color: var(--ed-cyan); font-weight: bold; display: flex; align-items: center; gap: 4px;" data-i18n="date_filter_title">
+                    📅 訪問期間:
+                  </span>
+                  <select id="date-preset-select" class="sort-select" style="flex: 1; font-size: 0.78rem;">
+                    <option value="all" data-i18n="preset_all">全期間</option>
+                    <option value="before_today" data-i18n="preset_before_today">今日より前</option>
+                    <option value="last_7_days" data-i18n="preset_last_7">過去7日間</option>
+                    <option value="last_30_days" data-i18n="preset_last_30">過去30日間</option>
+                    <option value="last_90_days" data-i18n="preset_last_90">過去90日間</option>
+                    <option value="last_1_year" data-i18n="preset_last_1_year">過去1年間</option>
+                    <option value="this_year" data-i18n="preset_this_year">今年 (2026)</option>
+                    <option value="last_year" data-i18n="preset_last_year">昨年 (2025)</option>
+                    <option value="custom" data-i18n="preset_custom">カスタム範囲指定...</option>
+                  </select>
+                </div>
+                <div id="custom-date-inputs" style="display: none; flex-direction: column; gap: 4px; margin-top: 2px;">
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <input type="date" id="filter-date-from" class="search-input" style="padding: 3px 6px; font-size: 0.75rem; flex: 1;" title="開始日">
+                    <span style="font-size: 0.75rem; color: var(--text-secondary);">〜</span>
+                    <input type="date" id="filter-date-to" class="search-input" style="padding: 3px 6px; font-size: 0.75rem; flex: 1;" title="終了日">
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                    <select id="date-field-select" class="sort-select" style="flex: 1; font-size: 0.72rem;">
+                      <option value="last_visited" data-i18n="field_last_visited">最新訪問日時を対象</option>
+                      <option value="first_visited" data-i18n="field_first_visited">初回訪問日時を対象</option>
+                      <option value="any_visit" data-i18n="field_any_visit">全訪問履歴のいずれか</option>
+                    </select>
+                    <button id="btn-clear-date" class="btn-page" style="padding: 2px 8px; font-size: 0.72rem;" data-i18n="btn_clear_date">クリア</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Real-time Live Sync Toggle Button -->
+              <div class="live-toggle-container" style="margin-top: 6px;">
+                <button id="btn-live-toggle" class="btn-live active" style="width: 100%; justify-content: center; padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px;" title="リアルタイム自動更新の有効/無効を切り替え（ジャンプ到着待機時は最新星系の現状データを即時表示）">
+                  <span class="live-indicator-dot"></span>
+                  <span id="live-status-text" data-i18n="live_sync_on">LIVE (リアルタイム)</span>
+                </button>
+              </div>
+
+              <!-- Sort Controls Section -->
+              <div class="sort-section" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid var(--border-color);">
+                <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                  <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_primary">1次ソート:</span>
+                  <select id="sort-select" class="sort-select" style="flex: 1; font-size: 0.78rem;">
+                    <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
+                    <option value="total_potential_value-asc" data-i18n="sort_value_asc">推定探査価値 (低い順)</option>
+                    <option value="total_fss_value-desc" data-i18n="sort_fss_desc">FSS合計 (高い順)</option>
+                    <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
+                    <option value="total_bio_signals-asc" data-i18n="sort_bio_asc">生体シグナル数 (少ない順)</option>
+                    <option value="first_discovered_bodies-desc" data-i18n="sort_first_disc_desc">初発見天体数 (多い順)</option>
+                    <option value="avg_landable_radius-desc" data-i18n="sort_landable_radius_desc">Landable平均サイズ (大きい順)</option>
+                    <option value="avg_landable_radius-asc" data-i18n="sort_landable_radius_asc">Landable平均サイズ (小さい順)</option>
+                    <option value="main_star_type-asc" data-i18n="sort_main_star_asc">主星系列 (O-B-A-F-G-K-M...)</option>
+                    <option value="main_star_type-desc" data-i18n="sort_main_star_desc">主星系列 (BH・特殊星〜)</option>
+                    <option value="cmdr_distance_ly-asc" data-i18n="sort_cmdr_dist_asc">現在地からの距離 (近い順)</option>
+                    <option value="cmdr_distance_ly-desc" data-i18n="sort_cmdr_dist_desc">現在地からの距離 (遠い順)</option>
+                    <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
+                    <option value="sol_distance_ly-desc" data-i18n="sort_sol_dist_desc">Sol距離 (遠い順)</option>
+                    <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
+                    <option value="last_visited-asc" data-i18n="sort_visited_asc">最新訪問日時 (古い順)</option>
+                    <option value="first_visited-asc" data-i18n="sort_first_asc">初回訪問日時 (古い順)</option>
+                    <option value="first_visited-desc" data-i18n="sort_first_desc">初回訪問日時 (新しい順)</option>
+                    <option value="scanned_bodies-desc" data-i18n="sort_bodies_desc">スキャン天体数 (多い順)</option>
+                    <option value="scanned_bodies-asc" data-i18n="sort_bodies_asc">スキャン天体数 (少ない順)</option>
+                    <option value="visit_count-desc" data-i18n="sort_visits_desc">訪問回数 (多い順)</option>
+                    <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
+                  </select>
+                </div>
+                <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                  <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_secondary">2次ソート:</span>
+                  <select id="sort-select-2" class="sort-select" style="flex: 1; font-size: 0.78rem;">
+                    <option value="none" data-i18n="sort_none">（指定なし）</option>
+                    <option value="avg_landable_radius-desc" data-i18n="sort_landable_radius_desc">Landable平均サイズ (大きい順)</option>
+                    <option value="avg_landable_radius-asc" data-i18n="sort_landable_radius_asc">Landable平均サイズ (小さい順)</option>
+                    <option value="main_star_type-asc" data-i18n="sort_main_star_asc">主星系列 (O-B-A-F-G-K-M...)</option>
+                    <option value="main_star_type-desc" data-i18n="sort_main_star_desc">主星系列 (BH・特殊星〜)</option>
+                    <option value="cmdr_distance_ly-asc" data-i18n="sort_cmdr_dist_asc">現在地からの距離 (近い順)</option>
+                    <option value="cmdr_distance_ly-desc" data-i18n="sort_cmdr_dist_desc">現在地からの距離 (遠い順)</option>
+                    <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
+                    <option value="sol_distance_ly-desc" data-i18n="sort_sol_dist_desc">Sol距離 (遠い順)</option>
+                    <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
+                    <option value="first_discovered_bodies-desc" data-i18n="sort_first_disc_desc">初発見天体数 (多い順)</option>
+                    <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
+                    <option value="total_fss_value-desc" data-i18n="sort_fss_desc">FSS合計 (高い順)</option>
+                    <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
+                    <option value="last_visited-asc" data-i18n="sort_visited_asc">最新訪問日時 (古い順)</option>
+                    <option value="scanned_bodies-desc" data-i18n="sort_bodies_desc">スキャン天体数 (多い順)</option>
+                    <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
+                  </select>
+                </div>
+                <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                  <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_tertiary">3次ソート:</span>
+                  <select id="sort-select-3" class="sort-select" style="flex: 1; font-size: 0.78rem;">
+                    <option value="none" data-i18n="sort_none">（指定なし）</option>
+                    <option value="avg_landable_radius-desc" data-i18n="sort_landable_radius_desc">Landable平均サイズ (大きい順)</option>
+                    <option value="avg_landable_radius-asc" data-i18n="sort_landable_radius_asc">Landable平均サイズ (小さい順)</option>
+                    <option value="main_star_type-asc" data-i18n="sort_main_star_asc">主星系列 (O-B-A-F-G-K-M...)</option>
+                    <option value="main_star_type-desc" data-i18n="sort_main_star_desc">主星系列 (BH・特殊星〜)</option>
+                    <option value="cmdr_distance_ly-asc" data-i18n="sort_cmdr_dist_asc">現在地からの距離 (近い順)</option>
+                    <option value="cmdr_distance_ly-desc" data-i18n="sort_cmdr_dist_desc">現在地からの距離 (遠い順)</option>
+                    <option value="sol_distance_ly-asc" data-i18n="sort_sol_dist_asc">Sol距離 (近い順)</option>
+                    <option value="sol_distance_ly-desc" data-i18n="sort_sol_dist_desc">Sol距離 (遠い順)</option>
+                    <option value="total_bio_signals-desc" data-i18n="sort_bio_desc">生体シグナル数 (多い順)</option>
+                    <option value="first_discovered_bodies-desc" data-i18n="sort_first_disc_desc">初発見天体数 (多い順)</option>
+                    <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
+                    <option value="total_fss_value-desc" data-i18n="sort_fss_desc">FSS合計 (高い順)</option>
+                    <option value="last_visited-desc" data-i18n="sort_visited_desc">最新訪問日時 (新しい順)</option>
+                    <option value="last_visited-asc" data-i18n="sort_visited_asc">最新訪問日時 (古い順)</option>
+                    <option value="scanned_bodies-desc" data-i18n="sort_bodies_desc">スキャン天体数 (多い順)</option>
+                    <option value="star_system-asc" data-i18n="sort_name_asc">星系名 (A-Z)</option>
+                  </select>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 2px;">
+                  <label style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; cursor: pointer; color: #a5f3fc;" title="1次〜3次の各項目を総合スコアリング（加重ブレンド）して並び替えます">
+                    <input type="checkbox" id="cb-sort-composite" checked style="cursor: pointer;">
+                    <span data-i18n="sort_composite_mode">⚡ 総合スコア（加重ブレンド）</span>
+                  </label>
+                  <span style="font-size: 0.65rem; color: var(--text-dim);">1次 50% / 2次 35% / 3次 15%</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div id="system-list" class="system-list">
-        <!-- Systems injected by JS -->
-      </div>
+      <!-- Left Column 2: System Cards & Pagination -->
+      <div class="left-cards-col" id="left-cards-col">
+        <div id="system-list" class="system-list">
+          <!-- Systems injected by JS -->
+        </div>
 
-      <div class="pagination-bar">
-        <button id="btn-prev-page" class="btn-page" data-i18n="prev_page" disabled>&lt; 前へ</button>
-        <span id="page-info">1 / 1</span>
-        <button id="btn-next-page" class="btn-page" data-i18n="next_page">&gt; 次へ</button>
+        <div class="pagination-bar">
+          <button id="btn-prev-page" class="btn-page" data-i18n="prev_page" disabled>&lt; 前へ</button>
+          <span id="page-info">1 / 1</span>
+          <button id="btn-next-page" class="btn-page" data-i18n="next_page">&gt; 次へ</button>
+        </div>
       </div>
     </div>
 
@@ -873,7 +1012,7 @@
         <!-- Warning Banner -->
         <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; padding: 12px; margin-bottom: 14px;">
           <div style="color: #f87171; font-weight: bold; font-size: 0.9rem; margin-bottom: 6px;" data-i18n="modal_export_warn_title">⚠️ 未売却探査データに関する重大な注意事項</div>
-          <ul style="color: #fca5a5; font-size: 0.8rem; padding-left: 18px; line-height: 1.5;" data-i18n="modal_export_warn_desc">
+          <ul style="color: #fca5a5; font-size: 0.8rem; padding-left: 18px; line-height: 1.5;" data-i18n-html="modal_export_warn_desc">
             <li>ゲーム内の宇宙ステーション（Universal Cartographics）で探査データを売却する前にこの星系データを他者に渡すと、相手が現地へ先に飛んで売却した場合、あなたの初発見ボーナス（First Discovery）や発見者名義が失われるリスクがあります。</li>
             <li>あらかじめゲーム内で探査データを売却済みであること、または信頼できる相手との間でのみやり取りすることを推奨します。</li>
           </ul>

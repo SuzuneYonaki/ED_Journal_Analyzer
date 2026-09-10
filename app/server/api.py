@@ -384,6 +384,8 @@ def get_systems(
     has_mining_signals: Optional[bool] = False,
     has_bookmarks: Optional[bool] = False,
     is_shared: Optional[bool] = False,
+    star_types: Optional[List[str]] = Query(None),
+    star_match_mode: Optional[str] = "any",
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     date_field: Optional[str] = "last_visited",
@@ -493,6 +495,51 @@ def get_systems(
             conditions.append(f"{target_date_col} <= ?")
             params.append(to_ts)
 
+    # Star Types filtering (Stellar classification multi-search)
+    active_star_types = []
+    if star_types:
+        for st in star_types:
+            for item in str(st).split(","):
+                clean = item.strip()
+                if clean and clean not in active_star_types:
+                    active_star_types.append(clean)
+
+    if active_star_types:
+        star_type_sql_map = {
+            "O": "(b.star_type = 'O')",
+            "B": "(b.star_type = 'B' OR b.star_type LIKE 'B_%')",
+            "A": "(b.star_type = 'A' OR b.star_type LIKE 'A_%')",
+            "F": "(b.star_type = 'F' OR b.star_type LIKE 'F_%')",
+            "G": "(b.star_type = 'G' OR b.star_type LIKE 'G_%')",
+            "K": "(b.star_type = 'K' OR b.star_type LIKE 'K_%')",
+            "M": "(b.star_type = 'M' OR b.star_type LIKE 'M_%')",
+            "L": "(b.star_type = 'L')",
+            "T": "(b.star_type = 'T')",
+            "Y": "(b.star_type = 'Y')",
+            "TTS": "(b.star_type = 'TTS')",
+            "AeBe": "(b.star_type = 'AeBe')",
+            "W": "(b.star_type LIKE 'W%')",
+            "C": "(b.star_type LIKE 'C%' OR b.star_type = 'S' OR b.star_type = 'MS')",
+            "D": "(b.star_type LIKE 'D%')",
+            "N": "(b.star_type = 'N')",
+            "H": "(b.star_type = 'H' OR b.star_type LIKE '%BlackHole%')",
+        }
+        
+        type_exprs = []
+        for st in active_star_types:
+            if st in star_type_sql_map:
+                type_exprs.append(star_type_sql_map[st])
+            else:
+                clean_escaped = st.replace("'", "''")
+                type_exprs.append(f"(b.star_type = '{clean_escaped}')")
+
+        if star_match_mode == "all":
+            for expr in type_exprs:
+                conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
+        else:
+            combined_or = " OR ".join(type_exprs)
+            conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND ({combined_or}))")
+
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
     allowed_sort = {
@@ -507,7 +554,8 @@ def get_systems(
         "first_discovered_bodies": "first_discovered_bodies",
         "scanned_bodies": "scanned_bodies",
         "visit_count": "visit_count",
-        "avg_landable_radius": "avg_landable_radius"
+        "avg_landable_radius": "avg_landable_radius",
+        "main_star_type": "main_star_type"
     }
 
     # Gather active sort criteria
@@ -569,6 +617,30 @@ def get_systems(
             elif col_name in ["last_visited", "first_visited"]:
                 col = "last_visited" if col_name == "last_visited" else "first_visited"
                 return f"CASE WHEN stats.max_{col} > stats.min_{col} THEN (julianday(base.{col}) - stats.min_{col}) * 1.0 / (stats.max_{col} - stats.min_{col}) ELSE 1.0 END" if direction == "desc" else f"CASE WHEN stats.max_{col} > stats.min_{col} THEN (stats.max_{col} - julianday(base.{col})) * 1.0 / (stats.max_{col} - stats.min_{col}) ELSE 1.0 END"
+            elif col_name == "main_star_type":
+                spectral_score = """
+                    CASE 
+                        WHEN base.main_star_type = 'O' THEN 10.0
+                        WHEN base.main_star_type LIKE 'B%' THEN 20.0
+                        WHEN base.main_star_type LIKE 'A%' AND base.main_star_type != 'AeBe' THEN 30.0
+                        WHEN base.main_star_type LIKE 'F%' THEN 40.0
+                        WHEN base.main_star_type LIKE 'G%' THEN 50.0
+                        WHEN base.main_star_type LIKE 'K%' THEN 60.0
+                        WHEN base.main_star_type LIKE 'M%' AND base.main_star_type != 'MS' THEN 70.0
+                        WHEN base.main_star_type = 'L' THEN 80.0
+                        WHEN base.main_star_type = 'T' THEN 90.0
+                        WHEN base.main_star_type = 'Y' THEN 100.0
+                        WHEN base.main_star_type = 'TTS' THEN 110.0
+                        WHEN base.main_star_type = 'AeBe' THEN 120.0
+                        WHEN base.main_star_type LIKE 'W%' THEN 130.0
+                        WHEN base.main_star_type LIKE 'C%' OR base.main_star_type IN ('S', 'MS') THEN 140.0
+                        WHEN base.main_star_type LIKE 'D%' THEN 150.0
+                        WHEN base.main_star_type = 'N' THEN 160.0
+                        WHEN base.main_star_type = 'H' OR base.main_star_type LIKE '%BlackHole%' THEN 170.0
+                        ELSE 100.0
+                    END
+                """
+                return f"((170.0 - ({spectral_score})) / 160.0)" if direction == "asc" else f"((({spectral_score}) - 10.0) / 160.0)"
             return "0.0"
 
         score_terms = []
@@ -618,6 +690,30 @@ def get_systems(
                 return f"cmdr_distance_ly IS NULL ASC, cmdr_distance_ly {direction.upper()}"
             if col_name == "avg_landable_radius":
                 return f"(avg_landable_radius IS NULL OR avg_landable_radius = 0) ASC, avg_landable_radius {direction.upper()}"
+            if col_name == "main_star_type":
+                spectral_order = """
+                    CASE 
+                        WHEN main_star_type = 'O' THEN 10
+                        WHEN main_star_type LIKE 'B%' THEN 20
+                        WHEN main_star_type LIKE 'A%' AND main_star_type != 'AeBe' THEN 30
+                        WHEN main_star_type LIKE 'F%' THEN 40
+                        WHEN main_star_type LIKE 'G%' THEN 50
+                        WHEN main_star_type LIKE 'K%' THEN 60
+                        WHEN main_star_type LIKE 'M%' AND main_star_type != 'MS' THEN 70
+                        WHEN main_star_type = 'L' THEN 80
+                        WHEN main_star_type = 'T' THEN 90
+                        WHEN main_star_type = 'Y' THEN 100
+                        WHEN main_star_type = 'TTS' THEN 110
+                        WHEN main_star_type = 'AeBe' THEN 120
+                        WHEN main_star_type LIKE 'W%' THEN 130
+                        WHEN main_star_type LIKE 'C%' OR main_star_type IN ('S', 'MS') THEN 140
+                        WHEN main_star_type LIKE 'D%' THEN 150
+                        WHEN main_star_type = 'N' THEN 160
+                        WHEN main_star_type = 'H' OR main_star_type LIKE '%BlackHole%' THEN 170
+                        ELSE 999
+                    END
+                """
+                return f"(main_star_type IS NULL OR main_star_type = '') ASC, {spectral_order} {direction.upper()}, main_star_type {direction.upper()}"
             return f"{col_name} {direction.upper()}"
 
         order_clauses = [build_order_clause(col, direction) for col, direction in valid_sorts]

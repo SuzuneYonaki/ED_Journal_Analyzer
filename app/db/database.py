@@ -217,6 +217,8 @@ def init_db(conn=None):
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_body_bookmarks_sys ON body_bookmarks(system_address);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_body_bookmarks_body ON body_bookmarks(system_address, body_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_body_bookmarks_alias ON body_bookmarks(alias_name);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bodies_sys_star ON bodies(system_address, star_type);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_main_star ON systems(main_star_type);")
 
     # Migration for surface_mining_activities columns if table already existed
     for col_def in [
