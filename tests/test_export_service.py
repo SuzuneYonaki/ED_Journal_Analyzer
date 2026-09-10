@@ -1,3 +1,4 @@
+import os
 import pytest
 import sqlite3
 from app.db.database import init_db
@@ -198,3 +199,28 @@ def test_api_export_and_import_endpoints():
     toggle_resp = client.post("/api/systems/888123/toggle-shared")
     assert toggle_resp.status_code == 200
     assert "is_shared" in toggle_resp.json()
+
+    # 6. Test save-local package endpoint
+    save_fail = client.post("/api/export/package/save-local", json={
+        "system_addresses": [888123],
+        "consent_token": False
+    })
+    assert save_fail.status_code == 400
+
+    save_ok = client.post("/api/export/package/save-local", json={
+        "system_addresses": [888123],
+        "cmdr_name": "CMDR Test",
+        "notes": "Test notes",
+        "consent_token": True,
+        "reveal": False
+    })
+    assert save_ok.status_code == 200
+    res_json = save_ok.json()
+    assert res_json["status"] == "success"
+    assert "saved_path" in res_json
+    assert os.path.exists(res_json["saved_path"])
+    # Clean up created file
+    try:
+        os.remove(res_json["saved_path"])
+    except OSError:
+        pass

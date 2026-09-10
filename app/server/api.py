@@ -3,6 +3,7 @@ import os
 import threading
 import time
 import asyncio
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List
@@ -1358,6 +1359,16 @@ class ExportPackageRequest(BaseModel):
     notes: Optional[str] = ""
     consent_token: bool = False
 
+class SavePackageLocalRequest(BaseModel):
+    system_addresses: List[int]
+    cmdr_name: Optional[str] = "Explorer"
+    notes: Optional[str] = ""
+    consent_token: bool = False
+    reveal: Optional[bool] = True
+
+class RevealPathRequest(BaseModel):
+    file_path: str
+
 class ImportExecuteRequest(BaseModel):
     package: dict
     overwrite: Optional[bool] = False
@@ -1407,7 +1418,7 @@ def export_standalone_html_endpoint(
 @app.post("/api/export/package")
 def export_package_endpoint(payload: ExportPackageRequest):
     if not payload.consent_token:
-        return JSONResponse({"error": "エクスポートには注意事項・リスクへの同意（Lock解除）が必要です。"}, status_code=400)
+        return JSONResponse({"error": "エクスポートには注意事項への同意が必要です。"}, status_code=400)
     if not payload.system_addresses:
         return JSONResponse({"error": "対象星系が選択されていません。"}, status_code=400)
 
@@ -1422,6 +1433,69 @@ def export_package_endpoint(payload: ExportPackageRequest):
         return package
     finally:
         conn.close()
+
+@app.post("/api/export/package/save-local")
+def export_package_save_local(payload: SavePackageLocalRequest):
+    if not payload.consent_token:
+        return JSONResponse({"error": "エクスポートには注意事項への同意が必要です。"}, status_code=400)
+    if not payload.system_addresses:
+        return JSONResponse({"error": "対象星系が選択されていません。"}, status_code=400)
+
+    conn = get_db_connection()
+    try:
+        package = create_edsys_package(
+            conn,
+            system_addresses=payload.system_addresses,
+            cmdr_name=payload.cmdr_name or "Explorer",
+            notes=payload.notes or ""
+        )
+        systems = package.get("systems", [])
+        if systems and systems[0].get("star_system"):
+            safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in systems[0]["star_system"])
+        else:
+            safe_name = "System_Export"
+
+        downloads_dir = Path.home() / "Downloads"
+        if not downloads_dir.exists():
+            downloads_dir = Path("./exports")
+            downloads_dir.mkdir(parents=True, exist_ok=True)
+
+        filename = f"{safe_name}.edsys"
+        out_path = downloads_dir / filename
+        counter = 1
+        while out_path.exists():
+            out_path = downloads_dir / f"{safe_name}_{counter}.edsys"
+            counter += 1
+
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(package, f, ensure_ascii=False, indent=2)
+
+        if payload.reveal:
+            try:
+                subprocess.Popen(f'explorer /select,"{str(out_path.resolve())}"', shell=True)
+            except Exception as e:
+                print(f"Could not open explorer: {e}")
+
+        return {
+            "status": "success",
+            "saved_path": str(out_path.resolve()),
+            "filename": out_path.name,
+            "directory": str(downloads_dir.resolve()),
+            "package": package
+        }
+    finally:
+        conn.close()
+
+@app.post("/api/system/reveal-file")
+def reveal_file_in_explorer(payload: RevealPathRequest):
+    p = Path(payload.file_path).resolve()
+    if p.exists():
+        try:
+            subprocess.Popen(f'explorer /select,"{str(p)}"', shell=True)
+            return {"status": "ok"}
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+    return JSONResponse({"error": "File not found"}, status_code=404)
 
 @app.post("/api/import/package/preview")
 def import_package_preview(package: dict):

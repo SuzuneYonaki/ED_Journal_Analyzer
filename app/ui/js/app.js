@@ -1293,21 +1293,7 @@ function renderCurrentView() {
   const container = document.getElementById('map-content');
   container.innerHTML = '';
 
-  // 1. Hyperspace Jump State Placeholder
-  if (state.jumpState === 'hyperspace') {
-    const nextSys = state.targetJumpSystem || (state.selectedSystem ? state.selectedSystem.star_system : 'Unknown');
-    container.innerHTML = `
-      <div class="jump-status-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 420px; color: var(--ed-orange); text-align: center; padding: 40px;">
-        <div style="font-size: 3rem; margin-bottom: 16px;">🌀</div>
-        <div style="font-size: 1.2rem; font-weight: bold; letter-spacing: 1.5px; color: #fff;">HYPERSPACE JUMP IN PROGRESS</div>
-        <div style="font-size: 0.95rem; color: var(--ed-orange); margin-top: 8px;">ジャンプ先星系 &rarr; <span style="color: #fff; font-weight: bold;">${nextSys}</span></div>
-        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 14px;">星系データをクリアしました。到着を待機中...</div>
-      </div>
-    `;
-    return;
-  }
-
-  // 2. Arrived Waiting FSS (Honk) State Placeholder
+  // 1. Arrived Waiting FSS (Honk) State Placeholder
   if (state.jumpState === 'arrived_waiting_fss') {
     const curSys = state.selectedSystem ? state.selectedSystem.star_system : (state.targetJumpSystem || 'Current System');
     container.innerHTML = `
@@ -3845,11 +3831,8 @@ function handleLiveJournalEvent(eventName, eventData) {
   if (eventName === 'StartJump') {
     const jumpType = eventData.JumpType || 'Hyperspace';
     if (jumpType === 'Hyperspace') {
-      state.jumpState = 'hyperspace';
       state.targetJumpSystem = eventData.StarSystem || 'Unknown';
-      clearSystemBioSummary();
-      clearBodyInspector();
-      renderCurrentView();
+      // Hyperspace Jump中の画面は不要のため、直前の星系表示を維持
     }
   } else if (eventName === 'FSDJump' || eventName === 'Location' || eventName === 'CarrierJump') {
     state.jumpState = 'arrived_waiting_fss';
@@ -4816,15 +4799,19 @@ function initExportImportModals() {
       btnSubmitExportPkg.innerHTML = `<span>⏳ ${t('exporting') || '作成中...'}</span>`;
       btnSubmitExportPkg.disabled = true;
 
+      const cbExportOpenFolder = document.getElementById('cb-export-open-folder');
+      const shouldReveal = cbExportOpenFolder ? cbExportOpenFolder.checked : true;
+
       try {
         const payload = {
           system_addresses: [sysAddr],
-          created_by: exportCmdrName ? exportCmdrName.value.trim() : '',
+          cmdr_name: exportCmdrName ? exportCmdrName.value.trim() : '',
           notes: exportNotes ? exportNotes.value.trim() : '',
-          consent_token: true
+          consent_token: true,
+          reveal: shouldReveal
         };
 
-        const res = await fetch('/api/export/package', {
+        const res = await fetch('/api/export/package/save-local', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -4832,20 +4819,38 @@ function initExportImportModals() {
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.detail || `HTTP ${res.status}`);
+          throw new Error(errData.error || errData.detail || `HTTP ${res.status}`);
         }
 
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${sysName}.edsys`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const data = await res.json();
+        const savedPath = data.saved_path;
 
         closeExportLockedModal();
+
+        // Show Export Success Modal with path & reveal button
+        const modalExportSuccess = document.getElementById('modal-export-success');
+        const exportSavedPathDisplay = document.getElementById('export-saved-path-display');
+        const btnRevealFolder = document.getElementById('btn-reveal-exported-folder');
+
+        if (exportSavedPathDisplay) {
+          exportSavedPathDisplay.innerText = savedPath || `${sysName}.edsys`;
+        }
+        if (btnRevealFolder) {
+          btnRevealFolder.onclick = async () => {
+            try {
+              await fetch('/api/system/reveal-file', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_path: savedPath })
+              });
+            } catch (err) {
+              console.error('Failed to reveal file:', err);
+            }
+          };
+        }
+        if (modalExportSuccess) {
+          modalExportSuccess.style.display = 'flex';
+        }
 
         // Mark current system as shared in UI
         if (state.selectedSystem) {
@@ -4865,6 +4870,21 @@ function initExportImportModals() {
         btnSubmitExportPkg.innerHTML = origHtml;
         btnSubmitExportPkg.disabled = false;
       }
+    });
+  }
+
+  // Export Success Modal Close Buttons
+  const modalExportSuccess = document.getElementById('modal-export-success');
+  const btnCloseExportSuccess = document.getElementById('btn-close-export-success');
+  const btnOkExportSuccess = document.getElementById('btn-ok-export-success');
+  if (btnCloseExportSuccess) {
+    btnCloseExportSuccess.addEventListener('click', () => {
+      if (modalExportSuccess) modalExportSuccess.style.display = 'none';
+    });
+  }
+  if (btnOkExportSuccess) {
+    btnOkExportSuccess.addEventListener('click', () => {
+      if (modalExportSuccess) modalExportSuccess.style.display = 'none';
     });
   }
 

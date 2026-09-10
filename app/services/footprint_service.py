@@ -129,7 +129,7 @@ class FootprintService:
         url = f"https://www.edsm.net/api-v1/system?systemName={encoded}&showInformation=1&showCoordinates=1"
         req = urllib.request.Request(
             url,
-            headers={"User-Agent": "EDJournalAnalyzer/v0.0.7 (Footprint Check)"}
+            headers={"User-Agent": "EDJournalAnalyzer/v0.0.8 (Footprint Check)"}
         )
         try:
             with urllib.request.urlopen(req, timeout=EXTERNAL_TIMEOUT_SEC) as resp:
@@ -166,7 +166,7 @@ class FootprintService:
             url,
             data=json.dumps(payload).encode("utf-8"),
             headers={
-                "User-Agent": "EDJournalAnalyzer/v0.0.7 (Footprint Check)",
+                "User-Agent": "EDJournalAnalyzer/v0.0.8 (Footprint Check)",
                 "Content-Type": "application/json"
             }
         )
