@@ -108,6 +108,7 @@ def init_db(conn=None):
         confirmed_genuses TEXT,
         exobiology_predictions TEXT,
         anomalies_json TEXT,
+        scan_type TEXT,
         scan_timestamp TEXT,
         updated_timestamp TEXT,
         UNIQUE(system_address, body_id)
@@ -262,6 +263,7 @@ def init_db(conn=None):
         ("edsm_discovered_at", "TEXT"),
         ("mining_signals", "INTEGER DEFAULT 0"),
         ("reserve_level", "TEXT"),
+        ("scan_type", "TEXT"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE bodies ADD COLUMN {col_def[0]} {col_def[1]};")
@@ -283,6 +285,16 @@ def init_db(conn=None):
         WHERE (star_type IS NULL AND planet_class IS NULL)
            OR LOWER(body_name) LIKE '%belt cluster%'
            OR LOWER(body_name) LIKE '% ring%';
+    """)
+
+    # Correct false first discovery caused by NavBeacon scans, already mapped bodies, or populated systems
+    cursor.execute("""
+        UPDATE bodies SET was_discovered = 1 
+        WHERE was_discovered = 0 AND (
+            was_mapped = 1 
+            OR scan_type IN ('NavBeacon', 'NavBeaconDetail')
+            OR system_address IN (SELECT system_address FROM systems WHERE population > 0)
+        );
     """)
 
     # Ensure system flags, scanned bodies count, sol distance, and first discovery consistency
@@ -319,17 +331,23 @@ def init_db(conn=None):
                 SELECT MAX(CASE WHEN b.landable = 1 AND b.surface_gravity_g >= 3.0 THEN 1 ELSE 0 END)
                 FROM bodies b WHERE b.system_address = systems.system_address
             ), 0),
-            first_discovered_bodies = COALESCE((
-                SELECT COUNT(*) FROM bodies b
-                WHERE b.system_address = systems.system_address 
-                  AND b.was_discovered = 0
-                  AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
-            ), 0),
-            has_first_discover = COALESCE((
-                SELECT MAX(CASE WHEN b.was_discovered = 0 THEN 1 ELSE 0 END)
-                FROM bodies b WHERE b.system_address = systems.system_address
-                  AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
-            ), 0),
+            first_discovered_bodies = CASE 
+                WHEN systems.population > 0 THEN 0
+                ELSE COALESCE((
+                    SELECT COUNT(*) FROM bodies b
+                    WHERE b.system_address = systems.system_address 
+                      AND b.was_discovered = 0
+                      AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
+                ), 0)
+            END,
+            has_first_discover = CASE 
+                WHEN systems.population > 0 THEN 0
+                ELSE COALESCE((
+                    SELECT MAX(CASE WHEN b.was_discovered = 0 THEN 1 ELSE 0 END)
+                    FROM bodies b WHERE b.system_address = systems.system_address
+                      AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
+                ), 0)
+            END,
             avg_landable_radius = COALESCE((
                 SELECT ROUND(AVG(b.radius), 1)
                 FROM bodies b WHERE b.system_address = systems.system_address

@@ -184,10 +184,15 @@ class JournalParser:
                     star_pos_z = COALESCE(?, star_pos_z),
                     sol_distance_ly = CASE WHEN ? > 0 THEN ? ELSE sol_distance_ly END,
                     main_star_type = COALESCE(?, main_star_type),
+                    population = CASE WHEN ? > 0 THEN ? ELSE population END,
+                    system_allegiance = COALESCE(?, system_allegiance),
+                    system_economy = COALESCE(?, system_economy),
+                    system_government = COALESCE(?, system_government),
+                    system_security = COALESCE(?, system_security),
                     last_visited = ?,
                     visit_count = visit_count + 1
                 WHERE system_address = ?
-            """, (star_sys, pos_x, pos_y, pos_z, sol_dist, sol_dist, star_class, timestamp, sys_addr))
+            """, (star_sys, pos_x, pos_y, pos_z, sol_dist, sol_dist, star_class, pop, pop, allegiance, economy, govt, sec, timestamp, sys_addr))
         else:
             self.cursor.execute("""
                 INSERT INTO systems (
@@ -275,8 +280,20 @@ class JournalParser:
         materials = json.dumps(data.get("Materials", [])) if data.get("Materials") else None
         parents = json.dumps(data.get("Parents", [])) if data.get("Parents") else None
 
+        scan_type = data.get("ScanType", "")
         was_discovered = 1 if data.get("WasDiscovered", False) else 0
         was_mapped = 1 if data.get("WasMapped", False) else 0
+
+        # Check if system is known to be populated
+        is_populated = False
+        self.cursor.execute("SELECT population FROM systems WHERE system_address = ?", (sys_addr,))
+        pop_row = self.cursor.fetchone()
+        if pop_row and pop_row["population"] and pop_row["population"] > 0:
+            is_populated = True
+
+        # NavBeacon scans, already mapped bodies, or populated systems cannot be first discoveries
+        if scan_type in ["NavBeacon", "NavBeaconDetail"] or was_mapped == 1 or is_populated:
+            was_discovered = 1
 
         reserve_level = data.get("ReserveLevel")
 
@@ -353,9 +370,9 @@ class JournalParser:
                 rotation_period, axial_tilt, rings, materials, parents, was_discovered, was_mapped,
                 is_mapped_by_user, bio_signals, geo_signals, mining_signals, reserve_level, fss_value, dss_value,
                 first_discovered_fss, first_mapped_dss, max_potential_value,
-                confirmed_genuses, exobiology_predictions, anomalies_json, scan_timestamp, updated_timestamp
+                confirmed_genuses, exobiology_predictions, anomalies_json, scan_type, scan_timestamp, updated_timestamp
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             ON CONFLICT(system_address, body_id) DO UPDATE SET
                 body_name = excluded.body_name,
@@ -385,8 +402,9 @@ class JournalParser:
                 rings = COALESCE(excluded.rings, bodies.rings),
                 materials = COALESCE(excluded.materials, bodies.materials),
                 parents = COALESCE(excluded.parents, bodies.parents),
-                was_discovered = excluded.was_discovered,
-                was_mapped = excluded.was_mapped,
+                was_discovered = CASE WHEN bodies.was_discovered = 1 OR excluded.was_discovered = 1 THEN 1 ELSE 0 END,
+                was_mapped = CASE WHEN bodies.was_mapped = 1 OR excluded.was_mapped = 1 THEN 1 ELSE 0 END,
+                scan_type = COALESCE(excluded.scan_type, bodies.scan_type),
                 reserve_level = COALESCE(excluded.reserve_level, bodies.reserve_level),
                 fss_value = excluded.fss_value,
                 dss_value = excluded.dss_value,
@@ -406,7 +424,7 @@ class JournalParser:
             rotation_period, axial_tilt, rings, materials, parents, was_discovered, was_mapped,
             existing_mapped, existing_bio, existing_geo, existing_mining, reserve_level, fss_val, dss_val,
             fd_fss, fm_dss, max_pot,
-            existing_genuses, bio_pred_json, anomalies_json, timestamp, timestamp
+            existing_genuses, bio_pred_json, anomalies_json, scan_type, timestamp, timestamp
         ))
 
         self.dirty_systems.add(sys_addr)
@@ -816,6 +834,14 @@ class JournalParser:
             sys_name = row["sys_name"] or f"System {sys_addr}"
             ts = row["latest_ts"] or datetime.now().isoformat()
             main_star = row["main_star"]
+
+            # Check if system is populated - populated bubble systems are never CMDR first discoveries
+            self.cursor.execute("SELECT population FROM systems WHERE system_address = ?", (sys_addr,))
+            pop_row = self.cursor.fetchone()
+            is_populated = bool(pop_row and pop_row["population"] and pop_row["population"] > 0)
+            first_disc_count = 0 if is_populated else (row["first_disc_count"] or 0)
+            has_first_disc = 0 if is_populated else (row["has_first_disc"] or 0)
+
             self.cursor.execute("""
                 INSERT INTO systems (
                     system_address, star_system, first_visited, last_visited,
@@ -849,7 +875,7 @@ class JournalParser:
                 row["sum_max"] or 0, row["sum_bio"] or 0, row["elw"] or 0,
                 row["ww"] or 0, row["ammonia"] or 0, row["tf"] or 0, row["bio"] or 0,
                 row["landable"] or 0, row["high_g"] or 0, row["anomalies"] or 0,
-                row["first_disc_count"] or 0, row["has_first_disc"] or 0,
+                first_disc_count, has_first_disc,
                 row["avg_landable_radius"] or 0
             ))
 
