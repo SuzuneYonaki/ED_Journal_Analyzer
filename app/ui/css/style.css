@@ -1130,6 +1130,39 @@ header {
   color: var(--ed-orange);
 }
 
+.prop-val.val-above-avg {
+  color: #00ff88;
+}
+
+.prop-val.val-below-avg {
+  color: #f87171;
+}
+
+.prop-diff-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.68rem;
+  font-weight: bold;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+.prop-diff-badge.positive {
+  color: #00ff88;
+  background: rgba(0, 255, 136, 0.12);
+  border: 1px solid rgba(0, 255, 136, 0.35);
+}
+
+.prop-diff-badge.negative {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
 /* Exobiology Predictions Card */
 .bio-pred-card {
   background: rgba(0, 255, 136, 0.05);

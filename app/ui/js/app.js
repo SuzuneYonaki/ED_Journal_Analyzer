@@ -2278,25 +2278,116 @@ function renderBodyInspector() {
     landableEl.className = 'prop-val';
   }
 
+  // System-wide average calculations for Inspector comparisons (Observatory Criteria evaluation)
+  const allSysBodies = (state.currentSystemData && state.currentSystemData.bodies) || [];
+  const validSysBodies = allSysBodies.filter(x => !x.isBarycentre);
+  const landableSysBodies = validSysBodies.filter(x => x.landable);
+
+  const curSys = (state.currentSystemData && state.currentSystemData.system) || state.selectedSystem;
+  let avgLandableRadius = curSys && curSys.avg_landable_radius > 0 ? curSys.avg_landable_radius : null;
+  if (!avgLandableRadius && landableSysBodies.length > 0) {
+    const validRadBodies = landableSysBodies.filter(x => x.radius > 0);
+    if (validRadBodies.length > 0) {
+      avgLandableRadius = validRadBodies.reduce((acc, x) => acc + x.radius, 0) / validRadBodies.length;
+    }
+  }
+
+  const allRadBodies = validSysBodies.filter(x => x.radius > 0);
+  const avgSystemRadius = allRadBodies.length > 0
+    ? (allRadBodies.reduce((acc, x) => acc + x.radius, 0) / allRadBodies.length)
+    : null;
+
+  const gravBodies = landableSysBodies.filter(x => (x.surface_gravity_g > 0 || x.surface_gravity > 0));
+  const avgGravity = gravBodies.length > 0
+    ? (gravBodies.reduce((acc, x) => acc + (x.surface_gravity_g || (x.surface_gravity / 9.80665) || 0), 0) / gravBodies.length)
+    : null;
+
+  const tempBodies = validSysBodies.filter(x => x.surface_temperature > 0);
+  const avgTemp = tempBodies.length > 0
+    ? (tempBodies.reduce((acc, x) => acc + x.surface_temperature, 0) / tempBodies.length)
+    : null;
+
+  const pressBodies = validSysBodies.filter(x => x.surface_pressure > 0);
+  const avgPress = pressBodies.length > 0
+    ? (pressBodies.reduce((acc, x) => acc + x.surface_pressure, 0) / pressBodies.length)
+    : null;
+
+  const eccBodies = validSysBodies.filter(x => x.eccentricity !== null && x.eccentricity !== undefined);
+  const avgEcc = eccBodies.length > 0
+    ? (eccBodies.reduce((acc, x) => acc + x.eccentricity, 0) / eccBodies.length)
+    : null;
+
+  const smaBodies = validSysBodies.filter(x => x.semi_major_axis > 0);
+  const avgSma = smaBodies.length > 0
+    ? (smaBodies.reduce((acc, x) => acc + x.semi_major_axis, 0) / smaBodies.length)
+    : null;
+
+  const orbBodies = validSysBodies.filter(x => x.orbital_period > 0);
+  const avgOrb = orbBodies.length > 0
+    ? (orbBodies.reduce((acc, x) => acc + x.orbital_period, 0) / orbBodies.length)
+    : null;
+
+  const rotBodies = validSysBodies.filter(x => x.rotation_period > 0);
+  const avgRot = rotBodies.length > 0
+    ? (rotBodies.reduce((acc, x) => acc + x.rotation_period, 0) / rotBodies.length)
+    : null;
+
+  const incBodies = validSysBodies.filter(x => x.orbital_inclination !== null && x.orbital_inclination !== undefined);
+  const avgInc = incBodies.length > 0
+    ? (incBodies.reduce((acc, x) => acc + x.orbital_inclination, 0) / incBodies.length)
+    : null;
+
+  function formatAvgDiffBadge(diffVal, diffPct, unit = '', avgLabel = '', count = 2) {
+    if (diffVal === null || isNaN(diffVal) || count <= 1) return '';
+    if (Math.abs(diffVal) < 1e-5) return '';
+
+    const isPlus = diffVal > 0;
+    const sign = isPlus ? '+' : '';
+    const arrow = isPlus ? '▲' : '▼';
+    const cls = isPlus ? 'positive' : 'negative';
+
+    let diffStr;
+    if (Math.abs(diffVal) < 0.01) {
+      diffStr = diffVal.toFixed(4);
+    } else if (Math.abs(diffVal) < 1) {
+      diffStr = diffVal.toFixed(3);
+    } else {
+      diffStr = diffVal.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    }
+
+    const pctStr = (diffPct !== null && diffPct !== undefined) ? ` (${sign}${diffPct.toFixed(1)}%)` : '';
+    const labelStr = avgLabel ? ` vs ${avgLabel}` : '';
+
+    return `<span class="prop-diff-badge ${cls}" title="平均値との差異: ${sign}${diffStr} ${unit}${pctStr}${labelStr}">${arrow} ${sign}${diffStr} ${unit}${pctStr}</span>`;
+  }
+
   const gravEl = document.getElementById('prop-gravity');
   if (b.surface_gravity_g !== null && b.surface_gravity_g !== undefined) {
     const gVal = b.surface_gravity_g;
-    gravEl.innerText = `${gVal.toFixed(3)} G (${(b.surface_gravity || 0).toFixed(1)} m/s²)`;
+    let baseText = `${gVal.toFixed(3)} G (${(b.surface_gravity || 0).toFixed(1)} m/s²)`;
+    let diffBadge = '';
     
+    if (avgGravity !== null && gravBodies.length > 1) {
+      const diffG = gVal - avgGravity;
+      const diffPctG = (diffG / avgGravity) * 100;
+      diffBadge = formatAvgDiffBadge(diffG, diffPctG, 'G', t('prop_gravity') + '平均', gravBodies.length);
+      gravEl.className = diffG > 0 ? 'prop-val val-above-avg' : (diffG < 0 ? 'prop-val val-below-avg' : 'prop-val');
+    } else {
+      gravEl.className = 'prop-val';
+    }
+
     // High-G warning only for landable bodies
     if (b.landable) {
       if (gVal >= 3.0) {
         gravEl.className = 'prop-val danger';
-        gravEl.innerText += ` ${t('extreme_danger')}`;
+        baseText += ` ${t('extreme_danger')}`;
       } else if (gVal >= 1.5) {
         gravEl.className = 'prop-val warning';
-        gravEl.innerText += ` ${t('high_g_warn')}`;
-      } else {
-        gravEl.className = 'prop-val';
+        baseText += ` ${t('high_g_warn')}`;
       }
-    } else {
-      gravEl.className = 'prop-val';
     }
+
+    gravEl.innerHTML = `${baseText} ${diffBadge}`;
   } else {
     gravEl.innerText = '--';
     gravEl.className = 'prop-val';
@@ -2308,11 +2399,36 @@ function renderBodyInspector() {
   if (b.radius !== null && b.radius !== undefined && b.radius > 0) {
     const radKm = b.radius / 1000;
     const diamKm = (b.radius * 2) / 1000;
-    if (radiusEl) radiusEl.innerText = `${radKm.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} km`;
-    if (diamEl) diamEl.innerText = `${diamKm.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} km`;
+
+    const targetAvgRadius = b.landable ? (avgLandableRadius || avgSystemRadius) : avgSystemRadius;
+    const avgLabel = b.landable ? t('avg_landable_size_label') : '平均';
+    const benchmarkCount = b.landable ? landableSysBodies.length : allRadBodies.length;
+
+    let radDiffBadge = '';
+    let diamDiffBadge = '';
+    if (targetAvgRadius && benchmarkCount > 1) {
+      const diffM = b.radius - targetAvgRadius;
+      const diffKm = diffM / 1000;
+      const diffPct = (diffM / targetAvgRadius) * 100;
+      radDiffBadge = formatAvgDiffBadge(diffKm, diffPct, 'km', avgLabel, benchmarkCount);
+      diamDiffBadge = formatAvgDiffBadge(diffKm * 2, diffPct, 'km', avgLabel, benchmarkCount);
+
+      if (radiusEl) {
+        radiusEl.className = diffM > 0 ? 'prop-val val-above-avg' : (diffM < 0 ? 'prop-val val-below-avg' : 'prop-val');
+      }
+      if (diamEl) {
+        diamEl.className = diffM > 0 ? 'prop-val val-above-avg' : (diffM < 0 ? 'prop-val val-below-avg' : 'prop-val');
+      }
+    } else {
+      if (radiusEl) radiusEl.className = 'prop-val';
+      if (diamEl) diamEl.className = 'prop-val';
+    }
+
+    if (radiusEl) radiusEl.innerHTML = `${radKm.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} km ${radDiffBadge}`;
+    if (diamEl) diamEl.innerHTML = `${diamKm.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} km ${diamDiffBadge}`;
   } else {
-    if (radiusEl) radiusEl.innerText = '--';
-    if (diamEl) diamEl.innerText = '--';
+    if (radiusEl) { radiusEl.innerText = '--'; radiusEl.className = 'prop-val'; }
+    if (diamEl) { diamEl.innerText = '--'; diamEl.className = 'prop-val'; }
   }
 
   const ATMOSPHERE_JA_MAP = {
@@ -2354,8 +2470,37 @@ function renderBodyInspector() {
     }
   }
 
-  document.getElementById('prop-temperature').innerText = b.surface_temperature ? `${b.surface_temperature.toFixed(0)} K (${(b.surface_temperature - 273.15).toFixed(0)} °C)` : '--';
-  document.getElementById('prop-pressure').innerText = formatSurfacePressure(b.surface_pressure);
+  const tempEl = document.getElementById('prop-temperature');
+  if (b.surface_temperature !== null && b.surface_temperature !== undefined && b.surface_temperature > 0) {
+    let baseTempText = `${b.surface_temperature.toFixed(0)} K (${(b.surface_temperature - 273.15).toFixed(0)} °C)`;
+    let tempDiffBadge = '';
+    if (avgTemp !== null && tempBodies.length > 1) {
+      const diffK = b.surface_temperature - avgTemp;
+      const diffPctK = (diffK / avgTemp) * 100;
+      tempDiffBadge = formatAvgDiffBadge(diffK, diffPctK, 'K', '平均温度', tempBodies.length);
+      tempEl.className = diffK > 0 ? 'prop-val val-above-avg' : (diffK < 0 ? 'prop-val val-below-avg' : 'prop-val');
+    } else {
+      tempEl.className = 'prop-val';
+    }
+    tempEl.innerHTML = `${baseTempText} ${tempDiffBadge}`;
+  } else {
+    tempEl.innerText = '--';
+    tempEl.className = 'prop-val';
+  }
+
+  const pressEl = document.getElementById('prop-pressure');
+  let basePressText = formatSurfacePressure(b.surface_pressure);
+  let pressDiffBadge = '';
+  if (b.surface_pressure !== null && b.surface_pressure !== undefined && avgPress !== null && pressBodies.length > 1) {
+    const diffPress = b.surface_pressure - avgPress;
+    const diffPctPress = (diffPress / avgPress) * 100;
+    pressDiffBadge = formatAvgDiffBadge(diffPress, diffPctPress, 'atm', '平均気圧', pressBodies.length);
+    pressEl.className = diffPress > 0 ? 'prop-val val-above-avg' : (diffPress < 0 ? 'prop-val val-below-avg' : 'prop-val');
+  } else {
+    pressEl.className = 'prop-val';
+  }
+  pressEl.innerHTML = `${basePressText} ${pressDiffBadge}`;
+
   document.getElementById('prop-atmosphere').innerText = formatAtmosphereDescription(b.atmosphere);
   document.getElementById('prop-volcanism').innerText = b.volcanism || 'None';
 
@@ -2546,20 +2691,99 @@ function renderBodyInspector() {
   }
 
   // Orbit parameters
-  document.getElementById('prop-semi-major').innerText = b.semi_major_axis ? `${(b.semi_major_axis / 149597870700).toFixed(3)} AU (${formatDistance(b.semi_major_axis / 299792458)})` : '--';
+  const smaEl = document.getElementById('prop-semi-major');
+  if (b.semi_major_axis) {
+    const baseSmaText = `${(b.semi_major_axis / 149597870700).toFixed(3)} AU (${formatDistance(b.semi_major_axis / 299792458)})`;
+    let smaDiffBadge = '';
+    if (avgSma !== null && smaBodies.length > 1) {
+      const diffSma = b.semi_major_axis - avgSma;
+      const diffPctSma = (diffSma / avgSma) * 100;
+      const diffLs = diffSma / 299792458;
+      smaDiffBadge = formatAvgDiffBadge(diffLs, diffPctSma, 'ls', '平均軌道長半径', smaBodies.length);
+      smaEl.className = diffSma > 0 ? 'prop-val val-above-avg' : (diffSma < 0 ? 'prop-val val-below-avg' : 'prop-val');
+    } else {
+      smaEl.className = 'prop-val';
+    }
+    smaEl.innerHTML = `${baseSmaText} ${smaDiffBadge}`;
+  } else {
+    smaEl.innerText = '--';
+    smaEl.className = 'prop-val';
+  }
   
   const eccEl = document.getElementById('prop-eccentricity');
   if (b.eccentricity !== null && b.eccentricity !== undefined) {
-    eccEl.innerText = b.eccentricity.toFixed(4);
-    if (b.eccentricity >= 0.8) eccEl.className = 'prop-val warning';
-    else eccEl.className = 'prop-val';
+    const baseEccText = b.eccentricity.toFixed(4);
+    let eccDiffBadge = '';
+    if (avgEcc !== null && eccBodies.length > 1) {
+      const diffEcc = b.eccentricity - avgEcc;
+      eccDiffBadge = formatAvgDiffBadge(diffEcc, null, '', '平均離心率', eccBodies.length);
+      if (b.eccentricity >= 0.8) {
+        eccEl.className = 'prop-val warning';
+      } else {
+        eccEl.className = diffEcc > 0 ? 'prop-val val-above-avg' : (diffEcc < 0 ? 'prop-val val-below-avg' : 'prop-val');
+      }
+    } else {
+      eccEl.className = b.eccentricity >= 0.8 ? 'prop-val warning' : 'prop-val';
+    }
+    eccEl.innerHTML = `${baseEccText} ${eccDiffBadge}`;
   } else {
     eccEl.innerText = '--';
+    eccEl.className = 'prop-val';
   }
 
-  document.getElementById('prop-orbital-period').innerText = formatSecondsToDaysOrHours(b.orbital_period);
-  document.getElementById('prop-rotation-period').innerText = formatSecondsToDaysOrHours(b.rotation_period);
-  document.getElementById('prop-inclination').innerText = b.orbital_inclination !== null && b.orbital_inclination !== undefined ? `${b.orbital_inclination.toFixed(2)}°` : '--';
+  const orbEl = document.getElementById('prop-orbital-period');
+  if (b.orbital_period) {
+    const baseOrbText = formatSecondsToDaysOrHours(b.orbital_period);
+    let orbDiffBadge = '';
+    if (avgOrb !== null && orbBodies.length > 1) {
+      const diffOrb = b.orbital_period - avgOrb;
+      const diffPctOrb = (diffOrb / avgOrb) * 100;
+      orbDiffBadge = formatAvgDiffBadge(diffOrb / 86400, diffPctOrb, t('days_unit'), '平均公転周期', orbBodies.length);
+      orbEl.className = diffOrb > 0 ? 'prop-val val-above-avg' : (diffOrb < 0 ? 'prop-val val-below-avg' : 'prop-val');
+    } else {
+      orbEl.className = 'prop-val';
+    }
+    orbEl.innerHTML = `${baseOrbText} ${orbDiffBadge}`;
+  } else {
+    orbEl.innerText = '--';
+    orbEl.className = 'prop-val';
+  }
+
+  const rotEl = document.getElementById('prop-rotation-period');
+  if (b.rotation_period) {
+    const baseRotText = formatSecondsToDaysOrHours(b.rotation_period);
+    let rotDiffBadge = '';
+    if (avgRot !== null && rotBodies.length > 1) {
+      const diffRot = b.rotation_period - avgRot;
+      const diffPctRot = (diffRot / avgRot) * 100;
+      rotDiffBadge = formatAvgDiffBadge(diffRot / 86400, diffPctRot, t('days_unit'), '平均自転周期', rotBodies.length);
+      rotEl.className = diffRot > 0 ? 'prop-val val-above-avg' : (diffRot < 0 ? 'prop-val val-below-avg' : 'prop-val');
+    } else {
+      rotEl.className = 'prop-val';
+    }
+    rotEl.innerHTML = `${baseRotText} ${rotDiffBadge}`;
+  } else {
+    rotEl.innerText = '--';
+    rotEl.className = 'prop-val';
+  }
+
+  const incEl = document.getElementById('prop-inclination');
+  if (b.orbital_inclination !== null && b.orbital_inclination !== undefined) {
+    const baseIncText = `${b.orbital_inclination.toFixed(2)}°`;
+    let incDiffBadge = '';
+    if (avgInc !== null && incBodies.length > 1) {
+      const diffInc = b.orbital_inclination - avgInc;
+      incDiffBadge = formatAvgDiffBadge(diffInc, null, '°', '平均軌道傾斜角', incBodies.length);
+      incEl.className = diffInc > 0 ? 'prop-val val-above-avg' : (diffInc < 0 ? 'prop-val val-below-avg' : 'prop-val');
+    } else {
+      incEl.className = 'prop-val';
+    }
+    incEl.innerHTML = `${baseIncText} ${incDiffBadge}`;
+  } else {
+    incEl.innerText = '--';
+    incEl.className = 'prop-val';
+  }
+
   document.getElementById('prop-tidal-lock').innerText = b.tidal_lock ? t('tidal_locked_yes') : t('tidal_locked_no');
 
   // Rings & Asteroid Belts Section
