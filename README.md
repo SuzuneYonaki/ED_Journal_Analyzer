@@ -1,4 +1,4 @@
-# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.0.5)
+# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.0.7)
 
 [日本語](#日本語) | [English](#english)
 

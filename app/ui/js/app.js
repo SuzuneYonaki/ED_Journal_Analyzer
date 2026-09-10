@@ -781,6 +781,22 @@ function highlightSelectedSystemCard() {
   });
 }
 
+function scrollToTopOfSystemCards() {
+  const container = document.getElementById('system-list');
+  if (!container) return;
+
+  if (state.uiLayoutMode === '2col') {
+    container.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    const firstCard = container.querySelector('.system-card');
+    if (firstCard) {
+      firstCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+}
+
 function renderPagination(totalCount) {
   document.getElementById('page-info').innerText = `${state.page} / ${state.totalPages} (${totalCount})`;
   document.getElementById('btn-prev-page').disabled = state.page <= 1;
@@ -3512,6 +3528,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-prev-page').addEventListener('click', () => {
     if (state.page > 1) {
       state.page--;
+      // Previous page preserves current scroll offset/card level without jumping to top
       fetchSystems();
     }
   });
@@ -3519,7 +3536,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-next-page').addEventListener('click', () => {
     if (state.page < state.totalPages) {
       state.page++;
-      fetchSystems();
+      // Next page shifts cursor and scrolls to the top of system cards
+      fetchSystems().then(() => {
+        scrollToTopOfSystemCards();
+      });
     }
   });
 

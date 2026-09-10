@@ -395,6 +395,37 @@ def init_db(conn=None):
             ), 0);
     """)
 
+    # Backfill star luminosity from journal logs if existing database records lack luminosity
+    try:
+        cursor.execute("SELECT COUNT(*) FROM bodies WHERE star_type IS NOT NULL AND (luminosity IS NULL OR luminosity = '')")
+        missing_lum_count = cursor.fetchone()[0]
+        if missing_lum_count > 0:
+            import glob
+            from app.config import DEFAULT_JOURNAL_DIR
+            if DEFAULT_JOURNAL_DIR.exists():
+                files = sorted(glob.glob(str(DEFAULT_JOURNAL_DIR / "Journal.*.log")))
+                updates = []
+                for fpath in files:
+                    try:
+                        with open(fpath, "r", encoding="utf-8", errors="replace") as jf:
+                            for line in jf:
+                                if '"Scan"' in line and '"StarType"' in line and '"Luminosity"' in line:
+                                    data = json.loads(line)
+                                    lum = data.get("Luminosity")
+                                    sys_addr = data.get("SystemAddress")
+                                    body_id = data.get("BodyID")
+                                    if lum and sys_addr and body_id is not None:
+                                        updates.append((lum, sys_addr, body_id))
+                    except Exception:
+                        pass
+                if updates:
+                    cursor.executemany("""
+                        UPDATE bodies SET luminosity = ?
+                        WHERE system_address = ? AND body_id = ? AND (luminosity IS NULL OR luminosity = '')
+                    """, updates)
+    except Exception as e:
+        print(f"Luminosity migration notice: {e}")
+
     conn.commit()
     if close_after:
         conn.close()
