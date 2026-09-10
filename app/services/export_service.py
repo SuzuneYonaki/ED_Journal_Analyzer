@@ -27,23 +27,29 @@ def verify_package_signature(package_dict: Dict[str, Any]) -> Tuple[bool, str]:
     """
     if not isinstance(package_dict, dict):
         return False, "無効なデータ構造です (Invalid JSON structure)"
-    
+
+    # Handle wrapper payload if present
+    if "package_data" in package_dict and isinstance(package_dict["package_data"], dict):
+        package_dict = package_dict["package_data"]
+    elif "package" in package_dict and isinstance(package_dict["package"], dict):
+        package_dict = package_dict["package"]
+
     fmt = package_dict.get("format")
     if fmt != "ED_JOURNAL_ANALYZER_PACKAGE_V1":
         return False, f"未対応のパッケージ形式です: {fmt}"
-    
+
     metadata = package_dict.get("metadata", {})
     cmdr_name = metadata.get("cmdr_name", "")
     systems = package_dict.get("systems", [])
     expected_sig = package_dict.get("signature", "")
-    
+
     if not expected_sig:
         return False, "電子署名が存在しません (Missing signature)"
-    
+
     computed_sig = calculate_package_signature(systems, cmdr_name)
     if computed_sig != expected_sig:
         return False, "署名不一致: データまたは発見者名が改ざんされている可能性があります (Signature mismatch / Tampered data)"
-    
+
     return True, "署名検証成功 (Valid)"
 
 def sanitize_system_for_export(system_row: Dict[str, Any], bodies_rows: List[Dict[str, Any]], mining_rows: List[Dict[str, Any]], bookmarks_rows: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -185,12 +191,17 @@ def create_edsys_package(conn, system_addresses: List[int], cmdr_name: str = "Ex
     }
     return package
 
-def import_edsys_package(conn, package_dict: Dict[str, Any], overwrite: bool = False) -> Dict[str, Any]:
+def import_edsys_package(conn, package_dict: Dict[str, Any], overwrite: bool = False, allow_invalid_signature: bool = True) -> Dict[str, Any]:
     """
     Safely imports systems from an .edsys package into the database under is_shared = 1.
     """
+    if "package_data" in package_dict and isinstance(package_dict["package_data"], dict):
+        package_dict = package_dict["package_data"]
+    elif "package" in package_dict and isinstance(package_dict["package"], dict):
+        package_dict = package_dict["package"]
+
     is_valid, reason = verify_package_signature(package_dict)
-    if not is_valid:
+    if not is_valid and not allow_invalid_signature:
         raise ValueError(f"Package validation failed: {reason}")
 
     c = conn.cursor()

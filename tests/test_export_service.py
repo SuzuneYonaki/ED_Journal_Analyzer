@@ -224,3 +224,21 @@ def test_api_export_and_import_endpoints():
         os.remove(res_json["saved_path"])
     except OSError:
         pass
+
+    # 7. Test preview with wrapped package_data
+    wrapped_prev = client.post("/api/import/package/preview", json={"package_data": pkg_data})
+    assert wrapped_prev.status_code == 200
+    wp_data = wrapped_prev.json()
+    assert wp_data["is_valid"] is True
+    assert wp_data["signature_valid"] is True
+    assert wp_data["total_bodies"] == 1
+    assert wp_data["created_by"] == "CMDR Test"
+
+    # 8. Test execute with wrapped package_data
+    exec_resp = client.post("/api/import/package/execute", json={
+        "package_data": pkg_data,
+        "consent_token": True,
+        "overwrite": True
+    })
+    assert exec_resp.status_code == 200
+    assert exec_resp.json()["success"] is True

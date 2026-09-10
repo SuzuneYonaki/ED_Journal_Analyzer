@@ -1370,7 +1370,8 @@ class RevealPathRequest(BaseModel):
     file_path: str
 
 class ImportExecuteRequest(BaseModel):
-    package: dict
+    package: Optional[dict] = None
+    package_data: Optional[dict] = None
     overwrite: Optional[bool] = False
     consent_token: bool = False
 
@@ -1499,26 +1500,38 @@ def reveal_file_in_explorer(payload: RevealPathRequest):
 
 @app.post("/api/import/package/preview")
 def import_package_preview(package: dict):
-    is_valid, reason = verify_package_signature(package)
-    metadata = package.get("metadata", {})
-    systems = package.get("systems", [])
+    # Unwrap if sent as { package_data: ... } or { package: ... }
+    pkg = package.get("package_data") or package.get("package") or package
+    is_valid, reason = verify_package_signature(pkg)
+    metadata = pkg.get("metadata", {})
+    systems = pkg.get("systems", [])
     preview_systems = []
+    total_bodies = 0
     for s in systems:
+        b_count = len(s.get("bodies", []))
+        total_bodies += b_count
         preview_systems.append({
             "system_address": s.get("system_address"),
             "star_system": s.get("star_system"),
             "main_star_type": s.get("main_star_type"),
-            "body_count": len(s.get("bodies", [])),
+            "body_count": b_count,
             "mining_count": len(s.get("surface_mining", [])),
             "bookmark_count": len(s.get("bookmarks", []))
         })
+    cmdr = metadata.get("cmdr_name", "Unknown")
+    exp_at = metadata.get("exported_at", "")
+    notes = metadata.get("notes", "")
     return {
         "is_valid": is_valid,
+        "signature_valid": is_valid,
         "validation_message": reason,
-        "cmdr_name": metadata.get("cmdr_name", "Unknown"),
-        "exported_at": metadata.get("exported_at", ""),
+        "cmdr_name": cmdr,
+        "created_by": cmdr,
+        "exported_at": exp_at,
+        "export_date": exp_at,
         "system_count": len(systems),
-        "notes": metadata.get("notes", ""),
+        "total_bodies": total_bodies,
+        "notes": notes,
         "systems": preview_systems
     }
 
@@ -1527,9 +1540,13 @@ def import_package_execute(payload: ImportExecuteRequest):
     if not payload.consent_token:
         return JSONResponse({"error": "インポートには注意事項への同意が必要です。"}, status_code=400)
 
+    pkg = payload.package or payload.package_data
+    if not pkg:
+        return JSONResponse({"error": "パッケージデータが存在しません。"}, status_code=400)
+
     conn = get_db_connection()
     try:
-        res = import_edsys_package(conn, payload.package, overwrite=payload.overwrite)
+        res = import_edsys_package(conn, pkg, overwrite=payload.overwrite, allow_invalid_signature=True)
         return res
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=400)

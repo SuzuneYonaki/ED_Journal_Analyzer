@@ -106,12 +106,12 @@
     <div class="header-actions">
       <!-- Import Shared Package Button -->
       <button id="btn-import-open" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #c4b5fd; background: rgba(167, 139, 250, 0.15); border: 1px solid #a78bfa; display: flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" title="📥 共有星系パッケージ (.edsys) をインポート">
-        <span>📥 共有インポート</span>
+        <span data-i18n="btn_import_pkg">📥 共有インポート</span>
       </button>
 
       <!-- Unified Settings Modal Button (Logs, UI Scaling, TTS, Credits) -->
       <button id="btn-settings-open" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #fff; background: rgba(255, 113, 0, 0.15); border: 1px solid var(--ed-orange); display: flex; align-items: center; gap: 5px; z-index: 9999; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px; box-shadow: 0 0 6px rgba(255, 113, 0, 0.2);" title="⚙️ 設定 & 文字サイズ & ログ同期 & TTS & 謝辞">
-        <span>⚙️ 設定</span>
+        <span data-i18n="btn_settings">⚙️ 設定</span>
       </button>
 
       <!-- Layout Switcher Button (1-Column / 2-Columns) -->
@@ -498,18 +498,18 @@
           
           <!-- Method 2: Main Standalone Web Share HTML Export -->
           <button id="btn-export-html" class="btn-icon" style="background: rgba(0, 210, 255, 0.12); border: 1px solid var(--ed-cyan); color: var(--ed-cyan); border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: bold;" title="🌐 単体HTMLファイルを生成（ブラウザだけで星系図・採掘地点・天体を閲覧可能。SNSやDiscord共有向け）">
-            <span>🌐 Web共有HTML</span>
+            <span data-i18n="btn_export_html">🌐 Web共有HTML</span>
           </button>
 
           <!-- Method 1: Locked Multi-System .edsys Package Export -->
           <button id="btn-export-pkg" class="btn-icon" style="background: rgba(255, 113, 0, 0.12); border: 1px solid var(--ed-orange); color: var(--ed-orange); border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: bold;" title="🔒 .edsys パッケージ書き出し（安全ロック・注意事項確認ダイアログ付き）">
-            <span>📦 パッケージ書出</span>
+            <span data-i18n="btn_export_pkg">📦 パッケージ書出</span>
           </button>
 
           <!-- Shared Bookmark Toggle Button -->
           <button id="btn-toggle-shared" class="btn-icon" style="background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.4); color: #c4b5fd; border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem;" title="🤝 共有星系マークの切り替え">
             <span id="shared-toggle-icon">🤝</span>
-            <span id="shared-toggle-label">共有マーク</span>
+            <span id="shared-toggle-label" data-i18n="btn_toggle_shared">共有マーク</span>
           </button>
 
           <div id="current-system-coords" class="system-coords"></div>
@@ -597,7 +597,7 @@
             <div id="inspect-body-alias" class="inspector-alias" style="display: none; font-size: 0.82rem; color: #38bdf8; font-weight: bold; margin-top: 2px;"></div>
           </div>
           <button id="btn-inspect-bookmark-toggle" class="view-btn" style="padding: 3px 8px; font-size: 0.75rem; border-color: rgba(251, 191, 36, 0.4); color: #fbbf24; display: none; align-items: center; gap: 4px; white-space: nowrap;" title="この天体をブックマーク登録/解除">
-            <span id="inspect-bm-icon">☆</span> <span id="inspect-bm-text">ブックマーク</span>
+            <span id="inspect-bm-icon">☆</span> <span id="inspect-bm-text" data-i18n="bm_toggle_btn">ブックマーク</span>
           </button>
         </div>
         <div id="inspect-body-type" class="inspector-subtitle" data-i18n="inspector_subtitle">天体をクリックすると詳細が表示されます</div>
@@ -625,8 +625,8 @@
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                 <label style="font-size: 0.7rem; color: var(--text-secondary);" data-i18n="bm_note_label">📝 メモ (Markdown対応・星系検索可能):</label>
                 <div style="display: flex; gap: 4px;">
-                  <button id="bm-note-tab-edit" class="view-btn active" style="padding: 1px 6px; font-size: 0.68rem;">編集</button>
-                  <button id="bm-note-tab-preview" class="view-btn" style="padding: 1px 6px; font-size: 0.68rem;">プレビュー</button>
+                  <button id="bm-note-tab-edit" class="view-btn active" style="padding: 1px 6px; font-size: 0.68rem;" data-i18n="tab_edit">編集</button>
+                  <button id="bm-note-tab-preview" class="view-btn" style="padding: 1px 6px; font-size: 0.68rem;" data-i18n="tab_preview">プレビュー</button>
                 </div>
               </div>
               <textarea id="bm-note-input" class="search-input" rows="4" placeholder="採掘Rig耐久値、適性鉱石、メモなどを記述..." style="width: 100%; padding: 6px 8px; font-size: 0.78rem; font-family: inherit; resize: vertical;"></textarea>
@@ -782,16 +782,16 @@
 
       <!-- Settings Tabs Header -->
       <div class="settings-tabs" style="display: flex; gap: 4px; border-bottom: 1px solid var(--border-color); padding: 0 16px; background: rgba(0,0,0,0.2);">
-        <button id="tab-btn-logs" class="view-btn active" style="border-bottom: 2px solid var(--ed-orange); border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;">
+        <button id="tab-btn-logs" class="view-btn active" style="border-bottom: 2px solid var(--ed-orange); border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="tab_logs">
           📁 ログ同期 & パス
         </button>
-        <button id="tab-btn-ui" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;">
+        <button id="tab-btn-ui" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="tab_ui">
           🖥️ 画面・文字サイズ
         </button>
-        <button id="tab-btn-tts" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;">
+        <button id="tab-btn-tts" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="tab_tts">
           🔊 音声読み上げ (TTS)
         </button>
-        <button id="tab-btn-credits" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;">
+        <button id="tab-btn-credits" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="tab_credits">
           📜 謝辞 & クレジット
         </button>
       </div>
@@ -806,7 +806,7 @@
             </label>
             <div style="display: flex; gap: 6px;">
               <input type="text" id="setting-journal-dir" class="search-input" style="flex: 1; font-size: 0.8rem; font-family: monospace;" placeholder="C:\Users\...\Saved Games\Frontier Developments\Elite Dangerous">
-              <button id="btn-reset-journal-dir" class="view-btn" style="white-space: nowrap; font-size: 0.75rem;" title="既定のパスにリセット">既定に戻す</button>
+              <button id="btn-reset-journal-dir" class="view-btn" style="white-space: nowrap; font-size: 0.75rem;" title="既定のパスにリセット" data-i18n="btn_reset_journal_dir">既定に戻す</button>
             </div>
             <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 4px;">
               ※ Steam版/Epic版など別ドライブにジャーナルがある場合は上記パスを変更してください
@@ -819,7 +819,7 @@
                 <div style="font-weight: bold; color: #fff;">手動ログスキャン実行</div>
                 <div style="font-size: 0.75rem; color: var(--text-secondary);">全ジャーナルファイルを再解析しデータベースを更新します</div>
               </div>
-              <button id="btn-modal-rescan" class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem;">
+              <button id="btn-modal-rescan" class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem;" data-i18n="btn_rescan">
                 🔄 ログスキャン開始
               </button>
             </div>
@@ -859,7 +859,7 @@
                 <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: bold;">px</span>
                 <button id="btn-font-inc" class="view-btn" style="padding: 4px 10px; font-size: 0.85rem; font-weight: bold;" title="1px大きく">＋</button>
               </div>
-              <button id="btn-reset-font-size" class="btn-primary" style="margin-left: auto; padding: 5px 12px; font-size: 0.78rem; background: rgba(251, 146, 60, 0.2); border-color: var(--ed-orange); color: var(--ed-orange);" title="標準の中間サイズ (18px) にリセット">
+              <button id="btn-reset-font-size" class="btn-primary" style="margin-left: auto; padding: 5px 12px; font-size: 0.78rem; background: rgba(251, 146, 60, 0.2); border-color: var(--ed-orange); color: var(--ed-orange);" title="標準の中間サイズ (18px) にリセット" data-i18n="btn_reset_font">
                 🔄 標準 (18px) にリセット
               </button>
             </div>
@@ -1044,7 +1044,7 @@
       </div>
 
       <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
-        <button id="btn-settings-save" class="btn-primary">
+        <button id="btn-settings-save" class="btn-primary" data-i18n="btn_save_and_close">
           設定を保存して閉じる
         </button>
       </div>

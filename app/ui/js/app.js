@@ -4848,7 +4848,8 @@ function initExportImportModals() {
             }
           };
         }
-        if (modalExportSuccess) {
+        // Only show Export Success Modal if NOT auto-revealing in explorer
+        if (!shouldReveal && modalExportSuccess) {
           modalExportSuccess.style.display = 'flex';
         }
 
@@ -5008,40 +5009,40 @@ function initExportImportModals() {
       const res = await fetch('/api/import/package/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ package_data: pkg })
+        body: JSON.stringify(pkg)
       });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${res.status}`);
+        throw new Error(errData.detail || errData.error || `HTTP ${res.status}`);
       }
 
       const preview = await res.json();
       pendingImportPackage = pkg;
 
       // Populate preview UI
-      if (importCmdrName) importCmdrName.innerText = preview.created_by || '--';
-      if (importExportDate) importExportDate.innerText = preview.export_date ? preview.export_date.substring(0, 19).replace('T', ' ') : '--';
-      if (importSysCount) importSysCount.innerText = preview.system_count;
-      if (importBodyCount) importBodyCount.innerText = preview.total_bodies;
+      if (importCmdrName) importCmdrName.innerText = preview.cmdr_name || preview.created_by || '--';
+      if (importExportDate) importExportDate.innerText = (preview.exported_at || preview.export_date || '').substring(0, 19).replace('T', ' ') || '--';
+      if (importSysCount) importSysCount.innerText = preview.system_count != null ? preview.system_count : '--';
+      if (importBodyCount) importBodyCount.innerText = preview.total_bodies != null ? preview.total_bodies : '--';
       if (importNotesText) importNotesText.innerText = preview.notes || '(なし)';
 
       if (importSigBadge) {
-        if (preview.signature_valid) {
+        if (preview.is_valid || preview.signature_valid) {
           importSigBadge.style.background = 'rgba(16, 185, 129, 0.15)';
           importSigBadge.style.color = '#6ee7b7';
           importSigBadge.style.border = '1px solid rgba(16, 185, 129, 0.4)';
-          importSigBadge.innerHTML = `<span>✓</span> <span>${t('import_sig_ok')}</span>`;
+          importSigBadge.innerHTML = `<span>✓</span> <span>${t('import_sig_ok') || '電子署名確認済み (改ざんなし)'}</span>`;
         } else {
           importSigBadge.style.background = 'rgba(239, 68, 68, 0.15)';
           importSigBadge.style.color = '#f87171';
           importSigBadge.style.border = '1px solid rgba(239, 68, 68, 0.4)';
-          importSigBadge.innerHTML = `<span>⚠️</span> <span>${t('import_sig_warn')}</span>`;
+          importSigBadge.innerHTML = `<span>⚠️</span> <span>${t('import_sig_warn') || '電子署名不一致 / 未検証 (外部データ)'}</span>`;
         }
       }
 
       if (importSystemsList) {
-        importSystemsList.innerHTML = preview.systems.map(s => `
+        importSystemsList.innerHTML = (preview.systems || []).map(s => `
           <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
             <span style="font-weight: bold; color: var(--ed-orange);">${s.star_system || 'System ' + s.system_address}</span>
             <span style="color: var(--text-secondary);">${s.body_count || 0} 天体</span>
@@ -5078,14 +5079,14 @@ function initExportImportModals() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            package_data: pendingImportPackage,
+            package: pendingImportPackage,
             consent_token: true
           })
         });
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.detail || `HTTP ${res.status}`);
+          throw new Error(errData.detail || errData.error || `HTTP ${res.status}`);
         }
 
         const resData = await res.json();
