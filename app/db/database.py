@@ -50,7 +50,11 @@ def init_db(conn=None):
         has_landable INTEGER DEFAULT 0,
         has_high_g INTEGER DEFAULT 0,
         has_anomalies INTEGER DEFAULT 0,
-        avg_landable_radius REAL DEFAULT 0
+        avg_landable_radius REAL DEFAULT 0,
+        is_shared INTEGER DEFAULT 0,
+        shared_by TEXT DEFAULT '',
+        shared_at TEXT DEFAULT '',
+        shared_notes TEXT DEFAULT ''
     );
     """)
 
@@ -241,11 +245,17 @@ def init_db(conn=None):
         ("edsm_submitted_at", "TEXT"),
         ("edsm_body_count", "INTEGER DEFAULT 0"),
         ("avg_landable_radius", "REAL DEFAULT 0"),
+        ("is_shared", "INTEGER DEFAULT 0"),
+        ("shared_by", "TEXT DEFAULT ''"),
+        ("shared_at", "TEXT DEFAULT ''"),
+        ("shared_notes", "TEXT DEFAULT ''"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE systems ADD COLUMN {col_def[0]} {col_def[1]};")
         except Exception:
             pass
+
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_shared ON systems(is_shared);")
 
     for col_def in [
         ("star_pos_x", "REAL"),

@@ -23,7 +23,8 @@ let state = {
     has_landable_rocky_ice: false,
     has_landable_ringed: false,
     has_mining_signals: false,
-    has_bookmarks: false
+    has_bookmarks: false,
+    is_shared: false
   },
   showMiningGravity: localStorage.getItem('mining_display_gravity') !== 'false',
   showMiningTemp: localStorage.getItem('mining_display_temp') !== 'false',
@@ -622,6 +623,10 @@ function renderSystemList() {
       const bmTip = sys.bookmarks.map(b => (b.alias_name ? `[${b.alias_name}] ` : '') + b.body_name + (b.note_snippet ? `: ${b.note_snippet}` : '')).join('\n');
       tags.push(`<span class="tag-badge tag-bookmark" title="${bmTip}">${bmText}${moreBm}</span>`);
     }
+    if (sys.is_shared) {
+      const sharedTip = sys.shared_by ? `${t('shared_by_label')}: ${sys.shared_by}` : t('shared_system');
+      tags.push(`<span class="tag-badge tag-shared" style="background: rgba(167, 139, 250, 0.2); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.6); font-weight: bold;" title="${sharedTip}">🤝 Shared</span>`);
+    }
     if (sys.composite_score !== null && sys.composite_score !== undefined) {
       tags.push(`<span class="tag-badge" style="background: rgba(0, 255, 136, 0.18); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.5); font-weight: bold;" title="総合ブレンドスコア: ${sys.composite_score}pt">★ スコア: ${Math.round(sys.composite_score)}pt</span>`);
     }
@@ -834,6 +839,43 @@ function renderSystemHeader() {
 
   const totalB = sys.total_bodies || sys.scanned_bodies || 0;
   document.getElementById('body-count-badge').innerText = `${t('scanned_badge')}: ${sys.scanned_bodies} / ${totalB}`;
+
+  // Export buttons & Shared Badge in Header
+  const btnExportHtml = document.getElementById('btn-export-html');
+  const btnExportPkg = document.getElementById('btn-export-pkg');
+  const btnToggleShared = document.getElementById('btn-toggle-shared');
+  const sharedBadge = document.getElementById('current-system-shared-badge');
+  const sharedIcon = document.getElementById('shared-toggle-icon');
+  const sharedLabel = document.getElementById('shared-toggle-label');
+
+  if (btnExportHtml) btnExportHtml.style.display = 'inline-flex';
+  if (btnExportPkg) btnExportPkg.style.display = 'inline-flex';
+  if (btnToggleShared) btnToggleShared.style.display = 'inline-flex';
+
+  if (sharedBadge) {
+    if (sys.is_shared) {
+      const byText = sys.shared_by ? `${t('shared_by_label')}: ${sys.shared_by}` : t('shared_system');
+      sharedBadge.innerHTML = `<span class="tag-badge tag-shared" style="background: rgba(167, 139, 250, 0.25); color: #c4b5fd; border: 1px solid #a78bfa; font-weight: bold;" title="${byText}">🤝 ${t('shared_system')}</span>`;
+      sharedBadge.style.display = 'inline-flex';
+    } else {
+      sharedBadge.innerHTML = '';
+      sharedBadge.style.display = 'none';
+    }
+  }
+
+  if (sharedIcon && sharedLabel && btnToggleShared) {
+    if (sys.is_shared) {
+      sharedIcon.innerText = '✅';
+      sharedLabel.innerText = t('unshare_label') || '共有解除';
+      btnToggleShared.style.background = 'rgba(167, 139, 250, 0.25)';
+      btnToggleShared.style.borderColor = '#a78bfa';
+    } else {
+      sharedIcon.innerText = '🤝';
+      sharedLabel.innerText = t('share_label') || '共有マーク';
+      btnToggleShared.style.background = 'rgba(167, 139, 250, 0.1)';
+      btnToggleShared.style.borderColor = 'rgba(167, 139, 250, 0.4)';
+    }
+  }
 }
 
 function getSortedBodies(bodies) {
@@ -2620,6 +2662,7 @@ document.addEventListener('DOMContentLoaded', () => {
     syncLanguageFromServer();
   }
   initSettingsModal();
+  initExportImportModals();
   fetchGlobalStats();
   fetchSystems();
   checkScanOnStartup();
@@ -4089,3 +4132,369 @@ async function initSettingsModal() {
     });
   }
 }
+
+function initExportImportModals() {
+  // Method 2: Standalone Web Share HTML Export
+  const btnExportHtml = document.getElementById('btn-export-html');
+  if (btnExportHtml) {
+    btnExportHtml.addEventListener('click', async () => {
+      if (!state.selectedSystem || !state.selectedSystem.system_address) return;
+      const sysAddr = state.selectedSystem.system_address;
+      const sysName = (state.selectedSystem.star_system || 'System').replace(/[^a-zA-Z0-9_-]/g, '_');
+      
+      const origHtml = btnExportHtml.innerHTML;
+      btnExportHtml.innerHTML = `<span>⏳ ${t('exporting') || '生成中...'}</span>`;
+      btnExportHtml.disabled = true;
+
+      try {
+        const res = await fetch(`/api/export/html/${sysAddr}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${sysName}_share.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Failed to export HTML:', err);
+        alert(t('export_failed') || 'HTML出力に失敗しました');
+      } finally {
+        btnExportHtml.innerHTML = origHtml;
+        btnExportHtml.disabled = false;
+      }
+    });
+  }
+
+  // Method 1: Locked Package Export (.edsys)
+  const modalExportLocked = document.getElementById('modal-export-locked');
+  const btnExportPkg = document.getElementById('btn-export-pkg');
+  const btnCloseExportModal = document.getElementById('btn-close-export-modal');
+  const btnCancelExport = document.getElementById('btn-cancel-export');
+  const btnSubmitExportPkg = document.getElementById('btn-submit-export-pkg');
+  const cbExportConsent = document.getElementById('cb-export-consent');
+  const exportTargetSysName = document.getElementById('export-target-system-name');
+  const exportCmdrName = document.getElementById('export-cmdr-name');
+  const exportNotes = document.getElementById('export-notes');
+
+  function openExportLockedModal() {
+    if (!state.selectedSystem) return;
+    if (exportTargetSysName) exportTargetSysName.innerText = state.selectedSystem.star_system || '--';
+    if (cbExportConsent) cbExportConsent.checked = false;
+    if (btnSubmitExportPkg) {
+      btnSubmitExportPkg.disabled = true;
+      btnSubmitExportPkg.style.opacity = '0.5';
+      btnSubmitExportPkg.style.cursor = 'not-allowed';
+    }
+    if (modalExportLocked) modalExportLocked.style.display = 'flex';
+  }
+
+  function closeExportLockedModal() {
+    if (modalExportLocked) modalExportLocked.style.display = 'none';
+  }
+
+  if (btnExportPkg) {
+    btnExportPkg.addEventListener('click', openExportLockedModal);
+  }
+  if (btnCloseExportModal) {
+    btnCloseExportModal.addEventListener('click', closeExportLockedModal);
+  }
+  if (btnCancelExport) {
+    btnCancelExport.addEventListener('click', closeExportLockedModal);
+  }
+
+  if (cbExportConsent && btnSubmitExportPkg) {
+    cbExportConsent.addEventListener('change', () => {
+      btnSubmitExportPkg.disabled = !cbExportConsent.checked;
+      btnSubmitExportPkg.style.opacity = cbExportConsent.checked ? '1' : '0.5';
+      btnSubmitExportPkg.style.cursor = cbExportConsent.checked ? 'pointer' : 'not-allowed';
+    });
+  }
+
+  if (btnSubmitExportPkg) {
+    btnSubmitExportPkg.addEventListener('click', async () => {
+      if (!cbExportConsent.checked || !state.selectedSystem) return;
+      const sysAddr = state.selectedSystem.system_address;
+      const sysName = (state.selectedSystem.star_system || 'System').replace(/[^a-zA-Z0-9_-]/g, '_');
+      
+      const origHtml = btnSubmitExportPkg.innerHTML;
+      btnSubmitExportPkg.innerHTML = `<span>⏳ ${t('exporting') || '作成中...'}</span>`;
+      btnSubmitExportPkg.disabled = true;
+
+      try {
+        const payload = {
+          system_addresses: [sysAddr],
+          created_by: exportCmdrName ? exportCmdrName.value.trim() : '',
+          notes: exportNotes ? exportNotes.value.trim() : '',
+          consent_token: true
+        };
+
+        const res = await fetch('/api/export/package', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `HTTP ${res.status}`);
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${sysName}.edsys`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        closeExportLockedModal();
+
+        // Mark current system as shared in UI
+        if (state.selectedSystem) {
+          state.selectedSystem.is_shared = 1;
+          if (state.currentSystemData && state.currentSystemData.system) {
+            state.currentSystemData.system.is_shared = 1;
+          }
+          const listSys = state.systems.find(s => s.system_address === sysAddr);
+          if (listSys) listSys.is_shared = 1;
+          renderSystemHeader();
+          renderSystemList();
+        }
+      } catch (err) {
+        console.error('Failed to export package:', err);
+        alert(err.message || 'パッケージ書き出しに失敗しました');
+      } finally {
+        btnSubmitExportPkg.innerHTML = origHtml;
+        btnSubmitExportPkg.disabled = false;
+      }
+    });
+  }
+
+  // Toggle Shared Bookmark Button
+  const btnToggleShared = document.getElementById('btn-toggle-shared');
+  if (btnToggleShared) {
+    btnToggleShared.addEventListener('click', async () => {
+      if (!state.selectedSystem || !state.selectedSystem.system_address) return;
+      const sysAddr = state.selectedSystem.system_address;
+      try {
+        const res = await fetch(`/api/systems/${sysAddr}/toggle-shared`, { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        state.selectedSystem.is_shared = data.is_shared;
+        if (state.currentSystemData && state.currentSystemData.system) {
+          state.currentSystemData.system.is_shared = data.is_shared;
+        }
+        const listSys = state.systems.find(s => s.system_address === sysAddr);
+        if (listSys) listSys.is_shared = data.is_shared;
+        renderSystemHeader();
+        renderSystemList();
+      } catch (err) {
+        console.error('Failed to toggle shared status:', err);
+      }
+    });
+  }
+
+  // Import Package Modal (.edsys)
+  const modalImportPkg = document.getElementById('modal-import-pkg');
+  const btnImportOpen = document.getElementById('btn-import-open');
+  const btnCloseImportModal = document.getElementById('btn-close-import-modal');
+  const btnCancelImport = document.getElementById('btn-cancel-import');
+  const importDropZone = document.getElementById('import-drop-zone');
+  const importFileInput = document.getElementById('import-file-input');
+  const importPreviewSection = document.getElementById('import-preview-section');
+  const importSigBadge = document.getElementById('import-signature-badge');
+  const importCmdrName = document.getElementById('import-cmdr-name');
+  const importExportDate = document.getElementById('import-export-date');
+  const importSysCount = document.getElementById('import-sys-count');
+  const importBodyCount = document.getElementById('import-body-count');
+  const importNotesText = document.getElementById('import-notes-text');
+  const importSystemsList = document.getElementById('import-systems-list');
+  const cbImportConsent = document.getElementById('cb-import-consent');
+  const btnExecuteImport = document.getElementById('btn-execute-import-pkg');
+
+  let pendingImportPackage = null;
+
+  function resetImportModal() {
+    pendingImportPackage = null;
+    if (importFileInput) importFileInput.value = '';
+    if (importPreviewSection) importPreviewSection.style.display = 'none';
+    if (cbImportConsent) cbImportConsent.checked = false;
+    if (btnExecuteImport) {
+      btnExecuteImport.disabled = true;
+      btnExecuteImport.style.opacity = '0.5';
+      btnExecuteImport.style.cursor = 'not-allowed';
+    }
+  }
+
+  function openImportModal() {
+    resetImportModal();
+    if (modalImportPkg) modalImportPkg.style.display = 'flex';
+  }
+
+  function closeImportModal() {
+    if (modalImportPkg) modalImportPkg.style.display = 'none';
+    resetImportModal();
+  }
+
+  if (btnImportOpen) {
+    btnImportOpen.addEventListener('click', openImportModal);
+  }
+  if (btnCloseImportModal) {
+    btnCloseImportModal.addEventListener('click', closeImportModal);
+  }
+  if (btnCancelImport) {
+    btnCancelImport.addEventListener('click', closeImportModal);
+  }
+
+  if (importDropZone && importFileInput) {
+    importDropZone.addEventListener('click', () => importFileInput.click());
+    
+    importDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      importDropZone.style.borderColor = 'var(--ed-cyan)';
+      importDropZone.style.background = 'rgba(0, 210, 255, 0.1)';
+    });
+
+    importDropZone.addEventListener('dragleave', () => {
+      importDropZone.style.borderColor = 'rgba(167, 139, 250, 0.4)';
+      importDropZone.style.background = 'rgba(167, 139, 250, 0.05)';
+    });
+
+    importDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      importDropZone.style.borderColor = 'rgba(167, 139, 250, 0.4)';
+      importDropZone.style.background = 'rgba(167, 139, 250, 0.05)';
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleImportFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    importFileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleImportFile(e.target.files[0]);
+      }
+    });
+  }
+
+  async function handleImportFile(file) {
+    try {
+      const text = await file.text();
+      let pkg;
+      try {
+        pkg = JSON.parse(text);
+      } catch (pe) {
+        throw new Error(t('import_invalid_format') || 'ファイルの形式が不正です (.edsys または JSON を指定してください)');
+      }
+
+      // Call preview API
+      const res = await fetch('/api/import/package/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ package_data: pkg })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `HTTP ${res.status}`);
+      }
+
+      const preview = await res.json();
+      pendingImportPackage = pkg;
+
+      // Populate preview UI
+      if (importCmdrName) importCmdrName.innerText = preview.created_by || '--';
+      if (importExportDate) importExportDate.innerText = preview.export_date ? preview.export_date.substring(0, 19).replace('T', ' ') : '--';
+      if (importSysCount) importSysCount.innerText = preview.system_count;
+      if (importBodyCount) importBodyCount.innerText = preview.total_bodies;
+      if (importNotesText) importNotesText.innerText = preview.notes || '(なし)';
+
+      if (importSigBadge) {
+        if (preview.signature_valid) {
+          importSigBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+          importSigBadge.style.color = '#6ee7b7';
+          importSigBadge.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+          importSigBadge.innerHTML = `<span>✓</span> <span>${t('import_sig_ok')}</span>`;
+        } else {
+          importSigBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+          importSigBadge.style.color = '#f87171';
+          importSigBadge.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+          importSigBadge.innerHTML = `<span>⚠️</span> <span>${t('import_sig_warn')}</span>`;
+        }
+      }
+
+      if (importSystemsList) {
+        importSystemsList.innerHTML = preview.systems.map(s => `
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <span style="font-weight: bold; color: var(--ed-orange);">${s.star_system || 'System ' + s.system_address}</span>
+            <span style="color: var(--text-secondary);">${s.body_count || 0} 天体</span>
+          </div>
+        `).join('');
+      }
+
+      if (importPreviewSection) importPreviewSection.style.display = 'block';
+    } catch (err) {
+      console.error('Import preview failed:', err);
+      alert(err.message || 'パッケージの読み込みに失敗しました');
+    }
+  }
+
+  if (cbImportConsent && btnExecuteImport) {
+    cbImportConsent.addEventListener('change', () => {
+      const ready = cbImportConsent.checked && pendingImportPackage !== null;
+      btnExecuteImport.disabled = !ready;
+      btnExecuteImport.style.opacity = ready ? '1' : '0.5';
+      btnExecuteImport.style.cursor = ready ? 'pointer' : 'not-allowed';
+    });
+  }
+
+  if (btnExecuteImport) {
+    btnExecuteImport.addEventListener('click', async () => {
+      if (!cbImportConsent.checked || !pendingImportPackage) return;
+
+      const origHtml = btnExecuteImport.innerHTML;
+      btnExecuteImport.innerHTML = `<span>⏳ ${t('importing') || '取り込み中...'}</span>`;
+      btnExecuteImport.disabled = true;
+
+      try {
+        const res = await fetch('/api/import/package/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            package_data: pendingImportPackage,
+            consent_token: true
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `HTTP ${res.status}`);
+        }
+
+        const resData = await res.json();
+        closeImportModal();
+        alert(`${resData.imported_systems} ${t('import_success')} (${resData.imported_bodies} 天体)`);
+
+        // Refresh system list and select the first imported system
+        await fetchSystems();
+        if (pendingImportPackage.systems && pendingImportPackage.systems.length > 0) {
+          const firstAddr = pendingImportPackage.systems[0].system_address;
+          if (firstAddr) {
+            selectSystem(firstAddr);
+          }
+        }
+      } catch (err) {
+        console.error('Import execution failed:', err);
+        alert(err.message || 'パッケージの取り込みに失敗しました');
+      } finally {
+        btnExecuteImport.innerHTML = origHtml;
+        btnExecuteImport.disabled = false;
+      }
+    });
+  }
+}
+

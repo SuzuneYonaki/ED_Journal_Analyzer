@@ -101,6 +101,11 @@
     </div>
 
     <div class="header-actions">
+      <!-- Import Shared Package Button -->
+      <button id="btn-import-open" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #c4b5fd; background: rgba(167, 139, 250, 0.15); border: 1px solid #a78bfa; display: flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" title="📥 共有星系パッケージ (.edsys) をインポート">
+        <span>📥 共有インポート</span>
+      </button>
+
       <!-- Unified Settings Modal Button (Logs, UI Scaling, TTS, Credits) -->
       <button id="btn-settings-open" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #fff; background: rgba(255, 113, 0, 0.15); border: 1px solid var(--ed-orange); display: flex; align-items: center; gap: 5px; z-index: 9999; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px; box-shadow: 0 0 6px rgba(255, 113, 0, 0.2);" title="⚙️ 設定 & 文字サイズ & ログ同期 & TTS & 謝辞">
         <span>⚙️ 設定</span>
@@ -131,6 +136,7 @@
           <button class="chip bio" data-filter="has_bio" data-i18n="filter_bio">Bio (生体)</button>
           <button class="chip first-disc" data-filter="has_first_discover" data-i18n="filter_first_discover" style="border-color: rgba(255, 215, 0, 0.4);">⭐ 1st Disc (初発見)</button>
           <button class="chip bookmark-chip" data-filter="has_bookmarks" data-i18n="filter_bookmarks" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.5);">🔖 ブックマーク</button>
+          <button class="chip shared-chip" data-filter="is_shared" data-i18n="filter_shared" style="color: #c4b5fd; border-color: rgba(167, 139, 250, 0.5);">🤝 Shared (共有)</button>
           <button class="chip" data-filter="has_high_g" data-i18n="filter_high_g">高重力 (3G+着陸)</button>
           <button class="chip" data-filter="has_anomalies" data-i18n="filter_anomalies">特殊・レア</button>
         </div>
@@ -291,14 +297,32 @@
     <!-- Center Pane: System Map & Celestial Orbit Hierarchy -->
     <div class="center-pane">
       <div class="system-header-bar">
-        <div class="system-title-row" style="display: flex; align-items: center; gap: 10px;">
+        <div class="system-title-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <div id="current-system-name" class="current-system-name" data-i18n="select_system_prompt" style="cursor: pointer;" title="クリックして星系名をコピー">星系を選択してください</div>
           <button id="btn-copy-system" class="btn-icon" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: 4px; padding: 3px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.75rem;" title="クリップボードにコピー">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             <span id="copy-label" data-i18n="copy_name">コピー</span>
           </button>
+          
+          <!-- Method 2: Main Standalone Web Share HTML Export -->
+          <button id="btn-export-html" class="btn-icon" style="background: rgba(0, 210, 255, 0.12); border: 1px solid var(--ed-cyan); color: var(--ed-cyan); border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: bold;" title="🌐 単体HTMLファイルを生成（ブラウザだけで星系図・採掘地点・天体を閲覧可能。SNSやDiscord共有向け）">
+            <span>🌐 Web共有HTML</span>
+          </button>
+
+          <!-- Method 1: Locked Multi-System .edsys Package Export -->
+          <button id="btn-export-pkg" class="btn-icon" style="background: rgba(255, 113, 0, 0.12); border: 1px solid var(--ed-orange); color: var(--ed-orange); border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: bold;" title="🔒 .edsys パッケージ書き出し（安全ロック・注意事項確認ダイアログ付き）">
+            <span>📦 パッケージ書出</span>
+          </button>
+
+          <!-- Shared Bookmark Toggle Button -->
+          <button id="btn-toggle-shared" class="btn-icon" style="background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.4); color: #c4b5fd; border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem;" title="🤝 共有星系マークの切り替え">
+            <span id="shared-toggle-icon">🤝</span>
+            <span id="shared-toggle-label">共有マーク</span>
+          </button>
+
           <div id="current-system-coords" class="system-coords"></div>
           <div id="current-system-edsm-badge" style="margin-left: 4px;"></div>
+          <div id="current-system-shared-badge" style="margin-left: 4px; display: none;"></div>
           <div id="current-system-distances" style="display: flex; gap: 3px; align-items: center; margin-left: 6px; flex-wrap: wrap;"></div>
         </div>
         <div class="system-total-payout" style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
@@ -830,6 +854,130 @@
       <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
         <button id="btn-settings-save" class="btn-primary">
           設定を保存して閉じる
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Locked Package Export (Safety Consent Modal) -->
+  <div id="modal-export-locked" class="modal-overlay" style="display: none;">
+    <div class="modal-dialog" style="max-width: 580px; background: var(--bg-card); border: 1px solid var(--ed-orange); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
+      <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="color: var(--ed-orange); font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+          <span>🔒</span> <span data-i18n="modal_export_title">星系データ共有の安全性確認 (Lock)</span>
+        </h3>
+        <button id="btn-close-export-modal" class="btn-icon" style="color: var(--text-secondary); cursor: pointer; font-size: 1.1rem; background: transparent; border: none;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px; max-height: 70vh; overflow-y: auto;">
+        
+        <!-- Warning Banner -->
+        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; padding: 12px; margin-bottom: 14px;">
+          <div style="color: #f87171; font-weight: bold; font-size: 0.9rem; margin-bottom: 6px;" data-i18n="modal_export_warn_title">⚠️ 未売却探査データに関する重大な注意事項</div>
+          <ul style="color: #fca5a5; font-size: 0.8rem; padding-left: 18px; line-height: 1.5;" data-i18n="modal_export_warn_desc">
+            <li>ゲーム内の宇宙ステーション（Universal Cartographics）で探査データを売却する前にこの星系データを他者に渡すと、相手が現地へ先に飛んで売却した場合、あなたの初発見ボーナス（First Discovery）や発見者名義が失われるリスクがあります。</li>
+            <li>あらかじめゲーム内で探査データを売却済みであること、または信頼できる相手との間でのみやり取りすることを推奨します。</li>
+          </ul>
+        </div>
+
+        <!-- Security & Privacy Banner -->
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 10px; margin-bottom: 14px;">
+          <div style="color: #6ee7b7; font-weight: bold; font-size: 0.85rem; margin-bottom: 4px;" data-i18n="modal_export_safe_title">🛡️ 本アプリ専用受け渡し & 個人情報完全保護</div>
+          <div style="color: #a7f3d0; font-size: 0.78rem; line-height: 1.4;" data-i18n="modal_export_safe_desc">
+            Frontierの生ログ（RAW Journal）は一切含めず、本アプリ閲覧用の一部データのみを抽出します。所持金・艦船装備・全航路履歴などの機密情報は100%除外されます。また、EDDiscoveryやEDMC等の外部ツールがジャーナルとして誤送信することも原理的に不可能です。
+          </div>
+        </div>
+
+        <!-- Target System Info -->
+        <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; margin-bottom: 14px;">
+          <div style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="modal_export_target_label">エクスポート対象星系:</div>
+          <div id="export-target-system-name" style="font-size: 1.05rem; font-weight: bold; color: var(--ed-orange); margin-top: 2px;">--</div>
+        </div>
+
+        <!-- Form fields -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="modal_export_cmdr_label">発見者 CMDR名 (署名用):</label>
+            <input type="text" id="export-cmdr-name" class="search-input" style="width: 100%; font-size: 0.82rem;" placeholder="例: CMDR Yonaki">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="modal_export_notes_label">共有メモ / 説明 (任意):</label>
+            <input type="text" id="export-notes" class="search-input" style="width: 100%; font-size: 0.82rem;" placeholder="例: 生体シグナル豊富・タングステン採掘地点あり">
+          </div>
+        </div>
+
+        <!-- Lock Consent Checkbox -->
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.15);">
+          <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="cb-export-consent" style="margin-top: 3px; accent-color: var(--ed-orange); cursor: pointer; width: 16px; height: 16px;">
+            <span style="font-size: 0.8rem; color: #fed7aa; font-weight: bold; line-height: 1.4;" data-i18n="modal_export_consent">
+              上記のリスクおよび注意事項を理解し、同意の上でパッケージを書き出します (Lock解除)
+            </span>
+          </label>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+        <button id="btn-cancel-export" class="btn-page" style="padding: 6px 14px;" data-i18n="btn_cancel">キャンセル</button>
+        <button id="btn-submit-export-pkg" class="btn-primary" style="padding: 6px 16px; opacity: 0.5; cursor: not-allowed;" disabled data-i18n="btn_export_confirm">
+          📦 同意して .edsys を保存
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Import Package (.edsys) -->
+  <div id="modal-import-pkg" class="modal-overlay" style="display: none;">
+    <div class="modal-dialog" style="max-width: 600px; background: var(--bg-card); border: 1px solid #a78bfa; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
+      <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="color: #c4b5fd; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+          <span>📥</span> <span data-i18n="modal_import_title">共有星系パッケージ (.edsys) の取り込み</span>
+        </h3>
+        <button id="btn-close-import-modal" class="btn-icon" style="color: var(--text-secondary); cursor: pointer; font-size: 1.1rem; background: transparent; border: none;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px; max-height: 70vh; overflow-y: auto;">
+        
+        <!-- File input drop zone -->
+        <div id="import-drop-zone" style="border: 2px dashed rgba(167, 139, 250, 0.4); border-radius: 8px; padding: 24px; text-align: center; background: rgba(167, 139, 250, 0.05); cursor: pointer; transition: all 0.2s;">
+          <input type="file" id="import-file-input" accept=".edsys,.json" style="display: none;">
+          <div style="font-size: 2rem; margin-bottom: 8px;">📦</div>
+          <div style="font-size: 0.9rem; font-weight: bold; color: #c4b5fd;" data-i18n="import_drop_prompt">クリックして .edsys ファイルを選択、またはここにドラッグ＆ドロップ</div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;" data-i18n="import_drop_sub">対応形式: ED Journal Analyzer 専用パッケージ (.edsys, .json)</div>
+        </div>
+
+        <!-- Preview section (shown after file parsed) -->
+        <div id="import-preview-section" style="display: none; margin-top: 14px;">
+          <div id="import-signature-badge" style="padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 0.82rem; font-weight: bold; display: flex; align-items: center; gap: 6px;"></div>
+
+          <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem;">
+              <div><span style="color: var(--text-secondary);" data-i18n="import_author_label">作成者 (CMDR):</span> <strong id="import-cmdr-name" style="color: #fed7aa;">--</strong></div>
+              <div><span style="color: var(--text-secondary);" data-i18n="import_date_label">エクスポート日時:</span> <span id="import-export-date" style="color: #e2e8f0;">--</span></div>
+              <div><span style="color: var(--text-secondary);" data-i18n="import_sys_count_label">含まれる星系:</span> <strong id="import-sys-count" style="color: var(--ed-cyan);">--</strong></div>
+              <div><span style="color: var(--text-secondary);" data-i18n="import_body_count_label">総天体数:</span> <strong id="import-body-count" style="color: var(--ed-green);">--</strong></div>
+            </div>
+            <div id="import-notes-container" style="margin-top: 8px; font-size: 0.78rem; color: var(--text-secondary); border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+              <span data-i18n="import_notes_label">メモ:</span> <span id="import-notes-text" style="color: #cbd5e1;"></span>
+            </div>
+          </div>
+
+          <div style="font-size: 0.78rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 6px;" data-i18n="import_sys_list_title">取り込み対象星系一覧:</div>
+          <div id="import-systems-list" style="max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 6px 10px; font-size: 0.8rem; border: 1px solid var(--border-color);"></div>
+
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.15);">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="cb-import-consent" style="accent-color: #a78bfa; cursor: pointer; width: 16px; height: 16px;">
+              <span style="font-size: 0.8rem; color: #c4b5fd; font-weight: bold;" data-i18n="import_consent">
+                共有星系（Shared）として本アプリに取り込むことに同意します
+              </span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+        <button id="btn-cancel-import" class="btn-page" style="padding: 6px 14px;" data-i18n="btn_cancel">キャンセル</button>
+        <button id="btn-execute-import-pkg" class="btn-primary" style="background: rgba(167, 139, 250, 0.25); border-color: #a78bfa; color: #c4b5fd; padding: 6px 16px; opacity: 0.5; cursor: not-allowed;" disabled data-i18n="btn_import_execute">
+          📥 取り込みを実行
         </button>
       </div>
     </div>

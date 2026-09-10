@@ -9,7 +9,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 from fastapi import FastAPI, Query, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR, DATA_DIR
@@ -20,6 +20,12 @@ from app.analyzer.orbit_analyzer import build_system_hierarchy
 from app.parser.exobiology import predict_exobiology_candidates, predict_system_exobiology_candidates
 from app.services.edsm_service import edsm_service
 from app.services.landmark_service import load_landmarks, calculate_landmark_distances
+from app.services.export_service import (
+    generate_standalone_html,
+    create_edsys_package,
+    import_edsys_package,
+    verify_package_signature
+)
 
 app = FastAPI(title="Elite Dangerous Journal Analyzer")
 
@@ -377,6 +383,7 @@ def get_systems(
     has_landable_ringed: Optional[bool] = False,
     has_mining_signals: Optional[bool] = False,
     has_bookmarks: Optional[bool] = False,
+    is_shared: Optional[bool] = False,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     date_field: Optional[str] = "last_visited",
@@ -421,6 +428,9 @@ def get_systems(
 
     if has_bookmarks:
         conditions.append("EXISTS (SELECT 1 FROM body_bookmarks bb WHERE bb.system_address = systems.system_address)")
+
+    if is_shared:
+        conditions.append("systems.is_shared = 1")
 
     if has_elw:
         conditions.append("has_elw = 1")
@@ -1198,6 +1208,156 @@ def save_tts_settings_endpoint(settings: dict):
         return {"status": "saved", "settings": settings}
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+# --- Safe System Export & Sharing Endpoints ---
+
+class ExportPackageRequest(BaseModel):
+    system_addresses: List[int]
+    cmdr_name: Optional[str] = "Explorer"
+    notes: Optional[str] = ""
+    consent_token: bool = False
+
+class ImportExecuteRequest(BaseModel):
+    package: dict
+    overwrite: Optional[bool] = False
+    consent_token: bool = False
+
+@app.get("/api/export/html/{system_address}")
+def export_standalone_html_endpoint(
+    system_address: int,
+    cmdr_name: Optional[str] = None,
+    is_anonymous: bool = False
+):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM systems WHERE system_address = ?", (system_address,))
+    sys_row = c.fetchone()
+    if not sys_row:
+        conn.close()
+        return JSONResponse({"error": "System not found"}, status_code=404)
+
+    system_data = dict(sys_row)
+    c.execute("SELECT * FROM bodies WHERE system_address = ? ORDER BY distance_from_arrival_ls ASC, body_id ASC", (system_address,))
+    bodies = [dict(r) for r in c.fetchall()]
+
+    c.execute("SELECT * FROM surface_mining_activities WHERE system_address = ? ORDER BY timestamp DESC", (system_address,))
+    raw_mining = [dict(r) for r in c.fetchall()]
+    mining_sites = extract_rhino_mining_sites(raw_mining)
+
+    c.execute("SELECT * FROM body_bookmarks WHERE system_address = ?", (system_address,))
+    bookmarks = [dict(r) for r in c.fetchall()]
+    conn.close()
+
+    html_content = generate_standalone_html(
+        system_data=system_data,
+        bodies=bodies,
+        mining_sites=mining_sites,
+        bookmarks=bookmarks,
+        cmdr_name=cmdr_name,
+        is_anonymous=is_anonymous
+    )
+    safe_sys_name = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in system_data.get("star_system", "system"))
+    filename = f"{safe_sys_name}_share.html"
+    return HTMLResponse(
+        content=html_content,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+@app.post("/api/export/package")
+def export_package_endpoint(payload: ExportPackageRequest):
+    if not payload.consent_token:
+        return JSONResponse({"error": "エクスポートには注意事項・リスクへの同意（Lock解除）が必要です。"}, status_code=400)
+    if not payload.system_addresses:
+        return JSONResponse({"error": "対象星系が選択されていません。"}, status_code=400)
+
+    conn = get_db_connection()
+    try:
+        package = create_edsys_package(
+            conn,
+            system_addresses=payload.system_addresses,
+            cmdr_name=payload.cmdr_name or "Explorer",
+            notes=payload.notes or ""
+        )
+        return package
+    finally:
+        conn.close()
+
+@app.post("/api/import/package/preview")
+def import_package_preview(package: dict):
+    is_valid, reason = verify_package_signature(package)
+    metadata = package.get("metadata", {})
+    systems = package.get("systems", [])
+    preview_systems = []
+    for s in systems:
+        preview_systems.append({
+            "system_address": s.get("system_address"),
+            "star_system": s.get("star_system"),
+            "main_star_type": s.get("main_star_type"),
+            "body_count": len(s.get("bodies", [])),
+            "mining_count": len(s.get("surface_mining", [])),
+            "bookmark_count": len(s.get("bookmarks", []))
+        })
+    return {
+        "is_valid": is_valid,
+        "validation_message": reason,
+        "cmdr_name": metadata.get("cmdr_name", "Unknown"),
+        "exported_at": metadata.get("exported_at", ""),
+        "system_count": len(systems),
+        "notes": metadata.get("notes", ""),
+        "systems": preview_systems
+    }
+
+@app.post("/api/import/package/execute")
+def import_package_execute(payload: ImportExecuteRequest):
+    if not payload.consent_token:
+        return JSONResponse({"error": "インポートには注意事項への同意が必要です。"}, status_code=400)
+
+    conn = get_db_connection()
+    try:
+        res = import_edsys_package(conn, payload.package, overwrite=payload.overwrite)
+        return res
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    finally:
+        conn.close()
+
+@app.post("/api/systems/{system_address}/toggle-shared")
+def toggle_system_shared(system_address: int):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT is_shared FROM systems WHERE system_address = ?", (system_address,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return JSONResponse({"error": "System not found"}, status_code=404)
+
+    new_val = 0 if row["is_shared"] == 1 else 1
+    now_iso = datetime.now(timezone.utc).isoformat() if new_val == 1 else ""
+    c.execute("UPDATE systems SET is_shared = ?, shared_at = ? WHERE system_address = ?", (new_val, now_iso, system_address))
+    conn.commit()
+    conn.close()
+    return {"system_address": system_address, "is_shared": new_val}
+
+@app.delete("/api/systems/{system_address}/shared")
+def delete_shared_system(system_address: int):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT is_shared FROM systems WHERE system_address = ?", (system_address,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return JSONResponse({"error": "System not found"}, status_code=404)
+    if row["is_shared"] != 1:
+        conn.close()
+        return JSONResponse({"error": "本人の探査データ（非共有星系）は削除できません。"}, status_code=400)
+
+    c.execute("DELETE FROM systems WHERE system_address = ? AND is_shared = 1", (system_address,))
+    c.execute("DELETE FROM bodies WHERE system_address = ?", (system_address,))
+    c.execute("DELETE FROM surface_mining_activities WHERE system_address = ?", (system_address,))
+    c.execute("DELETE FROM body_bookmarks WHERE system_address = ?", (system_address,))
+    conn.commit()
+    conn.close()
+    return {"success": True, "system_address": system_address}
 
 # Mount static files UI
 ui_dir = BASE_DIR / "app" / "ui"
