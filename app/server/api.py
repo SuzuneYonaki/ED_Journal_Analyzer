@@ -20,6 +20,7 @@ from app.analyzer.orbit_analyzer import build_system_hierarchy
 from app.parser.exobiology import predict_exobiology_candidates, predict_system_exobiology_candidates
 from app.services.edsm_service import edsm_service
 from app.services.landmark_service import load_landmarks, calculate_landmark_distances
+from app.services.footprint_service import footprint_service
 from app.services.export_service import (
     generate_standalone_html,
     create_edsys_package,
@@ -386,6 +387,8 @@ def get_systems(
     is_shared: Optional[bool] = False,
     star_types: Optional[List[str]] = Query(None),
     star_match_mode: Optional[str] = "any",
+    luminosity_classes: Optional[List[str]] = Query(None),
+    luminosity_match_mode: Optional[str] = "any",
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     date_field: Optional[str] = "last_visited",
@@ -539,6 +542,48 @@ def get_systems(
         else:
             combined_or = " OR ".join(type_exprs)
             conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND ({combined_or}))")
+
+    # Luminosity / Evolutionary Stage Filtering (Independent from spectral type)
+    active_lum_classes = []
+    if luminosity_classes:
+        for lc in luminosity_classes:
+            for item in str(lc).split(","):
+                clean = item.strip()
+                if clean and clean not in active_lum_classes:
+                    active_lum_classes.append(clean)
+
+    if active_lum_classes:
+        lum_sql_map = {
+            # Supergiants (Ia0, Ia, Ib, Iab, I) - exclude II and IV
+            "I": "(b.luminosity LIKE 'I%' AND b.luminosity NOT LIKE 'II%' AND b.luminosity NOT LIKE 'IV%')",
+            # Bright Giants (II, IIa, IIb, IIab)
+            "II": "(b.luminosity LIKE 'II%')",
+            # Giants (III, IIIa, IIIb, IIIab)
+            "III": "(b.luminosity LIKE 'III%')",
+            # Subgiants (IV, IVa, IVb, IVab)
+            "IV": "(b.luminosity LIKE 'IV%')",
+            # Main Sequence Dwarfs (V, Va, Vb, Vab, Vz) - exclude VI
+            "V": "(b.luminosity LIKE 'V%' AND b.luminosity NOT LIKE 'VI%')",
+            # Subdwarfs (VI)
+            "VI": "(b.luminosity = 'VI' OR b.luminosity LIKE 'VI%')",
+            # Degenerate (VII, White Dwarfs, Neutron, Black Holes)
+            "VII": "(b.luminosity = 'VII' OR b.star_type LIKE 'D%' OR b.star_type = 'N' OR b.star_type = 'H' OR b.star_type LIKE '%BlackHole%')",
+        }
+
+        lum_exprs = []
+        for lc in active_lum_classes:
+            if lc in lum_sql_map:
+                lum_exprs.append(lum_sql_map[lc])
+            else:
+                clean_escaped = lc.replace("'", "''")
+                lum_exprs.append(f"(b.luminosity = '{clean_escaped}')")
+
+        if luminosity_match_mode == "all":
+            for expr in lum_exprs:
+                conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
+        else:
+            combined_lum_or = " OR ".join(lum_exprs)
+            conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND ({combined_lum_or}))")
 
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -1454,6 +1499,15 @@ def delete_shared_system(system_address: int):
     conn.commit()
     conn.close()
     return {"success": True, "system_address": system_address}
+
+@app.get("/api/external_footprint")
+def get_external_footprint(system_name: str = Query(..., min_length=1)):
+    """
+    Checks if a system has an external footprint on Inara, Spansh, or EDSM.
+    Skips external queries if the system already exists in the local database.
+    """
+    result = footprint_service.check_system_footprint(system_name)
+    return result
 
 # Mount static files UI
 ui_dir = BASE_DIR / "app" / "ui"

@@ -531,6 +531,121 @@ header {
   box-shadow: 0 0 6px var(--ed-orange-glow);
 }
 
+/* External Footprint Check Row & Status Badges */
+.external-check-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+
+.external-check-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.external-check-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.73rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.external-check-toggle:hover {
+  color: #fed7aa;
+}
+
+.external-footprint-result {
+  font-size: 0.72rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.external-footprint-result.checking {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  animation: footprint-pulse 1.2s infinite ease-in-out;
+}
+
+@keyframes footprint-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1.0; filter: brightness(1.2); }
+}
+
+.external-footprint-result.local {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #93c5fd;
+}
+
+.external-footprint-result.found {
+  background: rgba(255, 113, 0, 0.12);
+  border-color: rgba(255, 113, 0, 0.4);
+  color: #fed7aa;
+}
+
+.external-footprint-result.uncharted {
+  background: rgba(0, 255, 136, 0.12);
+  border-color: rgba(0, 255, 136, 0.4);
+  color: #86efac;
+}
+
+.external-footprint-services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.external-service-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  text-decoration: none;
+  border: 1px solid var(--border-color);
+  transition: all 0.15s ease;
+}
+
+.external-service-badge:hover {
+  filter: brightness(1.2);
+}
+
+.external-service-badge.hit {
+  background: rgba(0, 255, 136, 0.15);
+  color: #86efac;
+  border-color: rgba(0, 255, 136, 0.4);
+}
+
+.external-service-badge.miss {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-dim);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Luminosity Grid */
+.luminosity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px;
+}
+
 .filter-chips {
   display: flex;
   flex-wrap: wrap;

@@ -113,6 +113,7 @@ def init_db(conn=None):
         exobiology_predictions TEXT,
         anomalies_json TEXT,
         scan_type TEXT,
+        luminosity TEXT,
         scan_timestamp TEXT,
         updated_timestamp TEXT,
         UNIQUE(system_address, body_id)
@@ -276,11 +277,14 @@ def init_db(conn=None):
         ("mining_signals", "INTEGER DEFAULT 0"),
         ("reserve_level", "TEXT"),
         ("scan_type", "TEXT"),
+        ("luminosity", "TEXT"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE bodies ADD COLUMN {col_def[0]} {col_def[1]};")
         except Exception:
             pass
+
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bodies_luminosity ON bodies(system_address, luminosity);")
 
     for col_def in [
         ("alias_name", "TEXT DEFAULT ''"),

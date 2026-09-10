@@ -244,6 +244,7 @@ class JournalParser:
             return
 
         star_type = data.get("StarType")
+        luminosity = data.get("Luminosity")
         stellar_mass = data.get("StellarMass")
         planet_class = data.get("PlanetClass")
         if not star_type and not planet_class:
@@ -307,6 +308,7 @@ class JournalParser:
             "semi_major_axis": semi_major_axis,
             "parents": parents,
             "star_type": star_type,
+            "luminosity": luminosity,
             "stellar_mass": stellar_mass,
             "planet_class": planet_class,
             "mass_em": mass_em,
@@ -362,7 +364,7 @@ class JournalParser:
         self.cursor.execute("""
             INSERT INTO bodies (
                 system_address, body_id, body_name, star_system, distance_from_arrival_ls,
-                star_type, stellar_mass, absolute_magnitude, radius, surface_temperature,
+                star_type, luminosity, stellar_mass, absolute_magnitude, radius, surface_temperature,
                 planet_class, atmosphere, atmosphere_type, atmosphere_composition,
                 mass_em, surface_gravity, surface_gravity_g, surface_pressure, landable,
                 volcanism, terraforming_state, tidal_lock, semi_major_axis, eccentricity,
@@ -372,13 +374,14 @@ class JournalParser:
                 first_discovered_fss, first_mapped_dss, max_potential_value,
                 confirmed_genuses, exobiology_predictions, anomalies_json, scan_type, scan_timestamp, updated_timestamp
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             ON CONFLICT(system_address, body_id) DO UPDATE SET
                 body_name = excluded.body_name,
                 star_system = COALESCE(excluded.star_system, bodies.star_system),
                 distance_from_arrival_ls = excluded.distance_from_arrival_ls,
                 star_type = COALESCE(excluded.star_type, bodies.star_type),
+                luminosity = COALESCE(excluded.luminosity, bodies.luminosity),
                 stellar_mass = COALESCE(excluded.stellar_mass, bodies.stellar_mass),
                 radius = COALESCE(excluded.radius, bodies.radius),
                 surface_temperature = COALESCE(excluded.surface_temperature, bodies.surface_temperature),
@@ -416,7 +419,7 @@ class JournalParser:
                 updated_timestamp = excluded.updated_timestamp
         """, (
             sys_addr, body_id, body_name, star_sys, dist_ls,
-            star_type, stellar_mass, data.get("AbsoluteMagnitude"), radius, surface_temp,
+            star_type, luminosity, stellar_mass, data.get("AbsoluteMagnitude"), radius, surface_temp,
             planet_class, atmosphere, atmosphere_type, atmosphere_comp,
             mass_em, gravity_raw, gravity_g, surface_pressure, landable,
             volcanism, terraforming, tidal_lock, semi_major_axis, eccentricity,

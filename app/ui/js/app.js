@@ -28,6 +28,9 @@ let state = {
   },
   starTypes: [],
   starMatchMode: 'any',
+  luminosityClasses: [],
+  luminosityMatchMode: 'any',
+  externalFootprintCheck: localStorage.getItem('ed_external_footprint_check') === 'true',
   uiLayoutMode: localStorage.getItem('ed_ui_layout') || '1col',
   headerStatsCollapsed: localStorage.getItem('ed_header_stats_collapsed') === 'true',
   collapsedGroups: JSON.parse(localStorage.getItem('ed_collapsed_groups') || '{}'),
@@ -443,6 +446,11 @@ async function fetchSystems(options = {}) {
   if (state.starTypes && state.starTypes.length > 0) {
     params.append('star_types', state.starTypes.join(','));
     params.append('star_match_mode', state.starMatchMode || 'any');
+  }
+
+  if (state.luminosityClasses && state.luminosityClasses.length > 0) {
+    params.append('luminosity_classes', state.luminosityClasses.join(','));
+    params.append('luminosity_match_mode', state.luminosityMatchMode || 'any');
   }
 
   Object.entries(state.filters).forEach(([k, v]) => {
@@ -2918,7 +2926,7 @@ function updateCollapsibleBadges() {
     badgeMine.classList.toggle('active', miningCount > 0);
   }
 
-  const starCount = (state.starTypes || []).length;
+  const starCount = (state.starTypes || []).length + (state.luminosityClasses || []).length;
   const badgeStar = document.getElementById('badge-stars-filters');
   if (badgeStar) {
     badgeStar.innerText = starCount > 0 ? starCount : '';
@@ -2978,6 +2986,40 @@ function initStellarFilters() {
     btnClear.addEventListener('click', () => {
       document.querySelectorAll('.star-filter-cb').forEach(cb => { cb.checked = false; });
       state.starTypes = [];
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  }
+
+  // Stellar Luminosity & Evolutionary Stages (Independent Filter)
+  const lumCbs = document.querySelectorAll('.lum-filter-cb');
+  lumCbs.forEach(cb => {
+    cb.addEventListener('change', () => {
+      const selected = Array.from(document.querySelectorAll('.lum-filter-cb:checked')).map(el => el.value);
+      state.luminosityClasses = selected;
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  });
+
+  const lumRadios = document.querySelectorAll('input[name="lum-match-mode"]');
+  lumRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      state.luminosityMatchMode = e.target.value;
+      if (state.luminosityClasses.length > 0) {
+        state.page = 1;
+        fetchSystems({ autoSelectTop: true });
+      }
+    });
+  });
+
+  const btnClearLum = document.getElementById('btn-clear-lum-filters');
+  if (btnClearLum) {
+    btnClearLum.addEventListener('click', () => {
+      document.querySelectorAll('.lum-filter-cb').forEach(cb => { cb.checked = false; });
+      state.luminosityClasses = [];
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
@@ -3064,14 +3106,155 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-modal-lang-ja')?.addEventListener('click', () => setLanguage('ja'));
   document.getElementById('btn-modal-lang-en')?.addEventListener('click', () => setLanguage('en'));
 
-  // Search input
+  // Search input & External Footprint Check
   let searchTimeout = null;
+  let footprintAbortController = null;
+
+  async function triggerExternalFootprintCheck(sysName) {
+    const resContainer = document.getElementById('external-footprint-result');
+    if (!resContainer) return;
+
+    const trimmed = (sysName || '').trim();
+    if (!state.externalFootprintCheck || trimmed.length < 2) {
+      resContainer.style.display = 'none';
+      resContainer.innerHTML = '';
+      return;
+    }
+
+    // Check if the system is already found in local DB (state.systems)
+    const exactLocalMatch = state.systems.some(s => (s.star_system || '').toLowerCase() === trimmed.toLowerCase());
+    if (exactLocalMatch) {
+      resContainer.style.display = 'flex';
+      resContainer.className = 'external-footprint-result local';
+      resContainer.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-weight: bold;">${t('footprint_local_db')}</span>
+          <span style="font-size: 0.65rem; opacity: 0.85;">${trimmed}</span>
+        </div>
+      `;
+      return;
+    }
+
+    // Show checking animation
+    resContainer.style.display = 'flex';
+    resContainer.className = 'external-footprint-result checking';
+    resContainer.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span class="spinner" style="width: 10px; height: 10px; border-width: 1.5px;"></span>
+        <span>${t('footprint_checking')} (${trimmed})</span>
+      </div>
+    `;
+
+    if (footprintAbortController) {
+      footprintAbortController.abort();
+    }
+    footprintAbortController = new AbortController();
+
+    try {
+      const resp = await fetch(`/api/external_footprint?system_name=${encodeURIComponent(trimmed)}`, {
+        signal: footprintAbortController.signal
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      // If user typed something else while waiting, ignore
+      if ((state.searchQuery || '').trim().toLowerCase() !== trimmed.toLowerCase()) return;
+
+      if (data.in_local_db) {
+        resContainer.className = 'external-footprint-result local';
+        resContainer.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: bold;">${t('footprint_local_db')}</span>
+            <span style="font-size: 0.65rem; opacity: 0.85;">${trimmed}</span>
+          </div>
+        `;
+        return;
+      }
+
+      const services = data.services || {};
+      const edsm = services.edsm || {};
+      const spansh = services.spansh || {};
+      const inara = services.inara || {};
+
+      const edsmBadge = `
+        <a href="${edsm.url || '#'}" target="_blank" rel="noopener" class="external-service-badge ${edsm.found ? 'hit' : 'miss'}" title="${edsm.found ? (edsm.details || 'EDSM登録済') : 'EDSM未登録'}">
+          EDSM ${edsm.found ? '✓' : '✕'}
+        </a>
+      `;
+      const spanshBadge = `
+        <a href="${spansh.url || '#'}" target="_blank" rel="noopener" class="external-service-badge ${spansh.found ? 'hit' : 'miss'}" title="${spansh.found ? (spansh.details || 'Spansh登録済') : 'Spansh未登録'}">
+          Spansh ${spansh.found ? '✓' : '✕'}
+        </a>
+      `;
+      const inaraBadge = `
+        <a href="${inara.url || '#'}" target="_blank" rel="noopener" class="external-service-badge ${inara.found ? 'hit' : 'miss'}" title="${inara.found ? 'Inara登録済' : 'Inara未登録'}">
+          Inara ${inara.found ? '✓' : '✕'}
+        </a>
+      `;
+
+      if (data.has_footprint) {
+        resContainer.className = 'external-footprint-result found';
+        resContainer.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between; font-weight: bold;">
+            <span>${t('footprint_found')}</span>
+            <span style="font-size: 0.65rem; color: var(--text-dim);">${trimmed}</span>
+          </div>
+          <div class="external-footprint-services">
+            ${edsmBadge}
+            ${spanshBadge}
+            ${inaraBadge}
+          </div>
+        `;
+      } else {
+        resContainer.className = 'external-footprint-result uncharted';
+        resContainer.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between; font-weight: bold;">
+            <span>${t('footprint_none')}</span>
+            <span style="font-size: 0.65rem; color: var(--text-dim);">${trimmed}</span>
+          </div>
+          <div class="external-footprint-services">
+            ${edsmBadge}
+            ${spanshBadge}
+            ${inaraBadge}
+          </div>
+        `;
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      resContainer.className = 'external-footprint-result';
+      resContainer.innerHTML = `<span style="color: #f87171;">${t('footprint_error')}</span>`;
+    }
+  }
+
+  // Checkbox toggle listener
+  const cbFootprint = document.getElementById('cb-external-footprint');
+  if (cbFootprint) {
+    cbFootprint.checked = state.externalFootprintCheck;
+    cbFootprint.addEventListener('change', () => {
+      state.externalFootprintCheck = cbFootprint.checked;
+      try {
+        localStorage.setItem('ed_external_footprint_check', state.externalFootprintCheck);
+      } catch (e) {}
+
+      if (state.externalFootprintCheck) {
+        triggerExternalFootprintCheck(state.searchQuery);
+      } else {
+        const resContainer = document.getElementById('external-footprint-result');
+        if (resContainer) {
+          resContainer.style.display = 'none';
+          resContainer.innerHTML = '';
+        }
+      }
+    });
+  }
+
   document.getElementById('system-search').addEventListener('input', (e) => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       state.searchQuery = e.target.value;
       state.page = 1;
       fetchSystems({ autoSelectTop: true });
+      triggerExternalFootprintCheck(state.searchQuery);
     }, 300);
   });
 

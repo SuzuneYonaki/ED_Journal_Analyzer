@@ -237,6 +237,28 @@ const i18n = {
     sort_main_star_asc: "主星系列 (O-B-A-F-G-K-M...)",
     sort_main_star_desc: "主星系列 (BH・特殊星〜)",
 
+    // External Footprint Check
+    external_check_label: "外部DB足跡チェック (Inara/Spansh/EDSM)",
+    external_check_tip: "入力した星系名がローカルDBに存在しない場合、Inara, Spansh, EDSM に登録・発見されているかを検索時に自動照会します（デフォルトOFF）",
+    footprint_local_db: "📍 ローカルDB探査記録あり (外部クエリ省略)",
+    footprint_checking: "⏳ 外部DB照会中...",
+    footprint_found: "👣 足跡あり (外部DB登録済)",
+    footprint_none: "✨ 未登録の可能性 (外部DB記録なし)",
+    footprint_error: "⚠️ 照会失敗 / タイムアウト",
+
+    // Stellar Luminosity & Degenerate Stages
+    star_luminosity_title: "光度階級 / 進化段階 (未指定は全対象):",
+    lum_I: "I 超巨星 (Supergiant)",
+    lum_II: "II 輝巨星 (Bright Giant)",
+    lum_III: "III 巨星 (Giant)",
+    lum_IV: "IV 準巨星 (Subgiant)",
+    lum_V: "V 主系列矮星 (Dwarf)",
+    lum_VI: "VI 準矮星 (Subdwarf)",
+    lum_VII: "VII / 縮退星 (Degenerate: D/N/BH)",
+    lum_mode_any: "いずれか (OR)",
+    lum_mode_all: "すべて一致 (AND)",
+    lum_clear: "クリア",
+
     btn_toggle_shared: "共有マーク",
     modal_export_title: "星系データ共有の安全性確認 (Lock)",
     modal_export_warn_title: "⚠️ 未売却探査データに関する重大な注意事項",
@@ -503,6 +525,28 @@ const i18n = {
     star_filter_clear: "Clear",
     sort_main_star_asc: "Main Star Class (O-B-A-F-G-K-M...)",
     sort_main_star_desc: "Main Star Class (Exotics/BH first)",
+
+    // External Footprint Check
+    external_check_label: "External Footprint Check (Inara/Spansh/EDSM)",
+    external_check_tip: "Check if the entered system is already recorded in Inara, Spansh, and EDSM when not found in local DB (Default OFF)",
+    footprint_local_db: "📍 Logged in local DB (External query skipped)",
+    footprint_checking: "⏳ Checking footprint...",
+    footprint_found: "👣 Footprint found (Recorded in external DB)",
+    footprint_none: "✨ Potential Uncharted (No record in external DB)",
+    footprint_error: "⚠️ Query failed / Timeout",
+
+    // Stellar Luminosity & Degenerate Stages
+    star_luminosity_title: "Luminosity / Stage (Unchecked = All):",
+    lum_I: "I Supergiant",
+    lum_II: "II Bright Giant",
+    lum_III: "III Giant",
+    lum_IV: "IV Subgiant",
+    lum_V: "V Main Sequence",
+    lum_VI: "VI Subdwarf",
+    lum_VII: "VII / Degenerate (D/N/BH)",
+    lum_mode_any: "Any (OR)",
+    lum_mode_all: "All (AND)",
+    lum_clear: "Clear",
 
     btn_toggle_shared: "Toggle Shared",
     modal_export_title: "System Data Sharing Safety Verification (Lock)",

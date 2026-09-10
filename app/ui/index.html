@@ -51,7 +51,7 @@
       <div class="brand">
         <img src="/static/icon.png" alt="Logo" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 6px;">
         <span class="logo-text">ED Journal Explorer</span>
-        <span class="version-badge">v0.0.6</span>
+        <span class="version-badge">v0.0.7</span>
       </div>
     </div>
 
@@ -137,6 +137,17 @@
         <div class="search-section">
           <div class="search-bar">
             <input type="text" id="system-search" class="search-input" placeholder="星系名を検索 (例: Sol, Beagle Point)...">
+          </div>
+
+          <!-- External Footprint Check Control & Status (Default OFF) -->
+          <div class="external-check-row" id="external-check-row">
+            <div class="external-check-top">
+              <label class="external-check-toggle" title="入力した星系名がローカルDBに存在しない場合、Inara, Spansh, EDSM に登録・発見されているかを検索時に自動照会します（デフォルトOFF）">
+                <input type="checkbox" id="cb-external-footprint" style="accent-color: var(--ed-orange); cursor: pointer;">
+                <span class="external-check-label" data-i18n="external_check_label">外部DB足跡チェック (Inara/Spansh/EDSM)</span>
+              </label>
+            </div>
+            <div id="external-footprint-result" class="external-footprint-result" style="display: none;"></div>
           </div>
 
           <!-- Collapsible Group 1: General & Planetary Filters -->
@@ -277,6 +288,48 @@
                 <label class="star-cb-label" style="grid-column: span 2;" title="Black Hole (ブラックホール: H, 超大質量)">
                   <input type="checkbox" class="star-filter-cb" value="H"> <span style="color: #c084fc; font-weight: bold;">H (BlackHole)</span>
                 </label>
+              </div>
+
+              <!-- Stellar Luminosity & Evolutionary Stages (Independent Filter) -->
+              <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed rgba(255, 255, 255, 0.12);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; font-size: 0.7rem;">
+                  <span style="color: #fed7aa; font-weight: bold;" data-i18n="star_luminosity_title">光度階級 / 進化段階 (未指定は全対象):</span>
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <label style="display: flex; align-items: center; gap: 2px; cursor: pointer; color: #a5f3fc; font-size: 0.68rem;" title="選択したいずれかの光度を含む星系">
+                      <input type="radio" name="lum-match-mode" value="any" checked style="cursor: pointer; accent-color: var(--ed-cyan);">
+                      <span data-i18n="lum_mode_any">OR</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 2px; cursor: pointer; color: #fbcfe8; font-size: 0.68rem;" title="選択したすべての光度を含む星系">
+                      <input type="radio" name="lum-match-mode" value="all" style="cursor: pointer; accent-color: #f472b6;">
+                      <span data-i18n="lum_mode_all">AND</span>
+                    </label>
+                    <button id="btn-clear-lum-filters" class="btn-page" style="padding: 1px 4px; font-size: 0.65rem;" data-i18n="lum_clear">クリア</button>
+                  </div>
+                </div>
+
+                <div class="luminosity-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; font-size: 0.7rem;">
+                  <label class="star-cb-label" title="Class I (超巨星: Ia0, Ia, Ib, Iab)">
+                    <input type="checkbox" class="lum-filter-cb" value="I"> <span style="color: #f43f5e; font-weight: bold;">I 超巨星</span>
+                  </label>
+                  <label class="star-cb-label" title="Class II (輝巨星: II, IIa, IIb)">
+                    <input type="checkbox" class="lum-filter-cb" value="II"> <span style="color: #fb923c; font-weight: bold;">II 輝巨星</span>
+                  </label>
+                  <label class="star-cb-label" title="Class III (巨星: 赤色巨星など)">
+                    <input type="checkbox" class="lum-filter-cb" value="III"> <span style="color: #facc15; font-weight: bold;">III 巨星 (Giant)</span>
+                  </label>
+                  <label class="star-cb-label" title="Class IV (準巨星: IV, IVa, IVb)">
+                    <input type="checkbox" class="lum-filter-cb" value="IV"> <span style="color: #a3e635; font-weight: bold;">IV 準巨星</span>
+                  </label>
+                  <label class="star-cb-label" title="Class V (主系列星/矮星: 太陽型等)">
+                    <input type="checkbox" class="lum-filter-cb" value="V"> <span style="color: #38bdf8; font-weight: bold;">V 主系列 (Dwarf)</span>
+                  </label>
+                  <label class="star-cb-label" title="Class VI (準矮星: 矮小化星)">
+                    <input type="checkbox" class="lum-filter-cb" value="VI"> <span style="color: #c084fc; font-weight: bold;">VI 準矮星 (Subdwarf)</span>
+                  </label>
+                  <label class="star-cb-label" style="grid-column: span 2;" title="Class VII / 縮退星 (白色矮星・中性子星・ブラックホール)">
+                    <input type="checkbox" class="lum-filter-cb" value="VII"> <span style="color: #e879f9; font-weight: bold;">VII / 縮退星 (D / N / BH)</span>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
