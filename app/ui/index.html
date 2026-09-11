@@ -51,7 +51,7 @@
       <div class="brand">
         <img src="/static/icon.png" alt="Logo" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 6px;">
         <span class="logo-text">ED Journal Explorer</span>
-        <span class="version-badge">v0.0.10</span>
+        <span class="version-badge">v0.1.0</span>
 
         <!-- Header Concept Mode Switcher Tabs -->
         <div class="header-concept-tabs" id="header-concept-tabs" style="display: inline-flex; align-items: center; gap: 3px; margin-left: 14px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); padding: 2px 4px; border-radius: 6px;">
@@ -171,8 +171,8 @@
             <input type="text" id="system-search" class="search-input" placeholder="星系名を検索 (例: Sol, Beagle Point)...">
           </div>
 
-          <!-- External Footprint Check Control & Status (Default OFF) -->
-          <div class="external-check-row" id="external-check-row">
+          <!-- External Footprint Check Control & Status (Temporarily hidden as requested) -->
+          <div class="external-check-row" id="external-check-row" style="display: none;">
             <div class="external-check-top">
               <label class="external-check-toggle" title="入力した星系名がローカルDBに存在しない場合、Inara, Spansh, EDSM に登録・発見されているかを検索時に自動照会します（デフォルトOFF）">
                 <input type="checkbox" id="cb-external-footprint" style="accent-color: var(--ed-orange); cursor: pointer;">

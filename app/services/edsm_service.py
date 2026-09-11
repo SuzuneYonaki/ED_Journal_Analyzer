@@ -22,6 +22,9 @@ from app.parser.exobiology import predict_exobiology_candidates
 
 EDSM_SYSTEM_API = "https://www.edsm.net/api-v1/system"
 EDSM_BODIES_API = "https://www.edsm.net/api-system-v1/bodies"
+
+# Feature flag: Temporarily disable external body completion as requested
+ENABLE_EDSM_BODY_COMPLETION = False
 REQUEST_DELAY_SEC = 1.0  # Respectful community delay between external API calls
 UNREGISTERED_RECHECK_COOLDOWN_SEC = 1800.0  # 30-minute in-memory cooldown before re-querying unregistered system
 
@@ -126,7 +129,7 @@ class EDSMService:
 
         req = urllib.request.Request(
             sys_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.0.10 (EDSM Discovery Integration)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.0 (EDSM Discovery Integration)"}
         )
 
         try:
@@ -150,7 +153,7 @@ class EDSMService:
         bodies_url = f"{EDSM_BODIES_API}?systemName={encoded_name}"
         bodies_req = urllib.request.Request(
             bodies_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.0.10 (EDSM Discovery Integration)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.0 (EDSM Discovery Integration)"}
         )
 
         first_discoverer = None
@@ -190,8 +193,8 @@ class EDSMService:
             WHERE system_address = ?
         """, (first_discoverer, submitted_at, body_count, system_address))
 
-        # Import or backfill missing bodies from EDSM
-        if bodies_list:
+        # Import or backfill missing bodies from EDSM (Temporarily disabled as requested)
+        if bodies_list and ENABLE_EDSM_BODY_COMPLETION:
             self._import_and_complete_bodies(conn, system_address, system_name, bodies_list)
 
         # Recalculate and update aggregated system statistics

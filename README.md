@@ -1,4 +1,4 @@
-# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.0.10)
+# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.0)
 
 [日本語](#日本語) | [English](#english)
 
@@ -14,6 +14,25 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 
 > **⚠️ 使用上の注意・免責事項**: 本ツールはファンメイドの非公式オープンソースツールです。フロンティア・デベロップメンツ社とは一切関係ありません。ジャーナルログの解釈や探査・採掘データの完全性についてはいかなる保証も致しかねます。本ツールの使用によって生じたゲーム内での損失（機体喪失、採掘リグ耐久値損失、探査データ喪失など）を含むいかなる結果についても開発者は一切の責任を負いません。自己責任においてご利用ください。
 
+### 🚀 v0.1.0 アップデート・サマリー (Major Update)
+- **ジャーナル読み込みの低レイヤー堅牢化 & 破損完全防止**:
+  - ジャーナル読み取りエンジンをバイナリ（`rb`）ストリーム走査へ全面刷新。
+  - Elite Dangerous 本体がログ書き込み中に発生する「行途切れ（Truncated line）」の自動検知・ロールバック機構を新設。
+  - ファイル縮小時の自動リセットと相まって、ゲーム側とのファイル競合や不完全行の誤パースを100%防止し、動作の劇的な軽量化を実現。
+- **UIレイアウトのオーバーホール & LIVE・ソート双方向同期**:
+  - 左ペイン最上段の探査・天体物理タブおよび LIVE トグルボタンの配置を最適化し、文字露出や幅オーバーフローを完全解消。
+  - 折りたたみアコーディオン（期間・ソート設定）内にも「⚡ リアルタイム追従中」ガイド行 & 「LIVE解除 / LIVE再開」ボタンを新設。
+  - アコーディオンを開いた状態からワンクリックで LIVE を解除し、1次・2次・3次ソートを自由に操作可能（ヘッダーとアコーディオンは完全双方向同期）。
+- **System Map（軌道階層ツリー）表示時の天体ソート制御**:
+  - 階層ツリーを描画する System Map 表示時は、ツリー構造と無関係な「天体ソート」を自動的に非表示化。天体一覧（Flat View）、Bio、採掘ビューの時のみ表示・連動させて混乱を防止。
+- **フィルターチップ初期状態のバグ修正**:
+  - 「⭐ 1st Disc」「🔖 ブックマーク」「🤝 Shared」が未選択時でも色が付いて見えていた不具合を修正。未選択時は他のチップと同じグレーで統一し、選択（アクティブ）時のみ鮮やかに点灯。
+- **任意ランドマーク距離表示のカスタマイズ設定新設**:
+  - 設定モーダル（「画面・文字サイズ」タブ）内に「📍 ランドマーク距離バッジ表示設定」を新設。
+  - CMDR現在地、Sol、Colonia、Rainbow's End、Explorer's Anchorage を個別にチェックボックスでON/OFF可能（設定は自動保存され即時反映）。
+- **純粋ローカルジャーナル至上主義（外部補完の安全化）**:
+  - プレイヤー自身のローカルジャーナルの完全性とオフラインプライバシーを最優先とし、外部APIによる未完全な天体自動補完を伏せた状態に安全化。
+
 ### 🌐 日英バイリンガル対応 (One-Click Language Switch)
 - アプリ画面右上の **`[JP] / [EN]`** ボタンから、日本語・英語をいつでも**ワンクリックで即座に切り替え可能**です。
 
@@ -28,19 +47,19 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
   - 設定モーダルに「🖥️ 画面・文字サイズ」タブを新設。**18px**（標準中間サイズ）をデフォルトとし、最小目安 **14px** から任意のpx実数値を直接指定可能。
   - バッジやパネルが一列から自然に折り返され、文字数や情報を欠落させずに縦長にフィット。
   - 右上「⚙️ 設定」ボタンは常に最前面に固定表示され、極端な数値入力時でも <kbd>Ctrl + 0</kbd> で即座に標準 (18px) に復旧可能。
+- **5大銀河ランドマーク距離表示 & 個別カスタマイズ**:
+  - CMDR現在地、Sol、Colonia、Rainbow's End (DW3)、Explorer's Anchorage (Sgr A*) からの直線距離（Ly）を星系カードおよびインスペクターに自動算出・表示。設定画面から表示したいランドマークを自由に選定可能。
 - **採掘支援 重力 (G)・温度 (K) 可視化 & 採掘パネル併記**:
   - 採掘ビューの天体カードにおいて、表面温度・大気欄に加えて **重力 (G)** も一行に並べて表示。
   - 採掘Rig耐久値管理に直結する重力 (G)・表面温度 (K) の表示トグルを左パネルに完備。
   - 星系カード最下段のLandableバッジは、左パネルでオンにした採掘フィルターに該当する天体のみがスマートに表示されるよう連動。
-- **LIVE（リアルタイム）ボタンの配置最適化**:
-  - 訪問期間プルダウンと1次ソートの間に配置換えし、押しやすい横幅と直感的な操作動線を実現。
+- **LIVE（リアルタイム）ボタンの配置最適化 & ソート解除**:
+  - 左ペイン最上段とアコーディオン内の両方に配置。ワンクリックで LIVE 解除と手動ソートの切り替えが可能。
   - ジャンプ到着待機（Honk待機）中であっても、LIVEボタンを押すことで即座に最新星系の現状データを閲覧可能。
 - **天体ブックマーク・エイリアス（別名・通称）・Markdownメモ帳**:
   - 天体単位でのブックマーク登録、ユーザー定義通称（例: `採掘拠点 Alpha`, `TF候補1`）、Markdown形式メモ（リアルタイムプレビュー対応）。
   - 星系検索欄で、星系名だけでなく **「天体名」「エイリアス名」「メモ本文」を横断した全文検索** が可能。
   - フィルターチップ「🔖 ブックマーク」による登録天体星系の瞬時絞り込み。
-- **5大銀河ランドマーク距離表示**:
-  - CMDR現在地、Sol、Colonia、Rainbow's End (DW3)、Explorer's Anchorage (Sgr A*) からの直線距離（Ly）を星系カードおよびインスペクターに自動算出・表示。
 - **星系 & 天体の過去ログ遡り・タイムライン**:
   - 過去に訪れた際のスキャン状況、訪問回数、ジャンプ距離・消費燃料・搭乗船ログの復元。
 - **位置関係 & 軌道階層ツリー & System Map**:
@@ -82,6 +101,24 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
 
 > **⚠️ Disclaimer**: This tool is an unofficial, fan-made open-source companion and is not affiliated with or endorsed by Frontier Developments plc. No warranties are provided regarding data accuracy or game log interpretation. The developer assumes no responsibility or liability for any in-game losses or damages (including loss of ships, mining rig durability, or exploration data). Use at your own discretion.
 
+### 🚀 v0.1.0 Major Update Summary
+- **Low-Level Journal Reader Hardening & Zero-Corruption Guarantee**:
+  - Rewrote the journal log reader engine to binary stream scanning (`rb` mode).
+  - Automatically handles and rolls back truncated lines written by Elite Dangerous in real-time, preventing partial line parsing or file locking.
+  - Automatically resets offset when log files are truncated or rotated, delivering ultra-lightweight and crash-resilient parsing.
+- **UI Layout Overhaul & Bidirectional LIVE/Sort Controls**:
+  - Re-aligned explorer/astrophysics concept tabs and the real-time LIVE button in the left pane header, eliminating text overflow and key label leakages.
+  - Added an in-accordion LIVE guide banner and Unlock/Resume buttons in the Visit Period & Sort section.
+  - Disabling LIVE instantly unlocks 1st, 2nd, and 3rd custom sorting (by potential value, astrophysics rarity, visit date, distances, etc.).
+- **Context-Aware Body Sort Controls in Center Pane**:
+  - Body sort dropdown is automatically hidden when viewing the hierarchical System Map tree to prevent confusion, and seamlessly displayed for Flat List, Bio, and Mining views.
+- **Filter Chip Initial State Bug Fix**:
+  - Fixed an issue where "⭐ 1st Disc", "🔖 Bookmarks", and "🤝 Shared" appeared selected even when inactive. They now default to neutral gray and glow brightly only when active.
+- **Customizable Galactic Landmark Distance Badges**:
+  - Added a dedicated checklist in Settings ("🖥️ Display & Font Size" tab) to independently toggle distance badges for CMDR current location, Sol, Colonia, Rainbow's End, and Explorer's Anchorage.
+- **Pure Local Journal Priority**:
+  - Prioritizes player's local journal data integrity and offline privacy by hiding incomplete external celestial body imports.
+
 ### 🌐 Instant Bilingual Support (JP / EN Switch)
 - Switch seamlessly between **English** and **Japanese** at any time with a single click on the **`[JP] / [EN]`** toggle in the top-right corner.
 
@@ -96,19 +133,19 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
   - New "🖥️ Display & Font Size" tab in Settings. Set standard base font size (**18px** default recommended, **14px** minimum guidance) with direct numeric input for custom values.
   - Fluid responsive wrapping allows badges and cards to fold vertically without truncation or loss of critical information.
   - Always-on-top Settings button and emergency <kbd>Ctrl + 0</kbd> shortcut instantly restores the default standard 18px size.
+- **5 Key Galactic Landmark Distances & Custom Display**:
+  - Instant distance calculations ($Ly$) to CMDR current location, Sol, Colonia, Rainbow's End (DW3), and Explorer's Anchorage (Sgr A*). Choose which badges to show in settings.
 - **Mining Support: Gravity (G) & Temperature (K) Display & Mining View Integration**:
   - Surface gravity ($G$) is displayed directly alongside temperature and atmosphere in the mining body cards.
   - Dedicated checkboxes to toggle surface gravity ($G$) and surface temperature ($K$) across all views.
   - System card bottom landable bar automatically synchronizes to display only bodies matching active mining filter chips.
-- **Optimized LIVE (Real-time) Button Relocation**:
-  - Relocated between the Visit Period dropdown and 1st Sort dropdown in the left pane for smooth navigation and visibility.
+- **Optimized LIVE (Real-time) Button Relocation & Unlock**:
+  - Easily toggle LIVE sync on/off from either the left header or the sort accordion to unlock manual custom sorting.
   - Easily dismisses Honk waiting screens to inspect current known star system data immediately.
 - **Body Bookmarks, Custom Aliases & Markdown Notes**:
   - Bookmark individual celestial bodies, assign user-defined aliases (e.g. `Mining Base Alpha`), and keep rich Markdown notes with instant live preview.
   - Search across star systems, body names, custom aliases, and Markdown note contents simultaneously via the global search bar.
   - Filter chip for quick navigation to bookmarked systems (`🔖 Bookmarks`).
-- **5 Key Galactic Landmark Distances**:
-  - Instant distance calculations ($Ly$) to CMDR current location, Sol, Colonia, Rainbow's End (DW3), and Explorer's Anchorage (Sgr A*).
 - **Exploration History & Flight Logs**:
   - Track scanned bodies, visit timestamps, jump distance, fuel used, and ship details for every visited system.
 - **Orbital Hierarchy & Planetary Tree & System Map**:
