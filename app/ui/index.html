@@ -116,6 +116,12 @@
     </div>
 
     <div class="header-actions">
+      <!-- Manual Log Rescan Button (Instant access without opening settings) -->
+      <button id="btn-rescan" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #fed7aa; background: rgba(255, 113, 0, 0.15); border: 1px solid rgba(255, 113, 0, 0.5); display: flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" title="最新のジャーナルログを即座に再解析・同期します">
+        <span id="rescan-icon">🔄</span>
+        <span id="rescan-text" data-i18n="btn_rescan">ログスキャン</span>
+      </button>
+
       <!-- Import Shared Package Button -->
       <button id="btn-import-open" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #c4b5fd; background: rgba(167, 139, 250, 0.15); border: 1px solid #a78bfa; display: flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" title="📥 共有星系パッケージ (.edsys) をインポート">
         <span data-i18n="btn_import_pkg">📥 共有インポート</span>
@@ -186,7 +192,10 @@
                 <span class="collapsible-chevron">▼</span>
                 <span data-i18n="section_general_filters">🪐 一般天体・属性フィルター</span>
               </div>
-              <span class="collapsible-badge" id="badge-general-filters"></span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button id="btn-clear-general-filters" class="btn-page" style="padding: 1px 6px; font-size: 0.65rem;" data-i18n="filter_clear">クリア</button>
+                <span class="collapsible-badge" id="badge-general-filters"></span>
+              </div>
             </div>
             <div class="collapsible-body">
               <div class="filter-chips">
@@ -211,7 +220,10 @@
                 <span class="collapsible-chevron">▼</span>
                 <span data-i18n="section_mining_filters">⛏️ 採掘・Landable天体フィルター</span>
               </div>
-              <span class="collapsible-badge" id="badge-mining-filters"></span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button id="btn-clear-mining-filters" class="btn-page" style="padding: 1px 6px; font-size: 0.65rem;" data-i18n="filter_clear">クリア</button>
+                <span class="collapsible-badge" id="badge-mining-filters"></span>
+              </div>
             </div>
             <div class="collapsible-body">
               <div class="filter-chips mining-filter-chips" style="display: flex; flex-wrap: wrap; gap: 4px;">

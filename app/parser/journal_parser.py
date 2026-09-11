@@ -893,9 +893,14 @@ class JournalParser:
         if not path.exists():
             return
 
-        stat = path.stat()
-        file_size = stat.st_size
-        last_mod = stat.st_mtime
+        try:
+            stat = path.stat()
+            file_size = stat.st_size
+            last_mod = stat.st_mtime
+        except (OSError, PermissionError):
+            # File might be temporarily locked or being created by Elite Dangerous; retry safely later
+            return
+
         filename = path.name
 
         self.cursor.execute("SELECT file_size, last_modified, last_line_offset FROM parsed_files WHERE filename = ?", (filename,))
@@ -907,15 +912,41 @@ class JournalParser:
                 # Already up to date
                 return
             start_offset = row["last_line_offset"] or 0
+            # If file was truncated or recreated, reset offset to start of file
+            if file_size < start_offset:
+                start_offset = 0
 
-        line_count = 0
-        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
-            if start_offset > 0:
-                f.seek(start_offset)
-            for line in f:
-                self.process_journal_line(line)
-                line_count += 1
-            current_offset = f.tell()
+        # Non-blocking safe read: Open file in binary read-only mode for exact byte offsets.
+        # To prevent race conditions with Elite Dangerous disk flushes, read line by line
+        # ensuring any trailing incomplete line (missing newline) is NOT processed and offset is wound back.
+        try:
+            with open(filepath, "rb") as f:
+                if start_offset > 0:
+                    f.seek(start_offset)
+
+                valid_bytes_processed = start_offset
+                while True:
+                    line_start_pos = f.tell()
+                    raw_bytes = f.readline()
+                    if not raw_bytes:
+                        break
+
+                    # Check if line was completely written (must end with newline b'\n' or b'\r')
+                    # If file ends without newline, Elite Dangerous is currently buffering/writing this line!
+                    if not raw_bytes.endswith(b"\n") and not raw_bytes.endswith(b"\r"):
+                        # Incomplete line! Do NOT advance offset past line_start_pos
+                        break
+
+                    line = raw_bytes.decode("utf-8", errors="replace")
+                    self.process_journal_line(line)
+                    valid_bytes_processed = f.tell()
+
+                current_offset = valid_bytes_processed
+        except (PermissionError, OSError) as read_err:
+            # If Elite Dangerous is holding an exclusive write/flush handle, don't crash or corrupt.
+            # The next watcher cycle will safely pick it up.
+            print(f"[Journal Read Warning] File locked or unavailable ({filename}): {read_err}")
+            return
 
         # Batch-update systems modified during this file's parse
         self.flush_dirty_systems()
@@ -944,4 +975,4 @@ class JournalParser:
                 progress_callback(count, total, Path(fpath).name)
         self.flush_dirty_systems()
         self.conn.commit()
-        return total
+        return count

@@ -3708,6 +3708,35 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Clear Filter Buttons (General & Mining groups)
+  const btnClearGeneral = document.getElementById('btn-clear-general-filters');
+  if (btnClearGeneral) {
+    btnClearGeneral.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('#group-general-filters .chip').forEach(chip => {
+        chip.classList.remove('active');
+        state.filters[chip.dataset.filter] = false;
+      });
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  }
+
+  const btnClearMining = document.getElementById('btn-clear-mining-filters');
+  if (btnClearMining) {
+    btnClearMining.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('#group-mining-filters .chip').forEach(chip => {
+        chip.classList.remove('active');
+        state.filters[chip.dataset.filter] = false;
+      });
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  }
+
   // Mining display toggles (Gravity & Temperature)
   const toggleGrav = document.getElementById('toggle-mining-gravity');
   const toggleTemp = document.getElementById('toggle-mining-temp');
@@ -4150,22 +4179,55 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Scan Button (if exists)
+  // Manual Rescan Button (Header)
   const btnRescan = document.getElementById('btn-rescan');
   if (btnRescan) {
     btnRescan.addEventListener('click', async () => {
-      try {
-        const res = await fetch('/api/scan_now', { method: 'POST' });
-        pollScanProgress();
-      } catch (err) {
-        console.error('Failed to trigger scan:', err);
-      }
+      await triggerManualRescan();
     });
   }
 
   // Start Realtime Live Sync
   initLiveSync();
 });
+
+async function triggerManualRescan() {
+  updateRescanButtonUI(true);
+  try {
+    await fetch('/api/scan_now', { method: 'POST' });
+    pollScanProgress();
+  } catch (err) {
+    console.error('Failed to trigger scan:', err);
+    updateRescanButtonUI(false);
+  }
+}
+
+function updateRescanButtonUI(isScanning) {
+  const btn = document.getElementById('btn-rescan');
+  const icon = document.getElementById('rescan-icon');
+  const text = document.getElementById('rescan-text');
+  const modalBtn = document.getElementById('btn-modal-rescan');
+
+  if (btn) {
+    btn.disabled = isScanning;
+    btn.style.opacity = isScanning ? '0.7' : '1';
+    btn.style.cursor = isScanning ? 'wait' : 'pointer';
+  }
+  if (icon) {
+    if (isScanning) {
+      icon.style.display = 'inline-block';
+      icon.style.animation = 'spin 1s linear infinite';
+    } else {
+      icon.style.animation = 'none';
+    }
+  }
+  if (text) {
+    text.innerText = isScanning ? (t('btn_scanning') || '解析中...') : (t('btn_rescan') || 'ログスキャン');
+  }
+  if (modalBtn) {
+    modalBtn.disabled = isScanning;
+  }
+}
 
 function updateLiveSyncButtonUI() {
   const btn = document.getElementById('btn-live-toggle');
@@ -4497,6 +4559,7 @@ function pollScanProgress() {
 
         clearInterval(scanPollInterval);
         scanPollInterval = null;
+        updateRescanButtonUI(false);
 
         // Instant full UI refresh
         fetchGlobalStats();
@@ -4514,6 +4577,7 @@ function pollScanProgress() {
         clearInterval(scanPollInterval);
         scanPollInterval = null;
       }
+      updateRescanButtonUI(false);
     }
   }, 250);
 }
@@ -5052,7 +5116,7 @@ async function initSettingsModal() {
       }
 
       // Trigger scan
-      triggerScanNow();
+      await triggerManualRescan();
       if (modalScanStatusText) {
         modalScanStatusText.innerText = 'ログスキャンを開始しました...';
       }
