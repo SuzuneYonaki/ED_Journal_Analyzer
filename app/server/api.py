@@ -1505,6 +1505,23 @@ class ImportExecuteRequest(BaseModel):
     overwrite: Optional[bool] = False
     consent_token: bool = False
 
+@app.post("/api/external/import_edsm")
+def import_edsm_external_system(system_name: str):
+    """
+    Imports and completes an unvisited system by name directly from EDSM.
+    Enables viewing and analyzing star systems never visited by the player,
+    while strictly restricting export/package operations.
+    """
+    clean_name = (system_name or "").strip()
+    if not clean_name:
+        return JSONResponse({"error": "星系名が指定されていません。"}, status_code=400)
+
+    result = edsm_service.import_unvisited_system_by_name(clean_name)
+    if not result.get("success"):
+        return JSONResponse({"error": result.get("error", "EDSMからのインポートに失敗しました。")}, status_code=404)
+
+    return JSONResponse(result)
+
 @app.get("/api/export/html/{system_address}")
 def export_standalone_html_endpoint(
     system_address: int,
@@ -1518,6 +1535,11 @@ def export_standalone_html_endpoint(
     if not sys_row:
         conn.close()
         return JSONResponse({"error": "System not found"}, status_code=404)
+
+    # Restriction: Unvisited external systems cannot be exported
+    if sys_row["is_external"] == 1 or (sys_row["visit_count"] or 0) == 0:
+        conn.close()
+        return JSONResponse({"error": "外部参照（未訪問）星系のため、Web共有HTMLのエクスポートは行えません。"}, status_code=403)
 
     system_data = dict(sys_row)
     c.execute("SELECT * FROM bodies WHERE system_address = ? ORDER BY distance_from_arrival_ls ASC, body_id ASC", (system_address,))
@@ -1555,6 +1577,15 @@ def export_package_endpoint(payload: ExportPackageRequest):
 
     conn = get_db_connection()
     try:
+        # Restriction: Check for unvisited external systems
+        placeholders = ",".join("?" * len(payload.system_addresses))
+        c = conn.cursor()
+        c.execute(f"SELECT star_system FROM systems WHERE system_address IN ({placeholders}) AND (is_external = 1 OR visit_count = 0)", payload.system_addresses)
+        ext_rows = c.fetchall()
+        if ext_rows:
+            ext_names = [r["star_system"] for r in ext_rows]
+            return JSONResponse({"error": f"外部参照（未訪問）星系 ({', '.join(ext_names)}) はパッケージ書き出しできません。"}, status_code=403)
+
         package = create_edsys_package(
             conn,
             system_addresses=payload.system_addresses,
@@ -1574,6 +1605,15 @@ def export_package_save_local(payload: SavePackageLocalRequest):
 
     conn = get_db_connection()
     try:
+        # Restriction: Check for unvisited external systems
+        placeholders = ",".join("?" * len(payload.system_addresses))
+        c = conn.cursor()
+        c.execute(f"SELECT star_system FROM systems WHERE system_address IN ({placeholders}) AND (is_external = 1 OR visit_count = 0)", payload.system_addresses)
+        ext_rows = c.fetchall()
+        if ext_rows:
+            ext_names = [r["star_system"] for r in ext_rows]
+            return JSONResponse({"error": f"外部参照（未訪問）星系 ({', '.join(ext_names)}) はパッケージ書き出しできません。"}, status_code=403)
+
         package = create_edsys_package(
             conn,
             system_addresses=payload.system_addresses,

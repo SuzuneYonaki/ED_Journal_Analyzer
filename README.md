@@ -1,4 +1,4 @@
-# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.0)
+# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.1)
 
 [日本語](#日本語) | [English](#english)
 
@@ -13,6 +13,19 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 > 銀河の遥かなる長旅の記録や、過去の深宇宙探索・初発見の思い出をいつでも鮮明に振り返ることができます。
 
 > **⚠️ 使用上の注意・免責事項**: 本ツールはファンメイドの非公式オープンソースツールです。フロンティア・デベロップメンツ社とは一切関係ありません。ジャーナルログの解釈や探査・採掘データの完全性についてはいかなる保証も致しかねます。本ツールの使用によって生じたゲーム内での損失（機体喪失、採掘リグ耐久値損失、探査データ喪失など）を含むいかなる結果についても開発者は一切の責任を負いません。自己責任においてご利用ください。
+
+### 🚀 v0.1.1 アップデート・サマリー
+- **未訪問星系の EDSM オンデマンド参照ロード機能（安全ロック保護付き）**:
+  - 検索バー下の「外部DB足跡チェック」で EDSM 足跡（登録）が確認された未訪問星系について、「🚀 EDSMから星系データをロード（未訪問参照）」ボタンを新設。
+  - フライト履歴のない星系でもオンデマンドで EDSM より座標・星系情報・全天体データを取得・インポートし、System Map や天体インスペクターで自由に軌道構造・天体スペックを閲覧可能に。
+  - **厳格なエクスポート保護（安全ロック）**: 未訪問の外部参照星系（`is_external = 1` または `visit_count = 0`）は、プレイヤー自身の探査記録と混同されないよう、**Web共有HTML生成（`btn-export-html`）およびパッケージ書き出し（`btn-export-pkg`）はUI上で完全非表示化＆バックエンド 403 Forbidden による二重保護ブロック**を徹底。また星系統計（訪問星系数・総探査額）にも加算されません。
+  - 星系一覧カードおよび詳細ヘッダーに `🌐 外部参照 (未訪問)` バッジを明示。
+- **ヘッダーUIの整理・一本化**:
+  - ヘッダー部の「ジャーナル探査」「天体物理」ボタンを左ペイン側のコンセプトタブに一本化し、ヘッダーの横幅を確保して統計情報や現在地表示をより見やすく整理。
+- **ヘッダーログスキャンボタンのアイコン重複修正**:
+  - ログスキャンボタンでリロードマーク `🔄` が2個並んで表示されていた問題を修正し、1個のスッキリした表示に改善。
+- **バージョニング運用ルールの適用**:
+  - 通常アップデート時は最下位桁（下3桁目 `v0.0.x`）を繰り上げ（`v0.1.0` → `v0.1.1`）。
 
 ### 🚀 v0.1.0 アップデート・サマリー (Major Update)
 - **ジャーナル読み込みの低レイヤー堅牢化 & 破損完全防止**:
@@ -109,6 +122,19 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
 > Relive and explore your epic expedition memories, first discoveries, and galaxy travels anytime with complete offline privacy.
 
 > **⚠️ Disclaimer**: This tool is an unofficial, fan-made open-source companion and is not affiliated with or endorsed by Frontier Developments plc. No warranties are provided regarding data accuracy or game log interpretation. The developer assumes no responsibility or liability for any in-game losses or damages (including loss of ships, mining rig durability, or exploration data). Use at your own discretion.
+
+### 🚀 v0.1.1 Update Summary
+- **On-Demand EDSM Reference Loading for Unvisited Systems (with Security Lockout)**:
+  - Added a "🚀 EDSMから星系データをロード（未訪問参照）" button in the External Footprint Check panel when a system is discovered on EDSM.
+  - Allows pilots to retrieve and import stellar coordinates, system allegiance, and complete celestial body hierarchies directly into the local DB without needing flight journal logs, enabling immediate inspection in the System Map and Celestial Inspector.
+  - **Strict Security Lockout**: Unvisited reference systems (`is_external = 1` or `visit_count = 0`) are completely barred from Web Share HTML generation (`btn-export-html`) and `.edsys` package export (`btn-export-pkg`) via both UI hiding and dual-layer backend HTTP 403 Forbidden enforcement. They are also excluded from personal expedition statistics (visited count and total payouts).
+  - Explicit `🌐 外部参照 (未訪問)` badges are rendered on system cards and the detail header.
+- **Header UI Streamlining**:
+  - Consolidated redundant Explorer / Astrophysics concept buttons from the top header into the left pane tabs, freeing up horizontal space for system stats and CMDR coordinates.
+- **Fixed Duplicate Reload Icon in Header Rescan Button**:
+  - Removed duplicate `🔄` emoji rendering from the header Log Rescan button, restoring a clean single icon layout.
+- **Semantic Versioning Convention**:
+  - Adopted automatic patch level increments (`v0.0.x`) for standard updates (`v0.1.0` → `v0.1.1`).
 
 ### 🚀 v0.1.0 Major Update Summary
 - **Low-Level Journal Reader Hardening & Zero-Corruption Guarantee**:

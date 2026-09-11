@@ -94,7 +94,8 @@ def init_db(conn=None):
         is_shared INTEGER DEFAULT 0,
         shared_by TEXT DEFAULT '',
         shared_at TEXT DEFAULT '',
-        shared_notes TEXT DEFAULT ''
+        shared_notes TEXT DEFAULT '',
+        is_external INTEGER DEFAULT 0
     );
     """)
 
@@ -328,6 +329,7 @@ def init_db(conn=None):
         ("shared_by", "TEXT DEFAULT ''"),
         ("shared_at", "TEXT DEFAULT ''"),
         ("shared_notes", "TEXT DEFAULT ''"),
+        ("is_external", "INTEGER DEFAULT 0"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE systems ADD COLUMN {col_def[0]} {col_def[1]};")
@@ -335,6 +337,7 @@ def init_db(conn=None):
             pass
 
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_shared ON systems(is_shared);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_external ON systems(is_external);")
 
     for col_def in [
         ("star_pos_x", "REAL"),

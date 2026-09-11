@@ -161,6 +161,165 @@ class EDSMService:
         self._throttle_delay()
         return self._fetch_and_update_system(system_address, system_name)
 
+    def import_unvisited_system_by_name(self, system_name: str) -> dict:
+        """
+        Fetches an unvisited system by name directly from EDSM and inserts/updates it into
+        the database with is_external = 1, visit_count = 0.
+        Also fetches and completes all celestial bodies so the user can inspect it immediately.
+        """
+        clean_name = (system_name or "").strip()
+        if not clean_name:
+            return {"success": False, "error": "System name is empty"}
+
+        self._throttle_delay()
+        encoded_name = urllib.parse.quote(clean_name)
+        sys_url = f"{EDSM_SYSTEM_API}?systemName={encoded_name}&showInformation=1&showCoordinates=1"
+
+        req = urllib.request.Request(
+            sys_url,
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.1 (External System Import)"}
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=10.0) as resp:
+                if resp.status != 200:
+                    return {"success": False, "error": f"EDSM HTTP {resp.status}"}
+                sys_data = json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+        if not sys_data or not isinstance(sys_data, dict) or not sys_data.get("name"):
+            return {"success": False, "error": f"System '{clean_name}' not found on EDSM"}
+
+        star_sys_name = sys_data.get("name")
+        system_address = sys_data.get("id64")
+        if not system_address:
+            system_address = sys_data.get("id")
+
+        if not system_address:
+            return {"success": False, "error": "System address (id64) not found in EDSM response"}
+
+        coords = sys_data.get("coords") or {}
+        pos_x = coords.get("x")
+        pos_y = coords.get("y")
+        pos_z = coords.get("z")
+
+        sol_dist = 0.0
+        if pos_x is not None and pos_y is not None and pos_z is not None:
+            sol_dist = round((pos_x * pos_x + pos_y * pos_y + pos_z * pos_z) ** 0.5, 1)
+
+        info = sys_data.get("information") or {}
+        allegiance = info.get("allegiance")
+        government = info.get("government")
+        economy = info.get("economy")
+        security = info.get("security")
+        population = info.get("population") or 0
+
+        # Fetch bodies from EDSM
+        self._throttle_delay()
+        bodies_url = f"{EDSM_BODIES_API}?systemName={encoded_name}"
+        bodies_req = urllib.request.Request(
+            bodies_url,
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.1 (External System Import)"}
+        )
+
+        first_discoverer = None
+        submitted_at = None
+        body_count = 0
+        bodies_list = []
+
+        try:
+            with urllib.request.urlopen(bodies_req, timeout=10.0) as b_resp:
+                if b_resp.status == 200:
+                    b_data = json.loads(b_resp.read().decode("utf-8"))
+                    if isinstance(b_data, dict):
+                        body_count = b_data.get("bodyCount", 0)
+                        bodies_list = b_data.get("bodies", [])
+        except Exception as e:
+            print(f"[EDSM Service] Error fetching bodies for {star_sys_name}: {e}")
+
+        for b in bodies_list:
+            disc = b.get("discovery")
+            if isinstance(disc, dict) and disc.get("commander"):
+                if not first_discoverer:
+                    first_discoverer = disc.get("commander")
+                    submitted_at = disc.get("date")
+                break
+
+        conn = get_db_connection()
+        c = conn.cursor()
+
+        c.execute("SELECT system_address, visit_count, is_external FROM systems WHERE system_address = ?", (system_address,))
+        existing_sys = c.fetchone()
+
+        if existing_sys:
+            c.execute("""
+                UPDATE systems SET
+                    star_system = ?,
+                    star_pos_x = COALESCE(?, star_pos_x),
+                    star_pos_y = COALESCE(?, star_pos_y),
+                    star_pos_z = COALESCE(?, star_pos_z),
+                    sol_distance_ly = CASE WHEN ? > 0 THEN ? ELSE sol_distance_ly END,
+                    system_allegiance = COALESCE(?, system_allegiance),
+                    system_government = COALESCE(?, system_government),
+                    system_economy = COALESCE(?, system_economy),
+                    system_security = COALESCE(?, system_security),
+                    population = CASE WHEN ? > 0 THEN ? ELSE population END,
+                    edsm_checked = 1,
+                    edsm_registered = 1,
+                    edsm_first_discoverer = ?,
+                    edsm_submitted_at = ?,
+                    edsm_body_count = ?
+                WHERE system_address = ?
+            """, (
+                star_sys_name, pos_x, pos_y, pos_z, sol_dist, sol_dist,
+                allegiance, government, economy, security, population, population,
+                first_discoverer, submitted_at, body_count, system_address
+            ))
+        else:
+            c.execute("""
+                INSERT INTO systems (
+                    system_address, star_system, star_pos_x, star_pos_y, star_pos_z, sol_distance_ly,
+                    system_allegiance, system_government, system_economy, system_security, population,
+                    first_visited, last_visited, visit_count, is_external,
+                    edsm_checked, edsm_registered, edsm_first_discoverer, edsm_submitted_at, edsm_body_count
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?,
+                    NULL, NULL, 0, 1,
+                    1, 1, ?, ?, ?
+                )
+            """, (
+                system_address, star_sys_name, pos_x, pos_y, pos_z, sol_dist,
+                allegiance, government, economy, security, population,
+                first_discoverer, submitted_at, body_count
+            ))
+
+        completed_count = 0
+        if bodies_list:
+            completed_count = self._import_and_complete_bodies(conn, system_address, star_sys_name, bodies_list)
+
+        self._update_system_aggregated_stats(conn, system_address)
+
+        conn.commit()
+        conn.close()
+
+        try:
+            from app.server.api import manager
+            manager.notify_update_from_thread(None)
+        except Exception:
+            pass
+
+        return {
+            "success": True,
+            "system_address": system_address,
+            "star_system": star_sys_name,
+            "first_discoverer": first_discoverer,
+            "body_count": body_count,
+            "completed_bodies": completed_count,
+            "is_external": 1 if not existing_sys or existing_sys["visit_count"] == 0 else 0
+        }
+
     def _fetch_and_update_system(self, system_address: int, system_name: str) -> dict:
         """Fetches system info and body discoveries from EDSM and updates the database."""
         encoded_name = urllib.parse.quote(system_name)
@@ -168,7 +327,7 @@ class EDSMService:
 
         req = urllib.request.Request(
             sys_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.0 (EDSM Discovery Integration)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.1 (EDSM Discovery Integration)"}
         )
 
         try:
@@ -192,7 +351,7 @@ class EDSMService:
         bodies_url = f"{EDSM_BODIES_API}?systemName={encoded_name}"
         bodies_req = urllib.request.Request(
             bodies_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.0 (EDSM Discovery Integration)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.1 (EDSM Discovery Integration)"}
         )
 
         first_discoverer = None

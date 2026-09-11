@@ -51,19 +51,7 @@
       <div class="brand">
         <img src="/static/icon.png" alt="Logo" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 6px;">
         <span class="logo-text">ED Journal Explorer</span>
-        <span class="version-badge">v0.1.0</span>
-
-        <!-- Header Concept Mode Switcher Tabs -->
-        <div class="header-concept-tabs" id="header-concept-tabs" style="display: inline-flex; align-items: center; gap: 3px; margin-left: 14px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); padding: 2px 4px; border-radius: 6px;">
-          <button id="btn-tab-explorer" class="concept-tab-btn active" style="display: flex; align-items: center; gap: 5px; padding: 3px 10px; font-size: 0.78rem; font-weight: bold; border-radius: 4px; border: 1px solid transparent; cursor: pointer; color: var(--ed-orange); background: rgba(255, 113, 0, 0.15);" title="ジャーナル探査・星系マップモード">
-            <span>🧭</span>
-            <span data-i18n="concept_tab_explorer">ジャーナル探査</span>
-          </button>
-          <button id="btn-tab-physics" class="concept-tab-btn" style="display: flex; align-items: center; gap: 5px; padding: 3px 10px; font-size: 0.78rem; font-weight: bold; border-radius: 4px; border: 1px solid transparent; cursor: pointer; color: #a5f3fc; background: transparent; transition: all 0.2s ease;" title="ED_Analysys 天体物理・レア度解析モード">
-            <span>🌌</span>
-            <span data-i18n="concept_tab_physics">ED_Analysys (天体物理)</span>
-          </button>
-        </div>
+        <span class="version-badge">v0.1.1</span>
       </div>
     </div>
 
@@ -558,6 +546,7 @@
           <button id="btn-sync-edsm" class="btn-icon" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 4px; padding: 2px 6px; cursor: pointer; display: none; align-items: center; gap: 3px; font-size: 0.72rem;" title="EDSMから天体情報と発見ステータスを即時照会・補完します">
             <span>🔄 EDSM同期</span>
           </button>
+          <div id="current-system-external-badge" style="margin-left: 4px; display: none;"></div>
           <div id="current-system-shared-badge" style="margin-left: 4px; display: none;"></div>
           <div id="current-system-physics-badge" style="margin-left: 4px; display: none; cursor: pointer;" title="クリックして天体物理・レア度レポートを表示"></div>
           <div id="current-system-distances" style="display: flex; gap: 3px; align-items: center; margin-left: 6px; flex-wrap: wrap;"></div>
@@ -867,7 +856,7 @@
                 <div style="font-weight: bold; color: #fff;">手動ログスキャン実行</div>
                 <div style="font-size: 0.75rem; color: var(--text-secondary);">全ジャーナルファイルを再解析しデータベースを更新します</div>
               </div>
-              <button id="btn-modal-rescan" class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem;" data-i18n="btn_rescan">
+              <button id="btn-modal-rescan" class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem;" data-i18n="btn_modal_rescan">
                 🔄 ログスキャン開始
               </button>
             </div>

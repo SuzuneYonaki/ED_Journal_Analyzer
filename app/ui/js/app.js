@@ -719,6 +719,9 @@ function renderSystemList() {
       const sharedTip = sys.shared_by ? `${t('shared_by_label')}: ${sys.shared_by}` : t('shared_system');
       tags.push(`<span class="tag-badge tag-shared" style="background: rgba(167, 139, 250, 0.2); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.6); font-weight: bold;" title="${sharedTip}">🤝 Shared</span>`);
     }
+    if (sys.is_external || sys.visit_count === 0) {
+      tags.push('<span class="tag-badge tag-external" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-weight: bold;" title="未訪問・EDSM外部参照星系（Web共有/パッケージ書出は不可）">🌐 外部参照 (未訪問)</span>');
+    }
     if (sys.composite_score !== null && sys.composite_score !== undefined) {
       tags.push(`<span class="tag-badge" style="background: rgba(0, 255, 136, 0.18); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.5); font-weight: bold;" title="総合ブレンドスコア: ${sys.composite_score}pt">★ スコア: ${Math.round(sys.composite_score)}pt</span>`);
     }
@@ -1003,38 +1006,62 @@ function renderSystemHeader() {
   const totalB = sys.total_bodies || sys.scanned_bodies || 0;
   document.getElementById('body-count-badge').innerText = `${t('scanned_badge')}: ${sys.scanned_bodies} / ${totalB}`;
 
-  // Export buttons & Shared Badge in Header
+  // Export buttons & Shared / External Badge in Header
   const btnExportHtml = document.getElementById('btn-export-html');
   const btnExportPkg = document.getElementById('btn-export-pkg');
   const btnToggleShared = document.getElementById('btn-toggle-shared');
   const sharedBadge = document.getElementById('current-system-shared-badge');
+  const extBadge = document.getElementById('current-system-external-badge');
   const sharedIcon = document.getElementById('shared-toggle-icon');
   const sharedLabel = document.getElementById('shared-toggle-label');
 
-  if (btnExportHtml) btnExportHtml.style.display = 'inline-flex';
-  if (btnExportPkg) btnExportPkg.style.display = 'inline-flex';
+  const isUnvisitedExternal = Boolean(sys.is_external || (sys.visit_count === 0));
 
-  if (sharedBadge) {
-    if (sys.is_shared) {
-      const byText = sys.shared_by ? `${t('shared_by_label')}: ${sys.shared_by}` : t('shared_system');
-      sharedBadge.innerHTML = `<span class="tag-badge tag-shared" style="background: rgba(167, 139, 250, 0.25); color: #c4b5fd; border: 1px solid #a78bfa; font-weight: bold;" title="${byText}">🤝 ${t('shared_system')}</span>`;
-      sharedBadge.style.display = 'inline-flex';
+  if (extBadge) {
+    if (isUnvisitedExternal) {
+      extBadge.innerHTML = '<span class="tag-badge tag-external" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.6); font-weight: bold;" title="未訪問・EDSM外部参照星系（Web共有およびパッケージ書出は利用できません）">🌐 外部参照 (未訪問)</span>';
+      extBadge.style.display = 'inline-flex';
     } else {
-      sharedBadge.innerHTML = '';
-      sharedBadge.style.display = 'none';
+      extBadge.innerHTML = '';
+      extBadge.style.display = 'none';
     }
   }
 
-  if (btnToggleShared) {
-    if (sys.is_shared) {
-      // Once shared, "共有解除" is not needed because it doesn't notify counterparty.
-      btnToggleShared.style.display = 'none';
-    } else {
-      btnToggleShared.style.display = 'inline-flex';
-      if (sharedIcon) sharedIcon.innerText = '🤝';
-      if (sharedLabel) sharedLabel.innerText = t('share_label') || '共有マーク';
-      btnToggleShared.style.background = 'rgba(167, 139, 250, 0.1)';
-      btnToggleShared.style.borderColor = 'rgba(167, 139, 250, 0.4)';
+  if (isUnvisitedExternal) {
+    // 外部参照・未訪問星系は、Web共有・パッケージ書出・共有マーク付与を禁止（非表示化）
+    if (btnExportHtml) btnExportHtml.style.display = 'none';
+    if (btnExportPkg) btnExportPkg.style.display = 'none';
+    if (btnToggleShared) btnToggleShared.style.display = 'none';
+    if (sharedBadge) {
+      sharedBadge.innerHTML = '';
+      sharedBadge.style.display = 'none';
+    }
+  } else {
+    if (btnExportHtml) btnExportHtml.style.display = 'inline-flex';
+    if (btnExportPkg) btnExportPkg.style.display = 'inline-flex';
+
+    if (sharedBadge) {
+      if (sys.is_shared) {
+        const byText = sys.shared_by ? `${t('shared_by_label')}: ${sys.shared_by}` : t('shared_system');
+        sharedBadge.innerHTML = `<span class="tag-badge tag-shared" style="background: rgba(167, 139, 250, 0.25); color: #c4b5fd; border: 1px solid #a78bfa; font-weight: bold;" title="${byText}">🤝 ${t('shared_system')}</span>`;
+        sharedBadge.style.display = 'inline-flex';
+      } else {
+        sharedBadge.innerHTML = '';
+        sharedBadge.style.display = 'none';
+      }
+    }
+
+    if (btnToggleShared) {
+      if (sys.is_shared) {
+        // Once shared, "共有解除" is not needed because it doesn't notify counterparty.
+        btnToggleShared.style.display = 'none';
+      } else {
+        btnToggleShared.style.display = 'inline-flex';
+        if (sharedIcon) sharedIcon.innerText = '🤝';
+        if (sharedLabel) sharedLabel.innerText = t('share_label') || '共有マーク';
+        btnToggleShared.style.background = 'rgba(167, 139, 250, 0.1)';
+        btnToggleShared.style.borderColor = 'rgba(167, 139, 250, 0.4)';
+      }
     }
   }
 }
@@ -3699,6 +3726,14 @@ document.addEventListener('DOMContentLoaded', () => {
         </a>
       `;
 
+      const loadBtnHtml = edsm.found ? `
+        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(56, 189, 248, 0.3); display: flex; justify-content: flex-end;">
+          <button id="btn-import-external-edsm" class="btn-primary" style="background: rgba(56, 189, 248, 0.18); border: 1px solid #38bdf8; color: #38bdf8; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="未訪問星系ですが、EDSMの星系・天体データを取得してSystem Mapや天体リストで閲覧可能にします（Web共有/パッケージ書き出しは利用不可）">
+            <span>🚀 EDSMから星系データをロード（未訪問参照）</span>
+          </button>
+        </div>
+      ` : '';
+
       if (data.has_footprint) {
         resContainer.className = 'external-footprint-result found';
         resContainer.innerHTML = `
@@ -3711,6 +3746,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ${spanshBadge}
             ${inaraBadge}
           </div>
+          ${loadBtnHtml}
         `;
       } else {
         resContainer.className = 'external-footprint-result uncharted';
@@ -3724,7 +3760,36 @@ document.addEventListener('DOMContentLoaded', () => {
             ${spanshBadge}
             ${inaraBadge}
           </div>
+          ${loadBtnHtml}
         `;
+      }
+
+      if (edsm.found) {
+        const loadBtn = document.getElementById('btn-import-external-edsm');
+        if (loadBtn) {
+          loadBtn.onclick = async () => {
+            loadBtn.disabled = true;
+            loadBtn.innerHTML = '<span>⏳ EDSMよりデータ取得中...</span>';
+            try {
+              const resp = await fetch(`/api/external/import_edsm?system_name=${encodeURIComponent(trimmed)}`, { method: 'POST' });
+              if (!resp.ok) {
+                const errJson = await resp.json().catch(() => ({}));
+                throw new Error(errJson.detail || `HTTP ${resp.status}`);
+              }
+              const resData = await resp.json();
+              loadBtn.innerHTML = '<span>✓ ロード完了</span>';
+              await fetchSystems();
+              if (resData.system_address) {
+                await selectSystem(resData.system_address);
+              }
+            } catch (e) {
+              console.error('EDSM unvisited import error:', e);
+              alert(`EDSM星系ロードエラー: ${e.message}`);
+              loadBtn.disabled = false;
+              loadBtn.innerHTML = '<span>🚀 EDSMから星系データをロード（未訪問参照）</span>';
+            }
+          };
+        }
       }
     } catch (err) {
       if (err.name === 'AbortError') return;
