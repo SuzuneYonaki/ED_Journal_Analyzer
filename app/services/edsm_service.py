@@ -23,8 +23,8 @@ from app.parser.exobiology import predict_exobiology_candidates
 EDSM_SYSTEM_API = "https://www.edsm.net/api-v1/system"
 EDSM_BODIES_API = "https://www.edsm.net/api-system-v1/bodies"
 
-# Feature flag: Temporarily disable external body completion as requested
-ENABLE_EDSM_BODY_COMPLETION = False
+# Feature flag: Enable external body completion from EDSM
+ENABLE_EDSM_BODY_COMPLETION = True
 REQUEST_DELAY_SEC = 1.0  # Respectful community delay between external API calls
 UNREGISTERED_RECHECK_COOLDOWN_SEC = 1800.0  # 30-minute in-memory cooldown before re-querying unregistered system
 
@@ -61,21 +61,29 @@ def _extract_star_type(b: dict) -> str:
 
 class EDSMService:
     def __init__(self):
-        self.request_queue: queue.Queue = queue.Queue()
+        self.high_priority_queue: queue.Queue = queue.Queue()
+        self.low_priority_queue: queue.Queue = queue.Queue()
         self.queued_systems = set()
+        self.priority_systems = set()
         self.recent_unregistered_cache: Dict[int, float] = {}
         self.last_request_time = 0.0
         self.is_running = True
         self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
         self.worker_thread.start()
 
-    def queue_system_check(self, system_address: int, system_name: str, force_recheck: bool = False):
-        """Queue a system for EDSM registration and discovery verification."""
+    def queue_system_check(self, system_address: int, system_name: str, force_recheck: bool = False, priority: bool = False):
+        """Queue a system for EDSM registration and discovery verification.
+        priority=True bypasses low-priority background queue and executes immediately."""
         if not system_address or not system_name:
             return
 
-        if system_address in self.queued_systems:
-            return
+        # If priority requested, skip if already queued in high priority
+        if priority:
+            if system_address in self.priority_systems:
+                return
+        else:
+            if system_address in self.queued_systems or system_address in self.priority_systems:
+                return
 
         # Check in-memory cooldown for recent unregistered checks
         now = time.time()
@@ -86,24 +94,46 @@ class EDSMService:
         # Check if already cached in DB as REGISTERED
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT edsm_checked, edsm_registered FROM systems WHERE system_address = ?", (system_address,))
+        c.execute("SELECT edsm_checked, edsm_registered, edsm_body_count FROM systems WHERE system_address = ?", (system_address,))
         row = c.fetchone()
+        
+        needs_body_completion = False
+        if row and row["edsm_checked"] == 1 and row["edsm_registered"] == 1:
+            if ENABLE_EDSM_BODY_COMPLETION and (row["edsm_body_count"] or 0) > 0:
+                c.execute("SELECT COUNT(*) as cnt FROM bodies WHERE system_address = ?", (system_address,))
+                b_row = c.fetchone()
+                if b_row and b_row["cnt"] == 0:
+                    needs_body_completion = True
         conn.close()
 
         # If already registered on EDSM (edsm_registered == 1), keep permanent cache
+        # unless body completion is needed or force_recheck is specified
         if not force_recheck and row and row["edsm_checked"] == 1 and row["edsm_registered"] == 1:
-            return
+            if not needs_body_completion:
+                return
 
-        self.queued_systems.add(system_address)
-        self.request_queue.put((system_address, system_name))
+        if priority:
+            self.priority_systems.add(system_address)
+            self.high_priority_queue.put((system_address, system_name))
+        else:
+            self.queued_systems.add(system_address)
+            self.low_priority_queue.put((system_address, system_name))
 
     def _worker_loop(self):
-        """Background worker loop that processes queued systems with strict rate limiting."""
+        """Background worker loop that processes queued systems with strict rate limiting.
+        Always drains high_priority_queue before handling low_priority_queue."""
         while self.is_running:
+            item = None
+            is_priority = False
             try:
-                item = self.request_queue.get(timeout=2.0)
+                item = self.high_priority_queue.get_nowait()
+                is_priority = True
             except queue.Empty:
-                continue
+                try:
+                    item = self.low_priority_queue.get(timeout=1.0)
+                    is_priority = False
+                except queue.Empty:
+                    continue
 
             system_address, system_name = item
             try:
@@ -112,8 +142,12 @@ class EDSMService:
             except Exception as e:
                 print(f"[EDSM Service] Error checking {system_name} ({system_address}): {e}")
             finally:
-                self.queued_systems.discard(system_address)
-                self.request_queue.task_done()
+                if is_priority:
+                    self.priority_systems.discard(system_address)
+                    self.high_priority_queue.task_done()
+                else:
+                    self.queued_systems.discard(system_address)
+                    self.low_priority_queue.task_done()
 
     def _throttle_delay(self):
         """Enforces a strict minimum delay between external HTTP requests."""
@@ -122,7 +156,12 @@ class EDSMService:
             time.sleep(REQUEST_DELAY_SEC - elapsed)
         self.last_request_time = time.time()
 
-    def _fetch_and_update_system(self, system_address: int, system_name: str):
+    def fetch_and_update_system_sync(self, system_address: int, system_name: str) -> dict:
+        """Synchronously fetch system and bodies from EDSM (honoring rate limits) and update DB."""
+        self._throttle_delay()
+        return self._fetch_and_update_system(system_address, system_name)
+
+    def _fetch_and_update_system(self, system_address: int, system_name: str) -> dict:
         """Fetches system info and body discoveries from EDSM and updates the database."""
         encoded_name = urllib.parse.quote(system_name)
         sys_url = f"{EDSM_SYSTEM_API}?systemName={encoded_name}&showInformation=1&showCoordinates=1"
@@ -136,16 +175,16 @@ class EDSMService:
             with urllib.request.urlopen(req, timeout=10.0) as resp:
                 if resp.status != 200:
                     self._mark_checked_unregistered(system_address)
-                    return
+                    return {"registered": False, "status": "http_error", "code": resp.status}
                 sys_data = json.loads(resp.read().decode("utf-8"))
-        except Exception:
+        except Exception as e:
             self._mark_checked_unregistered(system_address)
-            return
+            return {"registered": False, "status": "error", "error": str(e)}
 
         # An empty dictionary or missing name indicates system is not in EDSM
         if not sys_data or not isinstance(sys_data, dict) or not sys_data.get("name"):
             self._mark_checked_unregistered(system_address)
-            return
+            return {"registered": False, "status": "not_found"}
 
         # System is registered on EDSM
         # Check bodies for first discoverer and complete celestial bodies
@@ -193,9 +232,10 @@ class EDSMService:
             WHERE system_address = ?
         """, (first_discoverer, submitted_at, body_count, system_address))
 
-        # Import or backfill missing bodies from EDSM (Temporarily disabled as requested)
+        # Import or backfill missing bodies from EDSM
+        completed_count = 0
         if bodies_list and ENABLE_EDSM_BODY_COMPLETION:
-            self._import_and_complete_bodies(conn, system_address, system_name, bodies_list)
+            completed_count = self._import_and_complete_bodies(conn, system_address, system_name, bodies_list)
 
         # Recalculate and update aggregated system statistics
         self._update_system_aggregated_stats(conn, system_address)
@@ -210,13 +250,23 @@ class EDSMService:
         except Exception:
             pass
 
-    def _import_and_complete_bodies(self, conn, system_address: int, star_system: str, bodies_list: list):
+        return {
+            "registered": True,
+            "status": "success",
+            "first_discoverer": first_discoverer,
+            "body_count": body_count,
+            "completed_bodies": completed_count
+        }
+
+    def _import_and_complete_bodies(self, conn, system_address: int, star_system: str, bodies_list: list) -> int:
         """
         Completes missing celestial bodies from EDSM for known systems where player
         did not receive FSS Scan journal events. Respects and preserves any existing
         player-scanned records (AutoScan, Detailed, NavBeacon).
+        Returns number of completed/imported bodies.
         """
         c = conn.cursor()
+        completed_count = 0
 
         # Query existing bodies for this system
         c.execute("SELECT id, body_id, body_name, scan_type, scan_timestamp FROM bodies WHERE system_address = ?", (system_address,))
@@ -402,6 +452,7 @@ class EDSMService:
                     fss_val, dss_val, fd_fss, fm_dss, max_pot,
                     anomalies_json, bio_pred_json, existing["id"]
                 ))
+                completed_count += 1
             else:
                 # Insert new EDSM_Known body
                 c.execute("""
@@ -444,6 +495,9 @@ class EDSMService:
                     fss_val, dss_val, fd_fss, fm_dss,
                     max_pot, anomalies_json, bio_pred_json
                 ))
+                completed_count += 1
+
+        return completed_count
 
     def _update_system_aggregated_stats(self, conn, system_address: int):
         """Recalculates system-level exploration values and flags from celestial bodies."""

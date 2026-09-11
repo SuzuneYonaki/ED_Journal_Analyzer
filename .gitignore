@@ -13,6 +13,7 @@ __pycache__/
 # PyInstaller build artifacts
 build/
 dist/
+dist_new/
 *.spec.bak
 
 # Pytest / Virtual environment

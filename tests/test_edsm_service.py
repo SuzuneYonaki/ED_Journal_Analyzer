@@ -91,3 +91,27 @@ def test_edsm_unregistered_system():
     assert row["edsm_checked"] == 1
     assert row["edsm_registered"] == 0
     assert row["edsm_first_discoverer"] is None
+
+
+def test_edsm_priority_queue_and_backfill():
+    """Test priority queue placement and recovery for registered systems with 0 bodies."""
+    conn = get_db_connection()
+    c = conn.cursor()
+    test_sys_addr = 999999003
+    test_sys_name = "Test EDSM Priority"
+
+    # Seed system as registered but with 0 bodies in DB
+    c.execute("""
+        INSERT OR REPLACE INTO systems (system_address, star_system, edsm_checked, edsm_registered, edsm_body_count)
+        VALUES (?, ?, 1, 1, 5)
+    """, (test_sys_addr, test_sys_name))
+    c.execute("DELETE FROM bodies WHERE system_address = ?", (test_sys_addr,))
+    conn.commit()
+    conn.close()
+
+    service = EDSMService()
+    # Should accept queueing because bodies are missing in DB
+    service.queue_system_check(test_sys_addr, test_sys_name, priority=True)
+    assert test_sys_addr in service.priority_systems
+    assert not service.high_priority_queue.empty()
+

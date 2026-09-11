@@ -171,8 +171,8 @@
             <input type="text" id="system-search" class="search-input" placeholder="星系名を検索 (例: Sol, Beagle Point)...">
           </div>
 
-          <!-- External Footprint Check Control & Status (Temporarily hidden as requested) -->
-          <div class="external-check-row" id="external-check-row" style="display: none;">
+          <!-- External Footprint Check Control & Status -->
+          <div class="external-check-row" id="external-check-row">
             <div class="external-check-top">
               <label class="external-check-toggle" title="入力した星系名がローカルDBに存在しない場合、Inara, Spansh, EDSM に登録・発見されているかを検索時に自動照会します（デフォルトOFF）">
                 <input type="checkbox" id="cb-external-footprint" style="accent-color: var(--ed-orange); cursor: pointer;">
@@ -554,7 +554,10 @@
           </button>
 
           <div id="current-system-coords" class="system-coords"></div>
-          <div id="current-system-edsm-badge" style="margin-left: 4px;"></div>
+          <div id="current-system-edsm-badge" style="margin-left: 4px; display: inline-flex; align-items: center; gap: 4px;"></div>
+          <button id="btn-sync-edsm" class="btn-icon" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 4px; padding: 2px 6px; cursor: pointer; display: none; align-items: center; gap: 3px; font-size: 0.72rem;" title="EDSMから天体情報と発見ステータスを即時照会・補完します">
+            <span>🔄 EDSM同期</span>
+          </button>
           <div id="current-system-shared-badge" style="margin-left: 4px; display: none;"></div>
           <div id="current-system-physics-badge" style="margin-left: 4px; display: none; cursor: pointer;" title="クリックして天体物理・レア度レポートを表示"></div>
           <div id="current-system-distances" style="display: flex; gap: 3px; align-items: center; margin-left: 6px; flex-wrap: wrap;"></div>

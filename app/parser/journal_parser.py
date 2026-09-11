@@ -12,11 +12,12 @@ from app.analyzer.anomaly_finder import detect_anomalies
 from app.services.edsm_service import edsm_service
 
 class JournalParser:
-    def __init__(self, db_conn=None, event_callback=None):
+    def __init__(self, db_conn=None, event_callback=None, is_live: bool = False):
         self.conn = db_conn or get_db_connection()
         self.cursor = self.conn.cursor()
         self.dirty_systems = set()
         self.event_callback = event_callback
+        self.is_live = is_live
         
         # State tracking for SRV and surface activities
         self.current_system_address = None
@@ -215,7 +216,8 @@ class JournalParser:
         # Queue background EDSM discovery verification
         if sys_addr and star_sys:
             try:
-                edsm_service.queue_system_check(sys_addr, star_sys)
+                if self.is_live:
+                    edsm_service.queue_system_check(sys_addr, star_sys, priority=True)
             except Exception:
                 pass
 
@@ -229,7 +231,8 @@ class JournalParser:
             """, (body_count, sys_addr))
             if star_sys:
                 try:
-                    edsm_service.queue_system_check(sys_addr, star_sys)
+                    if self.is_live:
+                        edsm_service.queue_system_check(sys_addr, star_sys, priority=True)
                 except Exception:
                     pass
 

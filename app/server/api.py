@@ -960,11 +960,17 @@ def get_system_detail(system_address: int):
     lm_dists = calculate_landmark_distances(system_data.get("star_pos_x"), system_data.get("star_pos_y"), system_data.get("star_pos_z"))
     system_data.update(lm_dists)
 
-    # Queue EDSM verification if not yet checked
-    if not system_data.get("edsm_checked"):
-        sys_name = system_data.get("star_system")
-        if sys_name:
-            edsm_service.queue_system_check(system_address, sys_name)
+    # Queue EDSM verification with priority if not yet checked, or if registered on EDSM but missing bodies
+    sys_name = system_data.get("star_system")
+    if sys_name:
+        if not system_data.get("edsm_checked"):
+            edsm_service.queue_system_check(system_address, sys_name, priority=True)
+        elif system_data.get("edsm_registered") == 1 and (system_data.get("edsm_body_count") or 0) > 0:
+            # Check if bodies in DB are missing
+            c.execute("SELECT COUNT(*) as cnt FROM bodies WHERE system_address = ?", (system_address,))
+            b_cnt = c.fetchone()["cnt"]
+            if b_cnt == 0:
+                edsm_service.queue_system_check(system_address, sys_name, priority=True)
 
     # Fetch bodies
     c.execute("""
@@ -1275,6 +1281,23 @@ def get_system_detail(system_address: int):
         },
         "physics_evaluation": system_data.get("physics_evaluation")
     }
+
+@app.post("/api/systems/{system_address}/edsm_sync")
+def sync_system_edsm(system_address: int):
+    """
+    Directly triggers a high-priority EDSM query and celestial body completion for this system.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT star_system FROM systems WHERE system_address = ?", (system_address,))
+    row = c.fetchone()
+    conn.close()
+    if not row or not row["star_system"]:
+        return JSONResponse({"error": "System not found"}, status_code=404)
+
+    sys_name = row["star_system"]
+    result = edsm_service.fetch_and_update_system_sync(system_address, sys_name)
+    return JSONResponse(result)
 
 @app.get("/api/systems/{system_address}/physics")
 def get_system_physics(system_address: int):

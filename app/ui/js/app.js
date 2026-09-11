@@ -909,6 +909,33 @@ function renderSystemHeader() {
     }
   }
 
+  // EDSM Sync Button
+  const btnSyncEdsm = document.getElementById('btn-sync-edsm');
+  if (btnSyncEdsm) {
+    btnSyncEdsm.style.display = 'inline-flex';
+    btnSyncEdsm.onclick = async () => {
+      btnSyncEdsm.disabled = true;
+      btnSyncEdsm.innerHTML = '<span>⏳ 同期中...</span>';
+      try {
+        const resp = await fetch(`/api/systems/${sys.system_address}/edsm_sync`, { method: 'POST' });
+        const resData = await resp.json();
+        btnSyncEdsm.innerHTML = '<span>✓ 完了</span>';
+        setTimeout(() => {
+          btnSyncEdsm.disabled = false;
+          btnSyncEdsm.innerHTML = '<span>🔄 EDSM同期</span>';
+        }, 1500);
+        await selectSystem(sys.system_address, true, false);
+      } catch (err) {
+        console.error('EDSM Sync error:', err);
+        btnSyncEdsm.disabled = false;
+        btnSyncEdsm.innerHTML = '<span>❌ 失敗</span>';
+        setTimeout(() => {
+          btnSyncEdsm.innerHTML = '<span>🔄 EDSM同期</span>';
+        }, 2000);
+      }
+    };
+  }
+
   // Configurable Key Galactic Distances in Header
   updateCurrentSystemDistances(sys);
 
@@ -2449,9 +2476,16 @@ function renderBodyInspector() {
   const isBary = Boolean(b.isBarycentre);
 
   document.getElementById('inspect-body-name').innerText = b.body_name;
-  document.getElementById('inspect-body-type').innerText = b.star_type 
+  let typeSubtitle = b.star_type 
     ? `${t('star_type_label')}: ${b.star_type}` 
     : `${b.planet_class || 'Body'}${b.terraforming_state ? ' [' + b.terraforming_state + ']' : ''}`;
+  if (b.scan_type === 'EDSM_Known') {
+    typeSubtitle += ` · ⭐ EDSM既知 (未スキャン)`;
+    if (b.edsm_discovered_by) {
+      typeSubtitle += ` / 発見者: CMDR ${b.edsm_discovered_by}`;
+    }
+  }
+  document.getElementById('inspect-body-type').innerText = typeSubtitle;
 
   // Bookmark UI elements
   const bmSection = document.getElementById('section-bookmark');

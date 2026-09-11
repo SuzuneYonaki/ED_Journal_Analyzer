@@ -30,8 +30,11 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 - **任意ランドマーク距離表示のカスタマイズ設定新設**:
   - 設定モーダル（「画面・文字サイズ」タブ）内に「📍 ランドマーク距離バッジ表示設定」を新設。
   - CMDR現在地、Sol、Colonia、Rainbow's End、Explorer's Anchorage を個別にチェックボックスでON/OFF可能（設定は自動保存され即時反映）。
-- **純粋ローカルジャーナル至上主義（外部補完の安全化）**:
-  - プレイヤー自身のローカルジャーナルの完全性とオフラインプライバシーを最優先とし、外部APIによる未完全な天体自動補完を伏せた状態に安全化。
+- **EDSM連携の復活 & 既知星系天体自動補完の優先キュー（Priority Queue）最適化**:
+  - EDSM（Elite Dangerous Star Map）連携を完全復活。既知星系へのジャンプインや Honk（`FSSDiscoveryScan`）時に、未スキャン天体の公転軌道・物理データ・探査価値を自動補完。
+  - **二重優先度キュー機構**を新設。過去ログ解析によるAPIリクエスト渋滞を防止し、現在地・Honk・UI星系選択・手動同期を常に**最優先（待ち時間ゼロ）**で処理。
+  - 星系ヘッダーに「🔄 EDSM同期」ボタンを新設し、過去に補完が漏れていた星系でもワンクリックで即座に EDSM データを再取得・天体補完可能。
+  - 天体インスペクターに「⭐ EDSM既知（未スキャン）」バッジおよび「EDSM発見者: CMDR xxx」のクレジット表示を新設。
 
 ### 🌐 日英バイリンガル対応 (One-Click Language Switch)
 - アプリ画面右上の **`[JP] / [EN]`** ボタンから、日本語・英語をいつでも**ワンクリックで即座に切り替え可能**です。
@@ -116,8 +119,11 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
   - Fixed an issue where "⭐ 1st Disc", "🔖 Bookmarks", and "🤝 Shared" appeared selected even when inactive. They now default to neutral gray and glow brightly only when active.
 - **Customizable Galactic Landmark Distance Badges**:
   - Added a dedicated checklist in Settings ("🖥️ Display & Font Size" tab) to independently toggle distance badges for CMDR current location, Sol, Colonia, Rainbow's End, and Explorer's Anchorage.
-- **Pure Local Journal Priority**:
-  - Prioritizes player's local journal data integrity and offline privacy by hiding incomplete external celestial body imports.
+- **Restored EDSM Integration & High-Priority Body Completion**:
+  - Full restoration of EDSM (Elite Dangerous Star Map) integration to automatically backfill known celestial bodies, orbital parameters, physical properties, and exploration values upon jump-in or Honk (`FSSDiscoveryScan`).
+  - Implemented dual-queue architecture with **High-Priority Queue**, eliminating API request backlogs from historical journal scans and guaranteeing immediate, zero-wait queries for current systems, Honks, and UI selections.
+  - Added "🔄 EDSM Sync" button in the system header for on-demand manual resynchronization.
+  - Added "⭐ EDSM Known (Unscanned)" tag and discoverer CMDR credits in the Celestial Body Inspector.
 
 ### 🌐 Instant Bilingual Support (JP / EN Switch)
 - Switch seamlessly between **English** and **Japanese** at any time with a single click on the **`[JP] / [EN]`** toggle in the top-right corner.

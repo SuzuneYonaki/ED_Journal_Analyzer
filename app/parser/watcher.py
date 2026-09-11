@@ -49,7 +49,7 @@ class JournalWatcher(threading.Thread):
 
     def run(self):
         self.conn = get_db_connection()
-        self.parser = JournalParser(self.conn, event_callback=self._handle_journal_event)
+        self.parser = JournalParser(self.conn, event_callback=self._handle_journal_event, is_live=True)
         
         # Initial scan: seed file stats without triggering events for past data
         self._scan_active_files(initial_seed=True)
