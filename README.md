@@ -39,10 +39,16 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 ### 🌐 日英バイリンガル対応 (One-Click Language Switch)
 - アプリ画面右上の **`[JP] / [EN]`** ボタンから、日本語・英語をいつでも**ワンクリックで即座に切り替え可能**です。
 
-### 💾 ポータブル設計 & 簡単アンインストール
-- 本アプリは**レジストリやシステム領域への書き込みを一切行いません**。
-- `ED_Journal_Analyzer.exe` を実行すると、実行ファイルと同じフォルダにデータベース保管用の **`data`** フォルダが自動生成されます。
-- アンインストールしたい場合は、ダウンロードした **`ED_Journal_Analyzer.exe`** と **`data`** フォルダをそのまま手動で削除するだけで完全に削除されます。
+### 💾 ポータブル設計・`data` フォルダの扱い & アップデート手順
+- **レジストリやシステム領域への書き込みは一切行いません**: すべてのデータは実行ファイル直下のローカル領域で完結します。
+- **`data` フォルダの役割**:
+  - `ED_Journal_Analyzer.exe` を初回実行すると、同じフォルダ内に **`data`** フォルダが自動生成され、過去ジャーナルの解析データ、天体ブックマーク、エイリアス、メモ等の SQLite データベース（`elite_exploration.db`）が格納されます。
+- **既存ユーザーのアップデート方法（exe の置き換えだけで即時移行可能）**:
+  - 新バージョンへアップデートする際は、**既存の `data` フォルダは絶対に削除せずそのまま残してください**。
+  - 新しい `ED_Journal_Analyzer.exe` をダウンロードし、古い exe ファイルに上書き（置き換え）して起動するだけで、**これまでの探査履歴・ブックマーク・メモなどのすべてのデータをそのまま引き継いで即座に移行・利用再開できます**。
+  - データベースは起動時に後方互換性を保った自動マイグレーションが行われるため、手動でのデータ移行や再読み込み作業は一切不要です。
+- **完全初期化・アンインストール**:
+  - アプリを完全に削除したい場合は、`ED_Journal_Analyzer.exe` と `data` フォルダを手動で削除するだけで、PC内に一切の痕跡を残さず綺麗にアンインストールされます。
 
 ### 主な機能 (Key Features)
 
@@ -128,10 +134,17 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
 ### 🌐 Instant Bilingual Support (JP / EN Switch)
 - Switch seamlessly between **English** and **Japanese** at any time with a single click on the **`[JP] / [EN]`** toggle in the top-right corner.
 
-### 💾 100% Portable & Clean Uninstall
-- **Zero registry or system modifications**: Everything runs strictly in user space.
-- Running `ED_Journal_Analyzer.exe` will create a local **`data`** directory in the same folder to store the SQLite database.
-- To uninstall, simply delete the **`ED_Journal_Analyzer.exe`** file and the **`data`** folder. No uninstaller or leftover files.
+### 💾 100% Portable Design, `data` Directory Handling & Seamless Updates
+- **Zero registry or system modifications**: Everything runs strictly in local user space without touching Windows registry or AppData.
+- **Role of the `data` Folder**:
+  - Running `ED_Journal_Analyzer.exe` automatically creates a local **`data`** folder in the same directory, containing your SQLite database (`elite_exploration.db`), parsed exploration history, celestial body bookmarks, custom aliases, and Markdown notes.
+- **How to Update for Existing Users (Instant Migration by Replacing .exe Only)**:
+  - When upgrading to a newer version, **do NOT delete the existing `data` folder**.
+  - Simply replace the old `ED_Journal_Analyzer.exe` with the newly downloaded `.exe` and launch it.
+  - All your accumulated travel logs, bookmarks, notes, and preferences **will be seamlessly preserved and instantly available**.
+  - Automatic non-destructive schema migrations are applied on startup, requiring zero manual database handling.
+- **Complete Reset / Uninstall**:
+  - To completely remove the application, simply delete `ED_Journal_Analyzer.exe` and the `data` folder. No uninstaller or leftover files.
 
 ### Key Features
 
