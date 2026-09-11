@@ -10,6 +10,46 @@ def get_db_connection():
     conn.execute("PRAGMA synchronous = NORMAL;")
     return conn
 
+def checkpoint_wal(conn=None):
+    """Flushes and truncates WAL journal file into main database."""
+    close_after = False
+    try:
+        if conn is None:
+            conn = sqlite3.connect(str(DB_PATH), timeout=10.0, check_same_thread=False)
+            close_after = True
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE);")
+    except Exception as e:
+        print(f"[DB] WAL checkpoint warning: {e}")
+    finally:
+        if close_after and conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+def verify_db_integrity(conn=None) -> bool:
+    """Verifies SQLite database integrity on startup."""
+    close_after = False
+    try:
+        if conn is None:
+            conn = sqlite3.connect(str(DB_PATH), timeout=10.0, check_same_thread=False)
+            close_after = True
+        res = conn.execute("PRAGMA quick_check;").fetchone()
+        status = res[0] if res else "unknown"
+        if status != "ok":
+            print(f"[DB] Quick check status: {status}")
+            return False
+        return True
+    except Exception as e:
+        print(f"[DB] Integrity check error: {e}")
+        return False
+    finally:
+        if close_after and conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
 def init_db(conn=None):
     close_after = False
     if conn is None:

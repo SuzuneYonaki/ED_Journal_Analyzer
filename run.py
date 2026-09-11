@@ -15,7 +15,8 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = io.StringIO()
 
-from app.config import HOST, BASE_DIR, DATA_DIR
+from app.config import HOST, BASE_DIR, DATA_DIR, WEBVIEW_CACHE_DIR
+from app.db.database import checkpoint_wal
 from app.server.api import app
 
 def log_msg(msg: str):
@@ -53,15 +54,21 @@ def get_own_process_family():
     return pids
 
 def cleanup_stale_instances():
-    """Terminates any orphan background processes of ED_Journal_Analyzer.exe from previous runs."""
+    """Terminates any orphan background processes of ED_Journal_Analyzer.exe and associated msedgewebview2 from previous runs."""
     family = get_own_process_family()
-    for proc in psutil.process_iter(['pid', 'name']):
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
             pid = proc.info['pid']
             if pid not in family:
                 pname = (proc.info['name'] or '').lower()
-                if pname == 'ed_journal_analyzer.exe':
-                    log_msg(f"[Cleanup] Terminating stale instance PID {pid}")
+                cmdline = proc.info.get('cmdline') or []
+                cmdline_str = " ".join(cmdline).lower()
+                
+                is_stale_app = pname == 'ed_journal_analyzer.exe'
+                is_stale_webview = (pname == 'msedgewebview2.exe' and 'ed_journal_analyzer.exe' in cmdline_str)
+                
+                if is_stale_app or is_stale_webview:
+                    log_msg(f"[Cleanup] Terminating stale instance PID {pid} ({pname})")
                     proc.terminate()
                     try:
                         proc.wait(timeout=1.5)
@@ -172,7 +179,8 @@ def wait_for_server(url, timeout=12.0):
 
 def main():
     log_msg(f"=== Starting ED Journal Analyzer (PID {os.getpid()}) ===")
-    # 1. Terminate any stale zombie instances from earlier runs
+    
+    # 1. Startup safety: Terminate stale instances
     cleanup_stale_instances()
     free_port_if_stale(8686)
 
@@ -187,7 +195,7 @@ def main():
     else:
         url = f"http://{HOST}:{runner.active_port}"
 
-    # 3. Wait until server is fully responsive via HTTP
+    # 5. Wait until server is fully responsive via HTTP
     is_ready = False
     if url:
         is_ready = wait_for_server(url, timeout=12.0)
@@ -204,12 +212,10 @@ def main():
                     time.sleep(1)
             except KeyboardInterrupt:
                 pass
+        checkpoint_wal()
         os._exit(0)
     else:
-        # Create Desktop Window with pywebview
-        storage_dir = DATA_DIR / "webview"
-        storage_dir.mkdir(parents=True, exist_ok=True)
-
+        # Create Desktop Window with pywebview using dedicated cache directory
         if is_ready:
             window = webview.create_window(
                 title="Elite Dangerous Journal Analyzer & Exploration Orrery (v0.0.10)",
@@ -247,13 +253,22 @@ def main():
             )
 
         def on_window_closed():
-            # Immediately kill all background threads and release resources
+            log_msg("[Shutdown] Window closed. Checkpointing SQLite WAL...")
+            try:
+                checkpoint_wal()
+            except Exception:
+                pass
+            log_msg("[Shutdown] Complete. Exiting process.")
             os._exit(0)
 
         window.events.closed += on_window_closed
         try:
-            webview.start(debug=False, private_mode=False, storage_path=str(storage_dir))
+            webview.start(debug=False, private_mode=False, storage_path=str(WEBVIEW_CACHE_DIR))
         finally:
+            try:
+                checkpoint_wal()
+            except Exception:
+                pass
             os._exit(0)
 
 if __name__ == "__main__":

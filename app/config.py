@@ -14,6 +14,15 @@ else:
 BASE_DIR = RESOURCE_DIR
 DATA_DIR.mkdir(exist_ok=True)
 
+# Separate WebView2 cache completely from user DATA_DIR to prevent locks and bloat
+local_app_data = os.environ.get("LOCALAPPDATA")
+if local_app_data:
+    WEBVIEW_CACHE_DIR = Path(local_app_data) / "ED_Journal_Analyzer" / "webview_cache"
+else:
+    import tempfile
+    WEBVIEW_CACHE_DIR = Path(tempfile.gettempdir()) / "ED_Journal_Analyzer" / "webview_cache"
+WEBVIEW_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
 DB_PATH = DATA_DIR / "elite_journal.db"
 
 # Default Elite Dangerous Journal Directory on Windows
