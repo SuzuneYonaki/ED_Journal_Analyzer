@@ -719,6 +719,22 @@ header {
   font-weight: bold;
 }
 
+.chip.active[data-filter="has_bookmarks"],
+.chip.bookmark-chip.active {
+  background: rgba(251, 191, 36, 0.25) !important;
+  border-color: #fbbf24 !important;
+  color: #fbbf24 !important;
+  font-weight: bold;
+}
+
+.chip.active[data-filter="is_shared"],
+.chip.shared-chip.active {
+  background: rgba(167, 139, 250, 0.25) !important;
+  border-color: #a78bfa !important;
+  color: #c4b5fd !important;
+  font-weight: bold;
+}
+
 .chip.active[data-filter="has_high_g"] {
   background: rgba(255, 51, 68, 0.2) !important;
   border-color: var(--ed-red) !important;
@@ -2426,6 +2442,53 @@ header {
 .physics-anomalies-collapsible.hidden {
   display: none !important;
 }
+
+/* Live Sync Guide Row in Sort Section */
+.live-sync-accordion-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: rgba(255, 113, 0, 0.08);
+  border: 1px solid rgba(255, 113, 0, 0.25);
+  border-radius: 4px;
+  margin-bottom: 4px;
+  gap: 6px;
+}
+
+.live-sync-accordion-row.paused {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.btn-live-accordion-toggle {
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-live-accordion-toggle.active {
+  background: rgba(255, 113, 0, 0.2);
+  border-color: var(--ed-orange);
+  color: var(--ed-orange);
+  box-shadow: 0 0 6px rgba(255, 113, 0, 0.3);
+}
+
+.btn-live-accordion-toggle:hover {
+  background: rgba(255, 113, 0, 0.3);
+  color: #fff;
+}
+
 
 
 

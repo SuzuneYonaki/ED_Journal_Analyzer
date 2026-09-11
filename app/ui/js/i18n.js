@@ -24,6 +24,9 @@ const i18n = {
     // Concept Switcher Tabs
     concept_tab_explorer: "ジャーナル探査",
     concept_tab_physics: "ED_Analysys (天体物理)",
+    concept_tab_explorer_short: "探査",
+    concept_tab_physics_short: "天体物理",
+    search_mode_label: "表示:",
 
     // Left Pane
     search_placeholder: "星系名を検索 (例: Sol, Beagle Point)...",
@@ -32,8 +35,9 @@ const i18n = {
     filter_ammonia: "Ammonia",
     filter_tf: "TF可能",
     filter_bio: "Bio (生体)",
-    filter_first_discover: "1st Disc (初発見)",
+    filter_first_discover: "⭐ 1st Disc (初発見)",
     filter_bookmarks: "🔖 ブックマーク",
+    filter_shared: "🤝 Shared (共有)",
     filter_landable: "着陸可能",
     filter_high_g: "高重力 (3G+着陸)",
     filter_anomalies: "特殊・レア",
@@ -337,7 +341,22 @@ const i18n = {
     share_label: "共有マーク",
     import_sig_ok: "✓ SHA-256 電子署名検証成功: 改ざんなし (正規パッケージ)",
     import_sig_warn: "⚠️ 電子署名が一致しません。パッケージが編集・破損している可能性があります。",
-    import_success: "件の星系を取り込みました。"
+    import_success: "件の星系を取り込みました。",
+
+    // Live Sync & Sort Accordion
+    sort_live_hint: "⚡ リアルタイム追従中（手動ソートするにはLIVEを解除してください）",
+    sort_live_status: "リアルタイム自動更新:",
+    sort_live_unlock_btn: "LIVE解除",
+    sort_live_resume_btn: "LIVE再開",
+
+    // Landmark Display Settings
+    settings_landmarks_label: "📍 ランドマーク距離バッジ表示設定",
+    settings_landmarks_desc: "星系リストカードおよび星系詳細ヘッダーに表示するランドマーク距離を選択できます。",
+    lm_cmdr: "📍 CMDR (現在地)",
+    lm_sol: "Sol (太陽系)",
+    lm_colonia: "Colonia (コロニア)",
+    lm_rainbow: "Rainbow's End",
+    lm_eanch: "Explorer's Anchorage"
   },
   en: {
     // Header
@@ -362,6 +381,9 @@ const i18n = {
     // Concept Switcher Tabs
     concept_tab_explorer: "Journal Explorer",
     concept_tab_physics: "ED_Analysys (Astrophysics)",
+    concept_tab_explorer_short: "Explorer",
+    concept_tab_physics_short: "Astrophysics",
+    search_mode_label: "Mode:",
 
     // Left Pane
     search_placeholder: "Search system (e.g. Sol, Beagle Point)...",
@@ -370,8 +392,9 @@ const i18n = {
     filter_ammonia: "Ammonia",
     filter_tf: "Terraformable",
     filter_bio: "Exobiology",
-    filter_first_discover: "1st Discover",
+    filter_first_discover: "⭐ 1st Disc",
     filter_bookmarks: "🔖 Bookmarks",
+    filter_shared: "🤝 Shared",
     filter_landable: "Landable",
     filter_high_g: "High-G (3G+)",
     filter_anomalies: "Anomalies",
@@ -675,10 +698,24 @@ const i18n = {
     shared_system: "Shared System",
     shared_by_label: "Shared By",
     unshare_label: "Unshare",
-    share_label: "Mark Shared",
     import_sig_ok: "✓ SHA-256 signature verified: Authentic package",
     import_sig_warn: "⚠️ Signature mismatch. Package may be modified or corrupted.",
-    import_success: "systems imported successfully."
+    import_success: "systems imported successfully.",
+
+    // Live Sync & Sort Accordion
+    sort_live_hint: "⚡ Real-time sync active (Disable LIVE to enable custom sorting)",
+    sort_live_status: "Real-time Live Sync:",
+    sort_live_unlock_btn: "Disable LIVE",
+    sort_live_resume_btn: "Resume LIVE",
+
+    // Landmark Display Settings
+    settings_landmarks_label: "📍 Landmark Distance Badge Display",
+    settings_landmarks_desc: "Choose which landmark distance badges to display in system cards and details header.",
+    lm_cmdr: "📍 CMDR (Current)",
+    lm_sol: "Sol",
+    lm_colonia: "Colonia",
+    lm_rainbow: "Rainbow's End",
+    lm_eanch: "Explorer's Anchorage"
   }
 };
 

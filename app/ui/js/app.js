@@ -566,6 +566,104 @@ async function selectSystem(systemAddress, preserveSelectedBody = false, resetJu
   }
 }
 
+// Landmark Display Settings & Badge Generator
+const defaultLandmarkSettings = {
+  cmdr: true,
+  sol: true,
+  colonia: true,
+  rainbow: true,
+  eanch: true
+};
+
+function getLandmarkSettings() {
+  try {
+    const raw = localStorage.getItem('ed_landmark_settings');
+    if (raw) {
+      return { ...defaultLandmarkSettings, ...JSON.parse(raw) };
+    }
+  } catch (e) {
+    console.warn('Failed to load landmark settings:', e);
+  }
+  return { ...defaultLandmarkSettings };
+}
+
+function saveLandmarkSettings(settings) {
+  try {
+    localStorage.setItem('ed_landmark_settings', JSON.stringify(settings));
+  } catch (e) {
+    console.warn('Failed to save landmark settings:', e);
+  }
+}
+
+function generateLandmarkDistanceBadges(sys) {
+  const lmSettings = getLandmarkSettings();
+  const badges = [];
+
+  // CMDR distance
+  if (lmSettings.cmdr && sys.cmdr_distance_ly !== null && sys.cmdr_distance_ly !== undefined) {
+    const cmdrSys = state.currentLocation && state.currentLocation.star_system ? ` (${state.currentLocation.star_system})` : '';
+    badges.push(`<span class="tag-badge tag-cmdr-dist" title="現在地${cmdrSys}からの距離: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly">📍 CMDR: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly</span>`);
+  }
+
+  // Sol distance
+  if (lmSettings.sol) {
+    const solDist = (sys.sol_distance_ly !== undefined && sys.sol_distance_ly !== null && sys.sol_distance_ly > 0)
+      ? sys.sol_distance_ly
+      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+        ? Math.hypot(sys.star_pos_x, sys.star_pos_y, sys.star_pos_z)
+        : null);
+    if (solDist !== null && solDist !== undefined) {
+      badges.push(`<span class="tag-badge tag-sol-dist" title="太陽系 (Sol) からの距離: ${Math.round(solDist).toLocaleString()} Ly">Sol: ${Math.round(solDist).toLocaleString()} Ly</span>`);
+    }
+  }
+
+  // Colonia distance
+  if (lmSettings.colonia) {
+    const coloniaDist = (sys.colonia_distance_ly !== undefined && sys.colonia_distance_ly !== null)
+      ? sys.colonia_distance_ly
+      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+        ? Math.hypot(sys.star_pos_x - (-9530.5), sys.star_pos_y - (-910.28125), sys.star_pos_z - 19808.125)
+        : null);
+    if (coloniaDist !== null && coloniaDist !== undefined) {
+      badges.push(`<span class="tag-badge tag-colonia-dist" title="第2の人類居住圏 (Colonia) からの距離: ${Math.round(coloniaDist).toLocaleString()} Ly">Colonia: ${Math.round(coloniaDist).toLocaleString()} Ly</span>`);
+    }
+  }
+
+  // Rainbow's End distance
+  if (lmSettings.rainbow) {
+    const rbDist = (sys.rainbows_end_distance_ly !== undefined && sys.rainbows_end_distance_ly !== null)
+      ? sys.rainbows_end_distance_ly
+      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+        ? Math.hypot(sys.star_pos_x - 21481.40625, sys.star_pos_y - (-1004.5625), sys.star_pos_z - 43369.4375)
+        : null);
+    if (rbDist !== null && rbDist !== undefined) {
+      badges.push(`<span class="tag-badge tag-rainbow-dist" title="最遠方宇宙港 Rainbow's End (Roefoo ZE-H d10-0 / DW3) からの距離: ${Math.round(rbDist).toLocaleString()} Ly">Rainbow's End: ${Math.round(rbDist).toLocaleString()} Ly</span>`);
+    }
+  }
+
+  // Explorer's Anchorage distance
+  if (lmSettings.eanch) {
+    const eaDist = (sys.explorers_anchorage_distance_ly !== undefined && sys.explorers_anchorage_distance_ly !== null)
+      ? sys.explorers_anchorage_distance_ly
+      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+        ? Math.hypot(sys.star_pos_x - 28.6875, sys.star_pos_y - (-19.78125), sys.star_pos_z - 25899.6875)
+        : null);
+    if (eaDist !== null && eaDist !== undefined) {
+      badges.push(`<span class="tag-badge tag-eanch-dist" title="銀河中心探査基地 Explorer's Anchorage (Stuemeae FG-Y d7561 / Sgr A*近傍) からの距離: ${Math.round(eaDist).toLocaleString()} Ly">E.Anchorage: ${Math.round(eaDist).toLocaleString()} Ly</span>`);
+    }
+  }
+
+  return badges;
+}
+
+function updateCurrentSystemDistances(sys) {
+  const distEl = document.getElementById('current-system-distances');
+  if (distEl && sys) {
+    const badges = generateLandmarkDistanceBadges(sys);
+    distEl.innerHTML = badges.join('');
+  }
+}
+
 // Rendering
 function renderSystemList() {
   const container = document.getElementById('system-list');
@@ -593,48 +691,8 @@ function renderSystemList() {
     if (sys.total_bio_signals > 0) tags.push(`<span class="tag-badge tag-bio">BIO: ${sys.total_bio_signals}</span>`);
     else if (sys.has_bio) tags.push('<span class="tag-badge tag-bio">BIO</span>');
     
-    // 5 Key Galactic Distances (CMDR, Sol, Colonia, Rainbow's End, Explorer's Anchorage)
-    const distanceBadges = [];
-    if (sys.cmdr_distance_ly !== null && sys.cmdr_distance_ly !== undefined) {
-      const cmdrSys = state.currentLocation && state.currentLocation.star_system ? ` (${state.currentLocation.star_system})` : '';
-      distanceBadges.push(`<span class="tag-badge tag-cmdr-dist" title="現在地${cmdrSys}からの距離: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly">📍 CMDR: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly</span>`);
-    }
-
-    const solDist = (sys.sol_distance_ly !== undefined && sys.sol_distance_ly !== null && sys.sol_distance_ly > 0)
-      ? sys.sol_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
-        ? Math.hypot(sys.star_pos_x, sys.star_pos_y, sys.star_pos_z)
-        : null);
-    if (solDist !== null && solDist !== undefined) {
-      distanceBadges.push(`<span class="tag-badge tag-sol-dist" title="太陽系 (Sol) からの距離: ${Math.round(solDist).toLocaleString()} Ly">Sol: ${Math.round(solDist).toLocaleString()} Ly</span>`);
-    }
-
-    const coloniaDist = (sys.colonia_distance_ly !== undefined && sys.colonia_distance_ly !== null)
-      ? sys.colonia_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
-        ? Math.hypot(sys.star_pos_x - (-9530.5), sys.star_pos_y - (-910.28125), sys.star_pos_z - 19808.125)
-        : null);
-    if (coloniaDist !== null && coloniaDist !== undefined) {
-      distanceBadges.push(`<span class="tag-badge tag-colonia-dist" title="第2の人類居住圏 (Colonia) からの距離: ${Math.round(coloniaDist).toLocaleString()} Ly">Colonia: ${Math.round(coloniaDist).toLocaleString()} Ly</span>`);
-    }
-
-    const rbDist = (sys.rainbows_end_distance_ly !== undefined && sys.rainbows_end_distance_ly !== null)
-      ? sys.rainbows_end_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
-        ? Math.hypot(sys.star_pos_x - 21481.40625, sys.star_pos_y - (-1004.5625), sys.star_pos_z - 43369.4375)
-        : null);
-    if (rbDist !== null && rbDist !== undefined) {
-      distanceBadges.push(`<span class="tag-badge tag-rainbow-dist" title="最遠方宇宙港 Rainbow's End (Roefoo ZE-H d10-0 / DW3) からの距離: ${Math.round(rbDist).toLocaleString()} Ly">Rainbow's End: ${Math.round(rbDist).toLocaleString()} Ly</span>`);
-    }
-
-    const eaDist = (sys.explorers_anchorage_distance_ly !== undefined && sys.explorers_anchorage_distance_ly !== null)
-      ? sys.explorers_anchorage_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
-        ? Math.hypot(sys.star_pos_x - 28.6875, sys.star_pos_y - (-19.78125), sys.star_pos_z - 25899.6875)
-        : null);
-    if (eaDist !== null && eaDist !== undefined) {
-      distanceBadges.push(`<span class="tag-badge tag-eanch-dist" title="銀河中心探査基地 Explorer's Anchorage (Stuemeae FG-Y d7561 / Sgr A*近傍) からの距離: ${Math.round(eaDist).toLocaleString()} Ly">E.Anchorage: ${Math.round(eaDist).toLocaleString()} Ly</span>`);
-    }
+    // Configurable Key Galactic Distances (CMDR, Sol, Colonia, Rainbow's End, Explorer's Anchorage)
+    const distanceBadges = generateLandmarkDistanceBadges(sys);
 
     // EDSM Discovery Status Badges & 1st Discover Registerable Announcement
     if (sys.edsm_checked === 1) {
@@ -851,31 +909,8 @@ function renderSystemHeader() {
     }
   }
 
-  // 5 Key Galactic Distances in Header
-  const distEl = document.getElementById('current-system-distances');
-  if (distEl) {
-    const badges = [];
-    if (sys.cmdr_distance_ly !== null && sys.cmdr_distance_ly !== undefined) {
-      badges.push(`<span class="tag-badge tag-cmdr-dist" title="現在地からの距離">📍 CMDR: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly</span>`);
-    }
-    const solDist = (sys.sol_distance_ly > 0) ? sys.sol_distance_ly : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null) ? Math.hypot(sys.star_pos_x, sys.star_pos_y, sys.star_pos_z) : null);
-    if (solDist !== null) {
-      badges.push(`<span class="tag-badge tag-sol-dist" title="太陽系 (Sol) からの距離">Sol: ${Math.round(solDist).toLocaleString()} Ly</span>`);
-    }
-    const colDist = sys.colonia_distance_ly ?? ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null) ? Math.hypot(sys.star_pos_x - (-9530.5), sys.star_pos_y - (-910.28125), sys.star_pos_z - 19808.125) : null);
-    if (colDist !== null) {
-      badges.push(`<span class="tag-badge tag-colonia-dist" title="第2の人類居住圏 (Colonia) からの距離">Colonia: ${Math.round(colDist).toLocaleString()} Ly</span>`);
-    }
-    const rbDist = sys.rainbows_end_distance_ly ?? ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null) ? Math.hypot(sys.star_pos_x - 21481.40625, sys.star_pos_y - (-1004.5625), sys.star_pos_z - 43369.4375) : null);
-    if (rbDist !== null) {
-      badges.push(`<span class="tag-badge tag-rainbow-dist" title="最遠方宇宙港 Rainbow's End (Roefoo ZE-H d10-0 / DW3) からの距離">Rainbow's End: ${Math.round(rbDist).toLocaleString()} Ly</span>`);
-    }
-    const eaDist = sys.explorers_anchorage_distance_ly ?? ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null) ? Math.hypot(sys.star_pos_x - 28.6875, sys.star_pos_y - (-19.78125), sys.star_pos_z - 25899.6875) : null);
-    if (eaDist !== null) {
-      badges.push(`<span class="tag-badge tag-eanch-dist" title="銀河中心探査基地 Explorer's Anchorage (Stuemeae FG-Y d7561 / Sgr A*近傍) からの距離">E.Anchorage: ${Math.round(eaDist).toLocaleString()} Ly</span>`);
-    }
-    distEl.innerHTML = badges.join('');
-  }
+  // Configurable Key Galactic Distances in Header
+  updateCurrentSystemDistances(sys);
 
   // Astrophysical Rarity Badge in Header
   const physBadgeEl = document.getElementById('current-system-physics-badge');
@@ -4063,6 +4098,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bioFilterContainer) {
       bioFilterContainer.style.display = state.currentView === 'bio' ? 'inline-flex' : 'none';
     }
+
+    // Show body sort controls only for list-based views (flat, bio, mining)
+    const bodySortWrapper = document.getElementById('body-sort-wrapper');
+    if (bodySortWrapper) {
+      const showSort = (state.currentView === 'flat' || state.currentView === 'bio' || state.currentView === 'mining');
+      bodySortWrapper.style.display = showSort ? 'flex' : 'none';
+    }
   }
 
   // Concept Mode Switcher Tabs (Header & Left Pane synchronization)
@@ -4148,35 +4190,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Live Sync Toggle Button
+  // Live Sync Toggle Buttons (Header & Accordion)
   const btnLiveToggle = document.getElementById('btn-live-toggle');
   if (btnLiveToggle) {
-    btnLiveToggle.addEventListener('click', async () => {
-      // If currently on Honk waiting screen or hyperspace, dismiss it and show current known system
-      if (state.jumpState === 'arrived_waiting_fss' || state.jumpState === 'hyperspace') {
-        state.liveSyncEnabled = true;
-        updateLiveSyncButtonUI();
-        updateSortControlsUI();
-        await dismissHonkWaitingAndShowCurrent();
-        return;
-      }
+    btnLiveToggle.addEventListener('click', toggleLiveSync);
+  }
 
-      state.liveSyncEnabled = !state.liveSyncEnabled;
-      state.page = 1;
-      updateLiveSyncButtonUI();
-      updateSortControlsUI();
-      if (state.liveSyncEnabled) {
-        state.jumpState = 'idle';
-        await fetchSystems({ autoSelectTop: false });
-        if (state.currentCmdrSystemAddress) {
-          selectSystem(state.currentCmdrSystemAddress, false, false);
-        } else if (state.systems && state.systems.length > 0) {
-          selectSystem(state.systems[0].system_address, false, false);
-        }
-      } else {
-        fetchSystems();
-      }
-    });
+  const btnAccordionLiveToggle = document.getElementById('btn-accordion-live-toggle');
+  if (btnAccordionLiveToggle) {
+    btnAccordionLiveToggle.addEventListener('click', toggleLiveSync);
   }
 
   // Manual Rescan Button (Header)
@@ -4229,19 +4251,73 @@ function updateRescanButtonUI(isScanning) {
   }
 }
 
+async function toggleLiveSync() {
+  // If currently on Honk waiting screen or hyperspace, dismiss it and show current known system
+  if (state.jumpState === 'arrived_waiting_fss' || state.jumpState === 'hyperspace') {
+    state.liveSyncEnabled = true;
+    updateLiveSyncButtonUI();
+    updateSortControlsUI();
+    await dismissHonkWaitingAndShowCurrent();
+    return;
+  }
+
+  state.liveSyncEnabled = !state.liveSyncEnabled;
+  state.page = 1;
+  updateLiveSyncButtonUI();
+  updateSortControlsUI();
+  if (state.liveSyncEnabled) {
+    state.jumpState = 'idle';
+    await fetchSystems({ autoSelectTop: false });
+    if (state.currentCmdrSystemAddress) {
+      selectSystem(state.currentCmdrSystemAddress, false, false);
+    } else if (state.systems && state.systems.length > 0) {
+      selectSystem(state.systems[0].system_address, false, false);
+    }
+  } else {
+    fetchSystems();
+  }
+}
+
 function updateLiveSyncButtonUI() {
   const btn = document.getElementById('btn-live-toggle');
   const txt = document.getElementById('live-status-text');
-  if (!btn || !txt) return;
+  if (btn && txt) {
+    if (state.liveSyncEnabled) {
+      btn.className = 'btn-live active';
+      btn.title = t('live_sync_tip');
+      txt.innerText = t('live_sync_on');
+    } else {
+      btn.className = 'btn-live paused';
+      btn.title = t('live_sync_tip');
+      txt.innerText = t('live_sync_off');
+    }
+  }
 
-  if (state.liveSyncEnabled) {
-    btn.className = 'btn-live active';
-    btn.title = t('live_sync_tip');
-    txt.innerText = t('live_sync_on');
-  } else {
-    btn.className = 'btn-live paused';
-    btn.title = t('live_sync_tip');
-    txt.innerText = t('live_sync_off');
+  // Synchronize accordion helper row
+  const accRow = document.getElementById('accordion-live-sync-row');
+  const accBtn = document.getElementById('btn-accordion-live-toggle');
+  const accTxt = document.getElementById('accordion-live-status-text');
+  const accDot = document.getElementById('accordion-live-dot');
+  if (accRow && accBtn && accTxt) {
+    if (state.liveSyncEnabled) {
+      accRow.className = 'live-sync-accordion-row';
+      accBtn.className = 'btn-live-accordion-toggle active';
+      accBtn.innerText = t('sort_live_unlock_btn') || 'LIVE解除';
+      accTxt.innerText = t('sort_live_hint') || '⚡ リアルタイム追従中（手動ソートするにはLIVEを解除してください）';
+      if (accDot) {
+        accDot.style.background = 'var(--ed-orange)';
+        accDot.style.animation = 'pulse 2s infinite';
+      }
+    } else {
+      accRow.className = 'live-sync-accordion-row paused';
+      accBtn.className = 'btn-live-accordion-toggle';
+      accBtn.innerText = t('sort_live_resume_btn') || 'LIVE再開';
+      accTxt.innerText = '⏹️ LIVE停止中（手動ソート有効）';
+      if (accDot) {
+        accDot.style.background = '#888';
+        accDot.style.animation = 'none';
+      }
+    }
   }
 }
 
@@ -5072,6 +5148,30 @@ async function initSettingsModal() {
   if (tabBtnCredits) tabBtnCredits.addEventListener('click', () => switchTab('credits'));
 
   initFontSizeControl();
+
+  // Landmark Display Settings in UI Tab
+  function initLandmarkSettingsUI() {
+    const currentLmSettings = getLandmarkSettings();
+    const cbs = document.querySelectorAll('.landmark-toggle-cb');
+    cbs.forEach(cb => {
+      const lmKey = cb.getAttribute('data-landmark');
+      if (lmKey && currentLmSettings[lmKey] !== undefined) {
+        cb.checked = Boolean(currentLmSettings[lmKey]);
+      }
+      cb.addEventListener('change', () => {
+        const updated = getLandmarkSettings();
+        updated[lmKey] = cb.checked;
+        saveLandmarkSettings(updated);
+        // Re-render system cards and details header immediately
+        renderSystemList();
+        if (state.selectedSystem) {
+          updateCurrentSystemDistances(state.selectedSystem);
+        }
+      });
+    });
+  }
+
+  initLandmarkSettingsUI();
 
   // App Settings (Journal Dir)
   const inputJournalDir = document.getElementById('setting-journal-dir');

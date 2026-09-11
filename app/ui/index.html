@@ -154,17 +154,14 @@
       <div class="left-controls-col" id="left-controls-col">
         <div class="search-section">
           <!-- Left Pane Mode Switcher Header Row with LIVE Toggle -->
-          <div class="left-pane-concept-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.06); gap: 6px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: bold;" data-i18n="search_mode_label">モード切替</span>
-              <div class="left-concept-tabs" style="display: inline-flex; gap: 2px; background: rgba(0,0,0,0.25); padding: 1px 3px; border-radius: 4px; border: 1px solid var(--border-color);">
-                <button id="btn-left-tab-explorer" class="concept-tab-btn active" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: var(--ed-orange); background: rgba(255, 113, 0, 0.15);" title="ジャーナル探査リスト">🧭 <span data-i18n="concept_tab_explorer_short">探査</span></button>
-                <button id="btn-left-tab-physics" class="concept-tab-btn" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: #a5f3fc; background: transparent;" title="天体物理・レア度解析">🌌 <span data-i18n="concept_tab_physics_short">天体物理</span></button>
-              </div>
+          <div class="left-pane-concept-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.06); gap: 4px;">
+            <div class="left-concept-tabs" style="display: inline-flex; gap: 2px; background: rgba(0,0,0,0.25); padding: 1px 3px; border-radius: 4px; border: 1px solid var(--border-color); flex-shrink: 1; min-width: 0;">
+              <button id="btn-pane-tab-explorer" class="concept-tab-btn active" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: var(--ed-orange); background: rgba(255, 113, 0, 0.15); white-space: nowrap;" title="ジャーナル探査リスト">🧭 <span data-i18n="concept_tab_explorer_short">探査</span></button>
+              <button id="btn-pane-tab-physics" class="concept-tab-btn" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: #a5f3fc; background: transparent; white-space: nowrap;" title="天体物理・レア度解析">🌌 <span data-i18n="concept_tab_physics_short">天体物理</span></button>
             </div>
 
-            <!-- Real-time Live Sync Toggle Button (Moved to Header for instant access) -->
-            <button id="btn-live-toggle" class="btn-live active" style="padding: 3px 8px; font-size: 0.72rem; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;" title="リアルタイム自動更新の有効/無効を切り替え（オフにすると過去ジャーナル閲覧時に自動ジャンプや再取得が行われません）">
+            <!-- Real-time Live Sync Toggle Button (Always visible & responsive) -->
+            <button id="btn-live-toggle" class="btn-live active" style="padding: 3px 8px; font-size: 0.72rem; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap;" title="リアルタイム自動更新の有効/無効を切り替え（オフにすると過去ジャーナル閲覧時に自動ジャンプや再取得が行われません）">
               <span class="live-indicator-dot"></span>
               <span id="live-status-text" data-i18n="live_sync_on">LIVE</span>
             </button>
@@ -204,9 +201,9 @@
                 <button class="chip" data-filter="has_ammonia" data-i18n="filter_ammonia">Ammonia</button>
                 <button class="chip" data-filter="has_terraformable" data-i18n="filter_tf">TF可能</button>
                 <button class="chip bio" data-filter="has_bio" data-i18n="filter_bio">Bio (生体)</button>
-                <button class="chip first-disc" data-filter="has_first_discover" data-i18n="filter_first_discover" style="border-color: rgba(255, 215, 0, 0.4);">⭐ 1st Disc (初発見)</button>
-                <button class="chip bookmark-chip" data-filter="has_bookmarks" data-i18n="filter_bookmarks" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.5);">🔖 ブックマーク</button>
-                <button class="chip shared-chip" data-filter="is_shared" data-i18n="filter_shared" style="color: #c4b5fd; border-color: rgba(167, 139, 250, 0.5);">🤝 Shared (共有)</button>
+                <button class="chip first-disc" data-filter="has_first_discover" data-i18n="filter_first_discover">⭐ 1st Disc (初発見)</button>
+                <button class="chip bookmark-chip" data-filter="has_bookmarks" data-i18n="filter_bookmarks">🔖 ブックマーク</button>
+                <button class="chip shared-chip" data-filter="is_shared" data-i18n="filter_shared">🤝 Shared (共有)</button>
                 <button class="chip" data-filter="has_high_g" data-i18n="filter_high_g">高重力 (3G+着陸)</button>
                 <button class="chip" data-filter="has_anomalies" data-i18n="filter_anomalies">特殊・レア</button>
               </div>
@@ -419,6 +416,15 @@
                 </div>
               </div>
 
+              <!-- Real-time Live Sync Helper Row inside Accordion -->
+              <div id="accordion-live-sync-row" class="live-sync-accordion-row">
+                <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                  <span class="live-indicator-dot" id="accordion-live-dot"></span>
+                  <span style="font-size: 0.72rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="accordion-live-status-text" data-i18n="sort_live_hint">⚡ リアルタイム追従中（手動ソートするにはLIVEを解除してください）</span>
+                </div>
+                <button type="button" id="btn-accordion-live-toggle" class="btn-live-accordion-toggle active" data-i18n="sort_live_unlock_btn">LIVE解除</button>
+              </div>
+
               <!-- Sort Controls Section -->
               <div class="sort-section" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid var(--border-color);">
                 <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
@@ -603,17 +609,19 @@
         </label>
 
         <div style="flex: 1;"></div>
-        <span style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="body_sort_label">天体ソート:</span>
-        <select id="body-sort-select" class="sort-select" style="font-size: 0.75rem; padding: 2px 6px;">
-          <option value="distance-asc" data-i18n="body_sort_dist">到着距離順 (近い順)</option>
-          <option value="radius-desc" data-i18n="body_sort_radius_desc">半径・サイズ (大きい順)</option>
-          <option value="radius-asc" data-i18n="body_sort_radius_asc">半径・サイズ (小さい順)</option>
-          <option value="value-desc" data-i18n="body_sort_val_desc">探査価値 (高い順)</option>
-          <option value="value-asc" data-i18n="body_sort_val_asc">探査価値 (低い順)</option>
-          <option value="bio-desc" data-i18n="body_sort_bio_desc">Bioシグナル数 (多い順)</option>
-          <option value="gravity-desc" data-i18n="body_sort_g_desc">重力 (高い順)</option>
-          <option value="gravity-asc" data-i18n="body_sort_g_asc">重力 (低い順)</option>
-        </select>
+        <div id="body-sort-wrapper" style="display: none; align-items: center; gap: 4px;">
+          <span style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="body_sort_label">天体ソート:</span>
+          <select id="body-sort-select" class="sort-select" style="font-size: 0.75rem; padding: 2px 6px;">
+            <option value="distance-asc" data-i18n="body_sort_dist">到着距離順 (近い順)</option>
+            <option value="radius-desc" data-i18n="body_sort_radius_desc">半径・サイズ (大きい順)</option>
+            <option value="radius-asc" data-i18n="body_sort_radius_asc">半径・サイズ (小さい順)</option>
+            <option value="value-desc" data-i18n="body_sort_val_desc">探査価値 (高い順)</option>
+            <option value="value-asc" data-i18n="body_sort_val_asc">探査価値 (低い順)</option>
+            <option value="bio-desc" data-i18n="body_sort_bio_desc">Bioシグナル数 (多い順)</option>
+            <option value="gravity-desc" data-i18n="body_sort_g_desc">重力 (高い順)</option>
+            <option value="gravity-asc" data-i18n="body_sort_g_asc">重力 (低い順)</option>
+          </select>
+        </div>
         <span id="body-count-badge" style="font-family: var(--font-mono); color: var(--text-secondary); margin-left: 8px;"></span>
       </div>
 
@@ -917,6 +925,38 @@
             <!-- Emergency Safety Notice -->
             <div style="margin-top: 14px; padding: 8px 12px; background: rgba(251, 191, 36, 0.08); border-left: 3px solid #fbbf24; font-size: 0.72rem; color: #fbbf24; border-radius: 0 4px 4px 0; line-height: 1.5;">
               🛡️ <b>セーフティ機構</b>: 極端な数値の入力により画面が崩れた場合でも、ヘッダー右上の「⚙️ 設定」ボタンは常に最前面に表示されます。また、キーボードの <kbd style="background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 3px; border: 1px solid #fbbf24; font-family: monospace;">Ctrl + 0</kbd> を押すことでいつでも即座に標準 (18px) にリセットできます。
+            </div>
+
+            <!-- Landmark Distance Display Customization -->
+            <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+              <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.85rem; margin-bottom: 6px; display: block;" data-i18n="settings_landmarks_label">
+                📍 ランドマーク距離バッジ表示設定
+              </label>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px;" data-i18n="settings_landmarks_desc">
+                星系リストカードおよび星系詳細ヘッダーに表示するランドマーク距離を選択できます。
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="cb-lm-cmdr" class="landmark-toggle-cb" data-landmark="cmdr" checked style="accent-color: var(--ed-orange); cursor: pointer;">
+                  <span style="color: #fed7aa; font-weight: bold;" data-i18n="lm_cmdr">📍 CMDR (現在地)</span>
+                </label>
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="cb-lm-sol" class="landmark-toggle-cb" data-landmark="sol" checked style="accent-color: #38bdf8; cursor: pointer;">
+                  <span style="color: #93c5fd; font-weight: bold;" data-i18n="lm_sol">Sol (太陽系)</span>
+                </label>
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="cb-lm-colonia" class="landmark-toggle-cb" data-landmark="colonia" checked style="accent-color: #c084fc; cursor: pointer;">
+                  <span style="color: #c084fc; font-weight: bold;" data-i18n="lm_colonia">Colonia (コロニア)</span>
+                </label>
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="cb-lm-rainbow" class="landmark-toggle-cb" data-landmark="rainbow" checked style="accent-color: #f472b6; cursor: pointer;">
+                  <span style="color: #f472b6; font-weight: bold;" data-i18n="lm_rainbow">Rainbow's End</span>
+                </label>
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer; grid-column: span 2;">
+                  <input type="checkbox" id="cb-lm-eanch" class="landmark-toggle-cb" data-landmark="eanch" checked style="accent-color: #34d399; cursor: pointer;">
+                  <span style="color: #34d399; font-weight: bold;" data-i18n="lm_eanch">Explorer's Anchorage</span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
