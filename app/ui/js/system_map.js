@@ -162,16 +162,121 @@ function getStarGroupSortScore(key) {
 }
 
 /**
+ * Extracts explicit star letter from body name, e.g. "Sol A" -> "A", "Sagittarius A*" -> "A"
+ */
+function extractStarLetter(bodyName) {
+  if (!bodyName) return null;
+  const clean = bodyName.trim();
+  const m = clean.match(/(?:^|\s+)([A-Z]{1,4})\*?$/);
+  if (m) {
+    return m[1];
+  }
+  return null;
+}
+
+/**
+ * Pre-analyzes all stars in a system to ensure every root star
+ * gets a distinct starGroup letter (A, B, C, D...) and is never overwritten.
+ */
+function analyzeSystemStars(flatBodies, systemName) {
+  const allStars = flatBodies.filter(b => Boolean(b.star_type || (b.body_type && b.body_type.toLowerCase() === 'star')));
+  const rootStars = [];
+  const dwarfPlanets = [];
+
+  allStars.forEach(b => {
+    let short = (b.body_name || '').trim();
+    if (systemName && short.startsWith(systemName)) {
+      short = short.substring(systemName.length).trim();
+    }
+    const tokens = short.split(/\s+/).filter(Boolean);
+    // If short name is a pure number (e.g. "1", "2"), it's a sub-stellar dwarf on the planet rail
+    if (tokens.length > 0 && /^\d+$/.test(tokens[0])) {
+      dwarfPlanets.push(b);
+    } else {
+      rootStars.push(b);
+    }
+  });
+
+  // Sort root stars: primary arrival star (0 ls) first, then by distance / body_id
+  rootStars.sort((a, b) => {
+    const distA = a.distance_from_arrival_ls || 0;
+    const distB = b.distance_from_arrival_ls || 0;
+    if (Math.abs(distA - distB) > 0.001) {
+      return distA - distB;
+    }
+    return (a.body_id || 0) - (b.body_id || 0);
+  });
+
+  // Assign unique star letter (A, B, C, D...) to each root star
+  const claimedLetters = new Set();
+  const starLetterMap = new Map(); // body_id -> letter
+
+  // Pass 1: Explicit letters in name (e.g. "Sagittarius A*" -> "A", "Sys B" -> "B")
+  rootStars.forEach(s => {
+    const letter = extractStarLetter(s.body_name);
+    if (letter && !claimedLetters.has(letter)) {
+      claimedLetters.add(letter);
+      starLetterMap.set(s.body_id, letter);
+    }
+  });
+
+  // Pass 2: Fallback available letters in order for stars without explicit letters (e.g. "Source 2" -> "B")
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  let alphaIdx = 0;
+  rootStars.forEach(s => {
+    if (!starLetterMap.has(s.body_id)) {
+      while (alphaIdx < alphabet.length && claimedLetters.has(alphabet[alphaIdx])) {
+        alphaIdx++;
+      }
+      const assigned = alphaIdx < alphabet.length ? alphabet[alphaIdx] : `S${s.body_id}`;
+      claimedLetters.add(assigned);
+      starLetterMap.set(s.body_id, assigned);
+    }
+  });
+
+  return { rootStars, dwarfPlanets, starLetterMap };
+}
+
+/**
  * Builds a strict and reliable hierarchical tree from bodies:
  * Stars & Circumbinary Barycentres -> Planets -> Moons -> Submoons
  */
 function buildSystemMapTree(flatBodies, systemName) {
   if (!flatBodies || flatBodies.length === 0) return [];
 
-  // 1. Tag and analyze each body
+  // 1. Pre-analyze stars to assign unique star letters
+  const { rootStars, dwarfPlanets, starLetterMap } = analyzeSystemStars(flatBodies, systemName);
+
+  // 2. Tag and analyze each body
   const analyzedList = flatBodies.map(b => {
-    const isStar = Boolean(b.star_type || (b.body_type && b.body_type.toLowerCase() === 'star'));
-    const info = analyzeBodyDesignation(b.body_name, systemName, isStar);
+    const isStarType = Boolean(b.star_type || (b.body_type && b.body_type.toLowerCase() === 'star'));
+    const isRootStar = rootStars.some(rs => rs.body_id === b.body_id);
+
+    let info;
+    if (isRootStar) {
+      const assignedLetter = starLetterMap.get(b.body_id) || 'A';
+      const rawShort = getBodyShortName(b.body_name, systemName).trim();
+      const shortName = rawShort || b.body_name.trim();
+      info = {
+        shortName: shortName,
+        starGroup: assignedLetter,
+        isStar: true,
+        planetNum: null,
+        moonLetter: null,
+        submoonLetter: null,
+        level: 0
+      };
+    } else {
+      info = analyzeBodyDesignation(b.body_name, systemName, isStarType);
+      // If planet has parents pointing directly to a root star, align its starGroup
+      const parentsList = parseParentsList(b.parents);
+      if (parentsList.length > 0 && parentsList[0].Star !== undefined) {
+        const parentStarId = parentsList[0].Star;
+        if (starLetterMap.has(parentStarId)) {
+          info.starGroup = starLetterMap.get(parentStarId);
+        }
+      }
+    }
     return {
       ...b,
       ...info,
@@ -180,11 +285,10 @@ function buildSystemMapTree(flatBodies, systemName) {
     };
   });
 
-  // 2. Collect Stars and Star Sections
+  // 3. Collect Stars and Star Sections (Guaranteed unique keys per root star)
   const starMap = new Map();
   const stars = analyzedList.filter(b => b.isStar);
 
-  // If no explicit star found, use a fallback 'A' section
   if (stars.length === 0) {
     starMap.set('A', {
       starKey: 'A',
@@ -194,8 +298,12 @@ function buildSystemMapTree(flatBodies, systemName) {
     });
   } else {
     stars.forEach(s => {
-      starMap.set(s.starGroup, {
-        starKey: s.starGroup,
+      let key = s.starGroup;
+      if (starMap.has(key)) {
+        key = `${key}-${s.body_id}`;
+      }
+      starMap.set(key, {
+        starKey: key,
         isBarycentre: false,
         rootStar: s,
         planets: []

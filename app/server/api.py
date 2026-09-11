@@ -28,6 +28,17 @@ from app.services.export_service import (
     import_edsys_package,
     verify_package_signature
 )
+from app.analyzer.stellar_physics import (
+    StellarPhysicsEngine,
+    SystemNarrator,
+    StellarDatabaseStorage,
+    SystemData,
+    ScanBody
+)
+from app.services.physics_translator import (
+    translate_anomalies_list_to_ja,
+    translate_narrative_report_to_ja
+)
 
 app = FastAPI(title="Elite Dangerous Journal Analyzer")
 
@@ -424,7 +435,7 @@ def get_systems(
     if q and q.strip():
         term = f"%{q.strip()}%"
         conditions.append("""(
-            star_system LIKE ? OR EXISTS (
+            systems.star_system LIKE ? OR EXISTS (
                 SELECT 1 FROM body_bookmarks bb 
                 WHERE bb.system_address = systems.system_address 
                 AND (bb.alias_name LIKE ? OR bb.note_markdown LIKE ? OR bb.body_name LIKE ?)
@@ -439,23 +450,23 @@ def get_systems(
         conditions.append("systems.is_shared = 1")
 
     if has_elw:
-        conditions.append("has_elw = 1")
+        conditions.append("systems.has_elw = 1")
     if has_water_world:
-        conditions.append("has_water_world = 1")
+        conditions.append("systems.has_water_world = 1")
     if has_ammonia:
-        conditions.append("has_ammonia = 1")
+        conditions.append("systems.has_ammonia = 1")
     if has_terraformable:
-        conditions.append("has_terraformable = 1")
+        conditions.append("systems.has_terraformable = 1")
     if has_bio:
-        conditions.append("has_bio = 1")
+        conditions.append("systems.has_bio = 1")
     if has_landable:
-        conditions.append("has_landable = 1")
+        conditions.append("systems.has_landable = 1")
     if has_high_g:
-        conditions.append("has_high_g = 1")
+        conditions.append("systems.has_high_g = 1")
     if has_anomalies:
-        conditions.append("has_anomalies = 1")
+        conditions.append("systems.has_anomalies = 1")
     if has_first_discover:
-        conditions.append("has_first_discover = 1")
+        conditions.append("systems.has_first_discover = 1")
 
     # Landable Mining Target Class & Feature Filtering (ignores non-landable bodies)
     if has_landable_hmc:
@@ -492,11 +503,11 @@ def get_systems(
     else:
         if date_from and date_from.strip():
             from_ts = date_from.strip() if "T" in date_from else f"{date_from.strip()}T00:00:00"
-            conditions.append(f"{target_date_col} >= ?")
+            conditions.append(f"systems.{target_date_col} >= ?")
             params.append(from_ts)
         if date_to and date_to.strip():
             to_ts = date_to.strip() if "T" in date_to else f"{date_to.strip()}T23:59:59"
-            conditions.append(f"{target_date_col} <= ?")
+            conditions.append(f"systems.{target_date_col} <= ?")
             params.append(to_ts)
 
     # Star Types filtering (Stellar classification multi-search)
@@ -601,7 +612,8 @@ def get_systems(
         "scanned_bodies": "scanned_bodies",
         "visit_count": "visit_count",
         "avg_landable_radius": "avg_landable_radius",
-        "main_star_type": "main_star_type"
+        "main_star_type": "main_star_type",
+        "rarity_score": "rarity_score"
     }
 
     # Gather active sort criteria
@@ -663,6 +675,8 @@ def get_systems(
             elif col_name in ["last_visited", "first_visited"]:
                 col = "last_visited" if col_name == "last_visited" else "first_visited"
                 return f"CASE WHEN stats.max_{col} > stats.min_{col} THEN (julianday(base.{col}) - stats.min_{col}) * 1.0 / (stats.max_{col} - stats.min_{col}) ELSE 1.0 END" if direction == "desc" else f"CASE WHEN stats.max_{col} > stats.min_{col} THEN (stats.max_{col} - julianday(base.{col})) * 1.0 / (stats.max_{col} - stats.min_{col}) ELSE 1.0 END"
+            elif col_name == "rarity_score":
+                return "CASE WHEN stats.max_rarity > stats.min_rarity THEN (COALESCE(base.rarity_score, 10.0) - stats.min_rarity) * 1.0 / (stats.max_rarity - stats.min_rarity) ELSE 1.0 END" if direction == "desc" else "CASE WHEN stats.max_rarity > stats.min_rarity THEN (stats.max_rarity - COALESCE(base.rarity_score, 10.0)) * 1.0 / (stats.max_rarity - stats.min_rarity) ELSE 1.0 END"
             elif col_name == "main_star_type":
                 spectral_score = """
                     CASE 
@@ -701,8 +715,10 @@ def get_systems(
             WITH base AS (
                 SELECT 
                     systems.*,
+                    pe.rarity_score,
                     {cmdr_dist_expr} AS cmdr_distance_ly
                 FROM systems
+                LEFT JOIN system_physics_evaluations pe ON systems.system_address = pe.system_address
                 {where_clause}
             ),
             stats AS (
@@ -717,6 +733,7 @@ def get_systems(
                     COALESCE(MAX(CASE WHEN avg_landable_radius > 0 THEN avg_landable_radius ELSE NULL END), 0) AS max_rad,
                     COALESCE(MIN(scanned_bodies), 0) AS min_sb, COALESCE(MAX(scanned_bodies), 0) AS max_sb,
                     COALESCE(MIN(visit_count), 0) AS min_vc, COALESCE(MAX(visit_count), 0) AS max_vc,
+                    COALESCE(MIN(COALESCE(rarity_score, 10.0)), 10.0) AS min_rarity, COALESCE(MAX(COALESCE(rarity_score, 10.0)), 10.0) AS max_rarity,
                     COALESCE(MIN(julianday(last_visited)), 0) AS min_last_visited, COALESCE(MAX(julianday(last_visited)), 0) AS max_last_visited,
                     COALESCE(MIN(julianday(first_visited)), 0) AS min_first_visited, COALESCE(MAX(julianday(first_visited)), 0) AS max_first_visited
                 FROM base
@@ -760,22 +777,26 @@ def get_systems(
                     END
                 """
                 return f"(main_star_type IS NULL OR main_star_type = '') ASC, {spectral_order} {direction.upper()}, main_star_type {direction.upper()}"
-            return f"{col_name} {direction.upper()}"
+            if col_name == "rarity_score":
+                return f"COALESCE(pe.rarity_score, 10.0) {direction.upper()}"
+            return f"systems.{col_name} {direction.upper()}"
 
         order_clauses = [build_order_clause(col, direction) for col, direction in valid_sorts]
 
         # Fallback deterministic order
         if not any(v[0] == "star_system" for v in valid_sorts):
-            order_clauses.append("star_system ASC")
+            order_clauses.append("systems.star_system ASC")
 
         order_sql = "ORDER BY " + ", ".join(order_clauses)
 
         select_sql = f"""
             SELECT 
                 systems.*,
+                pe.rarity_score,
                 {cmdr_dist_expr} AS cmdr_distance_ly,
                 NULL AS composite_score
             FROM systems
+            LEFT JOIN system_physics_evaluations pe ON systems.system_address = pe.system_address
             {where_clause}
             {order_sql}
             LIMIT ? OFFSET ?
@@ -1022,6 +1043,37 @@ def get_system_detail(system_address: int):
     system_data["bookmarks"] = list(bm_map.values())
     system_data["bookmarks_count"] = len(bm_map)
 
+    # Fetch physics evaluation (Stellar Physics Engine / ED_Analysys)
+    c.execute("SELECT rarity_score, star_count, planet_count, anomalies_json, narrative_report, raw_features_json, evaluated_at FROM system_physics_evaluations WHERE system_address = ?", (system_address,))
+    phys_row = c.fetchone()
+    if not phys_row:
+        try:
+            storage = StellarDatabaseStorage(db_path=conn)
+            storage.evaluate_and_store_from_ed_journal_db(system_address)
+            c.execute("SELECT rarity_score, star_count, planet_count, anomalies_json, narrative_report, raw_features_json, evaluated_at FROM system_physics_evaluations WHERE system_address = ?", (system_address,))
+            phys_row = c.fetchone()
+        except Exception as p_err:
+            print(f"Warning: on-demand physics evaluation failed for system {system_address}:", p_err)
+
+    if phys_row:
+        anoms_en = json.loads(phys_row["anomalies_json"])
+        rep_en = phys_row["narrative_report"]
+        system_data["rarity_score"] = phys_row["rarity_score"]
+        system_data["physics_evaluation"] = {
+            "rarity_score": phys_row["rarity_score"],
+            "star_count": phys_row["star_count"],
+            "planet_count": phys_row["planet_count"],
+            "anomalies_en": anoms_en,
+            "anomalies_ja": translate_anomalies_list_to_ja(anoms_en),
+            "narrative_report_en": rep_en,
+            "narrative_report_ja": translate_narrative_report_to_ja(rep_en),
+            "raw_features": json.loads(phys_row["raw_features_json"]),
+            "evaluated_at": phys_row["evaluated_at"]
+        }
+    else:
+        system_data["rarity_score"] = None
+        system_data["physics_evaluation"] = None
+
     conn.close()
 
     # Group mining activities by body
@@ -1220,7 +1272,62 @@ def get_system_detail(system_address: int):
             "total_signals": system_bio_signals_count,
             "total_scanned": len(system_scanned_organics),
             "total_completed": system_bio_completed_count
-        }
+        },
+        "physics_evaluation": system_data.get("physics_evaluation")
+    }
+
+@app.get("/api/systems/{system_address}/physics")
+def get_system_physics(system_address: int):
+    """
+    Returns astrophysical evaluation (Stellar Physics Engine / ED_Analysys)
+    with dual-language (EN / JA) narrative reports, anomalies, and 2014 models.
+    If not yet evaluated, runs evaluation on demand from systems/bodies.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        "SELECT rarity_score, star_count, planet_count, anomalies_json, narrative_report, raw_features_json, evaluated_at FROM system_physics_evaluations WHERE system_address = ?",
+        (system_address,)
+    )
+    phys_row = c.fetchone()
+    
+    if not phys_row:
+        # Evaluate on-demand
+        storage = StellarDatabaseStorage(db_path=conn)
+        eval_result = storage.evaluate_and_store_from_ed_journal_db(system_address)
+        if not eval_result:
+            conn.close()
+            return JSONResponse({"error": "System not found or has no scannable bodies for astrophysics evaluation"}, status_code=404)
+        c.execute(
+            "SELECT rarity_score, star_count, planet_count, anomalies_json, narrative_report, raw_features_json, evaluated_at FROM system_physics_evaluations WHERE system_address = ?",
+            (system_address,)
+        )
+        phys_row = c.fetchone()
+
+    c.execute("SELECT star_system, star_pos_x, star_pos_y, star_pos_z FROM systems WHERE system_address = ?", (system_address,))
+    sys_row = c.fetchone()
+    conn.close()
+
+    if not phys_row:
+        return JSONResponse({"error": "Evaluation could not be completed"}, status_code=500)
+
+    anoms_en = json.loads(phys_row["anomalies_json"])
+    rep_en = phys_row["narrative_report"]
+    raw_feats = json.loads(phys_row["raw_features_json"])
+
+    return {
+        "system_address": system_address,
+        "star_system": sys_row["star_system"] if sys_row else f"System {system_address}",
+        "star_pos": [sys_row["star_pos_x"], sys_row["star_pos_y"], sys_row["star_pos_z"]] if sys_row and sys_row["star_pos_x"] is not None else None,
+        "rarity_score": phys_row["rarity_score"],
+        "star_count": phys_row["star_count"],
+        "planet_count": phys_row["planet_count"],
+        "anomalies_en": anoms_en,
+        "anomalies_ja": translate_anomalies_list_to_ja(anoms_en),
+        "narrative_report_en": rep_en,
+        "narrative_report_ja": translate_narrative_report_to_ja(rep_en),
+        "raw_features": raw_feats,
+        "evaluated_at": phys_row["evaluated_at"]
     }
 
 APP_SETTINGS_FILE = DATA_DIR / "app_settings.json"

@@ -205,6 +205,42 @@ def init_db(conn=None):
     );
     """)
 
+    # Astrophysical evaluations table (ED_Analysys / Stellar Physics Engine)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS system_physics_evaluations (
+        system_address INTEGER PRIMARY KEY,
+        star_system TEXT NOT NULL,
+        rarity_score REAL NOT NULL,
+        star_count INTEGER NOT NULL,
+        planet_count INTEGER NOT NULL,
+        anomalies_json TEXT NOT NULL,
+        narrative_report TEXT NOT NULL,
+        raw_features_json TEXT NOT NULL,
+        evaluated_at TEXT NOT NULL,
+        FOREIGN KEY (system_address) REFERENCES systems(system_address)
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_physics_eval_score ON system_physics_evaluations(rarity_score DESC);")
+
+    # If dist/data/elite_journal.db has evaluations not in local DB, import them
+    try:
+        dist_db = Path(__file__).resolve().parent.parent.parent / "dist" / "data" / "elite_journal.db"
+        if dist_db.exists() and dist_db.resolve() != Path(DB_PATH).resolve():
+            with sqlite3.connect(dist_db) as d_conn:
+                d_cur = d_conn.cursor()
+                d_cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='system_physics_evaluations'")
+                if d_cur.fetchone():
+                    d_cur.execute("SELECT system_address, star_system, rarity_score, star_count, planet_count, anomalies_json, narrative_report, raw_features_json, evaluated_at FROM system_physics_evaluations")
+                    dist_rows = d_cur.fetchall()
+                    for dr in dist_rows:
+                        cursor.execute("""
+                            INSERT OR IGNORE INTO system_physics_evaluations 
+                            (system_address, star_system, rarity_score, star_count, planet_count, anomalies_json, narrative_report, raw_features_json, evaluated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, dr)
+    except Exception as e:
+        pass
+
     # Indices for performance
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_name ON systems(star_system);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_last_visited ON systems(last_visited DESC);")

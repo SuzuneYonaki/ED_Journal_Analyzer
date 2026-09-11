@@ -19,7 +19,10 @@ hiddenimports = [
     'webview.platforms.winforms',
     'clr',
     'sqlite3',
-] + collect_submodules('uvicorn') + collect_submodules('fastapi') + collect_submodules('webview')
+    'psutil',
+    'app.analyzer.stellar_physics',
+    'app.services.physics_translator',
+] + collect_submodules('uvicorn') + collect_submodules('fastapi') + collect_submodules('webview') + collect_submodules('psutil') + collect_submodules('app')
 
 datas = [
     ('app/ui', 'app/ui'),

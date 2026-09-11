@@ -51,7 +51,19 @@
       <div class="brand">
         <img src="/static/icon.png" alt="Logo" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 6px;">
         <span class="logo-text">ED Journal Explorer</span>
-        <span class="version-badge">v0.0.8</span>
+        <span class="version-badge">v0.0.10</span>
+
+        <!-- Header Concept Mode Switcher Tabs -->
+        <div class="header-concept-tabs" id="header-concept-tabs" style="display: inline-flex; align-items: center; gap: 3px; margin-left: 14px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); padding: 2px 4px; border-radius: 6px;">
+          <button id="btn-tab-explorer" class="concept-tab-btn active" style="display: flex; align-items: center; gap: 5px; padding: 3px 10px; font-size: 0.78rem; font-weight: bold; border-radius: 4px; border: 1px solid transparent; cursor: pointer; color: var(--ed-orange); background: rgba(255, 113, 0, 0.15);" title="ジャーナル探査・星系マップモード">
+            <span>🧭</span>
+            <span data-i18n="concept_tab_explorer">ジャーナル探査</span>
+          </button>
+          <button id="btn-tab-physics" class="concept-tab-btn" style="display: flex; align-items: center; gap: 5px; padding: 3px 10px; font-size: 0.78rem; font-weight: bold; border-radius: 4px; border: 1px solid transparent; cursor: pointer; color: #a5f3fc; background: transparent; transition: all 0.2s ease;" title="ED_Analysys 天体物理・レア度解析モード">
+            <span>🌌</span>
+            <span data-i18n="concept_tab_physics">ED_Analysys (天体物理)</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -135,6 +147,15 @@
       <!-- Left Column 1: Search, Filter, and Sort Controls -->
       <div class="left-controls-col" id="left-controls-col">
         <div class="search-section">
+          <!-- Left Pane Mode Switcher Header Row -->
+          <div class="left-pane-concept-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+            <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: bold;" data-i18n="search_mode_label">モード切替</span>
+            <div class="left-concept-tabs" style="display: inline-flex; gap: 2px; background: rgba(0,0,0,0.25); padding: 1px 3px; border-radius: 4px; border: 1px solid var(--border-color);">
+              <button id="btn-left-tab-explorer" class="concept-tab-btn active" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: var(--ed-orange); background: rgba(255, 113, 0, 0.15);" title="ジャーナル探査リスト">🧭 <span data-i18n="concept_tab_explorer_short">探査</span></button>
+              <button id="btn-left-tab-physics" class="concept-tab-btn" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: #a5f3fc; background: transparent;" title="天体物理・レア度解析">🌌 <span data-i18n="concept_tab_physics_short">天体物理</span></button>
+            </div>
+          </div>
+
           <div class="search-bar">
             <input type="text" id="system-search" class="search-input" placeholder="星系名を検索 (例: Sol, Beagle Point)...">
           </div>
@@ -391,6 +412,7 @@
                 <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
                   <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_primary">1次ソート:</span>
                   <select id="sort-select" class="sort-select" style="flex: 1; font-size: 0.78rem;">
+                    <option value="rarity_score-desc" data-i18n="sort_rarity_desc">🌌 天体物理レア度 (高い順)</option>
                     <option value="total_potential_value-desc" data-i18n="sort_value_desc">推定探査価値 (高い順)</option>
                     <option value="total_potential_value-asc" data-i18n="sort_value_asc">推定探査価値 (低い順)</option>
                     <option value="total_fss_value-desc" data-i18n="sort_fss_desc">FSS合計 (高い順)</option>
@@ -419,6 +441,7 @@
                   <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_secondary">2次ソート:</span>
                   <select id="sort-select-2" class="sort-select" style="flex: 1; font-size: 0.78rem;">
                     <option value="none" data-i18n="sort_none">（指定なし）</option>
+                    <option value="rarity_score-desc" data-i18n="sort_rarity_desc">🌌 天体物理レア度 (高い順)</option>
                     <option value="avg_landable_radius-desc" data-i18n="sort_landable_radius_desc">Landable平均サイズ (大きい順)</option>
                     <option value="avg_landable_radius-asc" data-i18n="sort_landable_radius_asc">Landable平均サイズ (小さい順)</option>
                     <option value="main_star_type-asc" data-i18n="sort_main_star_asc">主星系列 (O-B-A-F-G-K-M...)</option>
@@ -515,6 +538,7 @@
           <div id="current-system-coords" class="system-coords"></div>
           <div id="current-system-edsm-badge" style="margin-left: 4px;"></div>
           <div id="current-system-shared-badge" style="margin-left: 4px; display: none;"></div>
+          <div id="current-system-physics-badge" style="margin-left: 4px; display: none; cursor: pointer;" title="クリックして天体物理・レア度レポートを表示"></div>
           <div id="current-system-distances" style="display: flex; gap: 3px; align-items: center; margin-left: 6px; flex-wrap: wrap;"></div>
         </div>
         <div class="system-total-payout" style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
@@ -558,6 +582,7 @@
         <button id="btn-view-bio" class="view-btn" style="color: var(--ed-green); border-color: rgba(0, 255, 136, 0.4);" data-i18n="view_bio">🌱 Bio天体のみ</button>
         <button id="btn-view-mining" class="view-btn" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" data-i18n="view_mining">⛏️ 採掘・Landable</button>
         <button id="btn-view-visits" class="view-btn" data-i18n="view_visits">過去訪問履歴</button>
+        <button id="btn-view-physics" class="view-btn" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" data-i18n="view_physics">🌌 天体物理 (ED_Analysys)</button>
         
         <!-- Bio-only view filter -->
         <label id="bio-filter-hide-completed-container" style="display: none; align-items: center; gap: 4px; font-size: 0.75rem; color: #a7f3d0; cursor: pointer; margin-left: 8px; background: rgba(0, 255, 136, 0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(0, 255, 136, 0.3);">

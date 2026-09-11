@@ -5,6 +5,7 @@ import time
 import threading
 import socket
 import urllib.request
+import psutil
 import uvicorn
 import webview
 
@@ -17,17 +18,148 @@ if sys.stderr is None:
 from app.config import HOST, BASE_DIR, DATA_DIR
 from app.server.api import app
 
-def find_free_port(start_port=8686):
-    for port in range(start_port, start_port + 50):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind((HOST, port))
-                return port
-            except OSError:
-                continue
-    return start_port
+def log_msg(msg: str):
+    """Outputs to stdout and app/data/run.log for diagnostics."""
+    try:
+        ts = time.strftime("%Y-%m-%d %H:%M:%S")
+        line = f"[{ts}] {msg}\n"
+        if sys.stdout:
+            sys.stdout.write(line)
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with open(DATA_DIR / "run.log", "a", encoding="utf-8") as f:
+            f.write(line)
+    except Exception:
+        pass
 
-def wait_for_server(url, timeout=10.0):
+def get_own_process_family():
+    """Returns set of PIDs in current process hierarchy (ancestors and descendants)."""
+    pids = set()
+    try:
+        cur = psutil.Process()
+        pids.add(cur.pid)
+        # Ancestors
+        p = cur.parent()
+        while p:
+            pids.add(p.pid)
+            try:
+                p = p.parent()
+            except Exception:
+                break
+        # Children
+        for c in cur.children(recursive=True):
+            pids.add(c.pid)
+    except Exception:
+        pids.add(os.getpid())
+    return pids
+
+def cleanup_stale_instances():
+    """Terminates any orphan background processes of ED_Journal_Analyzer.exe from previous runs."""
+    family = get_own_process_family()
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            pid = proc.info['pid']
+            if pid not in family:
+                pname = (proc.info['name'] or '').lower()
+                if pname == 'ed_journal_analyzer.exe':
+                    log_msg(f"[Cleanup] Terminating stale instance PID {pid}")
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=1.5)
+                    except Exception:
+                        proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):
+            pass
+
+def free_port_if_stale(port=8686):
+    """Frees the specified port if it is held by an orphan ED_Journal_Analyzer process."""
+    family = get_own_process_family()
+    try:
+        for conn in psutil.net_connections(kind='inet'):
+            if conn.laddr and conn.laddr.port == port and conn.status == 'LISTEN':
+                if conn.pid and conn.pid not in family:
+                    try:
+                        proc = psutil.Process(conn.pid)
+                        pname = proc.name().lower()
+                        if 'ed_journal_analyzer' in pname:
+                            log_msg(f"[Port] Freeing port {port} held by stale process (PID {conn.pid})")
+                            proc.terminate()
+                            try:
+                                proc.wait(timeout=1.5)
+                            except Exception:
+                                proc.kill()
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+
+class ResilientServerRunner:
+    """Runs FastAPI via uvicorn with automatic port migration on conflict (8686 -> 8687...)."""
+    def __init__(self, host="127.0.0.1", start_port=8686, max_tries=30):
+        self.host = host
+        self.start_port = start_port
+        self.max_tries = max_tries
+        self.active_port = None
+        self.server = None
+        self.ready_event = threading.Event()
+        self.error = None
+
+    def start_in_background(self):
+        t = threading.Thread(target=self._run_loop, daemon=True)
+        t.start()
+        return t
+
+    def _run_loop(self):
+        for port in range(self.start_port, self.start_port + self.max_tries):
+            # 1. Quick check: Is another server already listening?
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                try:
+                    s.settimeout(0.15)
+                    s.connect((self.host, port))
+                    # Already listening: port is occupied
+                    log_msg(f"[Server] Port {port} is already listening, trying next port...")
+                    continue
+                except (ConnectionRefusedError, OSError, socket.timeout):
+                    pass
+
+            # 2. Test bind with exclusive addr use
+            try:
+                test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                if hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):
+                    test_sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+                else:
+                    test_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                test_sock.bind((self.host, port))
+                test_sock.close()
+            except OSError as e:
+                log_msg(f"[Server] Port {port} cannot be bound ({e}), trying next port...")
+                continue
+
+            # 3. Start uvicorn on this port
+            try:
+                config = uvicorn.Config(
+                    app,
+                    host=self.host,
+                    port=port,
+                    log_level="error",
+                    access_log=False
+                )
+                self.server = uvicorn.Server(config)
+                self.active_port = port
+                self.ready_event.set()
+                log_msg(f"[Server] Running on http://{self.host}:{port}")
+                self.server.run()
+                break
+            except OSError as e:
+                log_msg(f"[Server] Uvicorn failed to bind on port {port}: {e}")
+                self.ready_event.clear()
+                self.active_port = None
+                continue
+            except Exception as e:
+                log_msg(f"[Server] Unexpected startup error: {e}")
+                self.error = e
+                break
+
+def wait_for_server(url, timeout=12.0):
     start = time.time()
     while time.time() - start < timeout:
         try:
@@ -39,50 +171,91 @@ def wait_for_server(url, timeout=10.0):
     return False
 
 def main():
-    port = find_free_port(8686)
+    log_msg(f"=== Starting ED Journal Analyzer (PID {os.getpid()}) ===")
+    # 1. Terminate any stale zombie instances from earlier runs
+    cleanup_stale_instances()
+    free_port_if_stale(8686)
+
+    # 2. Start server with automatic port migration
+    runner = ResilientServerRunner(host=HOST, start_port=8686, max_tries=30)
+    runner.start_in_background()
+
+    # Wait for runner to find a port and start
+    if not runner.ready_event.wait(timeout=10.0) or runner.active_port is None:
+        log_msg("[Error] Failed to initialize server port.")
+        url = None
+    else:
+        url = f"http://{HOST}:{runner.active_port}"
+
+    # 3. Wait until server is fully responsive via HTTP
+    is_ready = False
+    if url:
+        is_ready = wait_for_server(url, timeout=12.0)
+
     use_browser = "--browser" in sys.argv
 
-    # Start FastAPI server in a background thread
-    server_thread = threading.Thread(
-        target=lambda: uvicorn.run(
-            app,
-            host=HOST,
-            port=port,
-            log_level="error",
-            access_log=False
-        ),
-        daemon=True
-    )
-    server_thread.start()
-
-    url = f"http://{HOST}:{port}"
-
-    # Wait until server is fully responsive
-    wait_for_server(url, timeout=8.0)
-
     if use_browser:
-        import webbrowser
-        print(f"Opening in browser: {url}")
-        webbrowser.open(url)
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            print("Shutting down...")
+        if is_ready:
+            import webbrowser
+            log_msg(f"Opening in browser: {url}")
+            webbrowser.open(url)
+            try:
+                while True:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                pass
+        os._exit(0)
     else:
         # Create Desktop Window with pywebview
-        icon_path = str(BASE_DIR / "app" / "ui" / "icon.png")
-        window = webview.create_window(
-            title="Elite Dangerous Journal Analyzer & Exploration Orrery (v0.0.8)",
-            url=url,
-            width=1400,
-            height=900,
-            min_size=(1024, 700),
-            background_color="#0a0c10"
-        )
         storage_dir = DATA_DIR / "webview"
         storage_dir.mkdir(parents=True, exist_ok=True)
-        webview.start(debug=False, private_mode=False, storage_path=str(storage_dir))
+
+        if is_ready:
+            window = webview.create_window(
+                title="Elite Dangerous Journal Analyzer & Exploration Orrery (v0.0.10)",
+                url=url,
+                width=1400,
+                height=900,
+                min_size=(1024, 700),
+                background_color="#0a0c10"
+            )
+        else:
+            # Fallback error screen if server failed to start
+            error_html = """
+            <!DOCTYPE html>
+            <html style="background: #0a0c10; color: #f1f5f9; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh;">
+            <body style="text-align: center; max-width: 600px; padding: 20px;">
+                <h1 style="color: #ef4444; font-size: 1.5rem;">⚠️ ローカルサーバーの起動に失敗しました</h1>
+                <p style="color: #94a3b8; line-height: 1.6; margin-top: 12px;">
+                    ポートの競合または前回のプロセスが残存している可能性があります。<br>
+                    タスクマネージャーから「ED_Journal_Analyzer.exe」を終了してから再度起動してください。
+                </p>
+                <div style="margin-top: 24px;">
+                    <button onclick="window.close()" style="background: #ff7100; color: #000; font-weight: bold; border: none; padding: 10px 24px; border-radius: 4px; cursor: pointer;">
+                        閉じる
+                    </button>
+                </div>
+            </body>
+            </html>
+            """
+            window = webview.create_window(
+                title="Elite Dangerous Journal Analyzer - Startup Error",
+                html=error_html,
+                width=700,
+                height=450,
+                background_color="#0a0c10"
+            )
+
+        def on_window_closed():
+            # Immediately kill all background threads and release resources
+            os._exit(0)
+
+        window.events.closed += on_window_closed
+        try:
+            webview.start(debug=False, private_mode=False, storage_path=str(storage_dir))
+        finally:
+            os._exit(0)
 
 if __name__ == "__main__":
     main()
+

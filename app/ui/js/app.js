@@ -278,7 +278,10 @@ function getBodyIconClass(body) {
 }
 
 function getBodyIconLabel(body) {
-  if (body.star_type) return body.star_type;
+  if (body.star_type) {
+    if (body.star_type.toUpperCase() === 'SUPERMASSIVEBLACKHOLE') return 'SMBH';
+    return body.star_type;
+  }
   const pc = (body.planet_class || '').toLowerCase();
   if (pc.includes('earthlike')) return 'ELW';
   if (pc.includes('water world')) return 'WW';
@@ -661,6 +664,22 @@ function renderSystemList() {
     if (sys.composite_score !== null && sys.composite_score !== undefined) {
       tags.push(`<span class="tag-badge" style="background: rgba(0, 255, 136, 0.18); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.5); font-weight: bold;" title="総合ブレンドスコア: ${sys.composite_score}pt">★ スコア: ${Math.round(sys.composite_score)}pt</span>`);
     }
+    if (sys.rarity_score !== null && sys.rarity_score !== undefined) {
+      const rScore = Math.round(sys.rarity_score * 10) / 10;
+      let rClass = 'rarity-score-normal';
+      let rLabel = t('physics_normal');
+      if (rScore >= 95) {
+        rClass = 'rarity-score-legendary';
+        rLabel = t('physics_legendary');
+      } else if (rScore >= 80) {
+        rClass = 'rarity-score-epic';
+        rLabel = t('physics_epic');
+      } else if (rScore >= 60) {
+        rClass = 'rarity-score-rare';
+        rLabel = t('physics_rare');
+      }
+      tags.unshift(`<span class="tag-badge ${rClass}" title="ED_Analysys 天体物理レア度: ${rScore} pt [${rLabel}]">🌌 ★ ${rScore} pt</span>`);
+    }
 
     const visitedDate = sys.last_visited ? sys.last_visited.substring(0, 10) : '--';
     let mainStar = '';
@@ -856,6 +875,41 @@ function renderSystemHeader() {
       badges.push(`<span class="tag-badge tag-eanch-dist" title="銀河中心探査基地 Explorer's Anchorage (Stuemeae FG-Y d7561 / Sgr A*近傍) からの距離">E.Anchorage: ${Math.round(eaDist).toLocaleString()} Ly</span>`);
     }
     distEl.innerHTML = badges.join('');
+  }
+
+  // Astrophysical Rarity Badge in Header
+  const physBadgeEl = document.getElementById('current-system-physics-badge');
+  if (physBadgeEl) {
+    const rScore = (sys.rarity_score !== undefined && sys.rarity_score !== null)
+      ? sys.rarity_score
+      : (state.currentSystemData && state.currentSystemData.physics_evaluation ? state.currentSystemData.physics_evaluation.rarity_score : null);
+
+    if (rScore !== null && rScore !== undefined) {
+      const roundedScore = Math.round(rScore * 10) / 10;
+      let rClass = 'rarity-score-normal';
+      let rLabel = t('physics_normal');
+      if (roundedScore >= 95) {
+        rClass = 'rarity-score-legendary';
+        rLabel = t('physics_legendary');
+      } else if (roundedScore >= 80) {
+        rClass = 'rarity-score-epic';
+        rLabel = t('physics_epic');
+      } else if (roundedScore >= 60) {
+        rClass = 'rarity-score-rare';
+        rLabel = t('physics_rare');
+      }
+      physBadgeEl.className = `tag-badge ${rClass}`;
+      physBadgeEl.innerHTML = `🌌 ★ ${roundedScore} pt <span style="font-size: 0.68rem; opacity: 0.9;">(${rLabel})</span>`;
+      physBadgeEl.style.display = 'inline-flex';
+      physBadgeEl.onclick = () => {
+        state.currentView = 'physics';
+        updateViewButtons();
+        renderCurrentView();
+      };
+    } else {
+      physBadgeEl.style.display = 'none';
+      physBadgeEl.onclick = null;
+    }
   }
   
   // Exobiology System Summary
@@ -1333,12 +1387,394 @@ function renderCurrentView() {
     renderMiningView(container, sorted);
   } else if (state.currentView === 'visits') {
     renderVisitsTimeline(container, state.currentSystemData.visits);
+  } else if (state.currentView === 'physics') {
+    renderPhysicsReport(container, state.currentSystemData);
   }
 
   // Auto focus & scroll to target body
   const targetId = state.selectedBody ? state.selectedBody.body_id : state.targetBodyId;
-  if (targetId !== null && targetId !== undefined) {
+  if (targetId !== null && targetId !== undefined && state.currentView !== 'physics') {
     focusAndScrollToTargetBody(targetId);
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+async function renderPhysicsReport(container, systemData) {
+  if (!systemData || !systemData.system) {
+    container.innerHTML = `<div style="color: var(--text-secondary); text-align: center; padding: 40px;">${t('select_system_desc')}</div>`;
+    return;
+  }
+
+  const sys = systemData.system;
+  const sysAddr = sys.system_address;
+  let evalData = systemData.physics_evaluation;
+
+  // If not yet evaluated, fetch on-demand
+  if (!evalData) {
+    container.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 350px; color: var(--ed-cyan);">
+        <div class="loading-spinner" style="width: 38px; height: 38px; border: 3px solid rgba(0, 210, 255, 0.2); border-top-color: var(--ed-cyan); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
+        <div style="font-size: 1.05rem; font-weight: bold;">🌌 ${t('scanning_banner') || 'ED_Analysys 天体物理解析を実行中...'}</div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 6px;">2014年天文学モデル・Kopparapu HZ・Gladman Hill・古在共鳴を計算中...</div>
+      </div>
+    `;
+
+    try {
+      const res = await fetch(`/api/systems/${sysAddr}/physics`);
+      if (res.ok) {
+        const json = await res.json();
+        evalData = json;
+        systemData.physics_evaluation = json;
+        if (json.rarity_score !== undefined && json.rarity_score !== null) {
+          systemData.system.rarity_score = json.rarity_score;
+          if (state.selectedSystem && state.selectedSystem.system_address === sysAddr) {
+            state.selectedSystem.rarity_score = json.rarity_score;
+          }
+          renderSystemHeader();
+        }
+      } else {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+            <div style="font-size: 1.5rem; margin-bottom: 10px;">⚠️</div>
+            <div>${t('physics_no_data')}</div>
+            <button id="btn-retry-eval" class="btn-primary" style="margin-top: 14px; padding: 6px 14px; font-size: 0.8rem;">
+              ${t('btn_eval_physics')}
+            </button>
+          </div>
+        `;
+        const retryBtn = document.getElementById('btn-retry-eval');
+        if (retryBtn) retryBtn.onclick = () => renderPhysicsReport(container, systemData);
+        return;
+      }
+    } catch (err) {
+      console.error('Physics eval fetch failed:', err);
+      container.innerHTML = `<div style="color: var(--ed-red); text-align: center; padding: 40px;">天体物理データの取得に失敗しました: ${err.message}</div>`;
+      return;
+    }
+  }
+
+  // Determine display language
+  const isJa = currentLang === 'ja';
+  const rScore = Math.round((evalData.rarity_score || 0) * 10) / 10;
+  let rClass = 'rarity-score-normal';
+  let rLabel = t('physics_normal');
+  let rGlowColor = '#94a3b8';
+  if (rScore >= 95) {
+    rClass = 'rarity-score-legendary';
+    rLabel = t('physics_legendary');
+    rGlowColor = '#fbbf24';
+  } else if (rScore >= 80) {
+    rClass = 'rarity-score-epic';
+    rLabel = t('physics_epic');
+    rGlowColor = '#c084fc';
+  } else if (rScore >= 60) {
+    rClass = 'rarity-score-rare';
+    rLabel = t('physics_rare');
+    rGlowColor = '#38bdf8';
+  }
+
+  const anomalies = (isJa ? evalData.anomalies_ja : evalData.anomalies_en) || [];
+  const narrativeReport = (isJa ? evalData.narrative_report_ja : evalData.narrative_report_en) || '';
+  const rawFeats = evalData.raw_features || {};
+
+  // Build Anomalies Pills with body highlighting and collapsible fold
+  let anomaliesHtml = '';
+  if (anomalies.length > 0) {
+    const formatAnomalyPill = (a) => {
+      let icon = '⚡';
+      if (a.includes('HZ') || a.includes('ハビタブル') || a.includes('Habitable')) icon = '🌱';
+      else if (a.includes('Greenhouse') || a.includes('暴走温室') || a.includes('金星')) icon = '🌋';
+      else if (a.includes('Mega-Earth') || a.includes('超巨大岩石')) icon = '🪐';
+      else if (a.includes('Hill') || a.includes('共鳴') || a.includes('古在') || a.includes('ヒル')) icon = '🌀';
+      else if (a.includes('Tidal') || a.includes('潮汐') || a.includes('ロシュ限界') || a.includes('Roche')) icon = '🌊';
+      else if (a.includes('Binary') || a.includes('連星')) icon = '✨';
+      else if (a.includes('Ring') || a.includes('環')) icon = '🪐';
+      else if (a.includes('Remnant') || a.includes('Black Hole') || a.includes('Neutron') || a.includes('ブラックホール') || a.includes('中性子星')) icon = '💫';
+
+      let escaped = escapeHtml(a);
+      // Highlight body names (e.g. "天体 X:" or "X confirmed" or "Category: X & Y")
+      escaped = escaped
+        .replace(/^(天体\s+[^:：\s]+)/, '<strong style="color: #fff; text-shadow: 0 0 6px rgba(255,255,255,0.4);">$1</strong>')
+        .replace(/^(.*?[:：]\s*)([A-Za-z0-9\-]+(?:\s+[A-Za-z0-9\-]+)*(?:\s*&\s*[A-Za-z0-9\-]+(?:\s+[A-Za-z0-9\-]+)*)?)/, (m, p1, p2) => {
+          return `${p1}<strong style="color: #fff; text-shadow: 0 0 6px rgba(255,255,255,0.4);">${p2}</strong>`;
+        });
+
+      return `<span class="anomaly-pill">${icon} ${escaped}</span>`;
+    };
+
+    const initialCount = 5;
+    const initialPills = anomalies.slice(0, initialCount).map(formatAnomalyPill).join('');
+    const remainingPills = anomalies.slice(initialCount).map(formatAnomalyPill).join('');
+    const hasMore = anomalies.length > initialCount;
+
+    anomaliesHtml = `
+      <div class="physics-narrative-card" style="border-left: 4px solid #ef4444;">
+        <div style="font-size: 0.88rem; font-weight: bold; color: #f87171; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span>★</span> <span>${t('physics_anomalies_title')} (${anomalies.length})</span>
+          </div>
+        </div>
+        <div class="physics-anomalies-list">${initialPills}</div>
+        ${hasMore ? `
+          <div id="physics-anomalies-collapsed" class="physics-anomalies-collapsible hidden">
+            ${remainingPills}
+          </div>
+          <button id="btn-toggle-anomalies" class="anomaly-collapse-btn">
+            <span>${(t('physics_show_more_anomalies') || '他 {count} 件の特異点を表示 ▼').replace('{count}', anomalies.length - initialCount)}</span>
+          </button>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // Format Narrative Text (convert brackets, hyphens, markdown asterisks to colored elements)
+  let formattedNarrative = escapeHtml(narrativeReport)
+    .replace(/\[(\d+)\]/g, '<span class="report-idx-badge">[$1]</span>')
+    .replace(/\{([^}]+)\}/g, '<span class="report-bracket-param">{$1}</span>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #38bdf8;">$1</strong>')
+    .replace(/^([ \t]*)[-–—]\s+(.*)$/gm, '$1<span class="report-bullet-dash">◆</span> $2')
+    .replace(/^#+\s*(.*)$/gm, '<h3 style="font-size: 1.05rem; color: #fed7aa; margin: 14px 0 6px 0; border-bottom: 1px solid rgba(255,113,0,0.2); padding-bottom: 4px;">$1</h3>')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+
+  // Build 2014 Models Cards
+  const m2014 = rawFeats.astrophysics_2014_models || {};
+
+  // 1. Habitable Zone (Kopparapu et al. 2013, 2014)
+  const hzList = m2014.habitable_zone_kopparapu || [];
+  const hzConservative = hzList.filter(h => h.in_conservative_hz);
+  const hzOptimistic = hzList.filter(h => h.in_optimistic_hz && !h.in_conservative_hz);
+  const hzTotalCount = hzConservative.length + hzOptimistic.length;
+
+  let hzDetailHtml = '';
+  if (hzTotalCount > 0) {
+    const conservativeNames = hzConservative.map(h => `<strong style="color:#4ade80;">${escapeHtml(h.planet)}</strong> (S_eff=${h.received_flux_seff.toFixed(2)})`).join(', ');
+    const optimisticNames = hzOptimistic.map(h => `<strong style="color:#fed7aa;">${escapeHtml(h.planet)}</strong> (S_eff=${h.received_flux_seff.toFixed(2)})`).join(', ');
+    hzDetailHtml = `
+      <div style="font-size: 0.8rem; color: #cbd5e1; margin-top: 4px; line-height: 1.4;">
+        ${conservativeNames ? `<div>${isJa ? '保守的HZ' : 'Conservative'}: ${conservativeNames}</div>` : ''}
+        ${optimisticNames ? `<div>${isJa ? '楽観的HZ' : 'Optimistic'}: ${optimisticNames}</div>` : ''}
+      </div>
+    `;
+  } else {
+    hzDetailHtml = `
+      <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">
+        ${isJa ? '放射平衡流束 (S_eff) 基準内の天体なし' : 'No terrestrial bodies within S_eff boundaries'}
+      </div>
+    `;
+  }
+
+  // 2. Mutual Hill Stability (Gladman 1993)
+  const gladmanList = m2014.mutual_hill_stability_gladman || [];
+  const unstablePairs = gladmanList.filter(h => h.is_gladman_unstable);
+  let hillStatusText = '';
+  let hillStatusColor = '#94a3b8';
+  let hillDetailHtml = '';
+
+  if (gladmanList.length === 0) {
+    hillStatusText = isJa ? '単独・非摂動 (N/A)' : 'Single / Non-perturbed';
+    hillDetailHtml = `<div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">${isJa ? '同一主星を周回する隣接ペアなし' : 'No adjacent planetary pairs sharing primary'}</div>`;
+  } else if (unstablePairs.length > 0) {
+    hillStatusText = isJa ? `⚠️ ${unstablePairs.length}組で不安定検出` : `⚠️ ${unstablePairs.length} Unstable Pairs`;
+    hillStatusColor = '#ef4444';
+    const pairDescriptions = unstablePairs.map(p => `&bull; ${escapeHtml(p.body1)} & ${escapeHtml(p.body2)} (Δ_H = ${p.delta_hill.toFixed(2)} &lt; 2√3)`).join('<br>');
+    hillDetailHtml = `<div style="font-size: 0.78rem; color: #fca5a5; margin-top: 4px; line-height: 1.4;">${pairDescriptions}</div>`;
+  } else {
+    const minDeltaH = Math.min(...gladmanList.map(p => p.delta_hill));
+    hillStatusText = isJa ? `✓ 長期安定 (${gladmanList.length}組評価)` : `✓ Stable (${gladmanList.length} pairs evaluated)`;
+    hillStatusColor = 'var(--ed-cyan)';
+    hillDetailHtml = `<div style="font-size: 0.78rem; color: #94a3b8; margin-top: 4px;">${isJa ? 'Gladman基準(Δ_H &gt; 3.46)適合' : 'Satisfies Gladman limit (Δ_H &gt; 3.46)'} (min Δ_H = ${minDeltaH.toFixed(2)})</div>`;
+  }
+
+  // 3. Kozai-Lidov Secular Resonance (Fabrycky & Tremaine 2007)
+  const kozaiList = m2014.kozai_lidov_regime || [];
+  let kozaiStatusText = '';
+  let kozaiStatusColor = '#94a3b8';
+  let kozaiDetailHtml = '';
+
+  if (evalData.star_count < 2) {
+    kozaiStatusText = isJa ? '非対象 (単一恒星系)' : 'Inactive (Single Star)';
+    kozaiDetailHtml = `<div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">${isJa ? '外側摂動星が存在しないため共鳴なし' : 'No companion star perturber'}</div>`;
+  } else if (kozaiList.length > 0) {
+    kozaiStatusText = isJa ? `🌀 ${kozaiList.length}天体で共鳴励起` : `🌀 ${kozaiList.length} in Kozai Regime`;
+    kozaiStatusColor = '#fbbf24';
+    const kozaiDescriptions = kozaiList.map(k => `&bull; ${escapeHtml(k.body)}: i=${k.inclination_deg.toFixed(1)}°, e_max=${k.max_theoretical_eccentricity.toFixed(2)} (伴星: ${escapeHtml(k.companion_perturber)})`).join('<br>');
+    kozaiDetailHtml = `<div style="font-size: 0.78rem; color: #fde68a; margin-top: 4px; line-height: 1.4;">${kozaiDescriptions}</div>`;
+  } else {
+    kozaiStatusText = isJa ? '共鳴なし (傾斜角安定)' : 'No Kozai Regime (Stable)';
+    kozaiStatusColor = '#94a3b8';
+    kozaiDetailHtml = `<div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">${isJa ? '軌道傾斜角が共鳴臨界領域 (39.2°〜140.8°) 外' : 'Inclinations outside critical 39.2°-140.8°'}</div>`;
+  }
+
+  // 4. Planetary Composition & Transition (Weiss & Marcy 2014)
+  const compList = m2014.composition_weiss_marcy || [];
+  const megaEarths = compList.filter(c => c.is_mega_earth);
+  const superMercuries = compList.filter(c => c.is_super_mercury);
+  const puffyBodies = compList.filter(c => c.is_low_density_puffy);
+  const compAnomaliesCount = megaEarths.length + superMercuries.length + puffyBodies.length;
+
+  let compDetailHtml = '';
+  if (compAnomaliesCount > 0) {
+    const parts = [];
+    if (megaEarths.length > 0) {
+      parts.push(`<div>Mega-Earth: <strong style="color: #f59e0b;">${megaEarths.length}</strong> (${megaEarths.map(c => escapeHtml(c.body)).join(', ')})</div>`);
+    }
+    if (superMercuries.length > 0) {
+      parts.push(`<div>Super-Mercury: <strong style="color: #ef4444;">${superMercuries.length}</strong> (${superMercuries.map(c => escapeHtml(c.body)).join(', ')})</div>`);
+    }
+    if (puffyBodies.length > 0) {
+      parts.push(`<div>Puffy Terrestrial: <strong style="color: #c084fc;">${puffyBodies.length}</strong> (${puffyBodies.map(c => escapeHtml(c.body)).join(', ')})</div>`);
+    }
+    compDetailHtml = `<div style="font-size: 0.8rem; color: #cbd5e1; margin-top: 4px; line-height: 1.4;">${parts.join('')}</div>`;
+  } else {
+    compDetailHtml = `
+      <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">
+        ${isJa ? '岩石/ガス遷移境界 (1.5-1.6 R_Earth) に特異な偏位なし' : 'All planets conform to standard density curves'}
+      </div>
+    `;
+  }
+
+  const modelsHtml = `
+    <div class="physics-models-grid">
+      <div class="physics-model-card">
+        <div class="physics-model-title">
+          <span>🌱</span> <span>${t('physics_hz_title')}</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+          ${isJa ? '液体の水が存在可能な放射平衡ゾーン' : 'Liquid water radiation equilibrium boundary'}
+        </div>
+        <div style="font-size: 1.1rem; font-weight: bold; color: ${hzTotalCount > 0 ? 'var(--ed-green)' : '#94a3b8'}; margin-top: 4px;">
+          ${hzTotalCount} ${isJa ? '個の天体がHZ内に存在' : 'bodies in HZ'}
+        </div>
+        ${hzDetailHtml}
+      </div>
+
+      <div class="physics-model-card">
+        <div class="physics-model-title">
+          <span>📐</span> <span>${t('physics_hill_title')}</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+          ${isJa ? '多重惑星系の相互重力摂動と軌道長期安定性' : 'Mutual gravitational perturbation & Hill limits'}
+        </div>
+        <div style="font-size: 1.1rem; font-weight: bold; color: ${hillStatusColor}; margin-top: 4px;">
+          ${hillStatusText}
+        </div>
+        ${hillDetailHtml}
+      </div>
+
+      <div class="physics-model-card">
+        <div class="physics-model-title">
+          <span>🌀</span> <span>${t('physics_kozai_title')}</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+          ${isJa ? '高軌道傾斜角と離心率の交換振動メカニズム' : 'High orbital inclination & eccentricity oscillation'}
+        </div>
+        <div style="font-size: 1.1rem; font-weight: bold; color: ${kozaiStatusColor}; margin-top: 4px;">
+          ${kozaiStatusText}
+        </div>
+        ${kozaiDetailHtml}
+      </div>
+
+      <div class="physics-model-card">
+        <div class="physics-model-title">
+          <span>🪐</span> <span>${t('physics_classification_title')}</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+          ${isJa ? '地球質量・半径限界に基づく岩石/ガス境界判定' : 'Rock-to-gas transition mass-radius boundary'}
+        </div>
+        <div style="font-size: 1.1rem; font-weight: bold; color: ${compAnomaliesCount > 0 ? '#f59e0b' : 'var(--ed-cyan)'}; margin-top: 4px;">
+          ${compAnomaliesCount > 0 ? `${compAnomaliesCount} ${isJa ? '個の特異遷移天体' : 'boundary transition bodies'}` : (isJa ? '標準組成' : 'Standard')}
+        </div>
+        ${compDetailHtml}
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = `
+    <div class="physics-report-container">
+      <!-- Report Top Bar -->
+      <div class="physics-report-header">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.4rem;">🌌</span>
+            <span style="font-size: 1.3rem; font-weight: 800; color: #fff;">${sys.star_system}</span>
+            <span class="tag-badge ${rClass}" style="font-size: 0.85rem; padding: 3px 10px;">★ ${rLabel}</span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
+            ${t('physics_report_title')} &bull; ${sys.scanned_bodies || (evalData.planet_count + evalData.star_count)} ${t('bodies_count')} (★ ${evalData.star_count} / 🪐 ${evalData.planet_count})
+          </div>
+        </div>
+
+        <div class="physics-score-box">
+          <div style="text-align: right;">
+            <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">${t('rarity_score_label')}</div>
+            <div style="font-size: 0.76rem; color: ${rGlowColor}; font-weight: bold;">Rarity Index</div>
+          </div>
+          <div class="physics-score-number" style="color: ${rGlowColor};">
+            ${rScore.toFixed(1)}<span style="font-size: 1rem; color: var(--text-secondary); font-weight: normal;"> / 100</span>
+          </div>
+          <button id="btn-re-eval-physics" class="btn-icon" style="background: rgba(0, 210, 255, 0.12); border: 1px solid var(--ed-cyan); color: var(--ed-cyan); border-radius: 4px; padding: 4px 8px; cursor: pointer;" title="天体物理評価を再計算">
+            🔄
+          </button>
+        </div>
+      </div>
+
+      <!-- Anomalies List if any -->
+      ${anomaliesHtml}
+
+      <!-- System Narrative / Analogies Box -->
+      <div class="physics-narrative-card" style="border-left: 4px solid #00d2ff;">
+        <div style="font-size: 0.95rem; font-weight: bold; color: var(--ed-cyan); display: flex; align-items: center; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid rgba(0, 210, 255, 0.2); padding-bottom: 6px;">
+          <span>📖</span> <span>${t('physics_narrative_title')}</span>
+        </div>
+        <div class="physics-narrative-text">
+          ${formattedNarrative || `<div style="color: var(--text-secondary);">${isJa ? '特異な記述はありません。' : 'No exceptional narrative notes for this system.'}</div>`}
+        </div>
+      </div>
+
+      <!-- 2014 Models Analysis Grid -->
+      <div style="margin-top: 6px;">
+        <div style="font-size: 0.9rem; font-weight: bold; color: #fed7aa; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+          <span>🔬</span> <span>${t('physics_models_title')}</span>
+        </div>
+        ${modelsHtml}
+      </div>
+    </div>
+  `;
+
+  // Re-evaluation button click
+  const reEvalBtn = document.getElementById('btn-re-eval-physics');
+  if (reEvalBtn) {
+    reEvalBtn.onclick = async () => {
+      systemData.physics_evaluation = null;
+      renderPhysicsReport(container, systemData);
+    };
+  }
+
+  // Anomalies collapsible toggle button
+  const toggleAnomaliesBtn = document.getElementById('btn-toggle-anomalies');
+  if (toggleAnomaliesBtn) {
+    toggleAnomaliesBtn.onclick = () => {
+      const collapsedEl = document.getElementById('physics-anomalies-collapsed');
+      if (!collapsedEl) return;
+      const isHidden = collapsedEl.classList.contains('hidden');
+      if (isHidden) {
+        collapsedEl.classList.remove('hidden');
+        toggleAnomaliesBtn.querySelector('span').textContent = t('physics_show_less_anomalies') || '特異点を折りたたむ ▲';
+      } else {
+        collapsedEl.classList.add('hidden');
+        toggleAnomaliesBtn.querySelector('span').textContent = (t('physics_show_more_anomalies') || '他 {count} 件の特異点を表示 ▼').replace('{count}', anomalies.length - 5);
+      }
+    };
   }
 }
 
@@ -3569,18 +4005,29 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCurrentView();
   });
 
+  const btnViewPhysics = document.getElementById('btn-view-physics');
+  if (btnViewPhysics) {
+    btnViewPhysics.addEventListener('click', () => {
+      state.currentView = 'physics';
+      updateViewButtons();
+      renderCurrentView();
+    });
+  }
+
   function updateViewButtons() {
     const btnSys = document.getElementById('btn-view-sysmap');
     const btnFlat = document.getElementById('btn-view-flat');
     const btnBio = document.getElementById('btn-view-bio');
     const btnMining = document.getElementById('btn-view-mining');
     const btnVis = document.getElementById('btn-view-visits');
+    const btnPhys = document.getElementById('btn-view-physics');
 
     if (btnSys) btnSys.classList.toggle('active', state.currentView === 'sysmap');
     if (btnFlat) btnFlat.classList.toggle('active', state.currentView === 'flat');
     if (btnBio) btnBio.classList.toggle('active', state.currentView === 'bio');
     if (btnMining) btnMining.classList.toggle('active', state.currentView === 'mining');
     if (btnVis) btnVis.classList.toggle('active', state.currentView === 'visits');
+    if (btnPhys) btnPhys.classList.toggle('active', state.currentView === 'physics');
 
     // Show completed bio filter container only on bio view
     const bioFilterContainer = document.getElementById('bio-filter-hide-completed-container');
@@ -3588,6 +4035,58 @@ document.addEventListener('DOMContentLoaded', () => {
       bioFilterContainer.style.display = state.currentView === 'bio' ? 'inline-flex' : 'none';
     }
   }
+
+  // Concept Mode Switcher Tabs (Header & Left Pane synchronization)
+  function initConceptTabs() {
+    const headerBtnExplorer = document.getElementById('btn-tab-explorer');
+    const headerBtnPhysics = document.getElementById('btn-tab-physics');
+    const paneBtnExplorer = document.getElementById('btn-pane-tab-explorer');
+    const paneBtnPhysics = document.getElementById('btn-pane-tab-physics');
+
+    function setConceptMode(mode) {
+      state.conceptMode = mode;
+
+      if (headerBtnExplorer) headerBtnExplorer.classList.toggle('active', mode === 'explorer');
+      if (headerBtnPhysics) headerBtnPhysics.classList.toggle('active', mode === 'physics');
+      if (paneBtnExplorer) paneBtnExplorer.classList.toggle('active', mode === 'explorer');
+      if (paneBtnPhysics) paneBtnPhysics.classList.toggle('active', mode === 'physics');
+
+      if (mode === 'physics') {
+        // Switch view to physics
+        if (state.selectedSystem) {
+          state.currentView = 'physics';
+          updateViewButtons();
+          renderCurrentView();
+        }
+        // Set sort to astrophysical rarity desc and refresh
+        const sortSelect = document.getElementById('sort-select');
+        const sortPrimary = document.getElementById('sort-primary');
+        if (sortPrimary) {
+          sortPrimary.value = 'rarity-desc';
+          state.sortPrimary = 'rarity-desc';
+        }
+        if (sortSelect) {
+          sortSelect.value = 'rarity-desc';
+          state.sort = 'rarity-desc';
+        }
+        fetchSystems(true);
+      } else {
+        // Return to journal exploration mode
+        if (state.currentView === 'physics') {
+          state.currentView = 'sysmap';
+          updateViewButtons();
+          renderCurrentView();
+        }
+      }
+    }
+
+    if (headerBtnExplorer) headerBtnExplorer.addEventListener('click', () => setConceptMode('explorer'));
+    if (headerBtnPhysics) headerBtnPhysics.addEventListener('click', () => setConceptMode('physics'));
+    if (paneBtnExplorer) paneBtnExplorer.addEventListener('click', () => setConceptMode('explorer'));
+    if (paneBtnPhysics) paneBtnPhysics.addEventListener('click', () => setConceptMode('physics'));
+  }
+
+  initConceptTabs();
 
   // Hide completed bio checkbox event
   const cbHideCompletedBio = document.getElementById('cb-hide-completed-bio');
