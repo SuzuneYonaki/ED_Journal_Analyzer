@@ -222,10 +222,16 @@ class JournalParser:
     def _handle_fss_discovery_scan(self, data: dict):
         sys_addr = data.get("SystemAddress")
         body_count = data.get("BodyCount", 0)
+        star_sys = data.get("SystemName") or self.current_star_system
         if sys_addr:
             self.cursor.execute("""
                 UPDATE systems SET total_bodies = MAX(total_bodies, ?) WHERE system_address = ?
             """, (body_count, sys_addr))
+            if star_sys:
+                try:
+                    edsm_service.queue_system_check(sys_addr, star_sys)
+                except Exception:
+                    pass
 
     def _handle_scan(self, data: dict, timestamp: str):
         sys_addr = data.get("SystemAddress")

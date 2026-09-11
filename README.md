@@ -69,7 +69,7 @@ python run.py --browser
 ```
 
 起動後、右上の「**ログ再スキャン (Rescan Logs)**」をクリックすると、全ジャーナルファイルが一括インデックス化されます。
-
+アップデート時dataフォルダを残して、他ファイルをアップデートすることでログの再読み込みが発生しなくなります。
 ---
 
 <a name="english"></a>
@@ -144,7 +144,7 @@ python run.py --browser
 ```
 
 Or simply download the pre-built standalone executable from [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases).
-
+when update, you can remain data folder for stop re-read the journals.
 ---
 
 ## Credits & Acknowledgements

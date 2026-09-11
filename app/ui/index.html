@@ -147,13 +147,21 @@
       <!-- Left Column 1: Search, Filter, and Sort Controls -->
       <div class="left-controls-col" id="left-controls-col">
         <div class="search-section">
-          <!-- Left Pane Mode Switcher Header Row -->
-          <div class="left-pane-concept-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.06);">
-            <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: bold;" data-i18n="search_mode_label">モード切替</span>
-            <div class="left-concept-tabs" style="display: inline-flex; gap: 2px; background: rgba(0,0,0,0.25); padding: 1px 3px; border-radius: 4px; border: 1px solid var(--border-color);">
-              <button id="btn-left-tab-explorer" class="concept-tab-btn active" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: var(--ed-orange); background: rgba(255, 113, 0, 0.15);" title="ジャーナル探査リスト">🧭 <span data-i18n="concept_tab_explorer_short">探査</span></button>
-              <button id="btn-left-tab-physics" class="concept-tab-btn" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: #a5f3fc; background: transparent;" title="天体物理・レア度解析">🌌 <span data-i18n="concept_tab_physics_short">天体物理</span></button>
+          <!-- Left Pane Mode Switcher Header Row with LIVE Toggle -->
+          <div class="left-pane-concept-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.06); gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: bold;" data-i18n="search_mode_label">モード切替</span>
+              <div class="left-concept-tabs" style="display: inline-flex; gap: 2px; background: rgba(0,0,0,0.25); padding: 1px 3px; border-radius: 4px; border: 1px solid var(--border-color);">
+                <button id="btn-left-tab-explorer" class="concept-tab-btn active" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: var(--ed-orange); background: rgba(255, 113, 0, 0.15);" title="ジャーナル探査リスト">🧭 <span data-i18n="concept_tab_explorer_short">探査</span></button>
+                <button id="btn-left-tab-physics" class="concept-tab-btn" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: #a5f3fc; background: transparent;" title="天体物理・レア度解析">🌌 <span data-i18n="concept_tab_physics_short">天体物理</span></button>
+              </div>
             </div>
+
+            <!-- Real-time Live Sync Toggle Button (Moved to Header for instant access) -->
+            <button id="btn-live-toggle" class="btn-live active" style="padding: 3px 8px; font-size: 0.72rem; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;" title="リアルタイム自動更新の有効/無効を切り替え（オフにすると過去ジャーナル閲覧時に自動ジャンプや再取得が行われません）">
+              <span class="live-indicator-dot"></span>
+              <span id="live-status-text" data-i18n="live_sync_on">LIVE</span>
+            </button>
           </div>
 
           <div class="search-bar">
@@ -355,12 +363,12 @@
             </div>
           </div>
 
-          <!-- Collapsible Group 4: Date Range, LIVE & Sort Settings -->
+          <!-- Collapsible Group 4: Date Range & Sort Settings -->
           <div class="collapsible-group" id="group-sort-filters">
             <div class="collapsible-header" data-group="sort">
               <div class="collapsible-title">
                 <span class="collapsible-chevron">▼</span>
-                <span data-i18n="section_sort_filters">⏱️ 期間・LIVE・ソート設定</span>
+                <span data-i18n="section_sort_filters">⏱️ 期間・ソート設定</span>
               </div>
             </div>
             <div class="collapsible-body">
@@ -397,14 +405,6 @@
                     <button id="btn-clear-date" class="btn-page" style="padding: 2px 8px; font-size: 0.72rem;" data-i18n="btn_clear_date">クリア</button>
                   </div>
                 </div>
-              </div>
-
-              <!-- Real-time Live Sync Toggle Button -->
-              <div class="live-toggle-container" style="margin-top: 6px;">
-                <button id="btn-live-toggle" class="btn-live active" style="width: 100%; justify-content: center; padding: 6px 12px; font-size: 0.8rem; font-weight: bold; border-radius: 4px;" title="リアルタイム自動更新の有効/無効を切り替え（ジャンプ到着待機時は最新星系の現状データを即時表示）">
-                  <span class="live-indicator-dot"></span>
-                  <span id="live-status-text" data-i18n="live_sync_on">LIVE (リアルタイム)</span>
-                </button>
               </div>
 
               <!-- Sort Controls Section -->

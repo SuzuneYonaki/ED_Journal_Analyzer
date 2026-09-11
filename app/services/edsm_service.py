@@ -16,11 +16,44 @@ import queue
 from typing import Dict, Any, Optional
 
 from app.db.database import get_db_connection
+from app.parser.value_calculator import calculate_body_value, STAR_VALUES
+from app.analyzer.anomaly_finder import detect_anomalies
+from app.parser.exobiology import predict_exobiology_candidates
 
 EDSM_SYSTEM_API = "https://www.edsm.net/api-v1/system"
 EDSM_BODIES_API = "https://www.edsm.net/api-system-v1/bodies"
 REQUEST_DELAY_SEC = 1.0  # Respectful community delay between external API calls
 UNREGISTERED_RECHECK_COOLDOWN_SEC = 1800.0  # 30-minute in-memory cooldown before re-querying unregistered system
+
+
+def _extract_star_type(b: dict) -> str:
+    """Extract standard Elite star type code matching STAR_VALUES from EDSM body data."""
+    subtype = b.get("subType", "") or ""
+    sub_lower = subtype.lower()
+
+    if "supermassive" in sub_lower and "black hole" in sub_lower:
+        return "SupermassiveBlackHole"
+    if "black hole" in sub_lower:
+        return "H"
+    if "neutron" in sub_lower:
+        return "N"
+    if "white dwarf" in sub_lower:
+        for wd in ["DA", "DAB", "DAO", "DAZ", "DAV", "DB", "DBZ", "DBV", "DO", "DOV", "DQ", "DC", "DCV", "DX", "D"]:
+            if f"({wd.lower()})" in sub_lower or f" {wd.lower()} " in f" {sub_lower} ":
+                return wd
+        return "D"
+
+    spec = b.get("spectralClass")
+    if spec and spec in STAR_VALUES:
+        return spec
+
+    # Token-based match (e.g. "M (Red dwarf) Star" -> "M", "TTS (T Tauri) Star" -> "TTS")
+    token = subtype.split()[0] if subtype else "M"
+    token_clean = token.split("(")[0].strip()
+    if token_clean in STAR_VALUES:
+        return token_clean
+
+    return spec or "M"
 
 
 class EDSMService:
@@ -112,7 +145,7 @@ class EDSMService:
             return
 
         # System is registered on EDSM
-        # Check bodies for first discoverer
+        # Check bodies for first discoverer and complete celestial bodies
         self._throttle_delay()
         bodies_url = f"{EDSM_BODIES_API}?systemName={encoded_name}"
         bodies_req = urllib.request.Request(
@@ -157,20 +190,313 @@ class EDSMService:
             WHERE system_address = ?
         """, (first_discoverer, submitted_at, body_count, system_address))
 
-        # Update body discoverers if available
-        for b in bodies_list:
-            b_name = b.get("name")
-            disc = b.get("discovery")
-            if b_name and isinstance(disc, dict) and disc.get("commander"):
-                c.execute("""
-                    UPDATE bodies SET
-                        edsm_discovered_by = ?,
-                        edsm_discovered_at = ?
-                    WHERE system_address = ? AND body_name = ?
-                """, (disc.get("commander"), disc.get("date"), system_address, b_name))
+        # Import or backfill missing bodies from EDSM
+        if bodies_list:
+            self._import_and_complete_bodies(conn, system_address, system_name, bodies_list)
+
+        # Recalculate and update aggregated system statistics
+        self._update_system_aggregated_stats(conn, system_address)
 
         conn.commit()
         conn.close()
+
+        # Notify front-end via WebSocket if available
+        try:
+            from app.server.api import manager
+            manager.notify_update_from_thread(None)
+        except Exception:
+            pass
+
+    def _import_and_complete_bodies(self, conn, system_address: int, star_system: str, bodies_list: list):
+        """
+        Completes missing celestial bodies from EDSM for known systems where player
+        did not receive FSS Scan journal events. Respects and preserves any existing
+        player-scanned records (AutoScan, Detailed, NavBeacon).
+        """
+        c = conn.cursor()
+
+        # Query existing bodies for this system
+        c.execute("SELECT id, body_id, body_name, scan_type, scan_timestamp FROM bodies WHERE system_address = ?", (system_address,))
+        existing_rows = c.fetchall()
+        existing_by_name = {r["body_name"]: dict(r) for r in existing_rows}
+        existing_by_id = {r["body_id"]: dict(r) for r in existing_rows if r["body_id"] is not None}
+
+        for b in bodies_list:
+            b_name = b.get("name")
+            b_id = b.get("bodyId")
+            if not b_name:
+                continue
+
+            disc = b.get("discovery") or {}
+            discoverer = disc.get("commander")
+            discovered_at = disc.get("date")
+
+            existing = existing_by_name.get(b_name) or (existing_by_id.get(b_id) if b_id is not None else None)
+
+            # If body already exists and was scanned by player, preserve local data and only update discoverer
+            if existing and existing.get("scan_type") and existing.get("scan_type") != "EDSM_Known":
+                if discoverer:
+                    c.execute("""
+                        UPDATE bodies SET
+                            edsm_discovered_by = ?,
+                            edsm_discovered_at = ?
+                        WHERE id = ?
+                    """, (discoverer, discovered_at, existing["id"]))
+                continue
+
+            # Determine whether this body is a star or planet
+            b_type = (b.get("type") or "").strip()
+            subtype = (b.get("subType") or "").strip()
+            is_star = (b_type.lower() == "star") or ("star" in subtype.lower() and "gas giant" not in subtype.lower())
+
+            dist_ls = b.get("distanceToArrival")
+            semi_major_m = (b.get("semiMajorAxis") * 149597870700.0) if b.get("semiMajorAxis") is not None else None
+            eccentricity = b.get("orbitalEccentricity")
+            inclination = b.get("orbitalInclination")
+            periapsis = b.get("argOfPeriapsis")
+            orbital_period_s = (b.get("orbitalPeriod") * 86400.0) if b.get("orbitalPeriod") is not None else None
+            rotation_period_s = (b.get("rotationalPeriod") * 86400.0) if b.get("rotationalPeriod") is not None else None
+            axial_tilt = b.get("axialTilt")
+
+            parents_json = json.dumps(b.get("parents")) if b.get("parents") else None
+            rings_json = json.dumps(b.get("belts") or b.get("rings")) if (b.get("belts") or b.get("rings")) else None
+            materials_json = json.dumps(b.get("materials")) if b.get("materials") else None
+
+            if is_star:
+                star_type = _extract_star_type(b)
+                planet_class = None
+                stellar_mass = b.get("solarMasses") or 1.0
+                radius_m = (b.get("solarRadius") * 696340000.0) if b.get("solarRadius") else ((b.get("radius") * 1000.0) if b.get("radius") else None)
+                surface_temp = b.get("surfaceTemperature")
+                abs_mag = b.get("absoluteMagnitude")
+                luminosity = b.get("spectralClass")
+                mass_em = None
+                gravity_g = None
+                gravity_raw = None
+                surface_pressure = None
+                landable = 0
+                volcanism = None
+                atmosphere = None
+                atmosphere_type = None
+                terraforming = None
+                calc_arg = {"star_type": star_type, "stellar_mass": stellar_mass}
+            else:
+                star_type = None
+                luminosity = None
+                stellar_mass = None
+                abs_mag = None
+                planet_class = subtype or "Icy body"
+                radius_m = (b.get("radius") * 1000.0) if b.get("radius") is not None else None
+                surface_temp = b.get("surfaceTemperature")
+                mass_em = b.get("earthMasses")
+                g_val = b.get("gravity")
+                gravity_g = round(g_val, 4) if g_val is not None else None
+                gravity_raw = (g_val * 9.80665) if g_val is not None else None
+                p_val = b.get("surfacePressure")
+                surface_pressure = (p_val * 101325.0) if p_val is not None else None
+                landable = 1 if b.get("isLandable") else 0
+                volcanism = b.get("volcanismType")
+                atmosphere = b.get("atmosphereType")
+                atmosphere_type = b.get("atmosphereType")
+                terraforming = b.get("terraformingState")
+                calc_arg = {
+                    "planet_class": planet_class,
+                    "mass_em": mass_em or 0.001,
+                    "terraforming_state": terraforming
+                }
+
+            # Value calculation
+            val_res = calculate_body_value(calc_arg)
+            fss_val = val_res.get("fss_value", 0)
+            dss_val = val_res.get("dss_value", 0)
+            fd_fss = val_res.get("first_discovered_fss", 0)
+            fm_dss = val_res.get("first_mapped_dss", 0)
+            max_pot = val_res.get("max_potential_value", 0)
+
+            # Anomaly & Exobiology detection
+            anomaly_arg = {
+                "body_name": b_name,
+                "star_system": star_system,
+                "star_type": star_type,
+                "planet_class": planet_class,
+                "distance_from_arrival_ls": dist_ls,
+                "semi_major_axis": semi_major_m,
+                "orbital_period": orbital_period_s,
+                "rotation_period": rotation_period_s,
+                "eccentricity": eccentricity,
+                "orbital_inclination": inclination,
+                "landable": landable,
+                "surface_gravity_g": gravity_g,
+                "rings": rings_json,
+                "volcanism": volcanism,
+                "terraforming_state": terraforming,
+                "parents": parents_json
+            }
+            anomalies = detect_anomalies(anomaly_arg)
+            anomalies_json = json.dumps(anomalies)
+
+            # Exobiology predictions
+            bio_preds = []
+            if not is_star and (atmosphere or landable):
+                bio_preds = predict_exobiology_candidates(anomaly_arg)
+            bio_pred_json = json.dumps(bio_preds)
+
+            if existing:
+                # Update existing EDSM_Known record
+                c.execute("""
+                    UPDATE bodies SET
+                        body_id = COALESCE(?, body_id),
+                        body_name = ?,
+                        star_system = ?,
+                        distance_from_arrival_ls = ?,
+                        star_type = ?,
+                        luminosity = ?,
+                        stellar_mass = ?,
+                        absolute_magnitude = ?,
+                        radius = ?,
+                        surface_temperature = ?,
+                        planet_class = ?,
+                        atmosphere = ?,
+                        atmosphere_type = ?,
+                        mass_em = ?,
+                        surface_gravity = ?,
+                        surface_gravity_g = ?,
+                        surface_pressure = ?,
+                        landable = ?,
+                        volcanism = ?,
+                        terraforming_state = ?,
+                        semi_major_axis = ?,
+                        eccentricity = ?,
+                        orbital_inclination = ?,
+                        periapsis = ?,
+                        orbital_period = ?,
+                        rotation_period = ?,
+                        axial_tilt = ?,
+                        rings = ?,
+                        materials = ?,
+                        parents = ?,
+                        was_discovered = 1,
+                        was_mapped = CASE WHEN ? IS NOT NULL THEN 1 ELSE was_mapped END,
+                        edsm_discovered_by = ?,
+                        edsm_discovered_at = ?,
+                        fss_value = ?,
+                        dss_value = ?,
+                        first_discovered_fss = ?,
+                        first_mapped_dss = ?,
+                        max_potential_value = ?,
+                        anomalies_json = ?,
+                        exobiology_predictions = ?
+                    WHERE id = ?
+                """, (
+                    b_id, b_name, star_system, dist_ls,
+                    star_type, luminosity, stellar_mass, abs_mag, radius_m, surface_temp,
+                    planet_class, atmosphere, atmosphere_type,
+                    mass_em, gravity_raw, gravity_g, surface_pressure, landable,
+                    volcanism, terraforming, semi_major_m, eccentricity,
+                    inclination, periapsis, orbital_period_s, rotation_period_s,
+                    axial_tilt, rings_json, materials_json, parents_json,
+                    discoverer, discoverer, discovered_at,
+                    fss_val, dss_val, fd_fss, fm_dss, max_pot,
+                    anomalies_json, bio_pred_json, existing["id"]
+                ))
+            else:
+                # Insert new EDSM_Known body
+                c.execute("""
+                    INSERT INTO bodies (
+                        system_address, body_id, body_name, star_system,
+                        distance_from_arrival_ls, star_type, luminosity, stellar_mass,
+                        absolute_magnitude, radius, surface_temperature, planet_class,
+                        atmosphere, atmosphere_type, mass_em, surface_gravity,
+                        surface_gravity_g, surface_pressure, landable, volcanism,
+                        terraforming_state, semi_major_axis, eccentricity,
+                        orbital_inclination, periapsis, orbital_period, rotation_period,
+                        axial_tilt, rings, materials, parents, was_discovered, was_mapped,
+                        scan_type, edsm_discovered_by, edsm_discovered_at,
+                        fss_value, dss_value, first_discovered_fss, first_mapped_dss,
+                        max_potential_value, anomalies_json, exobiology_predictions
+                    ) VALUES (
+                        ?, ?, ?, ?,
+                        ?, ?, ?, ?,
+                        ?, ?, ?, ?,
+                        ?, ?, ?, ?,
+                        ?, ?, ?, ?,
+                        ?, ?, ?,
+                        ?, ?, ?, ?,
+                        ?, ?, ?, ?, 1, ?,
+                        'EDSM_Known', ?, ?,
+                        ?, ?, ?, ?,
+                        ?, ?, ?
+                    )
+                """, (
+                    system_address, b_id, b_name, star_system,
+                    dist_ls, star_type, luminosity, stellar_mass,
+                    abs_mag, radius_m, surface_temp, planet_class,
+                    atmosphere, atmosphere_type, mass_em, gravity_raw,
+                    gravity_g, surface_pressure, landable, volcanism,
+                    terraforming, semi_major_m, eccentricity,
+                    inclination, periapsis, orbital_period_s, rotation_period_s,
+                    axial_tilt, rings_json, materials_json, parents_json,
+                    1 if discoverer else 0,
+                    discoverer, discovered_at,
+                    fss_val, dss_val, fd_fss, fm_dss,
+                    max_pot, anomalies_json, bio_pred_json
+                ))
+
+    def _update_system_aggregated_stats(self, conn, system_address: int):
+        """Recalculates system-level exploration values and flags from celestial bodies."""
+        c = conn.cursor()
+        c.execute("""
+            SELECT 
+                COUNT(*) as count,
+                MAX(star_system) as sys_name,
+                (SELECT star_type FROM bodies WHERE system_address = ? AND star_type IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star,
+                SUM(fss_value) as sum_fss,
+                SUM(dss_value) as sum_dss,
+                SUM(max_potential_value) as sum_max,
+                SUM(bio_signals) as sum_bio,
+                MAX(CASE WHEN LOWER(planet_class) LIKE '%earthlike%' OR LOWER(planet_class) LIKE '%earth-like%' THEN 1 ELSE 0 END) as elw,
+                MAX(CASE WHEN LOWER(planet_class) LIKE '%water world%' THEN 1 ELSE 0 END) as ww,
+                MAX(CASE WHEN LOWER(planet_class) LIKE '%ammonia%' THEN 1 ELSE 0 END) as ammonia,
+                MAX(CASE WHEN LOWER(terraforming_state) LIKE '%terraform%' THEN 1 ELSE 0 END) as tf,
+                MAX(CASE WHEN bio_signals > 0 THEN 1 ELSE 0 END) as bio,
+                MAX(CASE WHEN landable = 1 THEN 1 ELSE 0 END) as landable,
+                MAX(CASE WHEN landable = 1 AND surface_gravity_g >= 3.0 THEN 1 ELSE 0 END) as high_g,
+                MAX(CASE WHEN anomalies_json != '[]' AND anomalies_json IS NOT NULL THEN 1 ELSE 0 END) as anomalies,
+                ROUND(AVG(CASE WHEN landable = 1 AND radius IS NOT NULL AND radius > 0 THEN radius ELSE NULL END), 1) as avg_landable_radius
+            FROM bodies 
+            WHERE system_address = ? 
+              AND (star_type IS NOT NULL OR planet_class IS NOT NULL)
+        """, (system_address, system_address))
+        row = c.fetchone()
+        if not row or row["count"] == 0:
+            return
+
+        c.execute("""
+            UPDATE systems SET
+                scanned_bodies = ?,
+                main_star_type = COALESCE(main_star_type, ?),
+                total_fss_value = ?,
+                total_dss_value = ?,
+                total_potential_value = ?,
+                total_bio_signals = ?,
+                has_elw = ?,
+                has_water_world = ?,
+                has_ammonia = ?,
+                has_terraformable = ?,
+                has_bio = ?,
+                has_landable = ?,
+                has_high_g = ?,
+                has_anomalies = ?,
+                avg_landable_radius = ?
+            WHERE system_address = ?
+        """, (
+            row["count"], row["main_star"], row["sum_fss"] or 0, row["sum_dss"] or 0,
+            row["sum_max"] or 0, row["sum_bio"] or 0, row["elw"] or 0,
+            row["ww"] or 0, row["ammonia"] or 0, row["tf"] or 0, row["bio"] or 0,
+            row["landable"] or 0, row["high_g"] or 0, row["anomalies"] or 0,
+            row["avg_landable_radius"] or 0,
+            system_address
+        ))
 
     def _mark_checked_unregistered(self, system_address: int):
         """Mark system as checked and unregistered on EDSM in SQLite."""
@@ -191,3 +517,4 @@ class EDSMService:
 
 # Singleton instance
 edsm_service = EDSMService()
+
