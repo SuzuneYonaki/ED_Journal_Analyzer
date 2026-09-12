@@ -1097,6 +1097,14 @@ def get_system_detail(system_address: int):
         return JSONResponse({"error": "System not found"}, status_code=404)
 
     system_data = dict(sys_row)
+    if system_data.get("edsm_factions_json"):
+        try:
+            system_data["edsm_factions"] = json.loads(system_data["edsm_factions_json"])
+        except Exception:
+            system_data["edsm_factions"] = []
+    else:
+        system_data["edsm_factions"] = []
+
     lm_dists = calculate_landmark_distances(system_data.get("star_pos_x"), system_data.get("star_pos_y"), system_data.get("star_pos_z"))
     system_data.update(lm_dists)
 

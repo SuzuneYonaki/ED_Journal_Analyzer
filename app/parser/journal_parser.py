@@ -168,9 +168,32 @@ class JournalParser:
         star_class = data.get("StarClass") or data.get("StarType")
         allegiance = data.get("SystemAllegiance")
         economy = data.get("SystemEconomy_Localised") or data.get("SystemEconomy")
+        if economy and economy.startswith("$economy_"):
+            economy = economy.replace("$economy_", "").rstrip(";").capitalize()
         govt = data.get("SystemGovernment_Localised") or data.get("SystemGovernment")
         sec = data.get("SystemSecurity_Localised") or data.get("SystemSecurity")
         pop = data.get("Population", 0)
+
+        # SystemFaction & State
+        sys_faction_obj = data.get("SystemFaction")
+        controlling_faction = None
+        system_state = None
+        if isinstance(sys_faction_obj, dict):
+            controlling_faction = sys_faction_obj.get("Name")
+            system_state = sys_faction_obj.get("FactionState")
+        elif isinstance(sys_faction_obj, str):
+            controlling_faction = sys_faction_obj
+            system_state = data.get("FactionState")
+        if not system_state:
+            system_state = data.get("FactionState")
+
+        sec_economy = data.get("SystemSecondEconomy_Localised") or data.get("SystemSecondEconomy")
+        if sec_economy and sec_economy.startswith("$economy_"):
+            sec_economy = sec_economy.replace("$economy_", "").rstrip(";").capitalize()
+
+        reserve_lvl = data.get("SystemReserve_Localised") or data.get("SystemReserve")
+        if reserve_lvl and reserve_lvl.startswith("$reserve_"):
+            reserve_lvl = reserve_lvl.replace("$reserve_", "").rstrip(";").capitalize()
 
         # Check existing system
         self.cursor.execute("SELECT first_visited, visit_count FROM systems WHERE system_address = ?", (sys_addr,))
@@ -190,20 +213,35 @@ class JournalParser:
                     population = CASE WHEN ? > 0 THEN ? ELSE population END,
                     system_allegiance = COALESCE(?, system_allegiance),
                     system_economy = COALESCE(?, system_economy),
+                    system_second_economy = COALESCE(?, system_second_economy),
                     system_government = COALESCE(?, system_government),
                     system_security = COALESCE(?, system_security),
+                    system_state = COALESCE(NULLIF(?, ''), system_state),
+                    controlling_faction = COALESCE(NULLIF(?, ''), controlling_faction),
+                    system_reserve = COALESCE(NULLIF(?, ''), system_reserve),
                     last_visited = ?,
                     visit_count = visit_count + 1
                 WHERE system_address = ?
-            """, (star_sys, pos_x, pos_y, pos_z, sol_dist, sol_dist, star_class, pop, pop, allegiance, economy, govt, sec, timestamp, sys_addr))
+            """, (
+                star_sys, pos_x, pos_y, pos_z, sol_dist, sol_dist, star_class,
+                pop, pop, allegiance, economy, sec_economy, govt, sec,
+                system_state, controlling_faction, reserve_lvl,
+                timestamp, sys_addr
+            ))
         else:
             self.cursor.execute("""
                 INSERT INTO systems (
                     system_address, star_system, star_pos_x, star_pos_y, star_pos_z, sol_distance_ly,
-                    main_star_type, system_allegiance, system_economy, system_government, system_security,
+                    main_star_type, system_allegiance, system_economy, system_second_economy,
+                    system_government, system_security, system_state, controlling_faction, system_reserve,
                     population, first_visited, last_visited, visit_count
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (sys_addr, star_sys, pos_x, pos_y, pos_z, sol_dist, star_class, allegiance, economy, govt, sec, pop, timestamp, timestamp, 1))
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                sys_addr, star_sys, pos_x, pos_y, pos_z, sol_dist,
+                star_class, allegiance, economy, sec_economy,
+                govt, sec, system_state or "", controlling_faction or "", reserve_lvl or "",
+                pop, timestamp, timestamp, 1
+            ))
 
         # Record visit timeline if FSDJump
         if data.get("event") == "FSDJump":

@@ -762,6 +762,13 @@ function renderSystemList() {
       tags.push('<span class="tag-badge tag-edsm-unreg" title="ゲーム内初発見 / EDSM 1st Discover 登録可能">✨ 1st Discover 登録可能</span>');
     }
 
+    // EDSM System State (Boom, Investment)
+    if (sys.system_state && sys.system_state.toLowerCase().includes('boom')) {
+      tags.push('<span class="tag-badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; font-weight: bold;" title="EDSM星系経済状態: Boom (好況)">📈 Boom</span>');
+    } else if (sys.system_state && sys.system_state.toLowerCase().includes('investment')) {
+      tags.push('<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;" title="EDSM星系状態: Investment (投資)">💼 Investment</span>');
+    }
+
     if (sys.has_high_g) tags.push('<span class="tag-badge tag-high-g">High-G</span>');
     if (sys.has_anomalies) tags.push('<span class="tag-badge tag-anomaly">Rare/Orbit</span>');
     if (sys.bookmarks && sys.bookmarks.length > 0) {
@@ -993,6 +1000,73 @@ function renderSystemHeader() {
         }, 2000);
       }
     };
+  }
+
+  // System State Badge & Economy Info
+  const stateBadgeEl = document.getElementById('current-system-state-badge');
+  const econInfoEl = document.getElementById('current-system-economy-info');
+  if (stateBadgeEl) {
+    const sState = (sys.system_state || '').trim();
+    if (sState && sState.toLowerCase() !== 'none') {
+      let badgeStyle = 'background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.35);';
+      let icon = '🏛️';
+      let label = sState;
+      const lower = sState.toLowerCase();
+      if (lower.includes('boom')) {
+        badgeStyle = 'background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; font-weight: bold; box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);';
+        icon = '📈';
+        label = 'Boom (好況)';
+      } else if (lower.includes('investment')) {
+        badgeStyle = 'background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;';
+        icon = '💼';
+        label = 'Investment (投資)';
+      } else if (lower.includes('expansion')) {
+        badgeStyle = 'background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #c084fc; font-weight: bold;';
+        icon = '🚀';
+        label = 'Expansion (拡張)';
+      } else if (lower.includes('war') || lower.includes('unrest') || lower.includes('lockdown')) {
+        badgeStyle = 'background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #f87171; font-weight: bold;';
+        icon = '⚠️';
+      } else if (lower.includes('bust')) {
+        badgeStyle = 'background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #facc15; font-weight: bold;';
+        icon = '📉';
+        label = 'Bust (不況)';
+      }
+      stateBadgeEl.innerHTML = `<span class="tag-badge" style="${badgeStyle} font-size: 0.72rem; padding: 2px 7px;" title="EDSM星系経済・BGS状態: ${escapeHtml(sState)}">${icon} ${escapeHtml(label)}</span>`;
+      stateBadgeEl.style.display = 'inline-flex';
+    } else if (sState && sState.toLowerCase() === 'none') {
+      stateBadgeEl.innerHTML = `<span class="tag-badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.7rem; padding: 2px 6px;" title="EDSM星系状態: 平常 (None)">⚪ 平常 (None)</span>`;
+      stateBadgeEl.style.display = 'inline-flex';
+    } else if (sys.population === 0) {
+      stateBadgeEl.innerHTML = `<span class="tag-badge" style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); font-size: 0.7rem; padding: 2px 6px;" title="無人星系 (深宇宙)">🌌 無人星系</span>`;
+      stateBadgeEl.style.display = 'inline-flex';
+    } else {
+      stateBadgeEl.innerHTML = '';
+      stateBadgeEl.style.display = 'none';
+    }
+  }
+
+  if (econInfoEl) {
+    const parts = [];
+    if (sys.controlling_faction) {
+      parts.push(`<span style="color: #cbd5e1;" title="支配勢力">🎯 ${escapeHtml(sys.controlling_faction)}</span>`);
+    }
+    if (sys.system_reserve) {
+      const isPristine = sys.system_reserve.toLowerCase().includes('pristine');
+      const rColor = isPristine ? '#38bdf8; font-weight: bold;' : '#cbd5e1;';
+      parts.push(`<span style="color: ${rColor}" title="資源埋蔵量">💎 ${escapeHtml(sys.system_reserve)} Reserves</span>`);
+    }
+    if (sys.system_economy) {
+      const econStr = sys.system_economy + (sys.system_second_economy ? ` / ${sys.system_second_economy}` : '');
+      parts.push(`<span style="color: #94a3b8;" title="主要経済">🏭 ${escapeHtml(econStr)}</span>`);
+    }
+    if (parts.length > 0) {
+      econInfoEl.innerHTML = `<div style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.7rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 6px;">${parts.join('<span style="color: var(--text-dim);">|</span>')}</div>`;
+      econInfoEl.style.display = 'inline-flex';
+    } else {
+      econInfoEl.innerHTML = '';
+      econInfoEl.style.display = 'none';
+    }
   }
 
   // Configurable Key Galactic Distances in Header
@@ -2255,6 +2329,61 @@ function renderMiningView(container, bodies) {
   wrapper.style.gap = '12px';
 
   // Field Guide & Summary Banner
+  const curSys = state.selectedSystem || (state.currentSystemData && state.currentSystemData.system) || {};
+  const sState = (curSys.system_state || '').trim();
+  const sStateLower = sState.toLowerCase();
+  let stateImpactHtml = '';
+  if (sStateLower.includes('boom')) {
+    stateImpactHtml = `
+      <div style="background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <span style="color: #4ade80; font-weight: bold; font-size: 0.76rem;">📈 【星系経済状態: Boom (好況)】採掘物資の高額売却ボーナス & 需要急増中！Rhino採掘素材の放出やミッションに最適な状態です。</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; background: rgba(34, 197, 94, 0.2); border-color: #4ade80; color: #4ade80; cursor: pointer;">🔄 EDSM最新状態同期</button>
+      </div>
+    `;
+  } else if (sStateLower.includes('investment')) {
+    stateImpactHtml = `
+      <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <span style="color: #38bdf8; font-size: 0.76rem;">💼 【星系状態: Investment (投資)】経済活性化。鉱物需要・取引価格が好調です。</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">🔄 EDSM最新状態同期</button>
+      </div>
+    `;
+  } else if (sStateLower.includes('expansion')) {
+    stateImpactHtml = `
+      <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <span style="color: #c084fc; font-size: 0.76rem;">🚀 【星系状態: Expansion (拡張)】開発需要増加中。インフラ素材・金属類の需要が高まっています。</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #c084fc; cursor: pointer;">🔄 EDSM最新状態同期</button>
+      </div>
+    `;
+  } else if (sStateLower.includes('war') || sStateLower.includes('unrest') || sStateLower.includes('lockdown')) {
+    stateImpactHtml = `
+      <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <span style="color: #f87171; font-size: 0.76rem;">⚠️ 【星系状態: 紛争・治安悪化 (${escapeHtml(sState)})】ステーション機能制限や治安悪化の懸念があります。輸送時の海賊にご注意ください。</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #f87171; cursor: pointer;">🔄 EDSM最新状態同期</button>
+      </div>
+    `;
+  } else if (sStateLower.includes('bust')) {
+    stateImpactHtml = `
+      <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <span style="color: #facc15; font-size: 0.76rem;">📉 【星系状態: Bust (不況)】市場価格が低迷傾向です。近隣の好況星系（Boom）での売却を推奨します。</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #facc15; cursor: pointer;">🔄 EDSM最新状態同期</button>
+      </div>
+    `;
+  } else if (curSys.population === 0) {
+    stateImpactHtml = `
+      <div style="background: rgba(100, 116, 139, 0.08); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <span style="color: #94a3b8; font-size: 0.76rem;">🌌 【無人星系】ステーション等はありませんが、未開拓の豊富な資源（Pristine Reserves等）に恵まれた採掘適地です。</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">🔄 EDSM最新状態同期</button>
+      </div>
+    `;
+  } else {
+    stateImpactHtml = `
+      <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <span style="color: var(--text-secondary); font-size: 0.76rem;">🏛️ 星系状態: ${sState ? escapeHtml(sState) : '平常 (None)'} ${curSys.controlling_faction ? `| 支配: ${escapeHtml(curSys.controlling_faction)}` : ''} ${curSys.system_reserve ? `| 埋蔵量: ${escapeHtml(curSys.system_reserve)}` : ''}</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">🔄 EDSM最新状態同期</button>
+      </div>
+    `;
+  }
+
   const guideCard = document.createElement('div');
   guideCard.className = 'rhino-field-guide-card';
   guideCard.style.cssText = 'background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 10px 14px; font-size: 0.78rem;';
@@ -2269,6 +2398,7 @@ function renderMiningView(container, bodies) {
         ${ringedBodies.length > 0 ? `<span class="tag-badge" style="background: rgba(244, 114, 182, 0.18); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.4);">💍 環付きLandable: ${ringedBodies.length} 天体</span>` : ''}
       </div>
     </div>
+    ${stateImpactHtml}
     <div style="color: var(--text-secondary); margin-top: 6px; line-height: 1.45; font-size: 0.73rem; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 6px;">
       ・<b>推奨天体</b>: <b>Rocky / Metal Rich / HMC</b> はバストネサイト（Bastnäsite）等の希少鉱石・高価値素材の主産地。<br>
       ・<b>天体半径 & 重力</b>: 大半径天体は平坦な平原が広がりやすく操縦・リグ展開に有利。高重力(3G+)での着陸には注意。<br>
@@ -2276,6 +2406,36 @@ function renderMiningView(container, bodies) {
     </div>
   `;
   wrapper.appendChild(guideCard);
+
+  // Bind EDSM sync button in mining view
+  setTimeout(() => {
+    const btnMiningSync = guideCard.querySelector('#btn-mining-edsm-sync');
+    if (btnMiningSync) {
+      btnMiningSync.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!curSys.system_address) return;
+        btnMiningSync.disabled = true;
+        btnMiningSync.innerHTML = '⏳ 取得中...';
+        try {
+          const resp = await fetch(`/api/systems/${curSys.system_address}/edsm_sync`, { method: 'POST' });
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          await selectSystem(curSys.system_address, true, false);
+          btnMiningSync.innerHTML = '✓ 更新完了';
+          setTimeout(() => {
+            btnMiningSync.disabled = false;
+            btnMiningSync.innerHTML = '🔄 EDSM最新状態同期';
+          }, 1500);
+        } catch (err) {
+          console.error('Failed to sync EDSM in mining view:', err);
+          btnMiningSync.disabled = false;
+          btnMiningSync.innerHTML = '❌ 取得失敗';
+          setTimeout(() => {
+            btnMiningSync.innerHTML = '🔄 EDSM最新状態同期';
+          }, 2000);
+        }
+      });
+    }
+  }, 0);
 
   // Sub-filter button bar
   const subFilterBar = document.createElement('div');
@@ -3256,10 +3416,19 @@ function renderBodyInspector() {
                 ? site.commodities
                 : ((site.minerals || '').split(',').map(s => s.trim()).filter(Boolean));
               const mineralsStr = mineralsList.join(', ');
-              const hotspotStr = site.hotspot ? ` (Hotspot: ${site.hotspot})` : '';
-              const copyText = hasCoord 
-                ? `緯度: ${latStr}, 経度: ${lonStr}${hotspotStr} [${mineralsStr || '採掘記録'}]${site.note ? ` (${site.note})` : ''}`
-                : `${hotspotStr ? `${hotspotStr.trim()} ` : ''}[${mineralsStr || '採掘記録'}]${site.note ? ` (${site.note})` : ''}`;
+              
+              // Standard 4-line Rhino Sharing Format:
+              // Body Name
+              // Hotspot Name
+              // Minerals / Note description
+              // Location : Lat / Lon
+              const bodyName = b.body_name || site.body_name || 'Planet';
+              const hotspotLine = site.hotspot || 'Hotspot';
+              const descLine = [mineralsStr, site.note].filter(Boolean).join(' ') || 'Mining Site';
+              const locLine = hasCoord 
+                ? `Location : ${latNum.toFixed(4)} / ${lonNum.toFixed(4)}`
+                : 'Location : -- / --';
+              const copyText = `${bodyName}\n${hotspotLine}\n${descLine}\n${locLine}`;
 
               const mineralBadges = mineralsList.map(m => `
                 <span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #e0f2fe; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.72rem; padding: 2px 6px; font-weight: bold;">
@@ -3275,16 +3444,16 @@ function renderBodyInspector() {
                     <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                       <span style="color: var(--ed-orange); font-size: 0.85rem;">📍</span>
                       <span style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: bold; color: #fff;">
-                        ${hasCoord ? `緯度: ${latStr}  経度: ${lonStr}` : '<span style="color: var(--text-dim);">座標記録なし</span>'}
+                        ${hasCoord ? `Location : ${latNum.toFixed(4)} / ${lonNum.toFixed(4)}` : '<span style="color: var(--text-dim);">座標記録なし</span>'}
                       </span>
                       ${site.hotspot ? `
                         <span class="tag-badge" style="background: rgba(234, 88, 12, 0.2); color: #fb923c; border: 1px solid rgba(234, 88, 12, 0.45); font-size: 0.7rem; padding: 2px 6px; font-weight: bold;" title="近傍 Hotspot / PML拠点">
-                          🎯 Hotspot: ${escapeHtml(site.hotspot)}
+                          🎯 ${escapeHtml(site.hotspot)}
                         </span>
                       ` : ''}
                     </div>
                     <div style="display: flex; gap: 4px; align-items: center;">
-                      <button type="button" class="view-btn btn-copy-mining-site" data-copy-text="${encodeURIComponent(copyText)}" data-coords="${rawCoords}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="座標と採掘鉱物をクリップボードにコピー">
+                      <button type="button" class="view-btn btn-copy-mining-site" data-copy-text="${encodeURIComponent(copyText)}" data-coords="${rawCoords}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="4行共有フォーマットでクリップボードにコピー">
                         📋 コピー
                       </button>
                       <button type="button" class="view-btn btn-edit-mining-site" data-site-idx="${idx}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(147, 197, 253, 0.15); border-color: rgba(147, 197, 253, 0.4); color: #93c5fd; cursor: pointer;" title="この地点を編集">
@@ -3325,8 +3494,13 @@ function renderBodyInspector() {
             <span style="font-size: 0.78rem; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
               <span>🦏</span> <span>Rhino 惑星表面採掘地点 & 鉱物</span>
             </span>
-            <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
               <span style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">記録地点: ${miningSites.length} 箇所</span>
+              ${miningSites.length > 0 ? `
+                <button type="button" id="btn-copy-all-mining-sites" class="view-btn" style="padding: 2px 8px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="この天体の全採掘地点を共有テキスト形式で一括コピー">
+                  📋 全地点共有コピー
+                </button>
+              ` : ''}
               <button type="button" id="btn-add-mining-site" class="view-btn" style="padding: 2px 8px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #38bdf8; cursor: pointer; font-weight: bold;" title="新しい採掘地点を手動で追加">
                 ➕ 採掘地点を追加
               </button>
@@ -3343,6 +3517,39 @@ function renderBodyInspector() {
         btnAdd.addEventListener('click', (e) => {
           e.stopPropagation();
           openMiningSiteModal({ isNew: true, body: b });
+        });
+      }
+
+      // Event: Copy all mining sites for this body in 4-line format
+      const btnCopyAll = document.getElementById('btn-copy-all-mining-sites');
+      if (btnCopyAll) {
+        btnCopyAll.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const allText = miningSites.map(st => {
+            const hCoord = st.latitude !== null && st.longitude !== null && !isNaN(Number(st.latitude));
+            const lNum = Number(st.latitude);
+            const loNum = Number(st.longitude);
+            const mList = (st.commodities && st.commodities.length > 0) ? st.commodities : ((st.minerals || '').split(',').map(s => s.trim()).filter(Boolean));
+            const mStr = mList.join(', ');
+            const hLine = st.hotspot || 'Hotspot';
+            const dLine = [mStr, st.note].filter(Boolean).join(' ') || 'Mining Site';
+            const lcLine = hCoord ? `Location : ${lNum.toFixed(4)} / ${loNum.toFixed(4)}` : 'Location : -- / --';
+            return `${b.body_name || 'Planet'}\n${hLine}\n${dLine}\n${lcLine}`;
+          }).join('\n\n');
+
+          if (allText && navigator.clipboard) {
+            navigator.clipboard.writeText(allText).then(() => {
+              const orig = btnCopyAll.innerHTML;
+              btnCopyAll.innerHTML = '✓ 全地点コピー済';
+              btnCopyAll.style.color = '#38bdf8';
+              btnCopyAll.style.borderColor = '#38bdf8';
+              setTimeout(() => {
+                btnCopyAll.innerHTML = orig;
+                btnCopyAll.style.color = '';
+                btnCopyAll.style.borderColor = '';
+              }, 1800);
+            });
+          }
         });
       }
 
@@ -6288,6 +6495,9 @@ function openMiningSiteModal(opts) {
     if (noteInput) noteInput.value = s.note || '';
   }
 
+  const quickPasteArea = document.getElementById('input-mining-quick-paste');
+  if (quickPasteArea) quickPasteArea.value = '';
+
   modal.style.display = 'flex';
   setTimeout(() => {
     if (latInput) latInput.focus();
@@ -6306,10 +6516,64 @@ function initMiningSiteModal() {
   const btnClose = document.getElementById('btn-close-mining-site-modal');
   const btnCancel = document.getElementById('btn-cancel-mining-site');
   const btnSave = document.getElementById('btn-save-mining-site');
+  const btnApplyPaste = document.getElementById('btn-apply-mining-paste');
   const errEl = document.getElementById('modal-mining-site-error');
 
   if (btnClose) btnClose.addEventListener('click', closeMiningSiteModal);
   if (btnCancel) btnCancel.addEventListener('click', closeMiningSiteModal);
+
+  // Quick Paste text parsing (e.g. Kuk B 2 / Hotspot 26 / Iridium spot for 3 rig / Location : -28.8859 / -66.7179)
+  if (btnApplyPaste) {
+    btnApplyPaste.addEventListener('click', () => {
+      const raw = (document.getElementById('input-mining-quick-paste')?.value || '').trim();
+      if (!raw) return;
+
+      const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+      let foundLat = null, foundLon = null;
+      let foundHotspot = '';
+      let foundDesc = '';
+
+      for (const line of lines) {
+        // Check for Location line: e.g. "Location : -28.8859 / -66.7179" or "-28.8859 / -66.7179"
+        const locMatch = line.match(/(?:Location|Pos|Coords?|座標)?\s*[:：]?\s*([+-]?\d+(?:\.\d+)?)\s*[\/,\s]\s*([+-]?\d+(?:\.\d+)?)/i);
+        if (locMatch && !isNaN(parseFloat(locMatch[1])) && !isNaN(parseFloat(locMatch[2]))) {
+          foundLat = parseFloat(locMatch[1]);
+          foundLon = parseFloat(locMatch[2]);
+          continue;
+        }
+        // Check for Hotspot line (e.g. "Hotspot 26", "Hotspot 1", "PML #3")
+        if (/^(?:Hotspot|PML|採掘拠点)/i.test(line)) {
+          foundHotspot = line;
+          continue;
+        }
+        // Check if line matches current body name (e.g. "Kuk B 2")
+        if (activeMiningModalBody && activeMiningModalBody.body_name && line.toLowerCase() === activeMiningModalBody.body_name.toLowerCase()) {
+          continue;
+        }
+        // Otherwise treat as minerals / description / note
+        if (!foundDesc) {
+          foundDesc = line;
+        } else {
+          foundDesc += ', ' + line;
+        }
+      }
+
+      if (foundLat !== null) document.getElementById('input-mining-lat').value = foundLat;
+      if (foundLon !== null) document.getElementById('input-mining-lon').value = foundLon;
+      if (foundHotspot) document.getElementById('input-mining-hotspot').value = foundHotspot;
+      if (foundDesc) {
+        const minInput = document.getElementById('input-mining-minerals');
+        const noteInput = document.getElementById('input-mining-note');
+        if (!minInput.value) {
+          minInput.value = foundDesc;
+        } else if (!noteInput.value) {
+          noteInput.value = foundDesc;
+        } else {
+          noteInput.value += ' ' + foundDesc;
+        }
+      }
+    });
+  }
 
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeMiningSiteModal();

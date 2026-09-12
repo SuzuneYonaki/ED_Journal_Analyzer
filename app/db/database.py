@@ -97,7 +97,12 @@ def init_db(conn=None):
         shared_by TEXT DEFAULT '',
         shared_at TEXT DEFAULT '',
         shared_notes TEXT DEFAULT '',
-        is_external INTEGER DEFAULT 0
+        is_external INTEGER DEFAULT 0,
+        system_state TEXT DEFAULT '',
+        controlling_faction TEXT DEFAULT '',
+        system_second_economy TEXT DEFAULT '',
+        system_reserve TEXT DEFAULT '',
+        edsm_factions_json TEXT DEFAULT '[]'
     );
     """)
 
@@ -351,6 +356,11 @@ def init_db(conn=None):
         ("shared_at", "TEXT DEFAULT ''"),
         ("shared_notes", "TEXT DEFAULT ''"),
         ("is_external", "INTEGER DEFAULT 0"),
+        ("system_state", "TEXT DEFAULT ''"),
+        ("controlling_faction", "TEXT DEFAULT ''"),
+        ("system_second_economy", "TEXT DEFAULT ''"),
+        ("system_reserve", "TEXT DEFAULT ''"),
+        ("edsm_factions_json", "TEXT DEFAULT '[]'"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE systems ADD COLUMN {col_def[0]} {col_def[1]};")

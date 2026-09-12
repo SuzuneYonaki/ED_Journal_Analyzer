@@ -115,3 +115,78 @@ def test_edsm_priority_queue_and_backfill():
     assert test_sys_addr in service.priority_systems
     assert not service.high_priority_queue.empty()
 
+
+def test_edsm_service_extracts_state_and_factions():
+    """Test that EDSMService extracts factionState (e.g. Boom), faction, reserve, economy."""
+    init_db()
+    conn = get_db_connection()
+    c = conn.cursor()
+    test_sys_addr = 999999004
+    test_sys_name = "Kuk"
+
+    c.execute("DELETE FROM systems WHERE system_address = ?", (test_sys_addr,))
+    c.execute("""
+        INSERT INTO systems (system_address, star_system, edsm_checked, edsm_registered)
+        VALUES (?, ?, 0, 0)
+    """, (test_sys_addr, test_sys_name))
+    conn.commit()
+    conn.close()
+
+    service = EDSMService()
+
+    # Mock system response with Boom state and detailed information
+    mock_system_resp = MagicMock()
+    mock_system_resp.status = 200
+    mock_system_resp.read.return_value = b'''{
+        "name": "Kuk",
+        "id64": 999999004,
+        "information": {
+            "allegiance": "Independent",
+            "government": "Anarchy",
+            "faction": "Kuk Silver Mafia",
+            "factionState": "Boom",
+            "population": 1500000,
+            "security": "Low",
+            "economy": "Extraction",
+            "secondEconomy": "Refinery",
+            "reserve": "Pristine"
+        }
+    }'''
+    mock_system_resp.__enter__.return_value = mock_system_resp
+
+    # Mock factions response
+    mock_factions_resp = MagicMock()
+    mock_factions_resp.status = 200
+    mock_factions_resp.read.return_value = b'''{
+        "factions": [
+            {"name": "Kuk Silver Mafia", "state": "Boom", "influence": 0.65}
+        ]
+    }'''
+    mock_factions_resp.__enter__.return_value = mock_factions_resp
+
+    # Mock bodies response
+    mock_bodies_resp = MagicMock()
+    mock_bodies_resp.status = 200
+    mock_bodies_resp.read.return_value = b'{"bodyCount": 0, "bodies": []}'
+    mock_bodies_resp.__enter__.return_value = mock_bodies_resp
+
+    with patch("urllib.request.urlopen", side_effect=[mock_system_resp, mock_factions_resp, mock_bodies_resp]):
+        res = service.fetch_and_update_system_sync(test_sys_addr, test_sys_name)
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("""
+        SELECT system_state, controlling_faction, system_reserve, system_economy, system_second_economy
+        FROM systems WHERE system_address = ?
+    """, (test_sys_addr,))
+    row = c.fetchone()
+    conn.close()
+
+    assert row is not None
+    assert row["system_state"] == "Boom"
+    assert row["controlling_faction"] == "Kuk Silver Mafia"
+    assert row["system_reserve"] == "Pristine"
+    assert row["system_economy"] == "Extraction"
+    assert row["system_second_economy"] == "Refinery"
+
+

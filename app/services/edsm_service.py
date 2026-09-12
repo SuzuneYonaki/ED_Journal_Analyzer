@@ -212,15 +212,37 @@ class EDSMService:
         allegiance = info.get("allegiance")
         government = info.get("government")
         economy = info.get("economy")
+        second_economy = info.get("secondEconomy")
         security = info.get("security")
         population = info.get("population") or 0
+        faction = info.get("faction")
+        faction_state = info.get("factionState")
+        reserve = info.get("reserve")
+
+        # Fetch detailed factions if populated
+        factions_json = "[]"
+        if faction or population > 0:
+            try:
+                self._throttle_delay()
+                factions_url = f"https://www.edsm.net/api-system-v1/factions?systemName={encoded_name}"
+                factions_req = urllib.request.Request(
+                    factions_url,
+                    headers={"User-Agent": "ED_Journal_Analyzer/v0.1.6 (External System Import)"}
+                )
+                with urllib.request.urlopen(factions_req, timeout=8.0) as f_resp:
+                    if f_resp.status == 200:
+                        f_data = json.loads(f_resp.read().decode("utf-8"))
+                        if isinstance(f_data, dict) and "factions" in f_data:
+                            factions_json = json.dumps(f_data.get("factions", []))
+            except Exception as e:
+                print(f"[EDSM Service] Error fetching factions for {star_sys_name}: {e}")
 
         # Fetch bodies from EDSM
         self._throttle_delay()
         bodies_url = f"{EDSM_BODIES_API}?systemName={encoded_name}"
         bodies_req = urllib.request.Request(
             bodies_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.4 (External System Import)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.6 (External System Import)"}
         )
 
         first_discoverer = None
@@ -263,7 +285,12 @@ class EDSMService:
                     system_allegiance = COALESCE(?, system_allegiance),
                     system_government = COALESCE(?, system_government),
                     system_economy = COALESCE(?, system_economy),
+                    system_second_economy = COALESCE(?, system_second_economy),
                     system_security = COALESCE(?, system_security),
+                    system_state = COALESCE(NULLIF(?, ''), system_state),
+                    controlling_faction = COALESCE(NULLIF(?, ''), controlling_faction),
+                    system_reserve = COALESCE(NULLIF(?, ''), system_reserve),
+                    edsm_factions_json = CASE WHEN ? != '[]' THEN ? ELSE edsm_factions_json END,
                     population = CASE WHEN ? > 0 THEN ? ELSE population END,
                     edsm_checked = 1,
                     edsm_registered = 1,
@@ -273,25 +300,32 @@ class EDSMService:
                 WHERE system_address = ?
             """, (
                 star_sys_name, pos_x, pos_y, pos_z, sol_dist, sol_dist,
-                allegiance, government, economy, security, population, population,
+                allegiance, government, economy, second_economy, security,
+                faction_state, faction, reserve,
+                factions_json, factions_json,
+                population, population,
                 first_discoverer, submitted_at, body_count, system_address
             ))
         else:
             c.execute("""
                 INSERT INTO systems (
                     system_address, star_system, star_pos_x, star_pos_y, star_pos_z, sol_distance_ly,
-                    system_allegiance, system_government, system_economy, system_security, population,
-                    first_visited, last_visited, visit_count, is_external,
+                    system_allegiance, system_government, system_economy, system_second_economy,
+                    system_security, system_state, controlling_faction, system_reserve, edsm_factions_json,
+                    population, first_visited, last_visited, visit_count, is_external,
                     edsm_checked, edsm_registered, edsm_first_discoverer, edsm_submitted_at, edsm_body_count
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
                     ?, ?, ?, ?, ?,
-                    NULL, NULL, 0, 1,
+                    ?, NULL, NULL, 0, 1,
                     1, 1, ?, ?, ?
                 )
             """, (
                 system_address, star_sys_name, pos_x, pos_y, pos_z, sol_dist,
-                allegiance, government, economy, security, population,
+                allegiance, government, economy, second_economy,
+                security, faction_state or "", faction or "", reserve or "", factions_json,
+                population,
                 first_discoverer, submitted_at, body_count
             ))
 
@@ -345,13 +379,42 @@ class EDSMService:
             self._mark_checked_unregistered(system_address)
             return {"registered": False, "status": "not_found"}
 
-        # System is registered on EDSM
+        # Extract information (economy, government, allegiance, state, faction, reserve)
+        info = sys_data.get("information") or {}
+        allegiance = info.get("allegiance")
+        government = info.get("government")
+        economy = info.get("economy")
+        second_economy = info.get("secondEconomy")
+        security = info.get("security")
+        population = info.get("population") or 0
+        faction = info.get("faction")
+        faction_state = info.get("factionState")
+        reserve = info.get("reserve")
+
+        # Fetch detailed factions if populated
+        factions_json = "[]"
+        if faction or population > 0:
+            try:
+                self._throttle_delay()
+                factions_url = f"https://www.edsm.net/api-system-v1/factions?systemName={encoded_name}"
+                factions_req = urllib.request.Request(
+                    factions_url,
+                    headers={"User-Agent": "ED_Journal_Analyzer/v0.1.6 (EDSM Discovery Integration)"}
+                )
+                with urllib.request.urlopen(factions_req, timeout=8.0) as f_resp:
+                    if f_resp.status == 200:
+                        f_data = json.loads(f_resp.read().decode("utf-8"))
+                        if isinstance(f_data, dict) and "factions" in f_data:
+                            factions_json = json.dumps(f_data.get("factions", []))
+            except Exception as e:
+                print(f"[EDSM Service] Error fetching factions for {system_name}: {e}")
+
         # Check bodies for first discoverer and complete celestial bodies
         self._throttle_delay()
         bodies_url = f"{EDSM_BODIES_API}?systemName={encoded_name}"
         bodies_req = urllib.request.Request(
             bodies_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.4 (EDSM Discovery Integration)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.6 (EDSM Discovery Integration)"}
         )
 
         first_discoverer = None
@@ -387,9 +450,26 @@ class EDSMService:
                 edsm_registered = 1,
                 edsm_first_discoverer = ?,
                 edsm_submitted_at = ?,
-                edsm_body_count = ?
+                edsm_body_count = ?,
+                system_allegiance = COALESCE(?, system_allegiance),
+                system_government = COALESCE(?, system_government),
+                system_economy = COALESCE(?, system_economy),
+                system_second_economy = COALESCE(?, system_second_economy),
+                system_security = COALESCE(?, system_security),
+                system_state = COALESCE(NULLIF(?, ''), system_state),
+                controlling_faction = COALESCE(NULLIF(?, ''), controlling_faction),
+                system_reserve = COALESCE(NULLIF(?, ''), system_reserve),
+                edsm_factions_json = CASE WHEN ? != '[]' THEN ? ELSE edsm_factions_json END,
+                population = CASE WHEN ? > 0 THEN ? ELSE population END
             WHERE system_address = ?
-        """, (first_discoverer, submitted_at, body_count, system_address))
+        """, (
+            first_discoverer, submitted_at, body_count,
+            allegiance, government, economy, second_economy, security,
+            faction_state, faction, reserve,
+            factions_json, factions_json,
+            population, population,
+            system_address
+        ))
 
         # Import or backfill missing bodies from EDSM
         completed_count = 0
