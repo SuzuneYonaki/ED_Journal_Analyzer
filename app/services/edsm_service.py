@@ -173,11 +173,11 @@ class EDSMService:
 
         self._throttle_delay()
         encoded_name = urllib.parse.quote(clean_name)
-        sys_url = f"{EDSM_SYSTEM_API}?systemName={encoded_name}&showInformation=1&showCoordinates=1"
+        sys_url = f"{EDSM_SYSTEM_API}?systemName={encoded_name}&showInformation=1&showCoordinates=1&showId=1"
 
         req = urllib.request.Request(
             sys_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.3 (External System Import)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.4 (External System Import)"}
         )
 
         try:
@@ -220,7 +220,7 @@ class EDSMService:
         bodies_url = f"{EDSM_BODIES_API}?systemName={encoded_name}"
         bodies_req = urllib.request.Request(
             bodies_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.3 (External System Import)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.4 (External System Import)"}
         )
 
         first_discoverer = None
@@ -323,11 +323,11 @@ class EDSMService:
     def _fetch_and_update_system(self, system_address: int, system_name: str) -> dict:
         """Fetches system info and body discoveries from EDSM and updates the database."""
         encoded_name = urllib.parse.quote(system_name)
-        sys_url = f"{EDSM_SYSTEM_API}?systemName={encoded_name}&showInformation=1&showCoordinates=1"
+        sys_url = f"{EDSM_SYSTEM_API}?systemName={encoded_name}&showInformation=1&showCoordinates=1&showId=1"
 
         req = urllib.request.Request(
             sys_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.3 (EDSM Discovery Integration)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.4 (EDSM Discovery Integration)"}
         )
 
         try:
@@ -351,7 +351,7 @@ class EDSMService:
         bodies_url = f"{EDSM_BODIES_API}?systemName={encoded_name}"
         bodies_req = urllib.request.Request(
             bodies_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.3 (EDSM Discovery Integration)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.4 (EDSM Discovery Integration)"}
         )
 
         first_discoverer = None

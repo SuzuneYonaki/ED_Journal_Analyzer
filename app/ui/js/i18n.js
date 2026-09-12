@@ -357,6 +357,16 @@ const i18n = {
     mod_exobiology: "🌿 Exobiology（生物予測・BIOバッジ・探査ビュー）",
     mod_rhino: "🦏 Rhino採掘（採掘拠点バッジ・座標マップ・履歴・採掘ビュー）",
 
+    // UI Theme Settings
+    settings_theme_label: "🎨 UIカラーテーマ / 配色プリセット",
+    settings_theme_desc: "コックピット環境や好みに合わせてインターフェース配色を選択できます。",
+    theme_default: "🌌 Modern Deep Space",
+    theme_default_sub: "標準・ハイコントラスト（ダークブルー＋アンバー）",
+    theme_elite_amber: "🚀 Elite Classic Amber HUD",
+    theme_elite_amber_sub: "原作Elite Dangerousのコックピット計器盤カラーを忠実に再現",
+    theme_cyan: "🌐 Cyan Explorer HUD",
+    theme_cyan_sub: "サイバー調の探査機用シアン・ブルー配色",
+
     // Landmark Display Settings
     settings_landmarks_label: "📍 ランドマーク距離バッジ表示設定",
     settings_landmarks_desc: "星系リストカードおよび星系詳細ヘッダーに表示するランドマーク距離を選択できます。",
@@ -723,6 +733,16 @@ const i18n = {
     settings_modules_desc: "Choose which expansion modules to display. Unchecking allows you to simplify the view to pure astrophysics.",
     mod_exobiology: "🌿 Exobiology (Bio Predictions, Badges & View)",
     mod_rhino: "🦏 Rhino Mining (Mining Badges, Coords Map, History & View)",
+
+    // UI Theme Settings
+    settings_theme_label: "🎨 UI Color Theme Presets",
+    settings_theme_desc: "Choose an interface color scheme matching your cockpit environment or personal preference.",
+    theme_default: "🌌 Modern Deep Space",
+    theme_default_sub: "Standard high-contrast dark space theme (Amber & Blue)",
+    theme_elite_amber: "🚀 Elite Classic Amber HUD",
+    theme_elite_amber_sub: "Authentic Elite Dangerous cockpit amber instrument HUD style",
+    theme_cyan: "🌐 Cyan Explorer HUD",
+    theme_cyan_sub: "High-tech cyan-blue explorer cockpit aesthetic",
 
     // Landmark Display Settings
     settings_landmarks_label: "📍 Landmark Distance Badge Display",

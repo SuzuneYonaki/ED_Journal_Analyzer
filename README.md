@@ -1,4 +1,4 @@
-# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.3)
+# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.4)
 
 [日本語](#日本語) | [English](#english)
 
@@ -13,6 +13,17 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 > 銀河の遥かなる長旅の記録や、過去の深宇宙探索・初発見の思い出をいつでも鮮明に振り返ることができます。
 
 > **⚠️ 使用上の注意・免責事項**: 本ツールはファンメイドの非公式オープンソースツールです。フロンティア・デベロップメンツ社とは一切関係ありません。ジャーナルログの解釈や探査・採掘データの完全性についてはいかなる保証も致しかねます。本ツールの使用によって生じたゲーム内での損失（機体喪失、採掘リグ耐久値損失、探査データ喪失など）を含むいかなる結果についても開発者は一切の責任を負いません。自己責任においてご利用ください。
+
+### 🚀 v0.1.4 アップデート・サマリー
+- **未訪問星系（EDSM/Spansh/Inara既知）ロード時の404エラー解消**:
+  - 自身が訪問していない未訪問星系（Sol、Beagle Point等）を外部DB足跡チェックから「🚀 EDSMから星系データをロード（未訪問参照）」した際に、EDSM APIリクエストに `&showId=1` が欠落していたことでシステムアドレス（`id64`）が取得できず404エラーになっていた不具合を根本解決。
+  - EDSM上のあらゆる未訪問星系・天体データを100%確実にインポートし、System Mapで軌道構造や天体スペックを即座に閲覧できるようになりました。
+- **Elite Dangerous 固有のHUDカラーテーマを含む「UIカラーテーマ切り替え」新設**:
+  - 設定モーダル（UI表示設定タブ）に「🎨 UIカラーテーマ / 配色プリセット」を追加。
+  - **🌌 Modern Deep Space**: 視認性に優れた標準ハイコントラスト配色（ダークブルー＋アンバー）。
+  - **🚀 Elite Classic Amber HUD**: 原作Elite Dangerousのコックピット計器盤・ホログラフィックHUDのアンバーオレンジ配色（`#ff7100` / `#ffaa33`）を忠実に再現。
+  - **🌐 Cyan Explorer HUD**: サイバー調の深宇宙探査機向けシアン・ブルー配色。
+  - 選択したテーマは画面リロードなしで即座にUI全体へ反映され、次回起動時も永続化されます。
 
 ### 🚀 v0.1.3 アップデート・サマリー
 - **中央ペイン天体ソートに「Rhino適格 (PML順)」を追加**:
@@ -148,6 +159,17 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
 > Relive and explore your epic expedition memories, first discoveries, and galaxy travels anytime with complete offline privacy.
 
 > **⚠️ Disclaimer**: This tool is an unofficial, fan-made open-source companion and is not affiliated with or endorsed by Frontier Developments plc. No warranties are provided regarding data accuracy or game log interpretation. The developer assumes no responsibility or liability for any in-game losses or damages (including loss of ships, mining rig durability, or exploration data). Use at your own discretion.
+
+### 🚀 v0.1.4 Update Summary
+- **Resolved HTTP 404 Bug When Loading Unvisited Systems (EDSM / Spansh / Inara)**:
+  - Fixed a critical issue where attempting to load unvisited systems (e.g. Sol, Beagle Point) via "🚀 Load System Data from EDSM" resulted in a 404 error due to missing `&showId=1` query parameter in the EDSM API request.
+  - Now 100% reliably imports system coordinates, addresses (`id64`), and all orbital body data directly into the System Map for reference exploration.
+- **Cockpit-Authentic "UI Color Theme Selector"**:
+  - Added "🎨 UI Color Theme Presets" in the Settings modal (UI Settings tab).
+  - **🌌 Modern Deep Space**: Default high-contrast dark space aesthetic (Deep Blue & Orange Amber).
+  - **🚀 Elite Classic Amber HUD**: Faithfully reproduces the authentic Elite Dangerous cockpit instrument panel and holographic amber orange HUD (`#ff7100` / `#ffaa33`).
+  - **🌐 Cyan Explorer HUD**: High-tech cyber cyan-blue theme tailored for deep space exploratory probes.
+  - Theme changes apply immediately across all interface elements without reload and persist seamlessly across sessions.
 
 ### 🚀 v0.1.3 Update Summary
 - **PML Sorting for Rhino Eligibility in Central Pane**:

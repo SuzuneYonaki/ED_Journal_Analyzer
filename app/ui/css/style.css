@@ -21,6 +21,50 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Theme: Elite Dangerous Classic Amber / Orange Cockpit HUD */
+[data-theme="elite-amber"] {
+  --bg-primary: #0a0502;
+  --bg-secondary: #140b04;
+  --bg-card: #1c1006;
+  --bg-card-hover: #29180a;
+  --border-color: #3d240e;
+  --border-highlight: #ff8000;
+  --ed-orange: #ff7100;
+  --ed-orange-dim: #c55700;
+  --ed-orange-glow: rgba(255, 113, 0, 0.35);
+  --ed-cyan: #ffaa33;
+  --ed-cyan-dim: #d97706;
+  --ed-green: #4ade80;
+  --ed-red: #f87171;
+  --ed-purple: #e879f9;
+  --ed-gold: #fbbf24;
+  --text-primary: #ffe2c2;
+  --text-secondary: #c49a6c;
+  --text-dim: #785232;
+}
+
+/* Theme: Cyan Matrix / Deep Space Explorer */
+[data-theme="cyan-explorer"] {
+  --bg-primary: #040c14;
+  --bg-secondary: #071522;
+  --bg-card: #0b1f30;
+  --bg-card-hover: #102b42;
+  --border-color: #163d5c;
+  --border-highlight: #00d2ff;
+  --ed-orange: #00d2ff;
+  --ed-orange-dim: #0284c7;
+  --ed-orange-glow: rgba(0, 210, 255, 0.3);
+  --ed-cyan: #38bdf8;
+  --ed-cyan-dim: #0284c7;
+  --ed-green: #34d399;
+  --ed-red: #f87171;
+  --ed-purple: #c084fc;
+  --ed-gold: #38bdf8;
+  --text-primary: #e0f2fe;
+  --text-secondary: #7dd3fc;
+  --text-dim: #33698e;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -2487,6 +2531,56 @@ header {
 .btn-live-accordion-toggle:hover {
   background: rgba(255, 113, 0, 0.3);
   color: #fff;
+}
+
+/* Color Theme Selection Cards */
+.theme-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.theme-card-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.theme-card-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--ed-orange);
+}
+
+.theme-card-btn.active {
+  border-color: var(--ed-cyan);
+  background: rgba(0, 210, 255, 0.08);
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+}
+
+[data-theme="elite-amber"] .theme-card-btn.active {
+  border-color: var(--ed-orange);
+  background: rgba(255, 113, 0, 0.12);
+  box-shadow: 0 0 10px rgba(255, 113, 0, 0.25);
+}
+
+.theme-preview-palette {
+  display: flex;
+  height: 14px;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.theme-preview-palette span {
+  flex: 1;
 }
 
 

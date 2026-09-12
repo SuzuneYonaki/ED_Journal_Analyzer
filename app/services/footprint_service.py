@@ -126,10 +126,10 @@ class FootprintService:
 
     def _check_edsm(self, system_name: str) -> Dict[str, Any]:
         encoded = urllib.parse.quote(system_name)
-        url = f"https://www.edsm.net/api-v1/system?systemName={encoded}&showInformation=1&showCoordinates=1"
+        url = f"https://www.edsm.net/api-v1/system?systemName={encoded}&showInformation=1&showCoordinates=1&showId=1"
         req = urllib.request.Request(
             url,
-            headers={"User-Agent": "EDJournalAnalyzer/v0.1.3 (Footprint Check)"}
+            headers={"User-Agent": "EDJournalAnalyzer/v0.1.4 (Footprint Check)"}
         )
         try:
             with urllib.request.urlopen(req, timeout=EXTERNAL_TIMEOUT_SEC) as resp:
@@ -166,7 +166,7 @@ class FootprintService:
             url,
             data=json.dumps(payload).encode("utf-8"),
             headers={
-                "User-Agent": "EDJournalAnalyzer/v0.1.3 (Footprint Check)",
+                "User-Agent": "EDJournalAnalyzer/v0.1.4 (Footprint Check)",
                 "Content-Type": "application/json"
             }
         )

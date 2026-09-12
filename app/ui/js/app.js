@@ -3975,7 +3975,7 @@ document.addEventListener('DOMContentLoaded', () => {
               const resp = await fetch(`/api/external/import_edsm?system_name=${encodeURIComponent(trimmed)}`, { method: 'POST' });
               if (!resp.ok) {
                 const errJson = await resp.json().catch(() => ({}));
-                throw new Error(errJson.detail || `HTTP ${resp.status}`);
+                throw new Error(errJson.error || errJson.detail || `HTTP ${resp.status}`);
               }
               const resData = await resp.json();
               loadBtn.innerHTML = '<span>✓ ロード完了</span>';
@@ -5497,6 +5497,49 @@ async function initSettingsModal() {
   initModuleSettingsUI();
   updateModuleVisibilityUI();
   initLandmarkSettingsUI();
+
+  // UI Color Theme Settings in UI Tab
+  function initThemeSettingsUI() {
+    const themeBtns = document.querySelectorAll('.theme-card-btn');
+    const validThemes = ['default', 'elite-amber', 'cyan-explorer'];
+
+    function applyTheme(themeName) {
+      if (!validThemes.includes(themeName)) {
+        themeName = 'default';
+      }
+      if (themeName === 'default') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', themeName);
+      }
+      try {
+        localStorage.setItem('ed_theme', themeName);
+      } catch (e) {
+        console.warn('Could not save ed_theme to localStorage:', e);
+      }
+      themeBtns.forEach(btn => {
+        if (btn.getAttribute('data-theme') === themeName) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    const savedTheme = localStorage.getItem('ed_theme') || 'default';
+    applyTheme(savedTheme);
+
+    themeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const theme = btn.getAttribute('data-theme');
+        if (theme) {
+          applyTheme(theme);
+        }
+      });
+    });
+  }
+
+  initThemeSettingsUI();
 
   // App Settings (Journal Dir)
   const inputJournalDir = document.getElementById('setting-journal-dir');
