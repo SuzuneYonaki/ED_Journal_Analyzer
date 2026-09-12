@@ -1,6 +1,8 @@
 import sqlite3
 import json
 from pathlib import Path
+from datetime import datetime
+from typing import Optional, List, Dict, Any
 from app.config import DB_PATH
 
 def get_db_connection():
@@ -245,6 +247,24 @@ def init_db(conn=None):
         UNIQUE(system_address, body_id)
     );
     """)
+
+    # Dedicated surface mining sites (editable by user, grouped by coordinates)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS surface_mining_sites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        system_address INTEGER NOT NULL,
+        star_system TEXT,
+        body_id INTEGER,
+        body_name TEXT,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        minerals TEXT NOT NULL DEFAULT '',
+        note TEXT DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_mining_sites_sys_body ON surface_mining_sites(system_address, body_id);")
 
     # Astrophysical evaluations table (ED_Analysys / Stellar Physics Engine)
     cursor.execute("""
@@ -505,10 +525,204 @@ def init_db(conn=None):
     except Exception as e:
         print(f"Luminosity migration notice: {e}")
 
+    # Migration: seed surface_mining_sites from surface_mining_activities if empty
+    try:
+        cursor.execute("SELECT COUNT(*) FROM surface_mining_sites")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                SELECT system_address, star_system, body_id, body_name,
+                       material_name, material_name_localised, latitude, longitude, timestamp
+                FROM surface_mining_activities
+                WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+                ORDER BY timestamp ASC
+            """)
+            for row in cursor.fetchall():
+                mat = row["material_name_localised"] or row["material_name"]
+                save_or_merge_mining_site(
+                    conn=conn,
+                    system_address=row["system_address"],
+                    star_system=row["star_system"] or "",
+                    body_id=row["body_id"],
+                    body_name=row["body_name"],
+                    latitude=row["latitude"],
+                    longitude=row["longitude"],
+                    material_name=mat,
+                    timestamp=row["timestamp"]
+                )
+    except Exception as mig_err:
+        pass
+
     conn.commit()
     if close_after:
         conn.close()
 
+def is_same_mining_site(lat1: Optional[float], lon1: Optional[float], lat2: Optional[float], lon2: Optional[float]) -> bool:
+    """
+    Determines if two surface coordinates represent the same mining location.
+    Rule: '座標がざっくり上2桁が同じ場合は採掘場所は同じ箇所として、別の場合は新たに記録'
+    Checks within ~0.2 degrees (or integer / top 2 digits match).
+    """
+    if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
+        return False
+
+    # Within ~0.2 degrees (covers typical planetary crater / SRV driving cluster ~6-8km)
+    if abs(lat1 - lat2) <= 0.2 and abs(lon1 - lon2) <= 0.2:
+        return True
+
+    def top_2_digits(val: float) -> str:
+        sign = '-' if val < 0 else '+'
+        clean = f"{abs(val):.4f}".replace(".", "")
+        return sign + clean[:2]
+
+    return top_2_digits(lat1) == top_2_digits(lat2) and top_2_digits(lon1) == top_2_digits(lon2)
+
+
+def save_or_merge_mining_site(
+    conn: sqlite3.Connection,
+    system_address: int,
+    star_system: str,
+    body_id: Optional[int],
+    body_name: Optional[str],
+    latitude: float,
+    longitude: float,
+    material_name: str,
+    timestamp: Optional[str] = None,
+    note: str = ""
+) -> int:
+    """
+    Saves a mined material at (latitude, longitude).
+    If an existing site on this body has matching coordinates ('ざっくり上2桁が同じ'),
+    merges the material into the existing site without creating a duplicate.
+    Otherwise inserts a new mining site.
+    """
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, latitude, longitude, minerals, note 
+        FROM surface_mining_sites
+        WHERE system_address = ? AND (body_id = ? OR (body_id IS NULL AND ? IS NULL))
+    """, (system_address, body_id, body_id))
+    rows = cursor.fetchall()
+
+    matched_site = None
+    for r in rows:
+        r_lat = r["latitude"]
+        r_lon = r["longitude"]
+        if is_same_mining_site(latitude, longitude, r_lat, r_lon):
+            matched_site = r
+            break
+
+    now_ts = timestamp or datetime.utcnow().isoformat() + "Z"
+    clean_mat = material_name.strip() if material_name else ""
+
+    if matched_site:
+        site_id = matched_site["id"]
+        curr_mats = [m.strip() for m in (matched_site["minerals"] or "").split(",") if m.strip()]
+        if clean_mat and clean_mat not in curr_mats:
+            curr_mats.append(clean_mat)
+        merged_mats_str = ", ".join(curr_mats)
+        cursor.execute("""
+            UPDATE surface_mining_sites
+            SET minerals = ?, updated_at = ?
+            WHERE id = ?
+        """, (merged_mats_str, now_ts, site_id))
+        conn.commit()
+        return site_id
+    else:
+        cursor.execute("""
+            INSERT INTO surface_mining_sites (
+                system_address, star_system, body_id, body_name,
+                latitude, longitude, minerals, note, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            system_address, star_system or "Unknown", body_id, body_name or (f"Body {body_id}" if body_id is not None else "Surface"),
+            round(latitude, 6), round(longitude, 6), clean_mat, note, now_ts, now_ts
+        ))
+        conn.commit()
+        return cursor.lastrowid
+
+
+def get_mining_sites(conn: sqlite3.Connection, system_address: int, body_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Retrieves all recorded mining sites for a star system (and optionally body)."""
+    cursor = conn.cursor()
+    if body_id is not None:
+        cursor.execute("""
+            SELECT * FROM surface_mining_sites
+            WHERE system_address = ? AND body_id = ?
+            ORDER BY updated_at DESC, id DESC
+        """, (system_address, body_id))
+    else:
+        cursor.execute("""
+            SELECT * FROM surface_mining_sites
+            WHERE system_address = ?
+            ORDER BY updated_at DESC, id DESC
+        """, (system_address,))
+
+    results = []
+    for r in cursor.fetchall():
+        d = dict(r)
+        mats = [m.strip() for m in (d.get("minerals") or "").split(",") if m.strip()]
+        d["commodities"] = mats
+        results.append(d)
+    return results
+
+
+def add_manual_mining_site(
+    conn: sqlite3.Connection,
+    system_address: int,
+    star_system: str,
+    body_id: Optional[int],
+    body_name: Optional[str],
+    latitude: float,
+    longitude: float,
+    minerals: str,
+    note: str = ""
+) -> int:
+    """Manually registers a new mining site."""
+    cursor = conn.cursor()
+    now_ts = datetime.utcnow().isoformat() + "Z"
+    clean_mats = ", ".join([m.strip() for m in minerals.split(",") if m.strip()])
+    cursor.execute("""
+        INSERT INTO surface_mining_sites (
+            system_address, star_system, body_id, body_name,
+            latitude, longitude, minerals, note, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        system_address, star_system or "Unknown", body_id, body_name or (f"Body {body_id}" if body_id is not None else "Surface"),
+        round(latitude, 6), round(longitude, 6), clean_mats, note, now_ts, now_ts
+    ))
+    conn.commit()
+    return cursor.lastrowid
+
+
+def update_mining_site(
+    conn: sqlite3.Connection,
+    site_id: int,
+    latitude: float,
+    longitude: float,
+    minerals: str,
+    note: str = ""
+) -> bool:
+    """Updates an existing mining site (coordinates, minerals, note)."""
+    cursor = conn.cursor()
+    now_ts = datetime.utcnow().isoformat() + "Z"
+    clean_mats = ", ".join([m.strip() for m in minerals.split(",") if m.strip()])
+    cursor.execute("""
+        UPDATE surface_mining_sites
+        SET latitude = ?, longitude = ?, minerals = ?, note = ?, updated_at = ?
+        WHERE id = ?
+    """, (round(latitude, 6), round(longitude, 6), clean_mats, note, now_ts, site_id))
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def delete_mining_site(conn: sqlite3.Connection, site_id: int) -> bool:
+    """Deletes a mining site from the database."""
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM surface_mining_sites WHERE id = ?", (site_id,))
+    conn.commit()
+    return cursor.rowcount > 0
+
 if __name__ == "__main__":
     init_db()
     print("Database initialized successfully at", DB_PATH)
+

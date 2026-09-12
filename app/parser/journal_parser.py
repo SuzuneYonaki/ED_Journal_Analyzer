@@ -5,7 +5,7 @@ import glob
 from pathlib import Path
 from datetime import datetime
 
-from app.db.database import get_db_connection
+from app.db.database import get_db_connection, save_or_merge_mining_site
 from app.parser.value_calculator import calculate_body_value
 from app.parser.exobiology import predict_exobiology_candidates, get_species_value
 from app.analyzer.anomaly_finder import detect_anomalies
@@ -772,10 +772,10 @@ class JournalParser:
         # Classify body_type (Icy, Rocky, Icy Rocky, HMC, Metal Rich)
         body_type = self._get_body_type_category(sys_addr, body_id, body_name)
 
-        # If in SRV but latitude is missing, attempt to query live Status.json
-        if self.in_srv and self.current_latitude is None and self.is_live:
+        # If in SRV and live, query live Status.json for latest surface coordinates
+        if self.in_srv and self.is_live:
             lat, lon = telemetry_tracker.get_coordinates()
-            if lat is not None:
+            if lat is not None and lon is not None:
                 self.current_latitude = lat
                 self.current_longitude = lon
 
@@ -793,21 +793,22 @@ class JournalParser:
             ))
             self.dirty_systems.add(sys_addr)
 
-            # Automatically update planet markdown note with mined material & coordinates if in SRV
-            if self.in_srv and body_id is not None:
+            # Record into dedicated surface_mining_sites table (with top 2 digits / ~0.2 deg grouping)
+            if self.in_srv and self.current_latitude is not None and self.current_longitude is not None:
                 try:
-                    update_body_note_in_db(
+                    save_or_merge_mining_site(
                         conn=self.conn,
                         system_address=sys_addr,
-                        body_id=body_id,
-                        body_name=body_name or f"Body {body_id}",
                         star_system=star_sys or "Unknown",
-                        lat=self.current_latitude,
-                        lon=self.current_longitude,
-                        minerals=[name_loc or name]
+                        body_id=body_id,
+                        body_name=body_name or (f"Body {body_id}" if body_id is not None else "Surface"),
+                        latitude=self.current_latitude,
+                        longitude=self.current_longitude,
+                        material_name=name_loc or name,
+                        timestamp=timestamp
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[Mining Site Save Warning] {e}")
 
     def _handle_mining_refined(self, data: dict, timestamp: str):
         # Only track surface/SRV mining refined commodities
@@ -818,10 +819,10 @@ class JournalParser:
         clean_type = raw_type.replace("$", "").replace("_name;", "").replace(";", "").strip()
         type_loc = data.get("Type_Localised") or clean_type
 
-        # If in SRV but latitude is missing, attempt to query live Status.json
-        if self.current_latitude is None and self.is_live:
+        # If in SRV and live, query live Status.json for latest surface coordinates
+        if self.is_live:
             lat, lon = telemetry_tracker.get_coordinates()
-            if lat is not None:
+            if lat is not None and lon is not None:
                 self.current_latitude = lat
                 self.current_longitude = lon
 
@@ -847,21 +848,22 @@ class JournalParser:
             ))
             self.dirty_systems.add(sys_addr)
 
-            # Automatically update planet markdown note with refined mineral & coordinates
-            if body_id is not None:
+            # Record into dedicated surface_mining_sites table (with top 2 digits / ~0.2 deg grouping)
+            if self.current_latitude is not None and self.current_longitude is not None:
                 try:
-                    update_body_note_in_db(
+                    save_or_merge_mining_site(
                         conn=self.conn,
                         system_address=sys_addr,
-                        body_id=body_id,
-                        body_name=body_name or f"Body {body_id}",
                         star_system=star_sys or "Unknown",
-                        lat=self.current_latitude,
-                        lon=self.current_longitude,
-                        minerals=[type_loc or clean_type]
+                        body_id=body_id,
+                        body_name=body_name or (f"Body {body_id}" if body_id is not None else "Surface"),
+                        latitude=self.current_latitude,
+                        longitude=self.current_longitude,
+                        material_name=type_loc or clean_type,
+                        timestamp=timestamp
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[Mining Site Save Warning] {e}")
 
     def _update_system_stats(self, sys_addr: int):
         self.cursor.execute("""

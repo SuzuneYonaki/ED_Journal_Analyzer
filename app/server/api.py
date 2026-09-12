@@ -14,7 +14,10 @@ from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR, DATA_DIR, EXPORTS_DIR
-from app.db.database import get_db_connection, init_db
+from app.db.database import (
+    get_db_connection, init_db, get_mining_sites,
+    add_manual_mining_site, update_mining_site, delete_mining_site, save_or_merge_mining_site
+)
 from app.parser.journal_parser import JournalParser
 from app.parser.watcher import JournalWatcher
 from app.analyzer.orbit_analyzer import build_system_hierarchy
@@ -168,6 +171,9 @@ def start_watcher():
             watched_dirs.append(p)
 
     print(f"[Watcher] Starting JournalWatcher on dirs: {[str(d) for d in watched_dirs]}")
+    from app.live.telemetry import telemetry_tracker
+    telemetry_tracker.set_journal_dir(str(get_saved_journal_dir()))
+
     watcher_instance = JournalWatcher(
         journal_dirs=watched_dirs,
         interval=0.4,
@@ -940,20 +946,23 @@ def get_systems(
         "systems": rows
     }
 
-def extract_rhino_mining_sites(mining_acts: list) -> list:
+def extract_rhino_mining_sites(mining_acts: list, include_raw: bool = False) -> list:
     """
-    Extract distinct Rhino mining sites with coordinates (lat/lon) and refined commodities.
-    Filters out raw engineering materials and quantities as per user requirements.
+    Extract distinct Rhino mining sites with coordinates (lat/lon) and commodities.
     """
     if not mining_acts:
         return []
 
-    refined_acts = [a for a in mining_acts if a.get("category") == "Refined"]
-    if not refined_acts:
+    if include_raw:
+        target_acts = [a for a in mining_acts if a.get("category") in ["Refined", "Raw"] or a.get("srv_type")]
+    else:
+        target_acts = [a for a in mining_acts if a.get("category") == "Refined"]
+
+    if not target_acts:
         return []
 
     sites_map = {}
-    for act in refined_acts:
+    for act in target_acts:
         lat = act.get("latitude")
         lon = act.get("longitude")
         if lat is not None and lon is not None:
@@ -990,6 +999,86 @@ def extract_rhino_mining_sites(mining_acts: list) -> list:
 
     result.sort(key=lambda s: (1 if s["latitude"] is not None else 0, s["last_mined"] or ""), reverse=True)
     return result
+
+
+class MiningSiteCreateRequest(BaseModel):
+    system_address: int
+    star_system: Optional[str] = "Unknown"
+    body_id: Optional[int] = None
+    body_name: Optional[str] = None
+    latitude: float
+    longitude: float
+    minerals: str
+    note: Optional[str] = ""
+
+
+class MiningSiteUpdateRequest(BaseModel):
+    latitude: float
+    longitude: float
+    minerals: str
+    note: Optional[str] = ""
+
+
+@app.get("/api/mining_sites/{system_address}")
+def api_get_mining_sites(system_address: int, body_id: Optional[int] = None):
+    conn = get_db_connection()
+    try:
+        sites = get_mining_sites(conn, system_address, body_id)
+        return {"system_address": system_address, "sites": sites}
+    finally:
+        conn.close()
+
+
+@app.post("/api/mining_sites")
+def api_create_mining_site(req: MiningSiteCreateRequest):
+    conn = get_db_connection()
+    try:
+        site_id = add_manual_mining_site(
+            conn=conn,
+            system_address=req.system_address,
+            star_system=req.star_system or "Unknown",
+            body_id=req.body_id,
+            body_name=req.body_name,
+            latitude=req.latitude,
+            longitude=req.longitude,
+            minerals=req.minerals,
+            note=req.note or ""
+        )
+        return {"status": "success", "site_id": site_id}
+    finally:
+        conn.close()
+
+
+@app.put("/api/mining_sites/{site_id}")
+def api_update_mining_site(site_id: int, req: MiningSiteUpdateRequest):
+    conn = get_db_connection()
+    try:
+        ok = update_mining_site(
+            conn=conn,
+            site_id=site_id,
+            latitude=req.latitude,
+            longitude=req.longitude,
+            minerals=req.minerals,
+            note=req.note or ""
+        )
+        if not ok:
+            return JSONResponse({"error": "Mining site not found"}, status_code=404)
+        return {"status": "success", "site_id": site_id}
+    finally:
+        conn.close()
+
+
+@app.delete("/api/mining_sites/{site_id}")
+def api_delete_mining_site(site_id: int):
+    conn = get_db_connection()
+    try:
+        ok = delete_mining_site(conn, site_id)
+        if not ok:
+            return JSONResponse({"error": "Mining site not found"}, status_code=404)
+        return {"status": "success", "deleted_id": site_id}
+    finally:
+        conn.close()
+
 
 
 @app.get("/api/system/{system_address}")
@@ -1127,7 +1216,13 @@ def get_system_detail(system_address: int):
         system_data["rarity_score"] = None
         system_data["physics_evaluation"] = None
 
+    db_mining_sites = get_mining_sites(conn, system_address)
     conn.close()
+
+    if db_mining_sites:
+        final_mining_sites = db_mining_sites
+    else:
+        final_mining_sites = extract_rhino_mining_sites(raw_mining)
 
     # Group mining activities by body
     mining_by_body = {}
@@ -1241,7 +1336,10 @@ def get_system_detail(system_address: int):
         )
         b["mining_activities"] = b_mining_list
         b["mining_activities_count"] = len(b_mining_list)
-        b["rhino_mining_sites"] = extract_rhino_mining_sites(b_mining_list)
+        b["rhino_mining_sites"] = [
+            s for s in final_mining_sites
+            if (b_id is not None and s.get("body_id") == b_id) or (b_name and s.get("body_name") == b_name)
+        ]
 
         completed_count = sum(1 for s in b_scanned_list if s.get("is_completed"))
         b["completed_bio_count"] = completed_count
@@ -1316,7 +1414,7 @@ def get_system_detail(system_address: int):
         "visits": visits,
         "organics": raw_organics,
         "mining_activities": raw_mining,
-        "rhino_mining_sites": extract_rhino_mining_sites(raw_mining),
+        "rhino_mining_sites": final_mining_sites,
         "system_bio_summary": {
             "total_base_value": system_bio_total_base,
             "total_first_value": system_bio_total_first,
@@ -1624,7 +1722,11 @@ def export_standalone_html_endpoint(
 
     c.execute("SELECT * FROM surface_mining_activities WHERE system_address = ? ORDER BY timestamp DESC", (system_address,))
     raw_mining = [dict(r) for r in c.fetchall()]
-    mining_sites = extract_rhino_mining_sites(raw_mining)
+    db_sites = get_mining_sites(conn, system_address)
+    if db_sites:
+        mining_sites = db_sites
+    else:
+        mining_sites = extract_rhino_mining_sites(raw_mining, include_raw=True)
 
     c.execute("SELECT * FROM body_bookmarks WHERE system_address = ?", (system_address,))
     bookmarks = [dict(r) for r in c.fetchall()]

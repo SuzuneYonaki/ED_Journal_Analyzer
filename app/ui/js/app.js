@@ -3156,86 +3156,116 @@ function renderBodyInspector() {
   const miningActivitiesEl = document.getElementById('inspect-mining-activities');
   const miningSigCount = b.mining_signals || 0;
   const miningSites = b.rhino_mining_sites || [];
-
+  const isLandable = Boolean(b.landable);
   const isRhinoEnabled = modSettings.rhino !== false;
-  if (isRhinoEnabled && (miningSigCount > 0 || miningSites.length > 0)) {
+
+  if (isRhinoEnabled && (isLandable || miningSigCount > 0 || miningSites.length > 0)) {
     if (miningSec) miningSec.style.display = 'block';
-    if (miningCountEl) miningCountEl.innerText = miningSigCount;
-    if (propCardMining) propCardMining.style.display = 'block';
-    if (propMining) propMining.innerText = `${miningSigCount} 箇所 (Planetary Mining Locations)`;
+    const signalsInfoEl = document.getElementById('inspect-mining-signals-info');
+    if (signalsInfoEl) {
+      if (miningSigCount > 0) {
+        signalsInfoEl.style.display = 'flex';
+        if (miningCountEl) miningCountEl.innerText = miningSigCount;
+      } else {
+        signalsInfoEl.style.display = 'none';
+      }
+    }
+    if (propCardMining) {
+      propCardMining.style.display = miningSigCount > 0 ? 'block' : 'none';
+      if (propMining) propMining.innerText = `${miningSigCount} 箇所 (Planetary Mining Locations)`;
+    }
 
     if (miningActivitiesEl) {
-      if (miningSites.length > 0) {
-        // Build SVG markers for sites with coordinates
-        const markersSvg = miningSites.map((site, idx) => {
-          if (site.latitude === null || site.longitude === null) return '';
-          const cx = site.longitude;
-          const cy = -site.latitude;
-          const commNames = (site.commodities || []).join(', ');
-          const latFmt = (site.latitude >= 0 ? '+' : '') + site.latitude.toFixed(4);
-          const lonFmt = (site.longitude >= 0 ? '+' : '') + site.longitude.toFixed(4);
-          return `
-            <g class="mining-map-marker" data-site-idx="${idx}" style="cursor: pointer;">
-              <circle cx="${cx}" cy="${cy}" r="6" fill="none" stroke="#38bdf8" stroke-width="1.2" class="pulse-marker" />
-              <circle cx="${cx}" cy="${cy}" r="3" fill="#38bdf8" stroke="#ffffff" stroke-width="0.8" />
-              <title>${commNames} (Lat: ${latFmt}°, Lon: ${lonFmt}°)</title>
-            </g>
-          `;
-        }).join('');
+      // Build SVG markers for sites with coordinates
+      const markersSvg = miningSites.map((site, idx) => {
+        if (site.latitude === null || site.longitude === null) return '';
+        const cx = Number(site.longitude);
+        const cy = -Number(site.latitude);
+        const commNames = (site.commodities || []).join(', ') || (site.minerals || '採掘地点');
+        const latFmt = (site.latitude >= 0 ? '+' : '') + Number(site.latitude).toFixed(4);
+        const lonFmt = (site.longitude >= 0 ? '+' : '') + Number(site.longitude).toFixed(4);
+        return `
+          <g class="mining-map-marker" data-site-idx="${idx}" style="cursor: pointer;">
+            <circle cx="${cx}" cy="${cy}" r="6" fill="none" stroke="#38bdf8" stroke-width="1.2" class="pulse-marker" />
+            <circle cx="${cx}" cy="${cy}" r="3" fill="#38bdf8" stroke="#ffffff" stroke-width="0.8" />
+            <title>${escapeHtml(commNames)} (Lat: ${latFmt}°, Lon: ${lonFmt}°)</title>
+          </g>
+        `;
+      }).join('');
 
-        const hasAnyCoords = miningSites.some(s => s.latitude !== null && s.longitude !== null);
+      const hasAnyCoords = miningSites.some(s => s.latitude !== null && s.longitude !== null && !isNaN(Number(s.latitude)));
 
-        const mapHtml = hasAnyCoords ? `
-          <div class="mining-map-container" style="background: radial-gradient(circle at center, #0e1b2e 0%, #060913 100%); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 8px; position: relative; margin-top: 6px; box-shadow: inset 0 0 16px rgba(0,0,0,0.6);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.72rem;">
-              <span style="color: #38bdf8; font-weight: bold; display: flex; align-items: center; gap: 4px;">
-                <span>🌐</span> <span>惑星表面 採掘座標マップ (2D Grid)</span>
-              </span>
-              <span style="color: var(--text-dim); font-family: var(--font-mono); font-size: 0.68rem;">記録地点: ${miningSites.length} 箇所</span>
-            </div>
-            <div style="position: relative; width: 100%;">
-              <svg viewBox="-180 -90 360 180" style="width: 100%; height: auto; max-height: 150px; display: block; background: rgba(5, 10, 20, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px;">
-                <!-- Latitudes -->
-                <line x1="-180" y1="0" x2="180" y2="0" stroke="rgba(56, 189, 248, 0.45)" stroke-width="0.8" stroke-dasharray="2,2" />
-                <line x1="-180" y1="-45" x2="180" y2="-45" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
-                <line x1="-180" y1="45" x2="180" y2="45" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
-                <!-- Longitudes -->
-                <line x1="0" y1="-90" x2="0" y2="90" stroke="rgba(56, 189, 248, 0.45)" stroke-width="0.8" stroke-dasharray="2,2" />
-                <line x1="-90" y1="-90" x2="-90" y2="90" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
-                <line x1="90" y1="-90" x2="90" y2="90" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
-                <!-- Labels -->
-                <text x="-176" y="-76" fill="#64748b" font-size="7" font-family="sans-serif">N 90°</text>
-                <text x="-176" y="86" fill="#64748b" font-size="7" font-family="sans-serif">S -90°</text>
-                <text x="-176" y="-3" fill="#38bdf8" font-size="6.5" font-family="sans-serif" opacity="0.8">0° (赤道)</text>
-                <text x="2" y="-76" fill="#38bdf8" font-size="6.5" font-family="sans-serif" opacity="0.8">0° (子午線)</text>
-                <text x="-176" y="12" fill="#64748b" font-size="6" font-family="sans-serif">-180°</text>
-                <text x="154" y="12" fill="#64748b" font-size="6" font-family="sans-serif">+180°</text>
-                <!-- Markers -->
-                ${markersSvg}
-              </svg>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.62rem; color: var(--text-dim);">
-              <span>西半球 (-180° ~ 0°)</span>
-              <span>子午線 (0°) / 赤道 (0°)</span>
-              <span>東半球 (0° ~ +180°)</span>
-            </div>
+      const mapHtml = hasAnyCoords ? `
+        <div class="mining-map-container" style="background: radial-gradient(circle at center, #0e1b2e 0%, #060913 100%); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 8px; position: relative; margin-top: 6px; box-shadow: inset 0 0 16px rgba(0,0,0,0.6);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.72rem;">
+            <span style="color: #38bdf8; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+              <span>🌐</span> <span>惑星表面 採掘座標マップ (2D Grid)</span>
+            </span>
+            <span style="color: var(--text-dim); font-family: var(--font-mono); font-size: 0.68rem;">記録地点: ${miningSites.length} 箇所</span>
           </div>
-        ` : '';
+          <div style="position: relative; width: 100%;">
+            <svg viewBox="-180 -90 360 180" style="width: 100%; height: auto; max-height: 150px; display: block; background: rgba(5, 10, 20, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px;">
+              <!-- Latitudes -->
+              <line x1="-180" y1="0" x2="180" y2="0" stroke="rgba(56, 189, 248, 0.45)" stroke-width="0.8" stroke-dasharray="2,2" />
+              <line x1="-180" y1="-45" x2="180" y2="-45" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
+              <line x1="-180" y1="45" x2="180" y2="45" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
+              <!-- Longitudes -->
+              <line x1="0" y1="-90" x2="0" y2="90" stroke="rgba(56, 189, 248, 0.45)" stroke-width="0.8" stroke-dasharray="2,2" />
+              <line x1="-90" y1="-90" x2="-90" y2="90" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
+              <line x1="90" y1="-90" x2="90" y2="90" stroke="rgba(255, 255, 255, 0.12)" stroke-width="0.5" stroke-dasharray="2,3" />
+              <!-- Labels -->
+              <text x="-176" y="-76" fill="#64748b" font-size="7" font-family="sans-serif">N 90°</text>
+              <text x="-176" y="86" fill="#64748b" font-size="7" font-family="sans-serif">S -90°</text>
+              <text x="-176" y="-3" fill="#38bdf8" font-size="6.5" font-family="sans-serif" opacity="0.8">0° (赤道)</text>
+              <text x="2" y="-76" fill="#38bdf8" font-size="6.5" font-family="sans-serif" opacity="0.8">0° (子午線)</text>
+              <text x="-176" y="12" fill="#64748b" font-size="6" font-family="sans-serif">-180°</text>
+              <text x="154" y="12" fill="#64748b" font-size="6" font-family="sans-serif">+180°</text>
+              <!-- Markers -->
+              ${markersSvg}
+            </svg>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.62rem; color: var(--text-dim);">
+            <span>西半球 (-180° ~ 0°)</span>
+            <span>子午線 (0°) / 赤道 (0°)</span>
+            <span>東半球 (0° ~ +180°)</span>
+          </div>
+        </div>
+      ` : '';
 
-        // Build Cards List
-        const cardsHtml = `
+      let cardsHtml = '';
+      if (miningSites.length === 0) {
+        cardsHtml = `
+          <div style="background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 12px; text-align: center; color: var(--text-dim); font-size: 0.75rem; margin-top: 8px;">
+            この天体で記録された採掘地点はありません。<br>
+            「➕ 採掘地点を追加」ボタンから手動登録するか、Rhino SRVで採掘を行うと自動記録されます。
+          </div>
+        `;
+      } else {
+        cardsHtml = `
           <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
             ${miningSites.map((site, idx) => {
-              const hasCoord = site.latitude !== null && site.longitude !== null;
-              const latStr = hasCoord ? `${site.latitude >= 0 ? '+' : ''}${site.latitude.toFixed(4)}°` : '--';
-              const lonStr = hasCoord ? `${site.longitude >= 0 ? '+' : ''}${site.longitude.toFixed(4)}°` : '--';
-              const copyVal = hasCoord ? `${site.latitude.toFixed(4)}, ${site.longitude.toFixed(4)}` : '';
-              const minerals = (site.commodities || []).map(m => `
+              const hasCoord = site.latitude !== null && site.longitude !== null && !isNaN(Number(site.latitude));
+              const latNum = Number(site.latitude);
+              const lonNum = Number(site.longitude);
+              const latStr = hasCoord ? `${latNum >= 0 ? '+' : ''}${latNum.toFixed(4)}°` : '--';
+              const lonStr = hasCoord ? `${lonNum >= 0 ? '+' : ''}${lonNum.toFixed(4)}°` : '--';
+              const rawCoords = hasCoord ? `${latNum.toFixed(4)}, ${lonNum.toFixed(4)}` : '';
+              
+              const mineralsList = (site.commodities && site.commodities.length > 0)
+                ? site.commodities
+                : ((site.minerals || '').split(',').map(s => s.trim()).filter(Boolean));
+              const mineralsStr = mineralsList.join(', ');
+              const copyText = hasCoord 
+                ? `緯度: ${latStr}, 経度: ${lonStr} [${mineralsStr || '採掘記録'}]${site.note ? ` (${site.note})` : ''}`
+                : `[${mineralsStr || '採掘記録'}]${site.note ? ` (${site.note})` : ''}`;
+
+              const mineralBadges = mineralsList.map(m => `
                 <span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #e0f2fe; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.72rem; padding: 2px 6px; font-weight: bold;">
-                  💎 ${m}
+                  💎 ${escapeHtml(m)}
                 </span>
               `).join('');
-              const lastTime = site.last_mined ? site.last_mined.replace('T', ' ').replace('Z', '') : '';
+
+              const lastTime = (site.updated_at || site.last_mined || '') ? (site.updated_at || site.last_mined).replace('T', ' ').replace('Z', '').substring(0, 19) : '';
 
               return `
                 <div class="mining-site-card" id="mining-site-card-${idx}" style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 8px 10px; transition: all 0.2s;">
@@ -3247,19 +3277,22 @@ function renderBodyInspector() {
                       </span>
                     </div>
                     <div style="display: flex; gap: 4px; align-items: center;">
-                      ${hasCoord ? `
-                        <button type="button" class="view-btn btn-copy-coords" data-coords="${copyVal}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="クリップボードに座標 (${copyVal}) をコピー">
-                          📋 座標コピー
+                      <button type="button" class="view-btn btn-copy-mining-site" data-copy-text="${encodeURIComponent(copyText)}" data-coords="${rawCoords}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="座標と採掘鉱物をクリップボードにコピー">
+                        📋 コピー
+                      </button>
+                      <button type="button" class="view-btn btn-edit-mining-site" data-site-idx="${idx}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(147, 197, 253, 0.15); border-color: rgba(147, 197, 253, 0.4); color: #93c5fd; cursor: pointer;" title="この地点を編集">
+                        ✏️ 編集
+                      </button>
+                      ${site.id ? `
+                        <button type="button" class="view-btn btn-delete-mining-site" data-site-id="${site.id}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.4); color: #f87171; cursor: pointer;" title="この地点を削除">
+                          🗑️ 削除
                         </button>
                       ` : ''}
-                      <button type="button" class="view-btn btn-append-mining-note" data-site-idx="${idx}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #f59e0b; cursor: pointer;" title="この地点の緯度経度と掘れた鉱物を惑星メモに追記">
-                        📝 メモに追記
-                      </button>
                     </div>
                   </div>
                   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                      ${minerals || '<span style="color: var(--text-dim); font-size: 0.7rem;">精製鉱物なし</span>'}
+                      ${mineralBadges || '<span style="color: var(--text-dim); font-size: 0.7rem;">採掘鉱物未記録</span>'}
                     </div>
                     ${lastTime ? `
                       <span style="font-size: 0.65rem; color: var(--text-dim); font-family: var(--font-mono);">
@@ -3267,187 +3300,118 @@ function renderBodyInspector() {
                       </span>
                     ` : ''}
                   </div>
+                  ${site.note ? `
+                    <div style="margin-top: 5px; font-size: 0.72rem; color: #cbd5e1; background: rgba(0,0,0,0.25); border-radius: 4px; padding: 3px 6px;">
+                      📝 <span style="color: #94a3b8;">メモ:</span> ${escapeHtml(site.note)}
+                    </div>
+                  ` : ''}
                 </div>
               `;
             }).join('')}
           </div>
         `;
+      }
 
-        miningActivitiesEl.innerHTML = `
-          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 10px; margin-top: 6px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; flex-wrap: wrap; gap: 6px;">
-              <span style="font-size: 0.78rem; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
-                <span>🦏</span> <span>Rhino 惑星表面採掘地点 & 鉱物</span>
-              </span>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">採掘地点: ${miningSites.length} 箇所</span>
-                <button type="button" id="btn-sync-all-mining-notes" class="view-btn" style="padding: 2px 8px; font-size: 0.68rem; background: rgba(245, 158, 11, 0.18); border-color: rgba(245, 158, 11, 0.5); color: #fbbf24; cursor: pointer; font-weight: bold;" title="記録されたすべての採掘地点の緯度経度と鉱物を惑星メモにまとめて追記">
-                  📝 全地点をメモに追記
-                </button>
-              </div>
+      miningActivitiesEl.innerHTML = `
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 10px; margin-top: 6px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; flex-wrap: wrap; gap: 6px;">
+            <span style="font-size: 0.78rem; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
+              <span>🦏</span> <span>Rhino 惑星表面採掘地点 & 鉱物</span>
+            </span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">記録地点: ${miningSites.length} 箇所</span>
+              <button type="button" id="btn-add-mining-site" class="view-btn" style="padding: 2px 8px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #38bdf8; cursor: pointer; font-weight: bold;" title="新しい採掘地点を手動で追加">
+                ➕ 採掘地点を追加
+              </button>
             </div>
-            ${mapHtml}
-            ${cardsHtml}
           </div>
-        `;
+          ${mapHtml}
+          ${cardsHtml}
+        </div>
+      `;
 
-        // Bind copy buttons
-        miningActivitiesEl.querySelectorAll('.btn-copy-coords').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const coords = btn.dataset.coords;
-            if (coords && navigator.clipboard) {
-              navigator.clipboard.writeText(coords).then(() => {
-                const orig = btn.innerHTML;
-                btn.innerHTML = '✓ コピー済';
-                btn.style.color = '#38bdf8';
-                btn.style.borderColor = '#38bdf8';
-                setTimeout(() => {
-                  btn.innerHTML = orig;
-                  btn.style.color = '';
-                  btn.style.borderColor = '';
-                }, 1800);
-              });
-            }
-          });
+      // Event: Add new mining site
+      const btnAdd = document.getElementById('btn-add-mining-site');
+      if (btnAdd) {
+        btnAdd.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openMiningSiteModal({ isNew: true, body: b });
         });
+      }
 
-        // Helper to update bookmark display across UI when note is appended
-        const syncBookmarkUIState = (savedBm, updatedNote) => {
-          b.bookmark = savedBm;
-          if (bmNoteInput) bmNoteInput.value = updatedNote || (savedBm ? savedBm.note_markdown : '');
-          if (bmStatusIndicator) bmStatusIndicator.style.display = 'inline-block';
-          if (btnBmDelete) btnBmDelete.style.display = 'inline-block';
-          if (inspectBmIcon) inspectBmIcon.innerText = '★';
-          if (inspectBmText) inspectBmText.innerText = 'ブックマーク中';
-          if (btnBmToggle) {
-            btnBmToggle.classList.add('active');
-            btnBmToggle.style.background = 'rgba(251, 191, 36, 0.2)';
-          }
-          if (state.selectedSystem && state.selectedSystem.bookmarks) {
-            const existingIdx = state.selectedSystem.bookmarks.findIndex(bm => bm.body_id === b.body_id);
-            if (existingIdx >= 0) {
-              state.selectedSystem.bookmarks[existingIdx] = savedBm;
-            } else if (savedBm) {
-              state.selectedSystem.bookmarks.push(savedBm);
-            }
-          }
-        };
-
-        // Bind single site append note button
-        miningActivitiesEl.querySelectorAll('.btn-append-mining-note').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const sIdx = parseInt(btn.dataset.siteIdx, 10);
-            const site = miningSites[sIdx];
-            if (!site) return;
-
-            btn.disabled = true;
-            const origHtml = btn.innerHTML;
-            btn.innerHTML = '⏳ 追記中...';
-
-            try {
-              const resp = await fetch(`/api/bookmark/${b.system_address}/${b.body_id}/append_mining`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  latitude: site.latitude,
-                  longitude: site.longitude,
-                  minerals: site.commodities || []
-                })
-              });
-              if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-              const resData = await resp.json();
-              btn.innerHTML = '✓ 追記済';
-              btn.style.color = '#34d399';
-              btn.style.borderColor = '#34d399';
-
-              syncBookmarkUIState(resData.bookmark, resData.note_markdown);
-
+      // Event: Copy mining site info
+      miningActivitiesEl.querySelectorAll('.btn-copy-mining-site').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const text = decodeURIComponent(btn.dataset.copyText || '');
+          if (text && navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+              const orig = btn.innerHTML;
+              btn.innerHTML = '✓ コピー済';
+              btn.style.color = '#38bdf8';
+              btn.style.borderColor = '#38bdf8';
               setTimeout(() => {
-                btn.disabled = false;
-                btn.innerHTML = origHtml;
+                btn.innerHTML = orig;
                 btn.style.color = '';
                 btn.style.borderColor = '';
               }, 1800);
-            } catch (err) {
-              console.error('Failed to append mining note:', err);
-              btn.disabled = false;
-              btn.innerHTML = '❌ 失敗';
-              setTimeout(() => {
-                btn.innerHTML = origHtml;
-              }, 2000);
-            }
-          });
+            });
+          }
         });
+      });
 
-        // Bind sync all mining sites button
-        const btnSyncAll = document.getElementById('btn-sync-all-mining-notes');
-        if (btnSyncAll) {
-          btnSyncAll.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            btnSyncAll.disabled = true;
-            const origHtml = btnSyncAll.innerHTML;
-            btnSyncAll.innerHTML = '⏳ 全地点追記中...';
-
-            try {
-              const resp = await fetch(`/api/bookmark/${b.system_address}/${b.body_id}/append_mining`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-              });
-              if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-              const resData = await resp.json();
-              btnSyncAll.innerHTML = '✓ 全地点反映済';
-              btnSyncAll.style.color = '#34d399';
-              btnSyncAll.style.borderColor = '#34d399';
-
-              syncBookmarkUIState(resData.bookmark, resData.note_markdown);
-
-              setTimeout(() => {
-                btnSyncAll.disabled = false;
-                btnSyncAll.innerHTML = origHtml;
-                btnSyncAll.style.color = '';
-                btnSyncAll.style.borderColor = '';
-              }, 2000);
-            } catch (err) {
-              console.error('Failed to sync all mining notes:', err);
-              btnSyncAll.disabled = false;
-              btnSyncAll.innerHTML = '❌ 失敗';
-              setTimeout(() => {
-                btnSyncAll.innerHTML = origHtml;
-              }, 2000);
-            }
-          });
-        }
-
-        // Bind map markers hover/click to highlight cards
-        miningActivitiesEl.querySelectorAll('.mining-map-marker').forEach(marker => {
-          const sIdx = marker.dataset.siteIdx;
-          const targetCard = document.getElementById(`mining-site-card-${sIdx}`);
-          marker.addEventListener('mouseenter', () => {
-            if (targetCard) targetCard.classList.add('highlighted');
-          });
-          marker.addEventListener('mouseleave', () => {
-            if (targetCard) targetCard.classList.remove('highlighted');
-          });
-          marker.addEventListener('click', () => {
-            if (targetCard) {
-              targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-              targetCard.classList.add('highlighted');
-              setTimeout(() => targetCard.classList.remove('highlighted'), 2000);
-            }
-          });
+      // Event: Edit mining site
+      miningActivitiesEl.querySelectorAll('.btn-edit-mining-site').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const sIdx = parseInt(btn.dataset.siteIdx, 10);
+          const site = miningSites[sIdx];
+          if (site) {
+            openMiningSiteModal({ isNew: false, body: b, site: site });
+          }
         });
+      });
 
-      } else {
-        miningActivitiesEl.innerHTML = `
-          <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 6px; padding: 6px 8px; background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(56, 189, 248, 0.2); border-radius: 4px;">
-            まだこの天体でのRhino採掘ログ（鉱物精製）は記録されていません。<br>
-            現地（PML）でRhino採掘Rigを展開して鉱物精製を行うと、採掘地点（緯度・経度）と鉱物種別が自動マッピングされます。
-          </div>
-        `;
-      }
+      // Event: Delete mining site
+      miningActivitiesEl.querySelectorAll('.btn-delete-mining-site').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const siteId = btn.dataset.siteId;
+          if (!siteId) return;
+          if (!confirm('この採掘地点の記録を削除しますか？')) return;
+          btn.disabled = true;
+          btn.innerHTML = '⏳ 削除中...';
+          try {
+            const res = await fetch(`/api/mining_sites/${siteId}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            await refreshMiningSitesForBody(b);
+          } catch (err) {
+            console.error('Failed to delete mining site:', err);
+            alert('採掘地点の削除に失敗しました: ' + (err.message || 'エラー'));
+            btn.disabled = false;
+            btn.innerHTML = '🗑️ 削除';
+          }
+        });
+      });
+
+      // Bind map markers hover/click to highlight cards
+      miningActivitiesEl.querySelectorAll('.mining-map-marker').forEach(marker => {
+        const sIdx = marker.dataset.siteIdx;
+        const targetCard = document.getElementById(`mining-site-card-${sIdx}`);
+        marker.addEventListener('mouseenter', () => {
+          if (targetCard) targetCard.classList.add('highlighted');
+        });
+        marker.addEventListener('mouseleave', () => {
+          if (targetCard) targetCard.classList.remove('highlighted');
+        });
+        marker.addEventListener('click', () => {
+          if (targetCard) {
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            targetCard.classList.add('highlighted');
+            setTimeout(() => targetCard.classList.remove('highlighted'), 2000);
+          }
+        });
+      });
     }
   } else {
     if (miningSec) miningSec.style.display = 'none';
@@ -3825,6 +3789,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   initSettingsModal();
   initExportImportModals();
+  initMiningSiteModal();
   initCollapsibleSections();
   initStellarFilters();
   initLayoutSwitcher();
@@ -6219,4 +6184,206 @@ function initExportImportModals() {
     });
   }
 }
+
+// ==========================================
+// Rhino Surface Mining Sites Modal & Management
+// ==========================================
+let activeMiningModalBody = null;
+
+async function refreshMiningSitesForBody(body) {
+  if (!body) return;
+  try {
+    const sysAddr = body.system_address;
+    const bodyId = body.body_id;
+    const url = (bodyId !== undefined && bodyId !== null)
+      ? `/api/mining_sites/${sysAddr}?body_id=${bodyId}` 
+      : `/api/mining_sites/${sysAddr}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      const updatedSites = data.sites || [];
+      body.rhino_mining_sites = updatedSites;
+      if (state.currentSystemData && state.currentSystemData.bodies) {
+        const found = state.currentSystemData.bodies.find(x => x.body_id === bodyId);
+        if (found) found.rhino_mining_sites = updatedSites;
+      }
+      if (state.currentSystemData && state.currentSystemData.rhino_mining_sites) {
+        const allRes = await fetch(`/api/mining_sites/${sysAddr}`);
+        if (allRes.ok) {
+          const allData = await allRes.json();
+          state.currentSystemData.rhino_mining_sites = allData.sites || [];
+        }
+      }
+      renderBodyInspector();
+    }
+  } catch (err) {
+    console.error('Failed to refresh mining sites:', err);
+  }
+}
+
+function openMiningSiteModal(opts) {
+  const modal = document.getElementById('modal-mining-site');
+  if (!modal) return;
+  activeMiningModalBody = opts.body;
+  const titleEl = document.getElementById('modal-mining-site-title');
+  const bodyNameEl = document.getElementById('modal-mining-site-body-name');
+  const idInput = document.getElementById('input-mining-site-id');
+  const latInput = document.getElementById('input-mining-lat');
+  const lonInput = document.getElementById('input-mining-lon');
+  const mineralsInput = document.getElementById('input-mining-minerals');
+  const noteInput = document.getElementById('input-mining-note');
+  const errEl = document.getElementById('modal-mining-site-error');
+
+  if (errEl) {
+    errEl.style.display = 'none';
+    errEl.innerText = '';
+  }
+
+  if (bodyNameEl) {
+    bodyNameEl.innerText = opts.body ? opts.body.body_name : '--';
+  }
+
+  if (opts.isNew) {
+    if (titleEl) titleEl.innerHTML = '<span>➕</span> <span>採掘地点の追加</span>';
+    if (idInput) idInput.value = '';
+    if (latInput) latInput.value = '';
+    if (lonInput) lonInput.value = '';
+    if (mineralsInput) mineralsInput.value = '';
+    if (noteInput) noteInput.value = '';
+  } else {
+    const s = opts.site || {};
+    if (titleEl) titleEl.innerHTML = '<span>⛏️</span> <span>採掘地点の編集</span>';
+    if (idInput) idInput.value = s.id || '';
+    if (latInput) latInput.value = (s.latitude !== null && s.latitude !== undefined) ? s.latitude : '';
+    if (lonInput) lonInput.value = (s.longitude !== null && s.longitude !== undefined) ? s.longitude : '';
+    const minText = (s.commodities && s.commodities.length > 0)
+      ? s.commodities.join(', ')
+      : (s.minerals || '');
+    if (mineralsInput) mineralsInput.value = minText;
+    if (noteInput) noteInput.value = s.note || '';
+  }
+
+  modal.style.display = 'flex';
+  setTimeout(() => {
+    if (latInput) latInput.focus();
+  }, 50);
+}
+
+function closeMiningSiteModal() {
+  const modal = document.getElementById('modal-mining-site');
+  if (modal) modal.style.display = 'none';
+  activeMiningModalBody = null;
+}
+
+function initMiningSiteModal() {
+  const modal = document.getElementById('modal-mining-site');
+  if (!modal) return;
+  const btnClose = document.getElementById('btn-close-mining-site-modal');
+  const btnCancel = document.getElementById('btn-cancel-mining-site');
+  const btnSave = document.getElementById('btn-save-mining-site');
+  const errEl = document.getElementById('modal-mining-site-error');
+
+  if (btnClose) btnClose.addEventListener('click', closeMiningSiteModal);
+  if (btnCancel) btnCancel.addEventListener('click', closeMiningSiteModal);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeMiningSiteModal();
+  });
+
+  if (btnSave) {
+    btnSave.addEventListener('click', async () => {
+      const b = activeMiningModalBody || state.selectedBody;
+      if (!b) return;
+
+      const idVal = document.getElementById('input-mining-site-id').value.trim();
+      const latRaw = document.getElementById('input-mining-lat').value.trim();
+      const lonRaw = document.getElementById('input-mining-lon').value.trim();
+      const mineralsVal = document.getElementById('input-mining-minerals').value.trim();
+      const noteVal = document.getElementById('input-mining-note').value.trim();
+
+      const showError = (msg) => {
+        if (errEl) {
+          errEl.innerText = msg;
+          errEl.style.display = 'block';
+        }
+      };
+
+      if (!latRaw || isNaN(parseFloat(latRaw))) {
+        showError('有効な緯度 (-90 ～ +90) を入力してください。');
+        return;
+      }
+      if (!lonRaw || isNaN(parseFloat(lonRaw))) {
+        showError('有効な経度 (-180 ～ +180) を入力してください。');
+        return;
+      }
+
+      const lat = parseFloat(latRaw);
+      const lon = parseFloat(lonRaw);
+      if (lat < -90 || lat > 90) {
+        showError('緯度は -90 ～ +90 の範囲で入力してください。');
+        return;
+      }
+      if (lon < -180 || lon > 180) {
+        showError('経度は -180 ～ +180 の範囲で入力してください。');
+        return;
+      }
+
+      const origText = btnSave.innerHTML;
+      btnSave.disabled = true;
+      btnSave.innerHTML = '⏳ 保存中...';
+
+      try {
+        if (idVal) {
+          // Update existing site
+          const resp = await fetch(`/api/mining_sites/${idVal}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              latitude: lat,
+              longitude: lon,
+              minerals: mineralsVal,
+              note: noteVal
+            })
+          });
+          if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.detail || errData.error || `HTTP ${resp.status}`);
+          }
+        } else {
+          // Create new site
+          const curSys = state.currentSystemData ? state.currentSystemData.system : state.selectedSystem;
+          const starSys = (curSys && curSys.star_system) || b.star_system || 'Unknown';
+          const resp = await fetch('/api/mining_sites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              system_address: b.system_address,
+              star_system: starSys,
+              body_id: b.body_id,
+              body_name: b.body_name,
+              latitude: lat,
+              longitude: lon,
+              minerals: mineralsVal,
+              note: noteVal
+            })
+          });
+          if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.detail || errData.error || `HTTP ${resp.status}`);
+          }
+        }
+
+        closeMiningSiteModal();
+        await refreshMiningSitesForBody(b);
+      } catch (err) {
+        console.error('Failed to save mining site:', err);
+        showError('保存に失敗しました: ' + (err.message || 'エラーが発生しました'));
+      } finally {
+        btnSave.disabled = false;
+        btnSave.innerHTML = origText;
+      }
+    });
+  }
+}
+
 

@@ -16,15 +16,36 @@ class TelemetryTracker:
     def set_journal_dir(self, journal_dir: str):
         self.journal_dir = Path(journal_dir) if journal_dir else None
 
+    def _resolve_journal_dir(self) -> Optional[Path]:
+        if self.journal_dir and self.journal_dir.exists():
+            return self.journal_dir
+        try:
+            from app.config import DEFAULT_JOURNAL_DIR
+            if DEFAULT_JOURNAL_DIR.exists():
+                return DEFAULT_JOURNAL_DIR
+        except Exception:
+            pass
+        cfg_path = Path("Data/config.json")
+        if cfg_path.exists():
+            try:
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                    if cfg.get("journal_dir") and Path(cfg["journal_dir"]).exists():
+                        return Path(cfg["journal_dir"])
+            except Exception:
+                pass
+        return None
+
     def read_status_json(self) -> Dict[str, Any]:
         """
         Safely reads the current Status.json file from the journal directory.
         Returns parsed dictionary, or empty dict if unavailable.
         """
-        if not self.journal_dir or not self.journal_dir.exists():
+        target_dir = self._resolve_journal_dir()
+        if not target_dir or not target_dir.exists():
             return {}
 
-        status_file = self.journal_dir / "Status.json"
+        status_file = target_dir / "Status.json"
         if not status_file.exists():
             return {}
 

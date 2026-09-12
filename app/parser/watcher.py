@@ -50,6 +50,9 @@ class JournalWatcher(threading.Thread):
     def run(self):
         self.conn = get_db_connection()
         self.parser = JournalParser(self.conn, event_callback=self._handle_journal_event, is_live=True)
+        if self.journal_dirs:
+            from app.live.telemetry import telemetry_tracker
+            telemetry_tracker.set_journal_dir(str(self.journal_dirs[0]))
         
         # Initial scan: seed file stats without triggering events for past data
         self._scan_active_files(initial_seed=True)
