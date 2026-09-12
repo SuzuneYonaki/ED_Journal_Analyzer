@@ -99,6 +99,43 @@ def test_standalone_html_generation():
     assert "<script src=" not in html_out
     assert '<link rel="stylesheet"' not in html_out
 
+def test_interactive_orrery_binary_and_moons():
+    sys_data = {
+        "star_system": "Col 285 Binary System",
+        "main_star_type": "G",
+        "star_pos_x": 10.0,
+        "star_pos_y": 20.0,
+        "star_pos_z": 30.0,
+        "total_fss_value": 2500000,
+        "total_potential_value": 5000000,
+        "total_bio_signals": 2
+    }
+    bodies = [
+        {"body_id": 1, "body_name": "Col 285 Binary System A", "star_type": "G", "distance_from_arrival_ls": 0},
+        {"body_id": 2, "body_name": "Col 285 Binary System A 1", "planet_class": "High metal content world", "distance_from_arrival_ls": 150, "semi_major_axis": 44800000000},
+        {"body_id": 3, "body_name": "Col 285 Binary System B", "star_type": "M", "distance_from_arrival_ls": 12500, "semi_major_axis": 3747000000000},
+        {"body_id": 4, "body_name": "Col 285 Binary System B 1", "planet_class": "Icy body", "distance_from_arrival_ls": 12550, "semi_major_axis": 15000000000},
+        {"body_id": 5, "body_name": "Col 285 Binary System B 1 a", "planet_class": "Rocky body", "distance_from_arrival_ls": 12551, "semi_major_axis": 450000000}
+    ]
+    html_out = generate_standalone_html(sys_data, bodies, [], [], cmdr_name="Yonaki")
+
+    # Verify Companion Star B exists in Orrery
+    assert "Col 285 Binary System B" in html_out
+    # Verify Companion Planet B 1 exists in Orrery
+    assert "Col 285 Binary System B 1" in html_out
+    # Verify Moon B 1 a exists in Orrery
+    assert "Col 285 Binary System B 1 a" in html_out
+    # Verify Quick Jump buttons for both Star A and Star B
+    assert "主星 A" in html_out
+    assert "伴星 B" in html_out
+    # Verify Zoom / Pan UI controls and SVG interactive layer
+    assert 'id="interactive-orrery-svg"' in html_out
+    assert 'id="orrery-pan-zoom-layer"' in html_out
+    assert 'id="orrery-wrapper"' in html_out
+    assert 'zoomOrrery' in html_out
+    assert 'resetOrreryView' in html_out
+
+
 def test_package_export_and_import():
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row

@@ -346,6 +346,308 @@ def import_edsys_package(conn, package_dict: Dict[str, Any], overwrite: bool = F
     }
 
 
+def get_body_visual_color(planet_class: str) -> str:
+    if not planet_class:
+        return "#60a5fa"
+    p = planet_class.lower()
+    if "earth" in p:
+        return "#4ade80"
+    elif "water" in p:
+        return "#38bdf8"
+    elif "ammonia" in p:
+        return "#facc15"
+    elif "high metal" in p:
+        return "#fb923c"
+    elif "metal rich" in p:
+        return "#f97316"
+    elif "icy" in p:
+        return "#a5f3fc"
+    elif "rocky" in p:
+        return "#cbd5e1"
+    elif "gas giant" in p:
+        return "#f472b6"
+    return "#94a3b8"
+
+
+def get_star_visual_color(star_type: str) -> str:
+    if not star_type:
+        return "#ffaa00"
+    st = star_type.upper()
+    if any(st.startswith(x) for x in ["O", "B"]):
+        return "#93c5fd"
+    elif st.startswith("A"):
+        return "#f8fafc"
+    elif st.startswith("F"):
+        return "#fef08a"
+    elif st.startswith("G"):
+        return "#facc15"
+    elif st.startswith("K"):
+        return "#fb923c"
+    elif st.startswith("M"):
+        return "#f87171"
+    elif st.startswith("D"):
+        return "#e0e7ff"
+    elif st.startswith("N"):
+        return "#c084fc"
+    elif st.startswith("H"):
+        return "#818cf8"
+    elif any(st.startswith(x) for x in ["T", "Y", "L"]):
+        return "#b45309"
+    return "#ffaa00"
+
+
+def extract_body_sub_tokens(body_name: str, sys_name: str) -> Dict[str, Any]:
+    short = body_name.strip()
+    if sys_name and short.startswith(sys_name):
+        short = short[len(sys_name):].strip()
+    tokens = short.split()
+    
+    if not tokens:
+        return {"star": "A", "planet": None, "moon": None, "submoon": None}
+    
+    star = "A"
+    idx = 0
+    if tokens[0].isupper() and tokens[0].isalpha() and len(tokens[0]) <= 5:
+        star = tokens[0]
+        idx = 1
+    
+    planet = None
+    moon = None
+    submoon = None
+    
+    if idx < len(tokens):
+        if tokens[idx].isdigit():
+            planet = int(tokens[idx])
+            idx += 1
+            if idx < len(tokens) and len(tokens[idx]) == 1 and tokens[idx].isalpha():
+                moon = tokens[idx].lower()
+                idx += 1
+                if idx < len(tokens) and len(tokens[idx]) == 1 and tokens[idx].isalpha():
+                    submoon = tokens[idx].lower()
+    
+    return {"star": star, "planet": planet, "moon": moon, "submoon": submoon}
+
+
+def build_interactive_orrery(system_data: Dict[str, Any], bodies: List[Dict[str, Any]]) -> str:
+    import math
+    sys_name = system_data.get("star_system", "System")
+    stars = [b for b in bodies if b.get("star_type")]
+    if not stars:
+        stars = [{"body_id": 0, "body_name": sys_name + " A", "star_type": system_data.get("main_star_type", "G"), "distance_from_arrival_ls": 0}]
+    stars.sort(key=lambda s: s.get("distance_from_arrival_ls") or 0)
+
+    # Map stars
+    star_map = {}
+    for i, s in enumerate(stars):
+        info = extract_body_sub_tokens(s.get("body_name", ""), sys_name)
+        key = info["star"] if (info["star"] != "A" or i == 0) else chr(ord('A') + i)
+        star_map[key] = {
+            "star_body": s,
+            "key": key,
+            "index": i,
+            "is_primary": (i == 0),
+            "is_barycentre": False,
+            "planets": {}
+        }
+
+    # Map planets and moons
+    non_stars = [b for b in bodies if not b.get("star_type")]
+    primary_key = stars[0].get("body_name", "A")
+    primary_key = extract_body_sub_tokens(primary_key, sys_name)["star"]
+    if primary_key not in star_map:
+        primary_key = list(star_map.keys())[0]
+
+    for b in non_stars:
+        info = extract_body_sub_tokens(b.get("body_name", ""), sys_name)
+        target_star = info["star"]
+        if target_star not in star_map:
+            if "AB" in target_star or "BC" in target_star:
+                star_map[target_star] = {
+                    "star_body": {"body_name": f"{sys_name} {target_star} Barycentre", "star_type": "Barycentre", "distance_from_arrival_ls": 0},
+                    "key": target_star,
+                    "index": len(star_map),
+                    "is_primary": False,
+                    "is_barycentre": True,
+                    "planets": {}
+                }
+            else:
+                target_star = primary_key
+
+        p_num = info["planet"] or b.get("body_id", 1)
+        if p_num not in star_map[target_star]["planets"]:
+            star_map[target_star]["planets"][p_num] = {
+                "body": b if info["moon"] is None else None,
+                "num": p_num,
+                "moons": []
+            }
+        if info["moon"] is None:
+            star_map[target_star]["planets"][p_num]["body"] = b
+        else:
+            star_map[target_star]["planets"][p_num]["moons"].append(b)
+
+    center_cx, center_cy = 500, 350
+    companion_stars = [s for s in star_map.values() if not s["is_primary"]]
+    num_companions = len(companion_stars)
+
+    star_positions = {}
+    star_positions[primary_key] = (center_cx, center_cy)
+
+    for i, comp in enumerate(companion_stars):
+        dist_ls = comp["star_body"].get("distance_from_arrival_ls") or (4000 * (i + 1))
+        orbit_r = 250 + 85 * math.log10(max(10, dist_ls) / 10.0)
+        angle_rad = (2 * math.pi * i / max(1, num_companions)) + 0.4
+        sx = center_cx + orbit_r * math.cos(angle_rad)
+        sy = center_cy + orbit_r * math.sin(angle_rad)
+        star_positions[comp["key"]] = (sx, sy, orbit_r)
+
+    svg_elements = []
+    svg_elements.append("""
+    <defs>
+        <filter id="star-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+            </feMerge>
+        </filter>
+        <filter id="companion-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+            </feMerge>
+        </filter>
+    </defs>
+    """)
+
+    # Companion Orbit Rings
+    for comp in companion_stars:
+        pos_data = star_positions[comp["key"]]
+        orbit_r = pos_data[2]
+        dist_ls = comp["star_body"].get("distance_from_arrival_ls") or 0
+        dist_str = f"{dist_ls:,} Ls" if dist_ls else "Binary Orbit"
+        svg_elements.append(f'<circle cx="{center_cx}" cy="{center_cy}" r="{orbit_r:.1f}" fill="none" stroke="rgba(255, 170, 0, 0.22)" stroke-width="1.2" stroke-dasharray="5,4" />')
+        svg_elements.append(f'<text x="{center_cx}" y="{center_cy - orbit_r - 5:.1f}" font-size="9" fill="#f59e0b" text-anchor="middle" font-family="monospace">── 伴星 {comp["key"]} 周回軌道 ({dist_str}) ──</text>')
+
+    jump_buttons_html = []
+    jump_buttons_html.append(f'<button type="button" class="orrery-btn" onclick="focusOrreryTarget({center_cx}, {center_cy}, 1.8)">☀️ 主星 {primary_key}</button>')
+
+    # Render stars & planets
+    for star_key, s_data in star_map.items():
+        is_prim = s_data["is_primary"]
+        is_bary = s_data.get("is_barycentre", False)
+        s_body = s_data["star_body"]
+        s_color = get_star_visual_color(s_body.get("star_type", "G"))
+        s_type = s_body.get("star_type") or ("Barycentre" if is_bary else "Star")
+        dist_val = s_body.get("distance_from_arrival_ls", 0)
+
+        pos = star_positions[star_key]
+        sx, sy = pos[0], pos[1]
+
+        if not is_prim:
+            dist_tag = f" ({dist_val:,} Ls)" if dist_val else ""
+            jump_buttons_html.append(f'<button type="button" class="orrery-btn" onclick="focusOrreryTarget({sx:.1f}, {sy:.1f}, 2.4)">⭐ 伴星 {star_key}{dist_tag}</button>')
+
+        if is_bary:
+            svg_elements.append(f'<g class="orrery-node" data-name="{html.escape(s_body.get("body_name", ""))}" data-type="Barycentre" data-dist="{dist_val}">')
+            svg_elements.append(f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="8" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="2,2" />')
+            svg_elements.append(f'<line x1="{sx-12:.1f}" y1="{sy:.1f}" x2="{sx+12:.1f}" y2="{sy:.1f}" stroke="#a855f7" stroke-width="1" />')
+            svg_elements.append(f'<line x1="{sx:.1f}" y1="{sy-12:.1f}" x2="{sx:.1f}" y2="{sy+12:.1f}" stroke="#a855f7" stroke-width="1" />')
+            svg_elements.append(f'<text x="{sx:.1f}" y="{sy+20:.1f}" font-size="10" fill="#d8b4fe" text-anchor="middle" font-family="sans-serif">重心 {star_key}</text>')
+            svg_elements.append('</g>')
+        else:
+            r_star = 18 if is_prim else 13
+            glow_id = "star-glow" if is_prim else "companion-glow"
+            b_name = html.escape(s_body.get("body_name", f"Star {star_key}"))
+            temp_val = f'{s_body.get("surface_temperature", "--")} K'
+            svg_elements.append(f'<g class="orrery-node" data-name="{b_name}" data-type="{s_type}型 恒星" data-dist="{dist_val}" data-temp="{temp_val}">')
+            svg_elements.append(f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="{r_star}" fill="{s_color}" filter="url(#{glow_id})" />')
+            svg_elements.append(f'<text x="{sx:.1f}" y="{sy + r_star + 13:.1f}" font-size="10" font-weight="bold" fill="#fed7aa" text-anchor="middle" font-family="sans-serif">{star_key}: {s_type}型</text>')
+            svg_elements.append('</g>')
+
+        planets_dict = s_data["planets"]
+        sorted_planets = sorted(planets_dict.values(), key=lambda p: p["num"])
+
+        for p_idx, p_entry in enumerate(sorted_planets):
+            p_body = p_entry["body"]
+            moons = p_entry["moons"]
+
+            p_orbit_r = 44 + p_idx * 26
+            p_angle_rad = math.radians((p_idx * 52) % 360)
+            px = sx + p_orbit_r * math.cos(p_angle_rad)
+            py = sy + p_orbit_r * math.sin(p_angle_rad)
+
+            svg_elements.append(f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="{p_orbit_r:.1f}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-dasharray="2,2" />')
+
+            p_name = html.escape(p_body.get("body_name", f"Planet {p_entry['num']}")) if p_body else f"{star_key} {p_entry['num']}"
+            p_class = p_body.get("planet_class", "Planet") if p_body else "Planet"
+            p_color = get_body_visual_color(p_class)
+            g_str = f"{p_body.get('surface_gravity_g', 0):.2f}G" if (p_body and p_body.get('surface_gravity_g')) else "--"
+            p_dist = p_body.get("distance_from_arrival_ls", 0) if p_body else 0
+            p_temp = f"{p_body.get('surface_temperature', '--')} K" if (p_body and p_body.get('surface_temperature')) else "--"
+
+            svg_elements.append(f'<g class="orrery-node" data-name="{p_name}" data-type="{html.escape(p_class)}" data-dist="{p_dist}" data-grav="{g_str}" data-temp="{p_temp}">')
+            svg_elements.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="6.5" fill="{p_color}" />')
+            svg_elements.append(f'<text x="{px:.1f}" y="{py - 8:.1f}" font-size="8" fill="#e2e8f0" text-anchor="middle" font-family="sans-serif">{p_name} ({g_str})</text>')
+            svg_elements.append('</g>')
+
+            for m_idx, m_body in enumerate(moons):
+                m_orbit_r = 12 + m_idx * 6.5
+                m_angle_rad = math.radians((m_idx * 80 + 30) % 360)
+                mx = px + m_orbit_r * math.cos(m_angle_rad)
+                my = py + m_orbit_r * math.sin(m_angle_rad)
+
+                svg_elements.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{m_orbit_r:.1f}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.8" stroke-dasharray="1,2" />')
+
+                m_name = html.escape(m_body.get("body_name", "Moon"))
+                m_class = m_body.get("planet_class", "Moon")
+                m_color = get_body_visual_color(m_class)
+                m_dist = m_body.get("distance_from_arrival_ls", 0)
+                m_grav = f"{m_body.get('surface_gravity_g', 0):.2f}G" if m_body.get('surface_gravity_g') else "--"
+
+                svg_elements.append(f'<g class="orrery-node" data-name="{m_name}" data-type="{html.escape(m_class)}" data-dist="{m_dist}" data-grav="{m_grav}">')
+                svg_elements.append(f'<circle cx="{mx:.1f}" cy="{my:.1f}" r="3" fill="{m_color}" />')
+                svg_elements.append('</g>')
+
+    svg_inner = "\n".join(svg_elements)
+    jump_bar_inner = " ".join(jump_buttons_html)
+
+    orrery_html = f"""
+    <div class="orrery-container" id="orrery-container-root">
+        <div class="orrery-header-bar">
+            <h2>🪐 System Orrery & Orbital Hierarchy (対話的ズーム・全星系軌道図)</h2>
+            <div class="orrery-controls">
+                <button type="button" class="orrery-btn" onclick="zoomOrrery(1.3)" title="拡大">🔍＋ 拡大</button>
+                <button type="button" class="orrery-btn" onclick="zoomOrrery(0.7)" title="縮小">🔍－ 縮小</button>
+                <button type="button" class="orrery-btn" onclick="resetOrreryView()" title="星系全体を表示">🔄 全体リセット</button>
+            </div>
+        </div>
+
+        <div class="orrery-jump-bar">
+            <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: bold; margin-right: 4px;">フォーカスジャンプ:</span>
+            {jump_bar_inner}
+        </div>
+
+        <div class="orrery-viewport-wrapper" id="orrery-wrapper">
+            <svg id="interactive-orrery-svg" viewBox="0 0 1000 700" style="width: 100%; height: 100%; user-select: none;">
+                <g id="orrery-pan-zoom-layer" transform="matrix(1 0 0 1 0 0)">
+                    {svg_inner}
+                </g>
+            </svg>
+
+            <!-- Floating Info Tooltip -->
+            <div id="orrery-tooltip" style="display: none; position: absolute; pointer-events: none; background: rgba(10, 16, 26, 0.94); border: 1px solid var(--ed-cyan); padding: 8px 12px; border-radius: 6px; font-size: 0.75rem; color: #fff; box-shadow: 0 4px 14px rgba(0,0,0,0.6); z-index: 10;"></div>
+
+            <!-- Hint overlay -->
+            <div style="position: absolute; bottom: 8px; left: 12px; font-size: 0.7rem; color: #64748b; pointer-events: none;">
+                🖱️ マウスホイールで無段階ズーム / ドラッグで自由移動 / 伴星ボタンで拡大ジャンプ
+            </div>
+        </div>
+    </div>
+    """
+    return orrery_html
+
+
 def generate_standalone_html(
     system_data: Dict[str, Any],
     bodies: List[Dict[str, Any]],
@@ -381,51 +683,8 @@ def generate_standalone_html(
     }
     json_str = json.dumps(full_data, ensure_ascii=False, indent=2).replace("</script>", "<\\/script>")
 
-    # Group bodies into stars and planets
-    stars = [b for b in bodies if b.get("star_type")]
-    planets = [b for b in bodies if not b.get("star_type") and b.get("planet_class")]
-
-    # Build SVG Orrery visual
-    svg_elements = []
-    center_cx, center_cy = 300, 200
-    svg_elements.append(f'<circle cx="{center_cx}" cy="{center_cy}" r="18" fill="#ffaa00" filter="drop-shadow(0 0 8px #ff7100)" />')
-    svg_elements.append(f'<text x="{center_cx}" y="{center_cy + 30}" font-size="11" fill="#fed7aa" text-anchor="middle" font-family="sans-serif">{main_star}-Class Star</text>')
-
-    # Orbit rings for planets (up to 8 visual rings)
-    max_display = min(len(planets), 10)
-    for idx, p in enumerate(planets[:max_display]):
-        orbit_r = 45 + idx * 24
-        p_name = html.escape(p.get("body_name", f"Planet {idx+1}"))
-        p_class = html.escape(p.get("planet_class", "Planet"))
-        rad_km = round(p.get("radius", 0) / 1000) if p.get("radius") else "?"
-        g_val = f"{p.get('surface_gravity_g', 0):.2f}G" if p.get('surface_gravity_g') else "--"
-        
-        # Color based on type
-        p_color = "#60a5fa"
-        if "earth" in p_class.lower():
-            p_color = "#4ade80"
-        elif "water" in p_class.lower():
-            p_color = "#38bdf8"
-        elif "ammonia" in p_class.lower():
-            p_color = "#facc15"
-        elif "high metal" in p_class.lower():
-            p_color = "#fb923c"
-        elif "metal rich" in p_class.lower():
-            p_color = "#f97316"
-        elif "icy" in p_class.lower():
-            p_color = "#a5f3fc"
-
-        # Planet position on orbit
-        angle = (idx * 48) % 360
-        import math
-        px = center_cx + orbit_r * math.cos(math.radians(angle))
-        py = center_cy + orbit_r * math.sin(math.radians(angle))
-
-        svg_elements.append(f'<circle cx="{center_cx}" cy="{center_cy}" r="{orbit_r}" fill="none" stroke="rgba(255,255,255,0.1)" stroke-dasharray="3,3" />')
-        svg_elements.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="7" fill="{p_color}" />')
-        svg_elements.append(f'<text x="{px:.1f}" y="{py - 10:.1f}" font-size="9" fill="#e2e8f0" text-anchor="middle" font-family="sans-serif">{p_name} ({g_val})</text>')
-
-    svg_content = "\n".join(svg_elements)
+    # Build interactive multi-star and orbital hierarchy Orrery
+    orrery_html_block = build_interactive_orrery(system_data, bodies)
 
     # Build bodies table rows with deep astrophysics parameter disclosure
     body_rows_html = []
@@ -680,6 +939,70 @@ tr:hover {{ background: rgba(255,255,255,0.02); }}
 .mining-card {{ background: rgba(0,0,0,0.3); border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; padding: 10px; }}
 .mining-card-header {{ font-size: 0.82rem; font-weight: bold; color: #38bdf8; }}
 .mining-card-body {{ font-size: 0.8rem; color: #cbd5e1; margin-top: 4px; }}
+
+.orrery-container {{
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}}
+.orrery-header-bar {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}}
+.orrery-controls {{
+    display: flex;
+    gap: 6px;
+}}
+.orrery-jump-bar {{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}}
+.orrery-btn {{
+    background: rgba(255, 113, 0, 0.12);
+    border: 1px solid rgba(255, 113, 0, 0.4);
+    color: var(--ed-orange);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}}
+.orrery-btn:hover {{
+    background: rgba(255, 113, 0, 0.25);
+    border-color: var(--ed-orange);
+    color: #fff;
+}}
+.orrery-viewport-wrapper {{
+    width: 100%;
+    height: 520px;
+    overflow: hidden;
+    position: relative;
+    background: radial-gradient(circle at center, #0d131f 0%, #06090e 100%);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: grab;
+}}
+.orrery-node {{
+    cursor: pointer;
+}}
+.orrery-node:hover circle {{
+    filter: drop-shadow(0 0 6px #00d2ff);
+}}
+
 footer {{ text-align: center; font-size: 0.75rem; color: var(--text-secondary); margin-top: 30px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); }}
 </style>
 </head>
@@ -725,12 +1048,7 @@ footer {{ text-align: center; font-size: 0.75rem; color: var(--text-secondary); 
         </div>
     </div>
 
-    <div class="orrery-container">
-        <h2>🪐 System Orrery Overview</h2>
-        <svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
-            {svg_content}
-        </svg>
-    </div>
+    {orrery_html_block}
 
     <div class="section-container">
         <h2>🪐 天体構成・探査インベントリ ({len(bodies)} 天体)</h2>
@@ -758,6 +1076,161 @@ footer {{ text-align: center; font-size: 0.75rem; color: var(--text-secondary); 
         Elite Dangerous Journal Analyzer &bull; Standalone Web Share Edition &bull; Exported on {now_str}
     </footer>
 </div>
+
+<script>
+(function() {{
+    const wrapper = document.getElementById('orrery-wrapper');
+    const layer = document.getElementById('orrery-pan-zoom-layer');
+    const tooltip = document.getElementById('orrery-tooltip');
+    if (!wrapper || !layer) return;
+
+    let scale = 1.0;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+
+    function updateTransform() {{
+        layer.setAttribute('transform', 'matrix(' + scale + ' 0 0 ' + scale + ' ' + panX + ' ' + panY + ')');
+    }}
+
+    window.zoomOrrery = function(factor) {{
+        const newScale = Math.max(0.12, Math.min(35.0, scale * factor));
+        const rect = wrapper.getBoundingClientRect();
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        panX = cx - (cx - panX) * (newScale / scale);
+        panY = cy - (cy - panY) * (newScale / scale);
+        scale = newScale;
+        updateTransform();
+    }};
+
+    window.resetOrreryView = function() {{
+        scale = 1.0;
+        panX = 0;
+        panY = 0;
+        updateTransform();
+    }};
+
+    window.focusOrreryTarget = function(targetX, targetY, targetScale) {{
+        targetScale = targetScale || 2.4;
+        const rect = wrapper.getBoundingClientRect();
+        const svgW = 1000, svgH = 700;
+        const ratioX = rect.width / svgW;
+        const ratioY = rect.height / svgH;
+        
+        scale = targetScale;
+        panX = (rect.width / 2) - (targetX * ratioX * scale);
+        panY = (rect.height / 2) - (targetY * ratioY * scale);
+        updateTransform();
+    }};
+
+    wrapper.addEventListener('wheel', (e) => {{
+        e.preventDefault();
+        const rect = wrapper.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const factor = e.deltaY < 0 ? 1.18 : 0.85;
+        const newScale = Math.max(0.12, Math.min(40.0, scale * factor));
+
+        panX = mouseX - (mouseX - panX) * (newScale / scale);
+        panY = mouseY - (mouseY - panY) * (newScale / scale);
+        scale = newScale;
+        updateTransform();
+    }}, {{ passive: false }});
+
+    wrapper.addEventListener('mousedown', (e) => {{
+        if (e.button !== 0) return;
+        isDragging = true;
+        startX = e.clientX - panX;
+        startY = e.clientY - panY;
+        wrapper.style.cursor = 'grabbing';
+    }});
+
+    window.addEventListener('mousemove', (e) => {{
+        if (!isDragging) return;
+        panX = e.clientX - startX;
+        panY = e.clientY - startY;
+        updateTransform();
+    }});
+
+    window.addEventListener('mouseup', () => {{
+        if (isDragging) {{
+            isDragging = false;
+            wrapper.style.cursor = 'grab';
+        }}
+    }});
+
+    // Touch support (mobile/tablet pinch-zoom and drag)
+    let initialTouchDist = null;
+    let initialTouchScale = 1.0;
+    wrapper.addEventListener('touchstart', (e) => {{
+        if (e.touches.length === 1) {{
+            isDragging = true;
+            startX = e.touches[0].clientX - panX;
+            startY = e.touches[0].clientY - panY;
+        }} else if (e.touches.length === 2) {{
+            isDragging = false;
+            initialTouchDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            initialTouchScale = scale;
+        }}
+    }}, {{ passive: true }});
+
+    wrapper.addEventListener('touchmove', (e) => {{
+        if (isDragging && e.touches.length === 1) {{
+            panX = e.touches[0].clientX - startX;
+            panY = e.touches[0].clientY - startY;
+            updateTransform();
+        }} else if (e.touches.length === 2 && initialTouchDist) {{
+            const currentDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            const factor = currentDist / initialTouchDist;
+            scale = Math.max(0.12, Math.min(35.0, initialTouchScale * factor));
+            updateTransform();
+        }}
+    }}, {{ passive: true }});
+
+    wrapper.addEventListener('touchend', () => {{
+        isDragging = false;
+        initialTouchDist = null;
+    }});
+
+    // Hover tooltip
+    const nodes = wrapper.querySelectorAll('.orrery-node');
+    nodes.forEach(node => {{
+        node.addEventListener('mouseenter', (e) => {{
+            const name = node.getAttribute('data-name');
+            const type = node.getAttribute('data-type');
+            const dist = node.getAttribute('data-dist');
+            const grav = node.getAttribute('data-grav');
+            const temp = node.getAttribute('data-temp');
+
+            let content = '<b style="color: var(--ed-orange);">' + name + '</b><br><span style="color: var(--ed-cyan);">' + type + '</span>';
+            if (dist && dist !== '0') content += '<br>到着距離: ' + Number(dist).toLocaleString() + ' Ls';
+            if (grav && grav !== '--') content += '<br>表面重力: ' + grav;
+            if (temp && temp !== '--') content += '<br>表面温度: ' + temp;
+
+            tooltip.innerHTML = content;
+            tooltip.style.display = 'block';
+        }});
+
+        node.addEventListener('mousemove', (e) => {{
+            const rect = wrapper.getBoundingClientRect();
+            tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+            tooltip.style.top = (e.clientY - rect.top + 10) + 'px';
+        }});
+
+        node.addEventListener('mouseleave', () => {{
+            tooltip.style.display = 'none';
+        }});
+    }});
+}})();
+</script>
 </body>
 </html>
 """

@@ -1,4 +1,4 @@
-# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.5)
+# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.6)
 
 [日本語](#日本語) | [English](#english)
 
@@ -13,6 +13,19 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 > 銀河の遥かなる長旅の記録や、過去の深宇宙探索・初発見の思い出をいつでも鮮明に振り返ることができます。
 
 > **⚠️ 使用上の注意・免責事項**: 本ツールはファンメイドの非公式オープンソースツールです。フロンティア・デベロップメンツ社とは一切関係ありません。ジャーナルログの解釈や探査・採掘データの完全性についてはいかなる保証も致しかねます。本ツールの使用によって生じたゲーム内での損失（機体喪失、採掘リグ耐久値損失、探査データ喪失など）を含むいかなる結果についても開発者は一切の責任を負いません。自己責任においてご利用ください。
+
+### 🚀 v0.1.6 アップデート・サマリー
+- **Web共有HTMLの「対話的マルチ恒星オーラリー（連星系・伴星・周回軌道図）」新設**:
+  - 従来のWeb共有HTMLで主星以外の伴星（Companion Stars: B, C, D...）が表示されなかった不具合を根本解決。
+  - 主星（A星）だけでなく、連星系における伴星（B星など）、伴星を周回する惑星（B 1, B 2...）、および惑星を周回する衛星（B 1 a...）を包括した完全な階層構造（Orbital Hierarchy）を描画。
+  - 到着距離（Ls）に応じた対数スケール軌道円および距離ラベルを表示し、星系全体の空間配置を一目で直感的に把握可能。
+- **無段階パン＆ズーム（0.12x〜40x）＆ 恒星クイックジャンプバー**:
+  - マウスホイールによる滑らかな無段階ズーム、ドラッグによるパン移動、モバイル/タブレットのピンチズーム・ドラッグに対応。
+  - 最大40倍までズームイン可能なため、伴星周りの惑星系や微小な衛星軌道まで明瞭にクローズアップ観察可能。
+  - 上部に新設された「恒星クイックジャンプバー」（`[☀️ 主星 A]`、`[⭐ 伴星 B (12,450 Ls)]`等）をワンクリックするだけで、対象天体へカメラが瞬時にフォーカス移動＆ズームイン。
+- **天体ホバー情報ツールチップ ＆ 完全スタンドアロン維持**:
+  - オーラリー上の天体にマウスホバー（タッチ）することで、天体名、分類、到着距離、表面重力、表面温度がポップアップ表示。
+  - 外部CDNや外部JS/CSSライブラリへの依存を一切持たず、単一HTMLファイル内でSVG対話制御・全天体物理JSON内包・AI推論対応が完全自己完結。
 
 ### 🚀 v0.1.5 アップデート・サマリー
 - **Web共有HTMLの「完全天体物理観測JSON内包」＆ AI推論対応化**:
@@ -192,6 +205,19 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
 > Relive and explore your epic expedition memories, first discoveries, and galaxy travels anytime with complete offline privacy.
 
 > **⚠️ Disclaimer**: This tool is an unofficial, fan-made open-source companion and is not affiliated with or endorsed by Frontier Developments plc. No warranties are provided regarding data accuracy or game log interpretation. The developer assumes no responsibility or liability for any in-game losses or damages (including loss of ships, mining rig durability, or exploration data). Use at your own discretion.
+
+### 🚀 v0.1.6 Update Summary
+- **Interactive Multi-Star Orrery & Companion Orbit Hierarchy in Web Share HTML**:
+  - Fixed an issue where companion stars (B, C, D...) and their orbiting planetary systems were omitted in exported HTML orrery views.
+  - Renders complete hierarchical celestial orbital structures, including primary stars, companion binary stars, their orbiting planets (B 1, B 2...), and moons (B 1 a...).
+  - Incorporates logarithmic scale orbital guide circles and distance labels based on arrival distance (Ls), giving commanders an intuitive spatial map of massive multi-star systems.
+- **Infinite Pan & Smooth Zoom (0.12x - 40x) & Stellar Quick Jump Navigation**:
+  - Smooth zooming via mouse wheel, pan by drag, and mobile/tablet touch pinch-zoom gestures.
+  - Zoom up to 40x to inspect dense planetary and lunar subsystems orbiting distant companions.
+  - Quick jump buttons (`[☀️ Star A]`, `[⭐ Star B (12,450 Ls)]`, etc.) instantly reposition and zoom the camera onto the selected stellar center.
+- **Interactive Hover Tooltips & 100% Zero-Dependency Standalone Self-Containment**:
+  - Hovering or tapping any celestial body in the Orrery reveals key telemetry: body name, classification, arrival distance, surface gravity, and temperature.
+  - Remains completely standalone in a single file without external CDN links or network requirements.
 
 ### 🚀 v0.1.5 Update Summary
 - **Embedded Complete Astrophysical Observation JSON in Web Share HTML & Full AI Inference Readiness**:

@@ -23,7 +23,7 @@ def test_theme_elements_in_index_html():
     assert 'data-theme="default"' in content
     assert 'data-theme="elite-amber"' in content
     assert 'data-theme="cyan-explorer"' in content
-    assert 'class="version-badge">v0.1.5</span>' in content
+    assert 'class="version-badge">v0.1.6</span>' in content
     assert "localStorage.getItem('ed_theme')" in content
 
 def test_edsm_service_url_has_show_id():
