@@ -1,4 +1,4 @@
-# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.1)
+# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.2)
 
 [日本語](#日本語) | [English](#english)
 
@@ -13,6 +13,17 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 > 銀河の遥かなる長旅の記録や、過去の深宇宙探索・初発見の思い出をいつでも鮮明に振り返ることができます。
 
 > **⚠️ 使用上の注意・免責事項**: 本ツールはファンメイドの非公式オープンソースツールです。フロンティア・デベロップメンツ社とは一切関係ありません。ジャーナルログの解釈や探査・採掘データの完全性についてはいかなる保証も致しかねます。本ツールの使用によって生じたゲーム内での損失（機体喪失、採掘リグ耐久値損失、探査データ喪失など）を含むいかなる結果についても開発者は一切の責任を負いません。自己責任においてご利用ください。
+
+### 🚀 v0.1.2 アップデート・サマリー
+- **Rhino 採掘記録（緯度経度 ＆ 掘れた鉱物）の惑星メモ簡潔追記機能**:
+  - メモ欄の美しさと容量効率を最優先し、冗長なタイムスタンプや全生ログの羅列を排除。
+  - **「緯度経度」とともに「何を掘ったか（掘れた鉱物・素材）」だけ**をシンプルかつコンパクトに惑星のメモ（Markdownノート）へ追加記述（追記）する仕組みを新設。
+  - 同一地点でさらに新しい鉱物を掘った場合、行数を増やさず既存行の鉱物リストへスマートにマージ統合（例: `- [Lat: +12.3456°, Lon: -45.6789°]: ゲルマニウム, 鉄, テクネチウム`）。既存のユーザー独自メモも100%保持。
+  - 天体インスペクターの採掘地点カードに「📝 メモに追記」ボタン、ヘッダーに「📝 全地点をメモに追記」ボタンを新設。ワンクリックで惑星メモ欄（`#bm-note-input`）へ即座に反映可能。
+  - ゲームプレイ中の SRV 採掘（マテリアル採取／鉱物精製）時にも、`Status.json` からのリアルタイム精密座標を補完して自動的に惑星メモへスマート記録。
+- **アーキテクチャのモジュール分割（「過去のアーカイブ」と「現在のLiveコパイロット」の分離）**:
+  - `app/live/` パッケージを新設し、リアルタイム監視・Status.jsonテレメトリ（`telemetry.py`）、ランドマークPOI距離計算（`landmarks.py`）、Rhino採掘追跡＆メモ統合（`live/rhino/`）の責務を綺麗に分離。
+  - 将来の天体物理ローカルLLM組み込み（Bonsai Ternary 7B 等による学術ナラティブ生成）に向けた基盤モジュール（`app/analyzer/llm/`）を整備。
 
 ### 🚀 v0.1.1 アップデート・サマリー
 - **未訪問星系の EDSM オンデマンド参照ロード機能（安全ロック保護付き）**:
@@ -122,6 +133,17 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
 > Relive and explore your epic expedition memories, first discoveries, and galaxy travels anytime with complete offline privacy.
 
 > **⚠️ Disclaimer**: This tool is an unofficial, fan-made open-source companion and is not affiliated with or endorsed by Frontier Developments plc. No warranties are provided regarding data accuracy or game log interpretation. The developer assumes no responsibility or liability for any in-game losses or damages (including loss of ships, mining rig durability, or exploration data). Use at your own discretion.
+
+### 🚀 v0.1.2 Update Summary
+- **Concise Rhino Mining History in Planet Notes (Coordinates & Mined Materials Only)**:
+  - Designed for visual elegance and markdown note efficiency, avoiding verbose raw log dumps or timestamp clutter.
+  - Automatically or manually logs **only "what was mined at which coordinates"** directly into celestial body notes (`body_bookmarks.note_markdown`).
+  - Intelligently merges newly extracted minerals at the same site into the existing coordinate line (e.g., `- [Lat: +12.3456°, Lon: -45.6789°]: Germanium, Iron, Technetium`) without inflating line count, preserving all user notes.
+  - Added "📝 メモに追記" buttons on mining site cards and "📝 全地点をメモに追記" in the mining section header for instant 1-click synchronization to the note editor (`#bm-note-input`).
+  - Real-time SRV surface mining seamlessly complements latitude/longitude telemetry from `Status.json`.
+- **Architectural Separation: Historical Exploration Archive vs. Live Co-Pilot**:
+  - Introduced the `app/live/` package separating real-time telemetry (`telemetry.py`), dynamic landmark POI distances (`landmarks.py`), and Rhino surface tracking/note integration (`live/rhino/`).
+  - Added interface foundations (`app/analyzer/llm/`) preparing for upcoming local LLM integrations (such as Bonsai Ternary 7B) for deep astrophysical scientific narratives.
 
 ### 🚀 v0.1.1 Update Summary
 - **On-Demand EDSM Reference Loading for Unvisited Systems (with Security Lockout)**:

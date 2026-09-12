@@ -22,6 +22,8 @@ from app.parser.exobiology import predict_exobiology_candidates, predict_system_
 from app.services.edsm_service import edsm_service
 from app.services.landmark_service import load_landmarks, calculate_landmark_distances
 from app.services.footprint_service import footprint_service
+from app.live.rhino.note_integrator import update_body_note_in_db
+from app.live.rhino.tracker import sync_body_mining_to_note, extract_all_mining_materials_for_body
 from app.services.export_service import (
     generate_standalone_html,
     create_edsys_package,
@@ -288,6 +290,51 @@ def delete_body_bookmark(system_address: int, body_id: int):
     conn.commit()
     conn.close()
     return {"status": "ok", "message": "Bookmark deleted"}
+
+class AppendMiningNotePayload(BaseModel):
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    minerals: Optional[List[str]] = None
+
+@app.post("/api/bookmark/{system_address}/{body_id}/append_mining")
+def append_mining_to_bookmark_endpoint(system_address: int, body_id: int, payload: Optional[AppendMiningNotePayload] = None):
+    conn = get_db_connection()
+    try:
+        c = conn.cursor()
+        c.execute("SELECT body_name, star_system FROM bodies WHERE system_address = ? AND body_id = ?", (system_address, body_id))
+        brow = c.fetchone()
+        body_name = brow["body_name"] if brow else f"Body {body_id}"
+        star_system = brow["star_system"] if brow else "Unknown"
+
+        if payload and (payload.latitude is not None or payload.minerals):
+            updated_note = update_body_note_in_db(
+                conn=conn,
+                system_address=system_address,
+                body_id=body_id,
+                body_name=body_name,
+                star_system=star_system,
+                lat=payload.latitude,
+                lon=payload.longitude,
+                minerals=payload.minerals or []
+            )
+        else:
+            updated_note = sync_body_mining_to_note(
+                conn=conn,
+                system_address=system_address,
+                body_id=body_id,
+                body_name=body_name,
+                star_system=star_system
+            )
+
+        c.execute("SELECT * FROM body_bookmarks WHERE system_address = ? AND body_id = ?", (system_address, body_id))
+        saved = c.fetchone()
+        return {
+            "status": "ok",
+            "bookmark": dict(saved) if saved else {"note_markdown": updated_note},
+            "note_markdown": updated_note
+        }
+    finally:
+        conn.close()
 
 @app.get("/api/bookmarks")
 def list_bookmarks(q: Optional[str] = None):

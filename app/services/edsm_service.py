@@ -177,7 +177,7 @@ class EDSMService:
 
         req = urllib.request.Request(
             sys_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.1 (External System Import)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.2 (External System Import)"}
         )
 
         try:
@@ -220,7 +220,7 @@ class EDSMService:
         bodies_url = f"{EDSM_BODIES_API}?systemName={encoded_name}"
         bodies_req = urllib.request.Request(
             bodies_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.1 (External System Import)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.2 (External System Import)"}
         )
 
         first_discoverer = None
@@ -327,7 +327,7 @@ class EDSMService:
 
         req = urllib.request.Request(
             sys_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.1 (EDSM Discovery Integration)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.2 (EDSM Discovery Integration)"}
         )
 
         try:
@@ -351,7 +351,7 @@ class EDSMService:
         bodies_url = f"{EDSM_BODIES_API}?systemName={encoded_name}"
         bodies_req = urllib.request.Request(
             bodies_url,
-            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.1 (EDSM Discovery Integration)"}
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.2 (EDSM Discovery Integration)"}
         )
 
         first_discoverer = None

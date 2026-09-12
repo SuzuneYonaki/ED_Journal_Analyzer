@@ -3164,11 +3164,16 @@ function renderBodyInspector() {
                         ${hasCoord ? `緯度: ${latStr}  経度: ${lonStr}` : '<span style="color: var(--text-dim);">座標記録なし</span>'}
                       </span>
                     </div>
-                    ${hasCoord ? `
-                      <button type="button" class="view-btn btn-copy-coords" data-coords="${copyVal}" style="padding: 2px 8px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="クリップボードに座標 (${copyVal}) をコピー">
-                        📋 座標コピー
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                      ${hasCoord ? `
+                        <button type="button" class="view-btn btn-copy-coords" data-coords="${copyVal}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="クリップボードに座標 (${copyVal}) をコピー">
+                          📋 座標コピー
+                        </button>
+                      ` : ''}
+                      <button type="button" class="view-btn btn-append-mining-note" data-site-idx="${idx}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #f59e0b; cursor: pointer;" title="この地点の緯度経度と掘れた鉱物を惑星メモに追記">
+                        📝 メモに追記
                       </button>
-                    ` : ''}
+                    </div>
                   </div>
                   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">
@@ -3188,11 +3193,16 @@ function renderBodyInspector() {
 
         miningActivitiesEl.innerHTML = `
           <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 10px; margin-top: 6px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; flex-wrap: wrap; gap: 6px;">
               <span style="font-size: 0.78rem; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
                 <span>🦏</span> <span>Rhino 惑星表面採掘地点 & 鉱物</span>
               </span>
-              <span style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">採掘地点: ${miningSites.length} 箇所</span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">採掘地点: ${miningSites.length} 箇所</span>
+                <button type="button" id="btn-sync-all-mining-notes" class="view-btn" style="padding: 2px 8px; font-size: 0.68rem; background: rgba(245, 158, 11, 0.18); border-color: rgba(245, 158, 11, 0.5); color: #fbbf24; cursor: pointer; font-weight: bold;" title="記録されたすべての採掘地点の緯度経度と鉱物を惑星メモにまとめて追記">
+                  📝 全地点をメモに追記
+                </button>
+              </div>
             </div>
             ${mapHtml}
             ${cardsHtml}
@@ -3219,6 +3229,115 @@ function renderBodyInspector() {
             }
           });
         });
+
+        // Helper to update bookmark display across UI when note is appended
+        const syncBookmarkUIState = (savedBm, updatedNote) => {
+          b.bookmark = savedBm;
+          if (bmNoteInput) bmNoteInput.value = updatedNote || (savedBm ? savedBm.note_markdown : '');
+          if (bmStatusIndicator) bmStatusIndicator.style.display = 'inline-block';
+          if (btnBmDelete) btnBmDelete.style.display = 'inline-block';
+          if (inspectBmIcon) inspectBmIcon.innerText = '★';
+          if (inspectBmText) inspectBmText.innerText = 'ブックマーク中';
+          if (btnBmToggle) {
+            btnBmToggle.classList.add('active');
+            btnBmToggle.style.background = 'rgba(251, 191, 36, 0.2)';
+          }
+          if (state.selectedSystem && state.selectedSystem.bookmarks) {
+            const existingIdx = state.selectedSystem.bookmarks.findIndex(bm => bm.body_id === b.body_id);
+            if (existingIdx >= 0) {
+              state.selectedSystem.bookmarks[existingIdx] = savedBm;
+            } else if (savedBm) {
+              state.selectedSystem.bookmarks.push(savedBm);
+            }
+          }
+        };
+
+        // Bind single site append note button
+        miningActivitiesEl.querySelectorAll('.btn-append-mining-note').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const sIdx = parseInt(btn.dataset.siteIdx, 10);
+            const site = miningSites[sIdx];
+            if (!site) return;
+
+            btn.disabled = true;
+            const origHtml = btn.innerHTML;
+            btn.innerHTML = '⏳ 追記中...';
+
+            try {
+              const resp = await fetch(`/api/bookmark/${b.system_address}/${b.body_id}/append_mining`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  latitude: site.latitude,
+                  longitude: site.longitude,
+                  minerals: site.commodities || []
+                })
+              });
+              if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+              const resData = await resp.json();
+              btn.innerHTML = '✓ 追記済';
+              btn.style.color = '#34d399';
+              btn.style.borderColor = '#34d399';
+
+              syncBookmarkUIState(resData.bookmark, resData.note_markdown);
+
+              setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+                btn.style.color = '';
+                btn.style.borderColor = '';
+              }, 1800);
+            } catch (err) {
+              console.error('Failed to append mining note:', err);
+              btn.disabled = false;
+              btn.innerHTML = '❌ 失敗';
+              setTimeout(() => {
+                btn.innerHTML = origHtml;
+              }, 2000);
+            }
+          });
+        });
+
+        // Bind sync all mining sites button
+        const btnSyncAll = document.getElementById('btn-sync-all-mining-notes');
+        if (btnSyncAll) {
+          btnSyncAll.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            btnSyncAll.disabled = true;
+            const origHtml = btnSyncAll.innerHTML;
+            btnSyncAll.innerHTML = '⏳ 全地点追記中...';
+
+            try {
+              const resp = await fetch(`/api/bookmark/${b.system_address}/${b.body_id}/append_mining`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+              });
+              if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+              const resData = await resp.json();
+              btnSyncAll.innerHTML = '✓ 全地点反映済';
+              btnSyncAll.style.color = '#34d399';
+              btnSyncAll.style.borderColor = '#34d399';
+
+              syncBookmarkUIState(resData.bookmark, resData.note_markdown);
+
+              setTimeout(() => {
+                btnSyncAll.disabled = false;
+                btnSyncAll.innerHTML = origHtml;
+                btnSyncAll.style.color = '';
+                btnSyncAll.style.borderColor = '';
+              }, 2000);
+            } catch (err) {
+              console.error('Failed to sync all mining notes:', err);
+              btnSyncAll.disabled = false;
+              btnSyncAll.innerHTML = '❌ 失敗';
+              setTimeout(() => {
+                btnSyncAll.innerHTML = origHtml;
+              }, 2000);
+            }
+          });
+        }
 
         // Bind map markers hover/click to highlight cards
         miningActivitiesEl.querySelectorAll('.mining-map-marker').forEach(marker => {

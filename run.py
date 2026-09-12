@@ -218,7 +218,7 @@ def main():
         # Create Desktop Window with pywebview using dedicated cache directory
         if is_ready:
             window = webview.create_window(
-                title="Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.1)",
+                title="Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.2)",
                 url=url,
                 width=1400,
                 height=900,

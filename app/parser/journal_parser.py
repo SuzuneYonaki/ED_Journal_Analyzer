@@ -10,6 +10,8 @@ from app.parser.value_calculator import calculate_body_value
 from app.parser.exobiology import predict_exobiology_candidates, get_species_value
 from app.analyzer.anomaly_finder import detect_anomalies
 from app.services.edsm_service import edsm_service
+from app.live.rhino.note_integrator import update_body_note_in_db
+from app.live.telemetry import telemetry_tracker
 
 class JournalParser:
     def __init__(self, db_conn=None, event_callback=None, is_live: bool = False):
@@ -770,6 +772,13 @@ class JournalParser:
         # Classify body_type (Icy, Rocky, Icy Rocky, HMC, Metal Rich)
         body_type = self._get_body_type_category(sys_addr, body_id, body_name)
 
+        # If in SRV but latitude is missing, attempt to query live Status.json
+        if self.in_srv and self.current_latitude is None and self.is_live:
+            lat, lon = telemetry_tracker.get_coordinates()
+            if lat is not None:
+                self.current_latitude = lat
+                self.current_longitude = lon
+
         if sys_addr and name:
             self.cursor.execute("""
                 INSERT INTO surface_mining_activities (
@@ -784,6 +793,22 @@ class JournalParser:
             ))
             self.dirty_systems.add(sys_addr)
 
+            # Automatically update planet markdown note with mined material & coordinates if in SRV
+            if self.in_srv and body_id is not None:
+                try:
+                    update_body_note_in_db(
+                        conn=self.conn,
+                        system_address=sys_addr,
+                        body_id=body_id,
+                        body_name=body_name or f"Body {body_id}",
+                        star_system=star_sys or "Unknown",
+                        lat=self.current_latitude,
+                        lon=self.current_longitude,
+                        minerals=[name_loc or name]
+                    )
+                except Exception:
+                    pass
+
     def _handle_mining_refined(self, data: dict, timestamp: str):
         # Only track surface/SRV mining refined commodities
         if not self.in_srv:
@@ -792,6 +817,13 @@ class JournalParser:
         raw_type = data.get("Type", "")
         clean_type = raw_type.replace("$", "").replace("_name;", "").replace(";", "").strip()
         type_loc = data.get("Type_Localised") or clean_type
+
+        # If in SRV but latitude is missing, attempt to query live Status.json
+        if self.current_latitude is None and self.is_live:
+            lat, lon = telemetry_tracker.get_coordinates()
+            if lat is not None:
+                self.current_latitude = lat
+                self.current_longitude = lon
 
         sys_addr = self.current_system_address
         star_sys = self.current_star_system
@@ -814,6 +846,22 @@ class JournalParser:
                 1, self.current_latitude, self.current_longitude, timestamp
             ))
             self.dirty_systems.add(sys_addr)
+
+            # Automatically update planet markdown note with refined mineral & coordinates
+            if body_id is not None:
+                try:
+                    update_body_note_in_db(
+                        conn=self.conn,
+                        system_address=sys_addr,
+                        body_id=body_id,
+                        body_name=body_name or f"Body {body_id}",
+                        star_system=star_sys or "Unknown",
+                        lat=self.current_latitude,
+                        lon=self.current_longitude,
+                        minerals=[type_loc or clean_type]
+                    )
+                except Exception:
+                    pass
 
     def _update_system_stats(self, sys_addr: int):
         self.cursor.execute("""
