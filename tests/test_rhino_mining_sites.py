@@ -135,6 +135,7 @@ def test_api_mining_sites_crud(client):
         "body_name": body_name,
         "latitude": 24.5678,
         "longitude": -80.1234,
+        "hotspot": "Hotspot 1",
         "minerals": "Iron, Manganese",
         "note": "Initial crater survey"
     })
@@ -150,6 +151,7 @@ def test_api_mining_sites_crud(client):
     assert target is not None
     assert abs(target["latitude"] - 24.5678) < 1e-4
     assert abs(target["longitude"] - (-80.1234)) < 1e-4
+    assert target["hotspot"] == "Hotspot 1"
     assert "Iron" in target["commodities"]
     assert "Manganese" in target["commodities"]
     assert target["note"] == "Initial crater survey"
@@ -158,6 +160,7 @@ def test_api_mining_sites_crud(client):
     put_res = client.put(f"/api/mining_sites/{site_id}", json={
         "latitude": 24.5800,
         "longitude": -80.1400,
+        "hotspot": "Painite Hotspot",
         "minerals": "Iron, Manganese, Polonium",
         "note": "Updated survey: rich deposit found"
     })
@@ -169,6 +172,7 @@ def test_api_mining_sites_crud(client):
     target2 = next((s for s in sites_data2 if s["id"] == site_id), None)
     assert target2 is not None
     assert abs(target2["latitude"] - 24.5800) < 1e-4
+    assert target2["hotspot"] == "Painite Hotspot"
     assert "Polonium" in target2["commodities"]
     assert target2["note"] == "Updated survey: rich deposit found"
 
@@ -181,6 +185,9 @@ def test_api_mining_sites_crud(client):
     b_obj = next((b for b in sys_payload["bodies"] if b["body_id"] == body_id), None)
     assert b_obj is not None
     assert any(s["id"] == site_id for s in b_obj.get("rhino_mining_sites", []))
+    b_site = next((s for s in b_obj.get("rhino_mining_sites", []) if s["id"] == site_id), None)
+    assert b_site is not None
+    assert b_site["hotspot"] == "Painite Hotspot"
 
     # 5. Delete site via DELETE
     del_res = client.delete(f"/api/mining_sites/{site_id}")

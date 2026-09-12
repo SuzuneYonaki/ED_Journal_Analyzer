@@ -1008,6 +1008,7 @@ class MiningSiteCreateRequest(BaseModel):
     body_name: Optional[str] = None
     latitude: float
     longitude: float
+    hotspot: Optional[str] = ""
     minerals: str
     note: Optional[str] = ""
 
@@ -1015,6 +1016,7 @@ class MiningSiteCreateRequest(BaseModel):
 class MiningSiteUpdateRequest(BaseModel):
     latitude: float
     longitude: float
+    hotspot: Optional[str] = ""
     minerals: str
     note: Optional[str] = ""
 
@@ -1042,6 +1044,7 @@ def api_create_mining_site(req: MiningSiteCreateRequest):
             latitude=req.latitude,
             longitude=req.longitude,
             minerals=req.minerals,
+            hotspot=req.hotspot or "",
             note=req.note or ""
         )
         return {"status": "success", "site_id": site_id}
@@ -1059,6 +1062,7 @@ def api_update_mining_site(site_id: int, req: MiningSiteUpdateRequest):
             latitude=req.latitude,
             longitude=req.longitude,
             minerals=req.minerals,
+            hotspot=req.hotspot or "",
             note=req.note or ""
         )
         if not ok:

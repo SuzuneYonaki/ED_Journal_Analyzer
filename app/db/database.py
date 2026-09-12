@@ -258,6 +258,7 @@ def init_db(conn=None):
         body_name TEXT,
         latitude REAL NOT NULL,
         longitude REAL NOT NULL,
+        hotspot TEXT DEFAULT '',
         minerals TEXT NOT NULL DEFAULT '',
         note TEXT DEFAULT '',
         created_at TEXT NOT NULL,
@@ -525,6 +526,15 @@ def init_db(conn=None):
     except Exception as e:
         print(f"Luminosity migration notice: {e}")
 
+    # Migration: add hotspot column to surface_mining_sites if missing
+    try:
+        cursor.execute("PRAGMA table_info(surface_mining_sites)")
+        cols = [c[1] for c in cursor.fetchall()]
+        if "hotspot" not in cols:
+            cursor.execute("ALTER TABLE surface_mining_sites ADD COLUMN hotspot TEXT DEFAULT ''")
+    except Exception:
+        pass
+
     # Migration: seed surface_mining_sites from surface_mining_activities if empty
     try:
         cursor.execute("SELECT COUNT(*) FROM surface_mining_sites")
@@ -586,6 +596,7 @@ def save_or_merge_mining_site(
     latitude: float,
     longitude: float,
     material_name: str,
+    hotspot: str = "",
     timestamp: Optional[str] = None,
     note: str = ""
 ) -> int:
@@ -597,7 +608,7 @@ def save_or_merge_mining_site(
     """
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, latitude, longitude, minerals, note 
+        SELECT id, latitude, longitude, hotspot, minerals, note 
         FROM surface_mining_sites
         WHERE system_address = ? AND (body_id = ? OR (body_id IS NULL AND ? IS NULL))
     """, (system_address, body_id, body_id))
@@ -620,22 +631,23 @@ def save_or_merge_mining_site(
         if clean_mat and clean_mat not in curr_mats:
             curr_mats.append(clean_mat)
         merged_mats_str = ", ".join(curr_mats)
+        final_hotspot = hotspot.strip() or (matched_site["hotspot"] or "")
         cursor.execute("""
             UPDATE surface_mining_sites
-            SET minerals = ?, updated_at = ?
+            SET minerals = ?, hotspot = ?, updated_at = ?
             WHERE id = ?
-        """, (merged_mats_str, now_ts, site_id))
+        """, (merged_mats_str, final_hotspot, now_ts, site_id))
         conn.commit()
         return site_id
     else:
         cursor.execute("""
             INSERT INTO surface_mining_sites (
                 system_address, star_system, body_id, body_name,
-                latitude, longitude, minerals, note, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                latitude, longitude, hotspot, minerals, note, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             system_address, star_system or "Unknown", body_id, body_name or (f"Body {body_id}" if body_id is not None else "Surface"),
-            round(latitude, 6), round(longitude, 6), clean_mat, note, now_ts, now_ts
+            round(latitude, 6), round(longitude, 6), (hotspot or "").strip(), clean_mat, note, now_ts, now_ts
         ))
         conn.commit()
         return cursor.lastrowid
@@ -675,6 +687,7 @@ def add_manual_mining_site(
     latitude: float,
     longitude: float,
     minerals: str,
+    hotspot: str = "",
     note: str = ""
 ) -> int:
     """Manually registers a new mining site."""
@@ -684,11 +697,11 @@ def add_manual_mining_site(
     cursor.execute("""
         INSERT INTO surface_mining_sites (
             system_address, star_system, body_id, body_name,
-            latitude, longitude, minerals, note, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            latitude, longitude, hotspot, minerals, note, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         system_address, star_system or "Unknown", body_id, body_name or (f"Body {body_id}" if body_id is not None else "Surface"),
-        round(latitude, 6), round(longitude, 6), clean_mats, note, now_ts, now_ts
+        round(latitude, 6), round(longitude, 6), (hotspot or "").strip(), clean_mats, note, now_ts, now_ts
     ))
     conn.commit()
     return cursor.lastrowid
@@ -700,17 +713,18 @@ def update_mining_site(
     latitude: float,
     longitude: float,
     minerals: str,
+    hotspot: str = "",
     note: str = ""
 ) -> bool:
-    """Updates an existing mining site (coordinates, minerals, note)."""
+    """Updates an existing mining site (coordinates, minerals, hotspot, note)."""
     cursor = conn.cursor()
     now_ts = datetime.utcnow().isoformat() + "Z"
     clean_mats = ", ".join([m.strip() for m in minerals.split(",") if m.strip()])
     cursor.execute("""
         UPDATE surface_mining_sites
-        SET latitude = ?, longitude = ?, minerals = ?, note = ?, updated_at = ?
+        SET latitude = ?, longitude = ?, hotspot = ?, minerals = ?, note = ?, updated_at = ?
         WHERE id = ?
-    """, (round(latitude, 6), round(longitude, 6), clean_mats, note, now_ts, site_id))
+    """, (round(latitude, 6), round(longitude, 6), (hotspot or "").strip(), clean_mats, note, now_ts, site_id))
     conn.commit()
     return cursor.rowcount > 0
 

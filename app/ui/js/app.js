@@ -3184,11 +3184,12 @@ function renderBodyInspector() {
         const commNames = (site.commodities || []).join(', ') || (site.minerals || '採掘地点');
         const latFmt = (site.latitude >= 0 ? '+' : '') + Number(site.latitude).toFixed(4);
         const lonFmt = (site.longitude >= 0 ? '+' : '') + Number(site.longitude).toFixed(4);
+        const markerTitle = `${site.hotspot ? `[Hotspot: ${site.hotspot}] ` : ''}${commNames} (Lat: ${latFmt}°, Lon: ${lonFmt}°)`;
         return `
           <g class="mining-map-marker" data-site-idx="${idx}" style="cursor: pointer;">
             <circle cx="${cx}" cy="${cy}" r="6" fill="none" stroke="#38bdf8" stroke-width="1.2" class="pulse-marker" />
             <circle cx="${cx}" cy="${cy}" r="3" fill="#38bdf8" stroke="#ffffff" stroke-width="0.8" />
-            <title>${escapeHtml(commNames)} (Lat: ${latFmt}°, Lon: ${lonFmt}°)</title>
+            <title>${escapeHtml(markerTitle)}</title>
           </g>
         `;
       }).join('');
@@ -3255,9 +3256,10 @@ function renderBodyInspector() {
                 ? site.commodities
                 : ((site.minerals || '').split(',').map(s => s.trim()).filter(Boolean));
               const mineralsStr = mineralsList.join(', ');
+              const hotspotStr = site.hotspot ? ` (Hotspot: ${site.hotspot})` : '';
               const copyText = hasCoord 
-                ? `緯度: ${latStr}, 経度: ${lonStr} [${mineralsStr || '採掘記録'}]${site.note ? ` (${site.note})` : ''}`
-                : `[${mineralsStr || '採掘記録'}]${site.note ? ` (${site.note})` : ''}`;
+                ? `緯度: ${latStr}, 経度: ${lonStr}${hotspotStr} [${mineralsStr || '採掘記録'}]${site.note ? ` (${site.note})` : ''}`
+                : `${hotspotStr ? `${hotspotStr.trim()} ` : ''}[${mineralsStr || '採掘記録'}]${site.note ? ` (${site.note})` : ''}`;
 
               const mineralBadges = mineralsList.map(m => `
                 <span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #e0f2fe; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.72rem; padding: 2px 6px; font-weight: bold;">
@@ -3270,11 +3272,16 @@ function renderBodyInspector() {
               return `
                 <div class="mining-site-card" id="mining-site-card-${idx}" style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 8px 10px; transition: all 0.2s;">
                   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; margin-bottom: 5px;">
-                    <div style="display: flex; align-items: center; gap: 6px;">
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                       <span style="color: var(--ed-orange); font-size: 0.85rem;">📍</span>
                       <span style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: bold; color: #fff;">
                         ${hasCoord ? `緯度: ${latStr}  経度: ${lonStr}` : '<span style="color: var(--text-dim);">座標記録なし</span>'}
                       </span>
+                      ${site.hotspot ? `
+                        <span class="tag-badge" style="background: rgba(234, 88, 12, 0.2); color: #fb923c; border: 1px solid rgba(234, 88, 12, 0.45); font-size: 0.7rem; padding: 2px 6px; font-weight: bold;" title="近傍 Hotspot / PML拠点">
+                          🎯 Hotspot: ${escapeHtml(site.hotspot)}
+                        </span>
+                      ` : ''}
                     </div>
                     <div style="display: flex; gap: 4px; align-items: center;">
                       <button type="button" class="view-btn btn-copy-mining-site" data-copy-text="${encodeURIComponent(copyText)}" data-coords="${rawCoords}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="座標と採掘鉱物をクリップボードにコピー">
@@ -6230,6 +6237,8 @@ function openMiningSiteModal(opts) {
   const idInput = document.getElementById('input-mining-site-id');
   const latInput = document.getElementById('input-mining-lat');
   const lonInput = document.getElementById('input-mining-lon');
+  const hotspotInput = document.getElementById('input-mining-hotspot');
+  const hotspotDatalist = document.getElementById('mining-hotspots-datalist');
   const mineralsInput = document.getElementById('input-mining-minerals');
   const noteInput = document.getElementById('input-mining-note');
   const errEl = document.getElementById('modal-mining-site-error');
@@ -6243,11 +6252,26 @@ function openMiningSiteModal(opts) {
     bodyNameEl.innerText = opts.body ? opts.body.body_name : '--';
   }
 
+  // Populate candidate hotspots in datalist
+  if (hotspotDatalist) {
+    const candidates = new Set();
+    const sigCount = (opts.body && opts.body.mining_signals) || 0;
+    for (let i = 1; i <= sigCount; i++) {
+      candidates.add(`Hotspot ${i}`);
+    }
+    const existingSites = (opts.body && opts.body.rhino_mining_sites) || [];
+    existingSites.forEach(st => {
+      if (st.hotspot && st.hotspot.trim()) candidates.add(st.hotspot.trim());
+    });
+    hotspotDatalist.innerHTML = Array.from(candidates).map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+  }
+
   if (opts.isNew) {
     if (titleEl) titleEl.innerHTML = '<span>➕</span> <span>採掘地点の追加</span>';
     if (idInput) idInput.value = '';
     if (latInput) latInput.value = '';
     if (lonInput) lonInput.value = '';
+    if (hotspotInput) hotspotInput.value = '';
     if (mineralsInput) mineralsInput.value = '';
     if (noteInput) noteInput.value = '';
   } else {
@@ -6256,6 +6280,7 @@ function openMiningSiteModal(opts) {
     if (idInput) idInput.value = s.id || '';
     if (latInput) latInput.value = (s.latitude !== null && s.latitude !== undefined) ? s.latitude : '';
     if (lonInput) lonInput.value = (s.longitude !== null && s.longitude !== undefined) ? s.longitude : '';
+    if (hotspotInput) hotspotInput.value = s.hotspot || '';
     const minText = (s.commodities && s.commodities.length > 0)
       ? s.commodities.join(', ')
       : (s.minerals || '');
@@ -6298,6 +6323,7 @@ function initMiningSiteModal() {
       const idVal = document.getElementById('input-mining-site-id').value.trim();
       const latRaw = document.getElementById('input-mining-lat').value.trim();
       const lonRaw = document.getElementById('input-mining-lon').value.trim();
+      const hotspotVal = (document.getElementById('input-mining-hotspot')?.value || '').trim();
       const mineralsVal = document.getElementById('input-mining-minerals').value.trim();
       const noteVal = document.getElementById('input-mining-note').value.trim();
 
@@ -6341,6 +6367,7 @@ function initMiningSiteModal() {
             body: JSON.stringify({
               latitude: lat,
               longitude: lon,
+              hotspot: hotspotVal,
               minerals: mineralsVal,
               note: noteVal
             })
@@ -6363,6 +6390,7 @@ function initMiningSiteModal() {
               body_name: b.body_name,
               latitude: lat,
               longitude: lon,
+              hotspot: hotspotVal,
               minerals: mineralsVal,
               note: noteVal
             })

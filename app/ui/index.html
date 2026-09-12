@@ -765,10 +765,10 @@
           <div class="section-heading" style="color: #38bdf8;" data-i18n="section_mining">⛏️ 惑星採掘拠点 & Rhino採掘実績</div>
           <div id="inspect-mining-signals-info" style="font-size: 0.82rem; color: var(--text-primary); background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <span style="font-weight: bold; color: #38bdf8;">⛏️ 採掘拠点シグナル検出:</span>
+              <span style="font-weight: bold; color: #38bdf8;">⛏️ 採掘拠点シグナル (Hotspots) 検出:</span>
               <span id="inspect-mining-count" style="font-weight: bold; font-size: 1.05rem; margin-left: 6px; color: #fff;">0</span> 箇所
             </div>
-            <span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-size: 0.72rem;">MINING LOCATION</span>
+            <span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-size: 0.72rem;">HOTSPOTS / PML</span>
           </div>
           <div id="inspect-mining-activities" style="margin-top: 8px;"></div>
         </div>
@@ -1380,6 +1380,11 @@
             <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">経度 (Longitude: -180 ~ +180):</label>
             <input type="number" id="input-mining-lon" step="any" min="-180" max="180" placeholder="例: -45.6789" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-family: var(--font-mono); font-size: 0.85rem;">
           </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">🎯 近傍 Hotspot / PML拠点 (任意):</label>
+          <input type="text" id="input-mining-hotspot" list="mining-hotspots-datalist" placeholder="例: Hotspot 1, 鉄 Hotspot, PML #2 など" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-size: 0.85rem;">
+          <datalist id="mining-hotspots-datalist"></datalist>
         </div>
         <div style="margin-bottom: 12px;">
           <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">採掘鉱物 / 素材 (カンマ区切り):</label>
