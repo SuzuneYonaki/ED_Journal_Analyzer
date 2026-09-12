@@ -136,6 +136,29 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 - **リアルタイム監視**:
   - ゲームプレイ中のジャーナル差分を自動検知して即座に画面へ反映。
 
+### 🌌 生成AIを活用した天体物理学的考察・星系形成史シナリオの推論 (LLM Prompting)
+
+本アプリで解析・管理される星系観測データ（またはエクスポートされた星系JSON / edsysデータ）を、各種生成AI（ChatGPT、Claude、Gemini、ローカルLLMなど）に読み込ませて以下のプロンプトを入力することで、現代の天体物理学・惑星科学に基づいた高精度な学術的考察や、星系形成史シナリオ、臨場感あふれる情景描写を推論させることができます。
+
+#### 💡 推論用プロンプト・テンプレート
+
+```text
+添付したJSONデータは、宇宙シミュレーションゲーム『Elite Dangerous』の星系観測ログです。
+
+この星系に存在する天体配置、物理パラメータ（質量・半径・表面温度・大気圧・組成）、軌道要素（軌道長半径・離心率・公転周期）を天体物理学・惑星科学の観点から詳細に精査してください。
+
+その上で、以下の内容について考察と解説をお願いします：
+
+1. **物理的なリアリズムと矛盾点**:
+   - 現代天文学・惑星形成理論から見て「あり得る点」と「物理的に不自然・矛盾している点（ゲーム的デフォルメやプロシージャル生成の癖）」の切り分け。
+2. **星系の形成史シナリオ（成り立ちの仮説）**:
+   - もしこの星系が実在すると仮定した場合、主星の進化（前駆星から現在に至るまで）、惑星系の誕生（原始惑星系円盤またはフォールバック・ディスク等）、軌道の進化（真円化や重力散乱）、そして現在の温度・大気が維持されているメカニズムについて、時系列に沿った詳細な科学的仮説シナリオ。
+3. **天文学的・観測的な特異性と景観の描写**:
+   - この星系特有のレアリティの解説、およびもし人類がこの惑星（特に地球型天体）の地表や軌道上に立った場合に観測されるであろう天球・空・環境の情景描写。
+
+※お世辞や定型句は省き、学術的な査読論文の解説や専門的なフィールドノートのようなトーンで論理的に解説してください。
+```
+
 ### 起動方法
 
 ```powershell
@@ -281,6 +304,29 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
   - Side-by-side display of **FSS Scan Total** and **Max Potential (FD+FM)**.
 - **Real-Time Journal Watcher**:
   - Lightweight background thread automatically detects new in-game journal entries and updates the UI live.
+
+### 🌌 Deep Astrophysical Analysis & Stellar History Deduction via Generative AI (LLM Prompting)
+
+You can feed the stellar system observation logs (system JSON / edsys data) parsed and managed by this application into modern Generative AI models (e.g. ChatGPT, Claude, Gemini, or local LLMs) using the prompt template below to deduce rigorous astrophysical critiques, stellar formation histories, and vivid atmospheric/orbital landscape descriptions:
+
+#### 💡 Generative AI Prompt Template
+
+```text
+添付したJSONデータは、宇宙シミュレーションゲーム『Elite Dangerous』の星系観測ログです。
+
+この星系に存在する天体配置、物理パラメータ（質量・半径・表面温度・大気圧・組成）、軌道要素（軌道長半径・離心率・公転周期）を天体物理学・惑星科学の観点から詳細に精査してください。
+
+その上で、以下の内容について考察と解説をお願いします：
+
+1. **物理的なリアリズムと矛盾点**:
+   - 現代天文学・惑星形成理論から見て「あり得る点」と「物理的に不自然・矛盾している点（ゲーム的デフォルメやプロシージャル生成の癖）」の切り分け。
+2. **星系の形成史シナリオ（成り立ちの仮説）**:
+   - もしこの星系が実在すると仮定した場合、主星の進化（前駆星から現在に至るまで）、惑星系の誕生（原始惑星系円盤またはフォールバック・ディスク等）、軌道の進化（真円化や重力散乱）、そして現在の温度・大気が維持されているメカニズムについて、時系列に沿った詳細な科学的仮説シナリオ。
+3. **天文学的・観測的な特異性と景観の描写**:
+   - この星系特有のレアリティの解説、およびもし人類がこの惑星（特に地球型天体）の地表や軌道上に立った場合に観測されるであろう天球・空・環境の情景描写。
+
+※お世辞や定型句は省き、学術的な査読論文の解説や専門的なフィールドノートのようなトーンで論理的に解説してください。
+```
 
 ### Installation & Run
 
