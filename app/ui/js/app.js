@@ -566,6 +566,58 @@ async function selectSystem(systemAddress, preserveSelectedBody = false, resetJu
   }
 }
 
+// Module Display Settings (Exobiology & Rhino Mining)
+const defaultModuleSettings = {
+  exobiology: true,
+  rhino: true
+};
+
+function getModuleSettings() {
+  try {
+    const raw = localStorage.getItem('ed_module_settings');
+    if (raw) {
+      return { ...defaultModuleSettings, ...JSON.parse(raw) };
+    }
+  } catch (e) {
+    console.warn('Failed to load module settings:', e);
+  }
+  return { ...defaultModuleSettings };
+}
+
+function saveModuleSettings(settings) {
+  try {
+    localStorage.setItem('ed_module_settings', JSON.stringify(settings));
+    fetch('/api/module_settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    }).catch(() => {});
+  } catch (e) {
+    console.warn('Failed to save module settings:', e);
+  }
+}
+window.getModuleSettings = getModuleSettings;
+
+function updateModuleVisibilityUI() {
+  const modSettings = getModuleSettings();
+  
+  // View switcher buttons in Central Pane
+  const btnViewBio = document.getElementById('btn-view-bio');
+  const btnViewMining = document.getElementById('btn-view-mining');
+  if (btnViewBio) btnViewBio.style.display = modSettings.exobiology ? 'inline-block' : 'none';
+  if (btnViewMining) btnViewMining.style.display = modSettings.rhino ? 'inline-block' : 'none';
+
+  // If currently selected view became hidden, fallback to sysmap
+  if (state.currentView === 'bio' && !modSettings.exobiology) {
+    state.currentView = 'sysmap';
+    if (typeof updateViewButtons === 'function') updateViewButtons();
+  }
+  if (state.currentView === 'mining' && !modSettings.rhino) {
+    state.currentView = 'sysmap';
+    if (typeof updateViewButtons === 'function') updateViewButtons();
+  }
+}
+
 // Landmark Display Settings & Badge Generator
 const defaultLandmarkSettings = {
   cmdr: true,
@@ -688,8 +740,12 @@ function renderSystemList() {
     if (sys.has_water_world) tags.push('<span class="tag-badge tag-ww">WW</span>');
     if (sys.has_ammonia) tags.push('<span class="tag-badge tag-ammonia">Ammonia</span>');
     if (sys.has_terraformable) tags.push('<span class="tag-badge tag-tf">TF</span>');
-    if (sys.total_bio_signals > 0) tags.push(`<span class="tag-badge tag-bio">BIO: ${sys.total_bio_signals}</span>`);
-    else if (sys.has_bio) tags.push('<span class="tag-badge tag-bio">BIO</span>');
+    
+    const modSettings = getModuleSettings();
+    if (modSettings.exobiology !== false) {
+      if (sys.total_bio_signals > 0) tags.push(`<span class="tag-badge tag-bio">BIO: ${sys.total_bio_signals}</span>`);
+      else if (sys.has_bio) tags.push('<span class="tag-badge tag-bio">BIO</span>');
+    }
     
     // Configurable Key Galactic Distances (CMDR, Sol, Colonia, Rainbow's End, Explorer's Anchorage)
     const distanceBadges = generateLandmarkDistanceBadges(sys);
@@ -775,7 +831,7 @@ function renderSystemList() {
     };
     const hasAnyMiningFilter = Object.values(activeMiningFilters).some(Boolean);
 
-    if (hasAnyMiningFilter && sys.landable_bodies && sys.landable_bodies.length > 0) {
+    if (modSettings.rhino !== false && hasAnyMiningFilter && sys.landable_bodies && sys.landable_bodies.length > 0) {
       const matchedBodies = sys.landable_bodies.filter(lb => {
         if (activeMiningFilters.hmc && lb.type === 'HMC') return true;
         if (activeMiningFilters.metal_rich && lb.type === 'Metal Rich') return true;
@@ -1080,6 +1136,9 @@ function getSortedBodies(bodies) {
     } else if (by === 'bio') {
       valA = a.bio_signals || 0;
       valB = b.bio_signals || 0;
+    } else if (by === 'pml' || by === 'mining') {
+      valA = a.mining_signals || (a.rhino_mining_sites ? a.rhino_mining_sites.length : 0) || 0;
+      valB = b.mining_signals || (b.rhino_mining_sites ? b.rhino_mining_sites.length : 0) || 0;
     } else if (by === 'radius') {
       valA = a.radius || 0;
       valB = b.radius || 0;
@@ -1091,13 +1150,21 @@ function getSortedBodies(bodies) {
       valB = b.distance_from_arrival_ls || 0;
     }
 
-    if (order === 'asc') return valA - valB;
-    return valB - valA;
+    if (valA !== valB) {
+      if (order === 'asc') return valA - valB;
+      return valB - valA;
+    }
+    // Tie-break by arrival distance (nearest first)
+    const distA = a.distance_from_arrival_ls !== null && a.distance_from_arrival_ls !== undefined ? a.distance_from_arrival_ls : 999999999;
+    const distB = b.distance_from_arrival_ls !== null && b.distance_from_arrival_ls !== undefined ? b.distance_from_arrival_ls : 999999999;
+    return distA - distB;
   });
   return list;
 }
 
 function renderBodyExobiologyBlock(node) {
+  const modSettings = getModuleSettings();
+  if (modSettings.exobiology === false) return '';
   const bioSig = node.bio_signals || 0;
   const scannedList = node.scanned_organics || [];
   const rawPotential = node.exobiology || node.potential_exobiology || [];
@@ -1354,6 +1421,8 @@ function renderBodyGeoBlock(node) {
 }
 
 function renderBodyMiningBlock(node) {
+  const modSettings = getModuleSettings();
+  if (modSettings.rhino === false) return '';
   const miningSig = node.mining_signals || 0;
   if (miningSig === 0) return '';
 
@@ -1912,7 +1981,8 @@ function renderHierarchyTree(container, nodes) {
     }
 
     if (node.geo_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(255,113,0,0.2); color: var(--ed-orange);">GEO: ${node.geo_signals}</span>`);
-    if (node.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${node.mining_signals}</span>`);
+    const modSettings = getModuleSettings();
+    if (modSettings.rhino !== false && node.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${node.mining_signals}</span>`);
     if (node.anomalies && node.anomalies.length > 0) {
       node.anomalies.forEach(a => badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`));
     }
@@ -2016,7 +2086,8 @@ function renderFlatBodiesList(container, bodies) {
       badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">🌡️ ${Math.round(body.surface_temperature)}K</span>`);
     }
     if (body.geo_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(255,113,0,0.2); color: var(--ed-orange);">GEO: ${body.geo_signals}</span>`);
-    if (body.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${body.mining_signals}</span>`);
+    const modSettings = getModuleSettings();
+    if (modSettings.rhino !== false && body.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${body.mining_signals}</span>`);
     if (body.anomalies && body.anomalies.length > 0) {
       body.anomalies.forEach(a => badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`));
     }
@@ -2718,12 +2789,17 @@ function renderBodyInspector() {
   document.getElementById('val-max-total').innerText = formatCredits(b.max_potential_value);
 
   // Exobiology Predictions & Confirmed
+  const secBio = document.getElementById('section-exobiology');
+  const modSettings = getModuleSettings();
   const bioInfo = document.getElementById('inspect-bio-signals-info');
   const bioContainer = document.getElementById('inspect-bio-predictions');
   const scannedOrganics = b.scanned_organics || [];
   const potBio = b.potential_exobiology || b.exobiology || [];
 
-  if (b.bio_signals > 0 || scannedOrganics.length > 0 || potBio.length > 0) {
+  if (modSettings.exobiology === false) {
+    if (secBio) secBio.style.display = 'none';
+  } else if (b.bio_signals > 0 || scannedOrganics.length > 0 || potBio.length > 0) {
+    if (secBio) secBio.style.display = 'block';
     bioInfo.innerText = `${t('bio_signals_detected')}: ${b.bio_signals || 0} (${t('bio_status_confirmed')}: ${scannedOrganics.length})`;
     
     let html = '';
@@ -2827,8 +2903,13 @@ function renderBodyInspector() {
 
     bioContainer.innerHTML = html;
   } else {
-    bioInfo.innerText = t('bio_none');
-    bioContainer.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-dim);">${t('bio_none_desc')}</div>`;
+    if (modSettings.exobiology === false) {
+      if (secBio) secBio.style.display = 'none';
+    } else {
+      if (secBio) secBio.style.display = 'block';
+      bioInfo.innerText = t('bio_none');
+      bioContainer.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-dim);">${t('bio_none_desc')}</div>`;
+    }
   }
 
   // Surface & Landable
@@ -3076,7 +3157,8 @@ function renderBodyInspector() {
   const miningSigCount = b.mining_signals || 0;
   const miningSites = b.rhino_mining_sites || [];
 
-  if (miningSigCount > 0 || miningSites.length > 0) {
+  const isRhinoEnabled = modSettings.rhino !== false;
+  if (isRhinoEnabled && (miningSigCount > 0 || miningSites.length > 0)) {
     if (miningSec) miningSec.style.display = 'block';
     if (miningCountEl) miningCountEl.innerText = miningSigCount;
     if (propCardMining) propCardMining.style.display = 'block';
@@ -4883,7 +4965,7 @@ function pollScanProgress() {
 
 const ttsState = {
   enabled: false,
-  highBioEnabled: true,
+  highBioEnabled: false,
   highBioMode: 'both', // 'both' | 'tts' | 'buzzer'
   highBioText: '{body}、高額生物反応です。見込額{value}クレジット。',
   engine: 'web_speech', // 'web_speech' | 'voicevox'
@@ -4932,7 +5014,7 @@ function playHighBioBuzzer() {
 }
 
 function checkAndAnnounceHighBioBody(sysData, bodyData) {
-  if (!ttsState.highBioEnabled) return;
+  if (!ttsState.enabled || !ttsState.highBioEnabled) return;
   if (!bodyData) return;
 
   const bodyName = bodyData.body_name || bodyData.BodyName;
@@ -5389,6 +5471,31 @@ async function initSettingsModal() {
     });
   }
 
+  // Module Display Settings in UI Tab
+  function initModuleSettingsUI() {
+    const currentModSettings = getModuleSettings();
+    const cbs = document.querySelectorAll('.module-toggle-cb');
+    cbs.forEach(cb => {
+      const modKey = cb.getAttribute('data-module');
+      if (modKey && currentModSettings[modKey] !== undefined) {
+        cb.checked = Boolean(currentModSettings[modKey]);
+      }
+      cb.addEventListener('change', () => {
+        const updated = getModuleSettings();
+        updated[modKey] = cb.checked;
+        saveModuleSettings(updated);
+        updateModuleVisibilityUI();
+        renderSystemList();
+        renderCurrentView();
+        if (state.selectedBody) {
+          renderBodyInspector();
+        }
+      });
+    });
+  }
+
+  initModuleSettingsUI();
+  updateModuleVisibilityUI();
   initLandmarkSettingsUI();
 
   // App Settings (Journal Dir)
@@ -5459,7 +5566,7 @@ async function initSettingsModal() {
 
   function updateTTSModalFields() {
     if (enabledToggle) enabledToggle.checked = Boolean(ttsState.enabled);
-    if (highBioToggle) highBioToggle.checked = Boolean(ttsState.highBioEnabled !== false);
+    if (highBioToggle) highBioToggle.checked = Boolean(ttsState.highBioEnabled);
     if (highBioModeSelect) highBioModeSelect.value = ttsState.highBioMode || 'both';
     if (highBioTextInput) highBioTextInput.value = ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。';
     if (engineSelect) engineSelect.value = ttsState.engine;

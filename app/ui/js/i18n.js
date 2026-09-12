@@ -151,6 +151,8 @@ const i18n = {
     body_sort_val_desc: "探査価値 (高い順)",
     body_sort_val_asc: "探査価値 (低い順)",
     body_sort_bio_desc: "Bioシグナル数 (多い順)",
+    body_sort_pml_desc: "⛏️ PML数 / Rhino適格 (多い順)",
+    body_sort_pml_asc: "⛏️ PML数 / Rhino適格 (少ない順)",
     body_sort_g_desc: "重力 (高い順)",
     body_sort_g_asc: "重力 (低い順)",
     bio_status_confirmed: "スキャン確定",
@@ -349,6 +351,12 @@ const i18n = {
     sort_live_unlock_btn: "LIVE解除",
     sort_live_resume_btn: "LIVE再開",
 
+    // Module Display Settings
+    settings_modules_label: "🧩 拡張機能モジュール表示設定",
+    settings_modules_desc: "表示する拡張機能モジュールを選択できます。チェックを外すことで、画面を天体物理のみのシンプルな表示に切り替えられます。",
+    mod_exobiology: "🌿 Exobiology（生物予測・BIOバッジ・探査ビュー）",
+    mod_rhino: "🦏 Rhino採掘（採掘拠点バッジ・座標マップ・履歴・採掘ビュー）",
+
     // Landmark Display Settings
     settings_landmarks_label: "📍 ランドマーク距離バッジ表示設定",
     settings_landmarks_desc: "星系リストカードおよび星系詳細ヘッダーに表示するランドマーク距離を選択できます。",
@@ -508,6 +516,8 @@ const i18n = {
     body_sort_val_desc: "Value (Highest)",
     body_sort_val_asc: "Value (Lowest)",
     body_sort_bio_desc: "Bio Count (Highest)",
+    body_sort_pml_desc: "⛏️ PMLs / Rhino Eligible (Highest)",
+    body_sort_pml_asc: "⛏️ PMLs / Rhino Eligible (Lowest)",
     body_sort_g_desc: "Gravity (Highest)",
     body_sort_g_asc: "Gravity (Low to High)",
     bio_status_confirmed: "Confirmed",
@@ -707,6 +717,12 @@ const i18n = {
     sort_live_status: "Real-time Live Sync:",
     sort_live_unlock_btn: "Disable LIVE",
     sort_live_resume_btn: "Resume LIVE",
+
+    // Module Display Settings
+    settings_modules_label: "🧩 Module Display Settings",
+    settings_modules_desc: "Choose which expansion modules to display. Unchecking allows you to simplify the view to pure astrophysics.",
+    mod_exobiology: "🌿 Exobiology (Bio Predictions, Badges & View)",
+    mod_rhino: "🦏 Rhino Mining (Mining Badges, Coords Map, History & View)",
 
     // Landmark Display Settings
     settings_landmarks_label: "📍 Landmark Distance Badge Display",

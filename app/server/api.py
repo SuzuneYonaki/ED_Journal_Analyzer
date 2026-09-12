@@ -1501,6 +1501,9 @@ TTS_SETTINGS_FILE = DATA_DIR / "tts_settings.json"
 def get_tts_settings():
     default_settings = {
         "enabled": False,
+        "highBioEnabled": False,
+        "highBioMode": "both",
+        "highBioText": "{body}、高額生物反応です。見込額{value}クレジット。",
         "engine": "web_speech",
         "webVoiceURI": "",
         "voicevoxSpeakerId": "3",
@@ -1517,6 +1520,33 @@ def get_tts_settings():
         except Exception:
             pass
     return default_settings
+
+MODULE_SETTINGS_FILE = DATA_DIR / "module_settings.json"
+
+@app.get("/api/module_settings")
+def get_module_settings_endpoint():
+    default_settings = {
+        "exobiology": True,
+        "rhino": True
+    }
+    if MODULE_SETTINGS_FILE.exists():
+        try:
+            with open(MODULE_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+                default_settings.update(saved)
+        except Exception:
+            pass
+    return default_settings
+
+@app.post("/api/module_settings")
+def save_module_settings_endpoint(settings: dict):
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with open(MODULE_SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(settings, f, ensure_ascii=False, indent=2)
+        return {"status": "saved", "settings": settings}
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
 @app.post("/api/tts_settings")
 def save_tts_settings_endpoint(settings: dict):

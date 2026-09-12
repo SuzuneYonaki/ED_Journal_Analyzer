@@ -51,7 +51,7 @@
       <div class="brand">
         <img src="/static/icon.png" alt="Logo" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 6px;">
         <span class="logo-text">ED Journal Explorer</span>
-        <span class="version-badge">v0.1.2</span>
+        <span class="version-badge">v0.1.3</span>
       </div>
     </div>
 
@@ -610,6 +610,8 @@
             <option value="value-desc" data-i18n="body_sort_val_desc">探査価値 (高い順)</option>
             <option value="value-asc" data-i18n="body_sort_val_asc">探査価値 (低い順)</option>
             <option value="bio-desc" data-i18n="body_sort_bio_desc">Bioシグナル数 (多い順)</option>
+            <option value="pml-desc" data-i18n="body_sort_pml_desc">⛏️ PML数 / Rhino適格 (多い順)</option>
+            <option value="pml-asc" data-i18n="body_sort_pml_asc">⛏️ PML数 / Rhino適格 (少ない順)</option>
             <option value="gravity-desc" data-i18n="body_sort_g_desc">重力 (高い順)</option>
             <option value="gravity-asc" data-i18n="body_sort_g_asc">重力 (低い順)</option>
           </select>
@@ -919,6 +921,32 @@
               🛡️ <b>セーフティ機構</b>: 極端な数値の入力により画面が崩れた場合でも、ヘッダー右上の「⚙️ 設定」ボタンは常に最前面に表示されます。また、キーボードの <kbd style="background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 3px; border: 1px solid #fbbf24; font-family: monospace;">Ctrl + 0</kbd> を押すことでいつでも即座に標準 (18px) にリセットできます。
             </div>
 
+            <!-- Module Display Customization -->
+            <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+              <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.85rem; margin-bottom: 6px; display: block;" data-i18n="settings_modules_label">
+                🧩 拡張機能モジュール表示設定
+              </label>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px;" data-i18n="settings_modules_desc">
+                表示する拡張機能モジュールを選択できます。チェックを外すことで、画面を天体物理のみのシンプルな表示に切り替えられます。
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" id="cb-mod-exobiology" class="module-toggle-cb" data-module="exobiology" checked style="accent-color: var(--ed-green); cursor: pointer;">
+                  <div>
+                    <span style="color: #6ee7b7; font-weight: bold;" data-i18n="mod_exobiology">🌿 Exobiology（生物予測・BIOバッジ・探査ビュー）</span>
+                    <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 1px;">星系一覧・天体ツリーのBIOバッジ、生物候補予測セクション、生物探査ビューを表示</div>
+                  </div>
+                </label>
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" id="cb-mod-rhino" class="module-toggle-cb" data-module="rhino" checked style="accent-color: #38bdf8; cursor: pointer;">
+                  <div>
+                    <span style="color: #38bdf8; font-weight: bold;" data-i18n="mod_rhino">🦏 Rhino採掘（採掘拠点バッジ・座標マップ・履歴・採掘ビュー）</span>
+                    <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 1px;">星系一覧の採掘拠点バッジ、惑星表面のRhino採掘座標マップや履歴カード、採掘適格ビューを表示</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <!-- Landmark Distance Display Customization -->
             <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-color);">
               <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.85rem; margin-bottom: 6px; display: block;" data-i18n="settings_landmarks_label">
@@ -955,6 +983,13 @@
 
         <!-- Tab 2: TTS Settings -->
         <div id="tab-pane-tts" class="settings-tab-pane" style="display: none; flex-direction: column; gap: 14px;">
+          <!-- Separation of Exploration Memories and Audio Alert Notice -->
+          <div style="padding: 8px 12px; background: rgba(56, 189, 248, 0.08); border-left: 3px solid var(--ed-cyan); font-size: 0.72rem; color: #bae6fd; border-radius: 0 4px 4px 0; line-height: 1.5;">
+            💡 <b>旅のしるし（画面表示）と音声通知の完全分離</b><br>
+            Exobiologyの予測やバッジ、Rhino採掘拠点などの画面表示（旅のしるし）は常に維持されます。<br>
+            この画面では、自動で喋る音声読み上げ（TTS）や通知音のみを項目別に自由に外す（OFFにする）ことができます。
+          </div>
+
           <!-- Enable / Disable Checkbox (Default unchecked) -->
           <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
             <div>
@@ -975,7 +1010,7 @@
                 <div style="font-size: 0.75rem; color: var(--text-secondary);">1st Discover星系で単一天体のBio予測総額が40M Crを超える場合にお知らせ</div>
               </div>
               <label class="switch">
-                <input type="checkbox" id="tts-high-bio-toggle" checked>
+                <input type="checkbox" id="tts-high-bio-toggle">
                 <span class="slider"></span>
               </label>
             </div>

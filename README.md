@@ -1,4 +1,4 @@
-# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.2)
+# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.3)
 
 [日本語](#日本語) | [English](#english)
 
@@ -13,6 +13,21 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 > 銀河の遥かなる長旅の記録や、過去の深宇宙探索・初発見の思い出をいつでも鮮明に振り返ることができます。
 
 > **⚠️ 使用上の注意・免責事項**: 本ツールはファンメイドの非公式オープンソースツールです。フロンティア・デベロップメンツ社とは一切関係ありません。ジャーナルログの解釈や探査・採掘データの完全性についてはいかなる保証も致しかねます。本ツールの使用によって生じたゲーム内での損失（機体喪失、採掘リグ耐久値損失、探査データ喪失など）を含むいかなる結果についても開発者は一切の責任を負いません。自己責任においてご利用ください。
+
+### 🚀 v0.1.3 アップデート・サマリー
+- **中央ペイン天体ソートに「Rhino適格 (PML順)」を追加**:
+  - 天体ソート（Body Sort）の選択肢に「⛏️ PML数 / Rhino適格 (多い順)」および「⛏️ PML数 / Rhino適格 (少ない順)」を新設。
+  - Planetary Mining Locations (PML) のシグナル数が多い惑星・天体を即座にリスト最上部にソート可能。同数の場合は到着距離順に自動タイブレークされます。
+- **拡張機能モジュール表示設定（チェックボックスで明示的に消す・戻す）**:
+  - 設定モーダルの「UI表示設定タブ」に「🧩 拡張機能モジュール表示設定」を新設。
+  - **🌿 Exobiology モジュール**: 星系一覧や天体ツリーのBIOバッジ、生物候補予測セクション、生物探査ビューをチェックボックス1つで明示的に消す（非表示にする）／戻す（表示する）ことが可能。
+  - **🦏 Rhino 採掘モジュール**: 星系一覧の採掘拠点バッジ、惑星表面のRhino採掘座標マップや履歴カード、採掘適格ビューをチェックボックス1つで明示的に消す／戻すことが可能。
+  - 過去の探査ログを純粋な天体物理データとしてシンプルに眺めたい時はチェックを外して消し、旅のしるし（思い出）として振り返りたい時はチェックを入れて戻すという自由な運用が可能です。
+- **旅のしるし（画面表示）とTTS（音声通知）の完全分離 & 個別制御**:
+  - 画面上の表示（生物予測・バッジ・採掘拠点）は大切な探査の思い出として維持したまま、ゲームプレイ中に気になるTTS（音声読み上げ）のみを個別スイッチで安全に外す（OFFにする）ことができます。
+  - 「未発見（1st Discover）読み上げ通知」と「高額生物天体 (40M+ Cr) 通知」を独立化し、高額生物通知の初期設定を静音（OFF）に配慮。
+- **設定の安全永続化**:
+  - モジュール表示設定はブラウザのローカルストレージに加え、バックエンド（`Data/module_settings.json`）にも自動同期保存。
 
 ### 🚀 v0.1.2 アップデート・サマリー
 - **Rhino 採掘記録（緯度経度 ＆ 掘れた鉱物）の惑星メモ簡潔追記機能**:
@@ -133,6 +148,21 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
 > Relive and explore your epic expedition memories, first discoveries, and galaxy travels anytime with complete offline privacy.
 
 > **⚠️ Disclaimer**: This tool is an unofficial, fan-made open-source companion and is not affiliated with or endorsed by Frontier Developments plc. No warranties are provided regarding data accuracy or game log interpretation. The developer assumes no responsibility or liability for any in-game losses or damages (including loss of ships, mining rig durability, or exploration data). Use at your own discretion.
+
+### 🚀 v0.1.3 Update Summary
+- **PML Sorting for Rhino Eligibility in Central Pane**:
+  - Added "⛏️ PMLs / Rhino Eligible (Highest)" and "⛏️ PMLs / Rhino Eligible (Lowest)" to the Body Sort options.
+  - Instantly sorts celestial bodies with Planetary Mining Locations (PMLs) to the top of the list, breaking ties by closest arrival distance.
+- **Expansion Module Display Settings (Explicit Checkboxes to Hide or Restore)**:
+  - Added "🧩 Module Display Settings" inside the UI Settings tab.
+  - **🌿 Exobiology Module**: Toggle BIO badges across system cards, orbital trees, biological candidate prediction cards, and the Bio View on/off.
+  - **🦏 Rhino Mining Module**: Toggle mining badges, surface coordinates map, mining history cards, and the Mining View on/off.
+  - Allows commanders to easily declutter the interface to focus purely on astrophysics or restore memories whenever desired.
+- **Clean Separation of Exploration Memories (UI Badges) and TTS (Voice Alerts)**:
+  - Exploration milestones (bio predictions, badges, mining sites) remain visible on screen as journey keepsakes.
+  - Voice alerts (TTS) and chimes can be independently turned on/off. High-value bio alerts (40M+ Cr) default to silent (disabled) until explicitly enabled.
+- **Robust Settings Persistence**:
+  - Module configurations are saved in localStorage and automatically synced to `Data/module_settings.json` on the server.
 
 ### 🚀 v0.1.2 Update Summary
 - **Concise Rhino Mining History in Planet Notes (Coordinates & Mined Materials Only)**:

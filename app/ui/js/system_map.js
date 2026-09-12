@@ -640,13 +640,14 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     const isMulti = body.starGroup && body.starGroup.length > 2;
     badgeList.push(`<span class="sysmap-mini-badge" style="background: rgba(147, 51, 234, 0.25); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.6); font-weight: bold;">♊ ${isMulti ? '多重連星共通軌道' : '連星共通周回軌道'}</span>`);
   }
-  if (body.bio_signals > 0) {
+  const modSettings = (typeof window.getModuleSettings === 'function') ? window.getModuleSettings() : { exobiology: true, rhino: true };
+  if (modSettings.exobiology !== false && body.bio_signals > 0) {
     badgeList.push(`<span class="sysmap-mini-badge bio">🌱 ${body.bio_signals}</span>`);
   }
   if (body.geo_signals > 0) {
     badgeList.push(`<span class="sysmap-mini-badge geo">🌋 ${body.geo_signals}</span>`);
   }
-  if (body.mining_signals > 0) {
+  if (modSettings.rhino !== false && body.mining_signals > 0) {
     badgeList.push(`<span class="sysmap-mini-badge mining" style="background: rgba(56, 189, 248, 0.25); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.6);">⛏️ ${body.mining_signals}</span>`);
   }
   if (body.has_first_discover || body.was_discovered === 0) {
