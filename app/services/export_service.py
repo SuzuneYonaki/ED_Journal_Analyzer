@@ -371,6 +371,16 @@ def generate_standalone_html(
     author_badge = "Shared Anonymously" if (is_anonymous or not cmdr_name) else f"Discovered / Shared by CMDR {html.escape(cmdr_name)}"
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
+    # Build clean full astrophysical JSON payload for AI prompting / external scientific tools
+    full_data = sanitize_system_for_export(system_data, bodies, mining_sites, bookmarks)
+    full_data["export_metadata"] = {
+        "format": "ED_JOURNAL_ANALYZER_ASTROPHYSICS_DATA_V1",
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "cmdr_name": "Anonymous" if is_anonymous else (cmdr_name or "Explorer"),
+        "ai_prompt_hint": "このJSONには星系および全天体の完全な天体物理・軌道観測パラメータ（質量・半径・軌道長半径・離心率・公転周期・詳細大気組成等）が含まれています。天体物理学・惑星科学の観点から星系の形成史や軌道進化の推論にそのまま利用できます。"
+    }
+    json_str = json.dumps(full_data, ensure_ascii=False, indent=2).replace("</script>", "<\\/script>")
+
     # Group bodies into stars and planets
     stars = [b for b in bodies if b.get("star_type")]
     planets = [b for b in bodies if not b.get("star_type") and b.get("planet_class")]
@@ -417,7 +427,7 @@ def generate_standalone_html(
 
     svg_content = "\n".join(svg_elements)
 
-    # Build bodies table rows
+    # Build bodies table rows with deep astrophysics parameter disclosure
     body_rows_html = []
     for b in bodies:
         b_name = html.escape(b.get("body_name", ""))
@@ -435,9 +445,61 @@ def generate_standalone_html(
         alias_html = f'<div class="alias-text">🔖 {html.escape(bm_match["alias_name"])}</div>' if bm_match and bm_match.get("alias_name") else ""
         note_html = f'<div class="note-text">{html.escape(bm_match["note_markdown"])}</div>' if bm_match and bm_match.get("note_markdown") else ""
 
+        # Format astrophysics details
+        astro_params = []
+        if b.get("stellar_mass"):
+            astro_params.append(f"質量: {b['stellar_mass']:.4f} M☉")
+        elif b.get("mass_em"):
+            astro_params.append(f"質量: {b['mass_em']:.4f} M⊕")
+        if b.get("radius"):
+            astro_params.append(f"半径: {round(b['radius']/1000):,} km")
+        if b.get("semi_major_axis"):
+            sma_au = b['semi_major_axis'] / 1.495978707e11
+            astro_params.append(f"軌道長半径: {sma_au:.4f} AU")
+        if b.get("eccentricity") is not None:
+            astro_params.append(f"離心率: {b['eccentricity']:.4f}")
+        if b.get("orbital_period"):
+            orb_days = b['orbital_period'] / 86400
+            astro_params.append(f"公転周期: {orb_days:.2f} 日")
+        if b.get("rotation_period"):
+            rot_days = b['rotation_period'] / 86400
+            astro_params.append(f"自転周期: {rot_days:.2f} 日")
+        if b.get("axial_tilt") is not None:
+            import math
+            tilt_deg = math.degrees(b['axial_tilt'])
+            astro_params.append(f"軸傾斜: {tilt_deg:.1f}°")
+        
+        atmo_comp_str = ""
+        comp_raw = b.get("atmosphere_composition")
+        if comp_raw:
+            try:
+                comp_obj = json.loads(comp_raw) if isinstance(comp_raw, str) else comp_raw
+                if isinstance(comp_obj, dict):
+                    atmo_comp_str = "組成: " + ", ".join(f"{k} {v:.1f}%" for k, v in comp_obj.items())
+                elif isinstance(comp_obj, list):
+                    atmo_comp_str = "組成: " + ", ".join(f"{item.get('Name')}: {item.get('Percent', 0):.1f}%" for item in comp_obj if isinstance(item, dict))
+            except Exception:
+                pass
+
+        astro_summary = " &bull; ".join(astro_params) if astro_params else ""
+        if atmo_comp_str:
+            astro_summary = f"{astro_summary}<br>{atmo_comp_str}" if astro_summary else atmo_comp_str
+
+        details_html = ""
+        if astro_summary:
+            details_html = f"""
+            <details class="astro-details">
+                <summary>🔬 詳細天体物理パラメータ (AI推論用)</summary>
+                <div class="astro-details-content">{astro_summary}</div>
+            </details>
+            """
+
         body_rows_html.append(f"""
         <tr>
-            <td><strong>{b_name}</strong> {alias_html}{note_html}</td>
+            <td>
+                <strong>{b_name}</strong> {alias_html}{note_html}
+                {details_html}
+            </td>
             <td>{b_type} {land_badge} {bio_badge}</td>
             <td>{dist}</td>
             <td>{grav}</td>
@@ -480,6 +542,12 @@ def generate_standalone_html(
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{sys_name} - Star System Summary</title>
+
+<!-- Full Astrophysical & Orbital Observation JSON (Embedded for AI Prompting & Scientific Analysis) -->
+<script type="application/json" id="ed-system-astrophysics-data">
+{json_str}
+</script>
+
 <style>
 :root {{
     --bg-dark: #0a0b0e;
@@ -505,13 +573,47 @@ header {{
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 16px 20px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }}
 .title-row {{ display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 10px; }}
 h1 {{ color: var(--ed-orange); font-size: 1.8rem; letter-spacing: 0.5px; }}
 .author-badge {{ font-size: 0.85rem; color: #fed7aa; background: rgba(255,113,0,0.15); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border-color); }}
 .coords-bar {{ color: var(--text-secondary); font-size: 0.82rem; margin-top: 6px; }}
+
+.ai-banner {{
+    background: rgba(14, 165, 233, 0.08);
+    border: 1px solid rgba(14, 165, 233, 0.35);
+    border-left: 4px solid #00d2ff;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}}
+.ai-banner-title {{
+    color: #38bdf8;
+    font-weight: bold;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}}
+.ai-badge {{
+    font-size: 0.68rem;
+    background: rgba(56, 189, 248, 0.2);
+    color: #7dd3fc;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+}}
+.ai-banner-desc {{
+    color: #94a3b8;
+    font-size: 0.74rem;
+}}
+
 .stats-grid {{
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -544,7 +646,7 @@ svg {{ width: 100%; max-width: 600px; height: auto; }}
 }}
 h2 {{ font-size: 1.1rem; color: var(--ed-cyan); margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; }}
 table {{ width: 100%; border-collapse: collapse; font-size: 0.85rem; }}
-th, td {{ padding: 8px 10px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }}
+th, td {{ padding: 8px 10px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: top; }}
 th {{ color: var(--text-secondary); font-weight: 600; }}
 tr:hover {{ background: rgba(255,255,255,0.02); }}
 .badge {{ font-size: 0.7rem; padding: 2px 6px; border-radius: 3px; font-weight: bold; margin-left: 4px; }}
@@ -552,6 +654,28 @@ tr:hover {{ background: rgba(255,255,255,0.02); }}
 .badge-land {{ background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }}
 .alias-text {{ font-size: 0.75rem; color: #fbbf24; margin-top: 2px; }}
 .note-text {{ font-size: 0.72rem; color: var(--text-secondary); font-style: italic; }}
+
+.astro-details {{
+    margin-top: 6px;
+    font-size: 0.72rem;
+}}
+.astro-details summary {{
+    color: var(--ed-cyan);
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+}}
+.astro-details-content {{
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(0,210,255,0.2);
+    border-radius: 4px;
+    padding: 6px 8px;
+    margin-top: 4px;
+    font-family: Consolas, monospace;
+    color: #cbd5e1;
+    line-height: 1.4;
+}}
+
 .mining-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }}
 .mining-card {{ background: rgba(0,0,0,0.3); border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; padding: 10px; }}
 .mining-card-header {{ font-size: 0.82rem; font-weight: bold; color: #38bdf8; }}
@@ -570,6 +694,17 @@ footer {{ text-align: center; font-size: 0.75rem; color: var(--text-secondary); 
             座標: <code>[{pos_x:.2f}, {pos_y:.2f}, {pos_z:.2f}]</code> &bull; Sol距離: <code>{sol_dist:,} Ly</code> &bull; 主星: <code>{main_star}型</code>
         </div>
     </header>
+
+    <div class="ai-banner">
+        <div class="ai-banner-title">
+            <span>🤖</span> <span>生成AI（LLM）天体物理分析・星系形成史シナリオ推論対応</span>
+            <span class="ai-badge">完全観測JSON内包</span>
+        </div>
+        <div class="ai-banner-desc">
+            本HTMLファイルには、星系および全天体の完全な天体物理・軌道観測データ（質量・半径・軌道長半径・離心率・公転周期・詳細大気組成など）が JSON 形式で内包されています。<br>
+            ChatGPT、Claude、Gemini 等の生成AIに本HTMLファイルをそのままアップロードし、推論プロンプトを入力することで、現代の天文学・惑星形成理論に基づいた詳細な形成史シナリオや景観描写の推論を行わせることができます。
+        </div>
+    </div>
 
     <div class="stats-grid">
         <div class="stat-card">

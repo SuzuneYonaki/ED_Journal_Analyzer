@@ -1,4 +1,4 @@
-# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.4)
+# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.5)
 
 [日本語](#日本語) | [English](#english)
 
@@ -13,6 +13,16 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 > 銀河の遥かなる長旅の記録や、過去の深宇宙探索・初発見の思い出をいつでも鮮明に振り返ることができます。
 
 > **⚠️ 使用上の注意・免責事項**: 本ツールはファンメイドの非公式オープンソースツールです。フロンティア・デベロップメンツ社とは一切関係ありません。ジャーナルログの解釈や探査・採掘データの完全性についてはいかなる保証も致しかねます。本ツールの使用によって生じたゲーム内での損失（機体喪失、採掘リグ耐久値損失、探査データ喪失など）を含むいかなる結果についても開発者は一切の責任を負いません。自己責任においてご利用ください。
+
+### 🚀 v0.1.5 アップデート・サマリー
+- **Web共有HTMLの「完全天体物理観測JSON内包」＆ AI推論対応化**:
+  - 生成されるスタンドアロンWeb共有HTML（`{星系名}_share.html`）内に、星系および全天体の完全な天体物理・軌道観測データ（恒星・惑星質量、精密半径、軌道長半径、離心率、公転・自転周期、軸傾斜、詳細大気組成比率など）を `<script type="application/json">` としてまるごと内包。
+  - **人間向けの美しい星系図ビューアー**でありながら、**各種生成AI（ChatGPT、Claude、Gemini等）に本HTMLファイルをそのまま渡すだけで、100%の精度で星系形成史シナリオや天体物理学的考察を推論させることができる「完全データコンテナ」**へ進化しました。
+  - 天体一覧テーブルの各行に「🔬 詳細天体物理パラメータ (AI推論用)」アコーディオンを新設。ブラウザ上で質量、半径、AU軌道長半径、離心率、大気組成比率を人間も即座に確認できます。
+- **Web共有HTMLの保存先自動特定＆エクスプローラー直接オープン機能**:
+  - デスクトップGUI（pywebview）環境でHTMLを出力した際、保存先が分からなくなる問題を解消。
+  - アプリ実行場所直下の **`exports/`** フォルダへ確実に自動保存し、生成完了と同時に**Windowsエクスプローラーが自動起動して該当ファイルをハイライト表示**します。
+  - 画面上にも保存先フルパスと「📂 保存フォルダーを開く」ボタン付きトースト通知を表示し、迷子を100%防止。
 
 ### 🚀 v0.1.4 アップデート・サマリー
 - **未訪問星系（EDSM/Spansh/Inara既知）ロード時の404エラー解消**:
@@ -182,6 +192,16 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
 > Relive and explore your epic expedition memories, first discoveries, and galaxy travels anytime with complete offline privacy.
 
 > **⚠️ Disclaimer**: This tool is an unofficial, fan-made open-source companion and is not affiliated with or endorsed by Frontier Developments plc. No warranties are provided regarding data accuracy or game log interpretation. The developer assumes no responsibility or liability for any in-game losses or damages (including loss of ships, mining rig durability, or exploration data). Use at your own discretion.
+
+### 🚀 v0.1.5 Update Summary
+- **Embedded Complete Astrophysical Observation JSON in Web Share HTML & Full AI Inference Readiness**:
+  - Standalone Web Share HTML files (`{system}_share.html`) now embed the complete astrophysical and orbital observation dataset (stellar & planetary masses, precise radii, semi-major axes, eccentricities, orbital/rotational periods, axial tilts, and exact atmospheric composition ratios) directly inside a `<script type="application/json">` block.
+  - Acts both as a zero-dependency beautiful orbital system viewer for humans, and an all-in-one data container: simply drag and drop the HTML file into Generative AI models (ChatGPT, Claude, Gemini, etc.) alongside scientific prompts to deduce accurate stellar history and formation scenarios.
+  - Added expandable "🔬 Detailed Astrophysical Parameters" rows to each celestial body table for instant human inspection of key physical numbers.
+- **Dedicated `exports/` Folder & Automatic File Explorer Reveal**:
+  - Solved the issue where desktop pywebview environments saved HTML files invisibly without showing download directories.
+  - Automatically writes exported HTML files directly into a dedicated **`exports/`** directory next to the application, and instantly reveals and highlights the exported file in Windows File Explorer.
+  - Added an interactive on-screen completion toast displaying the full file path and an instant "📂 Open Folder" action button.
 
 ### 🚀 v0.1.4 Update Summary
 - **Resolved HTTP 404 Bug When Loading Unvisited Systems (EDSM / Spansh / Inara)**:

@@ -7,12 +7,15 @@ if getattr(sys, 'frozen', False):
     EXE_DIR = Path(sys.executable).resolve().parent
     RESOURCE_DIR = Path(getattr(sys, '_MEIPASS', EXE_DIR))
     DATA_DIR = EXE_DIR / "data"
+    EXPORTS_DIR = EXE_DIR / "exports"
 else:
     RESOURCE_DIR = Path(__file__).resolve().parent.parent
     DATA_DIR = RESOURCE_DIR / "data"
+    EXPORTS_DIR = RESOURCE_DIR / "exports"
 
 BASE_DIR = RESOURCE_DIR
 DATA_DIR.mkdir(exist_ok=True)
+EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Separate WebView2 cache completely from user DATA_DIR to prevent locks and bloat
 local_app_data = os.environ.get("LOCALAPPDATA")

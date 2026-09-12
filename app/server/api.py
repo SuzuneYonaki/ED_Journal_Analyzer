@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR, DATA_DIR
+from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR, DATA_DIR, EXPORTS_DIR
 from app.db.database import get_db_connection, init_db
 from app.parser.journal_parser import JournalParser
 from app.parser.watcher import JournalWatcher
@@ -1640,10 +1640,44 @@ def export_standalone_html_endpoint(
     )
     safe_sys_name = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in system_data.get("star_system", "system"))
     filename = f"{safe_sys_name}_share.html"
+
+    # Save a permanent copy to the local exports directory
+    local_file_path = EXPORTS_DIR / filename
+    try:
+        local_file_path.write_text(html_content, encoding="utf-8")
+    except Exception as e:
+        print(f"Failed to save local export file {local_file_path}: {e}")
+
     return HTMLResponse(
         content=html_content,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Export-Path": str(local_file_path.resolve()),
+            "Access-Control-Expose-Headers": "X-Export-Path, Content-Disposition"
+        }
     )
+
+class OpenLocationRequest(BaseModel):
+    path: Optional[str] = None
+
+@app.post("/api/export/open_location")
+def open_export_location(payload: OpenLocationRequest):
+    target = Path(payload.path) if payload.path else EXPORTS_DIR
+    if not target.is_absolute():
+        target = (BASE_DIR / target).resolve()
+    
+    if not target.exists():
+        target = EXPORTS_DIR
+
+    try:
+        import subprocess
+        if target.is_file():
+            subprocess.Popen(f'explorer.exe /select,"{target}"')
+        else:
+            subprocess.Popen(f'explorer.exe "{target}"')
+        return {"success": True, "opened": str(target)}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/api/export/package")
 def export_package_endpoint(payload: ExportPackageRequest):

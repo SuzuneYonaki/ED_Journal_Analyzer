@@ -5742,6 +5742,69 @@ async function initSettingsModal() {
 
 function initExportImportModals() {
   // Method 2: Standalone Web Share HTML Export
+  function showExportSuccessToast(title, filePath) {
+    let toast = document.getElementById('app-export-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'app-export-toast';
+      toast.style.position = 'fixed';
+      toast.style.bottom = '24px';
+      toast.style.right = '24px';
+      toast.style.background = 'rgba(10, 16, 26, 0.96)';
+      toast.style.border = '1px solid var(--ed-cyan)';
+      toast.style.borderRadius = '8px';
+      toast.style.padding = '14px 18px';
+      toast.style.color = '#fff';
+      toast.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.7)';
+      toast.style.zIndex = '99999';
+      toast.style.maxWidth = '460px';
+      toast.style.fontSize = '0.85rem';
+      toast.style.lineHeight = '1.5';
+      document.body.appendChild(toast);
+    }
+
+    toast.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--ed-cyan); font-size: 0.95rem; margin-bottom: 6px;">
+        <span>🌐</span> <span>${title}</span>
+      </div>
+      <div style="color: #cbd5e1; font-size: 0.78rem; word-break: break-all; margin-bottom: 8px; background: rgba(0,0,0,0.3); padding: 6px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">
+        <b>保存先:</b> <code style="color: #38bdf8;">${filePath || 'exports/ フォルダ'}</code>
+      </div>
+      <div style="color: #94a3b8; font-size: 0.72rem; margin-bottom: 10px;">
+        🤖 <b>AI推論対応</b>: 全天体の天体物理・軌道観測JSONが内包されています。各種生成AIに本HTMLをそのまま読み込ませて星系形成史シナリオを推論できます。
+      </div>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button id="btn-toast-open-folder" class="btn-primary" style="padding: 4px 12px; font-size: 0.78rem; background: rgba(0, 210, 255, 0.2); border: 1px solid var(--ed-cyan); color: var(--ed-cyan); cursor: pointer;">
+          📂 保存フォルダーを開く
+        </button>
+        <button id="btn-toast-close" class="view-btn" style="padding: 4px 10px; font-size: 0.78rem; cursor: pointer;">
+          閉じる
+        </button>
+      </div>
+    `;
+    toast.style.display = 'block';
+
+    document.getElementById('btn-toast-open-folder')?.addEventListener('click', async () => {
+      try {
+        await fetch('/api/export/open_location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: filePath })
+        });
+      } catch (e) {}
+    });
+
+    document.getElementById('btn-toast-close')?.addEventListener('click', () => {
+      toast.style.display = 'none';
+    });
+
+    setTimeout(() => {
+      if (toast && toast.style.display !== 'none') {
+        toast.style.display = 'none';
+      }
+    }, 12000);
+  }
+
   const btnExportHtml = document.getElementById('btn-export-html');
   if (btnExportHtml) {
     btnExportHtml.addEventListener('click', async () => {
@@ -5756,6 +5819,8 @@ function initExportImportModals() {
       try {
         const res = await fetch(`/api/export/html/${sysAddr}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        const exportPath = res.headers.get('X-Export-Path') || '';
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -5765,6 +5830,18 @@ function initExportImportModals() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+
+        // Show toast with location & trigger explorer reveal
+        showExportSuccessToast('Web共有HTMLを出力しました', exportPath);
+        if (exportPath) {
+          try {
+            await fetch('/api/export/open_location', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: exportPath })
+            });
+          } catch (e) {}
+        }
       } catch (err) {
         console.error('Failed to export HTML:', err);
         alert(t('export_failed') || 'HTML出力に失敗しました');

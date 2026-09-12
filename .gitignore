@@ -5,6 +5,7 @@ __pycache__/
 
 # Local SQLite Database & logs
 /data/
+/exports/
 *.db
 *.db-journal
 *.db-wal
