@@ -1,4 +1,4 @@
-# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.7)
+# Elite Dangerous Journal Analyzer & Exploration Orrery
 
 [日本語](#日本語) | [English](#english)
 
@@ -7,105 +7,82 @@
 <a name="日本語"></a>
 ## 概要 (日本語)
 
-**Elite Dangerous Journal Analyzer** は、宇宙シミュレーションゲーム『Elite Dangerous』のフライトジャーナルログ（`Journal.*.log`）を自動解析・リアルタイム監視し、過去に訪れた星系・天体の状態、位置関係・軌道情報、レア天体・特殊周回、着陸可否・重力・火山活動、Exobiology（植物・菌類）の生息予測と報酬額、FSS/DSS探査価値の精密計算、Rhino採掘支援、天体ブックマーク・Markdownメモ機能を提供する**完全ローカル完結型デスクトップGUIアプリケーション**です。
-
-> **「あの時訪れたあの星は、どんな宙域だっただろう？」**  
-> 銀河の遥かなる長旅の記録や、過去の深宇宙探索・初発見の思い出をいつでも完全なプライバシーと美しいビジュアルで振り返ることができます。
-
-> **⚠️ 使用上の注意・免責事項**: 本ツールはファンメイドの非公式オープンソースツールです。フロンティア・デベロップメンツ社とは一切関係ありません。ジャーナルログの解釈や探査・採掘データの完全性についてはいかなる保証も致しかねます。本ツールの使用によって生じたゲーム内での損失（機体喪失、採掘リグ耐久値損失、探査データ喪失など）を含むいかなる結果についても開発者は一切の責任を負いません。自己責任においてご利用ください。
+**Elite Dangerous Journal Analyzer** は、宇宙シミュレーションゲーム『Elite Dangerous』のフライトジャーナルログ（`Journal.*.log`）をリアルタイムに自動解析・監視し、星系構造の可視化、探査価値の精密算出、Exobiology（生体スキャン）予測、採掘支援、天体ブックマーク・メモ機能を提供する**完全ローカル完結型デスクトップGUIアプリケーション**です。
 
 ---
 
-### 主な機能 (Key Features)
+### 🚀 主な機能 (Core Features)
 
-1. **軌道階層ツリー & インタラクティブ System Map**:
-   - 恒星・惑星・衛星の階層親子ツリー構造、多重連星系共通重心（Barycentre）、周回恒星、軌道長半径（AU / Ls）、離心率、公転・自転周期、傾斜角、潮汐固定の忠実な可視化。
-   - 周回恒星（`A 1`, `B 1` 等）や連星周回天体（`AB 1`, `Ab 2` 等）、特殊命名天体（`Founders World`, `Earth`, `Moon`, `Sagittarius A*`, `Source 2` 等）を正確な軌道順で描画。
-2. **探査価値の精密計算 (Exploration Payouts)**:
-   - FSSスキャン価値、DSSマッピング価値（効率ボーナス含む）、初回発見ボーナス（$\times 2.6$）、初回マッピングボーナスを精密算出。
-   - 星系ごとの「FSSスキャン合計」と「最大見込み（FD+FM）」を並列表示。
+1. **リアルタイム・フライトログ解析 & 探査価値計算**:
+   - ジャンプイン、Honk（FSS）、DSS、着陸、生体スキャンを完全自動トラッキング。
+   - FSSスキャン価値、DSSマッピング価値（効率ボーナス含む）、初回発見ボーナス（×2.6）、初回マッピングボーナスを精密算出。
+2. **多重連星系対応 Orrery & 軌道階層ツリー**:
+   - 恒星・惑星・衛星の階層親子ツリー構造、多重連星系共通重心（Barycentre）、周連星惑星（`AB 1` 等）、周回恒星（`A 1`, `B 1` 等）、特殊命名天体（`Sagittarius A*`, `Founders World`, `Earth` 等）を正確な軌道順で描画。
+   - 自由な拡大縮小（0.12x〜40x）・ドラッグ操作に対応したインタラクティブ星系儀（Orrery）。
 3. **Exobiology（植物・菌類）解析 & 報酬予測**:
-   - 大気組成・表面温度・重力・天体種別から生息可能性のある植物/菌類候補（Stratum, Bacterium, Clypeus等）と通常報酬 + 初回採取5倍ボーナス額を自動算出。
-   - サンプル採取に必要なコロニー間隔を天体カードに常時表示。
+   - 大気組成・表面温度・重力・天体種別から生息可能性のある植物/菌類候補と通常報酬＋初回採取5倍ボーナス額を自動算出。コロニー間隔も常時表示。
 4. **地表・着陸・重力 & 採掘支援 (Rhino Mining Support)**:
-   - 着陸可否（Landable）、精密表面重力（$G$値）と着陸可能天体限定の高重力危険警告、火山活動・地質シグナル。
-   - 採掘Rig耐久値管理に直結する重力（$G$）・表面温度（$K$）の表示トグル。
-   - EDSM天体データに基づく採掘有望度スコア（**⛏️ Scout: High** / **⛏️ Scout: Med**）判定。
-   - 大型着艦パッド（Large Pad）装備ステーション保有星系・到達距離（< 2,000 Ls、< 10,000 Ls、< 50,000 Ls）フィルター。
-   - リング天体DSSスキャン（ホットスポット）のMarkdownメモ自動記録機能。
-   - CMDRの現在地座標（緯度・経度）を天体メモへワンクリック挿入。
+   - 着陸可能天体（Landable）限定の高重力警告、地質・火山活動シグナル。
+   - EDSM天体データに基づく採掘有望度スコア判定（**⛏️ Scout: High / Med**）。
+   - 大型着艦パッド（Large Pad）装備ステーション保有星系・到達距離フィルター。
+   - リング天体のDSSスキャン結果（ホットスポット）のMarkdownメモ自動記録、CMDR現在地座標のワンクリック挿入。
 5. **天体ブックマーク・エイリアス（別名）・Markdownメモ帳**:
-   - 天体単位でのブックマーク登録、ユーザー定義通称（例: `採掘拠点 Alpha`, `TF候補1`）、Markdown形式メモ（リアルタイムプレビュー対応）。
-   - 星系名だけでなく「天体名」「エイリアス名」「メモ本文」を横断したグローバル検索が可能。
-6. **完全スタンドアロン Web共有HTML生成**:
-   - ワンクリックで単一の美しい星系図HTML（`{星系名}_share.html`）を `exports/` フォルダへ書き出し、エクスプローラーで自動ハイライト。
-   - 外部CDNや外部ネットワーク接続を一切必要としない完全オフライン完結設計。
-   - 多重連星系対応のオーラリー（無段階ズーム 0.12x〜40x、ドラッグパン、恒星クイックジャンプバー）を搭載。
+   - 天体単位でのブックマーク登録、ユーザー定義通称（エイリアス）、リアルタイムプレビュー対応のMarkdownメモ。
+   - 星系名・天体名・エイリアス名・メモ本文を対象とした高速グローバル検索。
+6. **スタンドアロン Web共有HTML生成**:
+   - ワンクリックで単一の美しい星系図HTML（`exports/{星系名}_share.html`）を出力。外部通信なしでブラウザ閲覧可能。
    - **完全な天体物理観測JSONデータを内包**しており、LLMへの直接投入データコンテナとしても機能。
 7. **EDSM連携 & 未訪問星系オンデマンド参照（安全ロック付き）**:
-   - EDSM（Elite Dangerous Star Map）連携により、既知星系へのジャンプインや Honk（`FSSDiscoveryScan`）時に未スキャン天体の公転軌道・物理データ・探査価値を優先キューで自動補完。
-   - 未訪問星系でも外部参照として星系マップをオンデマンド閲覧可能（プレイヤー自身の探査記録と混同されないようエクスポート遮断・統計除外の安全ロック機構を完備）。
+   - 既知星系へのジャンプインやHonk時に未スキャン天体の公転軌道・物理データ・探査価値を優先キューで自動補完。
+   - 未訪問星系でも外部参照として星系マップをオンデマンド閲覧可能（エクスポート遮断・統計除外の安全ロック機構を完備）。
 8. **UIカスタマイズ & 日英バイリンガル対応**:
-   - コックピット計器盤を再現した **Elite Classic Amber HUD**、**Modern Deep Space**、**Cyan Explorer HUD** のカラーテーマ切り替え。
-   - UIフォントサイズの実数値（px）自由変更および緊急リセット（<kbd>Ctrl + 0</kbd>）。
-   - 画面右上の **`[JP] / [EN]`** ボタンからいつでもワンクリックで言語を切り替え可能。
+   - コックピット計器盤を再現した **Elite Classic Amber HUD**、**Modern Deep Space**、**Cyan Explorer HUD** のテーマ切り替え。
+   - UIフォントサイズの自由変更および緊急リセット（<kbd>Ctrl + 0</kbd>）。
+   - 画面右上の **`[JP] / [EN]`** ボタンからいつでもワンクリックで言語切替。
 
 ---
 
-### 使用方法 (Usage)
+### 📖 使用方法 (Usage & Workflow)
 
-#### 起動方法
+#### 1. インストールと起動
+- **配布パッケージ（推奨）**:
+  [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases) より `ED_Journal_Analyzer.exe` をダウンロードし、任意のフォルダに配置して実行します。
+- **Pythonソースから実行**:
+  ```powershell
+  git clone https://github.com/SuzuneYonaki/ED_Journal_Analyzer.git
+  cd ED_Journal_Analyzer
+  pip install -r requirements.txt
+  python run.py          # GUIアプリとして起動
+  python run.py --browser # 既定のブラウザで起動
+  ```
 
-##### 配布パッケージ（推奨）:
-GitHub Releases よりダウンロードした `ED_Journal_Analyzer.exe` を任意のフォルダに配置して実行します。
+#### 2. 基本ワークフロー
+1. **初回ログスキャン**: 起動後、画面右上の「**Rescan Logs**」をクリックして過去のフライトログをインデックスします。
+2. **ゲームプレイ中の自動追跡**: *Elite Dangerous* を起動してプレイするだけで、ジャンプ・スキャン・着陸などの最新イベントがリアルタイムに画面へ反映されます。
+3. **星系の閲覧 & Web共有HTML出力**:
+   - 画面左側の星系リストから星系を選択してツリーやOrreryを表示します。
+   - 星系ヘッダーの「**Web共有HTML出力**」をクリックすると、`exports/` フォルダに自己完結型のHTML星系図が出力され、エクスプローラーでハイライトされます。
 
-##### ソースコードから実行する場合:
-```powershell
-# リポジトリのクローン
-git clone https://github.com/SuzuneYonaki/ED_Journal_Analyzer.git
-cd ED_Journal_Analyzer
+#### 3. 応用的な使い方
+- **ブックマーク & メモ**: 天体詳細パネルから「★ ブックマーク」やエイリアス名（例: `採掘拠点 Alpha`）、Markdown形式のメモを保存できます。
+- **採掘スポット・地表座標の記録**:
+  - リング天体をDSSスキャンすると、ホットスポット一覧が自動で天体メモに追記されます。
+  - 着陸中にメモ欄右下の「📍 現在地座標挿入」を押すと、現在CMDRがいる緯度・経度が瞬時に挿入されます。
+- **AI による星系の深層査読**:
+  - 出力した Web 共有 HTML（内部に天体・軌道JSONを完全保持）を ChatGPT、Claude、Gemini 等にドラッグ＆ドロップし、下記の**天体物理リアリティチェック・プロンプト**を併用することで、星系の物理的実在性やハビタビリティの学術的検証レポートを生成できます。
 
-# 依存パッケージのインストール
-pip install -r requirements.txt
-
-# デスクトップGUIウィンドウとして起動
-python run.py
-
-# または標準ブラウザで起動
-python run.py --browser
-```
-
-#### 基本的な操作フロー
-1. **ログの読み込み**:
-   - 起動後、右上の「**ログ再スキャン (Rescan Logs)**」をクリックすると、Saved Games フォルダ内のジャーナルログが一括インデックス化されます。
-2. **リアルタイム追従 (LIVE)**:
-   - ゲームプレイ中は自動的にジャーナルの更新を検知し、現在いる星系・スキャンした天体情報が画面に即時反映されます。
-3. **星系・天体の探索とメモ**:
-   - 左ペインの星系リストや検索バーから星系を選択。天体インスペクターからブックマーク登録やMarkdownメモの記述が可能です。
-4. **Web共有HTMLの出力**:
-   - 星系詳細ヘッダーの「Web共有HTML出力」をクリックすると、`exports/{星系名}_share.html` が書き出され、保存先がエクスプローラーで自動表示されます。
-
-#### 💾 ポータブル設計・`data` フォルダの扱い
-- **レジストリやシステム領域への書き込みは一切行いません**: すべてのデータはアプリケーション実行フォルダ内で完結します。
-- **`data` フォルダ**: 初回起動時に自動作成され、SQLiteデータベース（`elite_exploration.db`）が格納されます。
-- **バージョンアップ時**:
-  - 新バージョンへアップデートする際は、**既存の `data` フォルダを残したまま**、新しい `ED_Journal_Analyzer.exe`（またはソースファイル）で上書き起動してください。
-  - 過去の探査ログ、ブックマーク、メモ等の全データがそのまま安全に引き継がれます。
-- **完全削除（アンインストール）**:
-  - アプリケーション本体と `data` フォルダを手動で削除するだけで、PC内に一切の痕跡を残さずアンインストールされます。
+#### 💾 ポータブル設計 & `data` フォルダの管理
+- **レジストリ完全非依存**: すべての設定・インデックスデータ・メモ・ブックマークは、実行ファイルと同じ階層の `data/` フォルダ内に保存されます。
+- **アップデート時**: 新バージョンへ移行する際は、**既存の `data/` フォルダをそのまま残し**、実行ファイル（またはソースコード）のみを上書きしてください。すべてのフライト履歴やメモが自動で引き継がれます。
+- **アンインストール**: アプリ本体と `data/` フォルダを削除するだけで、PC環境を一切汚さず完全に消去できます。
 
 ---
 
-### 🌌 生成AIを活用した天体物理学的実在妥当性の検証 (Astrophysical Reality Check Prompt)
+### 🌌 天体物理学的実在妥当性チェック・プロンプト (for LLMs)
 
-本アプリケーションが出力する **Web共有HTML（`{星系名}_share.html`）** には、`<script id="ed-system-astrophysics-data" type="application/json">` として、星系内の全天体の完全な天体物理・軌道パラメータ（質量、半径、温度、軌道長半径、離心率、公転周期、大気圧、大気組成比率など）がJSON形式で埋め込まれています。
+本アプリケーションが出力する **Web共有HTML（`{星系名}_share.html`）** には、`<script id="ed-system-astrophysics-data" type="application/json">` として、星系内の全天体の完全な天体物理・軌道パラメータがJSON形式で埋め込まれています。
 
-このHTMLファイル（またはエクスポートされたJSON）を **ChatGPT、Claude、Gemini 等の生成AIにドラッグ＆ドロップで添付** し、以下のプロンプトを入力することで、**「この星系が現代の天体物理学・惑星科学の観点から見て、現実の宇宙に本当に存在し得るかどうか」** の厳密な実在妥当性チェックを行うことができます。
-
-> 💡 **AstroRarity との連携**:
-> 天体物理特異性判定エンジン（AstroRarity）等と連携して評価する際のリファレンスプロンプトとしても活用いただけます。
-
-#### 📋 天体物理学的実在妥当性チェック・プロンプト
+このHTMLファイル（またはJSON）を **ChatGPT、Claude、Gemini 等の生成AIにドラッグ＆ドロップで添付** し、以下のプロンプトを入力することで、現代の天体物理学・惑星科学の観点から厳密な実在妥当性チェックを行うことができます。
 
 ```text
 添付したファイルは、宇宙シミュレーション『Elite Dangerous』で実際に観測・記録された星系の天体物理観測データです。
@@ -149,91 +126,82 @@ python run.py --browser
 <a name="english"></a>
 ## Overview (English)
 
-**Elite Dangerous Journal Analyzer** is a local desktop GUI application designed to automatically parse, monitor, and visualize flight journal logs (`Journal.*.log`) from the space simulator *Elite Dangerous*. It delivers comprehensive expedition archives, orbital hierarchy trees, rare celestial anomaly detection, surface gravity & volcanism checks, Exobiology habitat predictions & payouts, exact FSS/DSS exploration value calculations, Rhino SRV mining intelligence, and celestial body bookmarks with rich Markdown notes—**completely offline with absolute privacy**.
-
-> **"What kind of world was that memorable planet I visited long ago?"**  
-> Relive your interstellar voyages, deep-space expeditions, and first discoveries through beautiful visuals and comprehensive telemetry.
-
-> **⚠️ Disclaimer**: This tool is an unofficial, fan-made open-source companion and is not affiliated with or endorsed by Frontier Developments plc. No warranties are provided regarding data accuracy or game log interpretation. The developer assumes no responsibility or liability for any in-game losses or damages. Use at your own discretion.
+**Elite Dangerous Journal Analyzer** is a standalone, local-first desktop GUI application designed to parse and monitor *Elite Dangerous* flight journal logs (`Journal.*.log`) in real time. It offers orbital hierarchy visualization, precise exploration payout calculations, Exobiology predictions, mining reconnaissance, and celestial bookmarking/notes.
 
 ---
 
-### Key Features
+### 🚀 Core Features
 
-1. **Orbital Hierarchy & Interactive System Map**:
-   - Faithful hierarchical visualization of stars, planets, and moons, including circumbinary barycentres, companion stars, semi-major axes (AU / Ls), eccentricity, orbital/rotational periods, inclination, and tidal locking.
-   - Accurately positions circumstellar stars (`A 1`, `B 1`), circumbinary bodies (`AB 1`, `Ab 2`), and custom-named bodies (`Founders World`, `Earth`, `Moon`, `Sagittarius A*`, `Source 2`) in exact orbital order.
-2. **Exact Exploration Payout Engine**:
-   - Precision calculation of FSS scan values, DSS mapped values (including efficiency bonus), First Discovered ($2.6\times$), and First Mapped bonuses.
-   - Parallel display of current FSS Scan Total alongside Max Potential (FD+FM).
-3. **Exobiology Predictor & Vista Genomics Rewards**:
-   - Predicts organic candidates (Stratum, Bacterium, Clypeus, Tubus, etc.) based on atmospheric composition, temperature, surface gravity, and planetary classification.
-   - Computes standard payouts and $5\times$ First Discovery bonuses, with sample colony distance requirements displayed on each body card.
-4. **Surface Telemetry & Rhino Mining Support**:
-   - Landable status, surface gravity ($G$) with High-G landing safety warnings, volcanism classification, and geological signals.
-   - Dedicated toggles for surface gravity ($G$) and surface temperature ($K$) directly tied to mining rig durability management.
-   - EDSM-based mining scout scores (**⛏️ Scout: High** / **⛏️ Scout: Med**).
-   - Filter systems by Large Landing Pad availability and arrival distance thresholds (< 2,000 Ls, < 10,000 Ls, < 50,000 Ls).
-   - Automated ring DSS scan (hotspots) logging into body Markdown notes.
-   - One-click insertion of live CMDR planetary surface coordinates into body notes.
-5. **Body Bookmarks, Custom Aliases & Markdown Notes**:
-   - Bookmark celestial bodies, set user-defined aliases (e.g. `Mining Base Alpha`), and maintain rich Markdown notes with instant live preview.
-   - Full global search across star systems, body names, aliases, and Markdown note contents simultaneously.
-6. **Standalone Web Share HTML Generation**:
-   - One-click export of a beautiful, self-contained single HTML file (`exports/{System}_share.html`) that automatically opens and highlights in Windows Explorer.
-   - Zero external CDN links or network requests; runs 100% offline in any modern browser.
-   - Interactive multi-star system orrery with continuous zoom (0.12x - 40x), drag pan, hover tooltips, and stellar quick jump navigation.
+1. **Real-Time Journal Tracking & Exploration Payouts**:
+   - Automated live tracking of system jumps, Honk (FSS), DSS mapping, surface landings, and bio-scans.
+   - Exact payout calculation for FSS scans, DSS mapping (including efficiency bonus), First Discovery bonus (×2.6), and First Mapped bonus.
+2. **Multi-Star Orrery & Orbital Hierarchy Tree**:
+   - True parent-child hierarchy representing stellar barycentres, circumbinary planets (`AB 1`), circumstellar companion stars (`A 1`, `B 1`), and custom-named bodies (`Sagittarius A*`, `Founders World`, `Earth`, `Moon`).
+   - Interactive system orrery with smooth continuous zoom (0.12x - 40x), drag pan, and stellar jump navigation.
+3. **Exobiology Predictions & Reward Modeling**:
+   - Predicts bio-genus candidates (Stratum, Bacterium, etc.) and calculates standard payouts plus 5x First Sampler bonuses based on atmosphere, surface temperature, gravity, and planet type. Displays required colony distance.
+4. **Surface Landing, Gravity & Rhino Mining Support**:
+   - Extreme gravity danger warnings exclusively on landable worlds; surface volcanism and geological signals.
+   - High-value mining reconnaissance rating (**⛏️ Scout: High / Med**) powered by EDSM telemetry.
+   - Filtering for systems hosting stations with Large Landing Pads within configurable arrival distance thresholds (< 2,000 Ls, < 10,000 Ls, < 50,000 Ls).
+   - Automated DSS ring hotspot markdown logging and one-click CMDR surface coordinate insertion.
+5. **Celestial Bookmarks, Aliases & Markdown Notes**:
+   - Bookmark celestial bodies, assign user aliases (e.g. `Mining Base Alpha`), and edit rich Markdown notes with live preview.
+   - Lightning-fast global search across star systems, body names, custom aliases, and note contents.
+6. **Standalone Web Share HTML Export**:
+   - Exports a single, self-contained HTML file (`exports/{System}_share.html`) that opens offline in any browser without external CDNs.
    - **Embeds complete astrophysical observation JSON data**, serving as a ready-to-use container for Generative AI analysis.
-7. **EDSM Integration & Unvisited Reference Systems (with Safety Locks)**:
-   - Synchronizes with EDSM via priority queue to auto-backfill physical parameters and exploration values for known star systems upon jump-in or Honk.
-   - On-demand inspection of unvisited reference systems with strict export lockout and expedition stat exclusion.
+7. **EDSM Integration & Unvisited Reference Systems**:
+   - Auto-backfills orbital mechanics and exploration values for known systems via background priority queue upon jump-in or Honk.
+   - On-demand inspection of unvisited systems with strict export lockout and expedition stat exclusion.
 8. **UI Customization & Instant Bilingual Support**:
-   - Switchable color presets: **Elite Classic Amber HUD** (authentic cockpit recreation), **Modern Deep Space**, and **Cyan Explorer HUD**.
-   - Adjustable font size (direct numeric px input) with instant reset (<kbd>Ctrl + 0</kbd>).
-   - Instant language switching via the **`[JP] / [EN]`** toggle in the top-right corner.
+   - Switchable themes: **Elite Classic Amber HUD**, **Modern Deep Space**, and **Cyan Explorer HUD**.
+   - Adjustable font size (numeric px input) with instant reset (<kbd>Ctrl + 0</kbd>).
+   - Instant language switching via the **`[JP] / [EN]`** button.
 
 ---
 
-### Installation & Run
+### 📖 Usage & Workflow
 
-#### Pre-built Executable (Recommended):
-Download `ED_Journal_Analyzer.exe` from [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases), place it in any folder, and double-click to run.
+#### 1. Installation & Launch
+- **Pre-built Executable (Recommended)**:
+  Download `ED_Journal_Analyzer.exe` from [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases), place it in any folder, and double-click to run.
+- **Run from Source**:
+  ```powershell
+  git clone https://github.com/SuzuneYonaki/ED_Journal_Analyzer.git
+  cd ED_Journal_Analyzer
+  pip install -r requirements.txt
+  python run.py          # Run desktop GUI
+  python run.py --browser # Run in default browser
+  ```
 
-#### Running from Source:
-```powershell
-# Clone the repository
-git clone https://github.com/SuzuneYonaki/ED_Journal_Analyzer.git
-cd ED_Journal_Analyzer
+#### 2. Basic Workflow
+1. **Initial Indexing**: Click **Rescan Logs** in the top-right corner to index your flight history.
+2. **Live Tracking**: Launch and play *Elite Dangerous*; the app automatically reflects new events in real time.
+3. **System Browsing & Web Share Export**:
+   - Select a star system from the left panel to inspect its tree and Orrery.
+   - Click "**Web共有HTML出力**" on any system header to export a standalone orrery HTML file into `exports/`.
 
-# Install dependencies
-pip install -r requirements.txt
+#### 3. Advanced Features
+- **Bookmarks & Notes**: Open body details to bookmark, set custom aliases, or write Markdown notes.
+- **Mining & Surface Navigation**:
+  - Scanning rings with DSS automatically documents detected hotspots into the body note.
+  - While landed, click "📍 現在地座標挿入" in the note editor to insert your exact planetary coordinates.
+- **AI-Powered System Audit**:
+  - Drag and drop your exported Web Share HTML into ChatGPT, Claude, or Gemini alongside the **Astrophysical Reality Check Prompt** below to generate an in-depth astrophysical plausibility review.
 
-# Launch GUI App
-python run.py
-
-# Or launch in default web browser
-python run.py --browser
-```
-
-#### Basic Workflow:
-1. **Initial Indexing**: Launch the app and click **Rescan Logs** in the top-right corner to index your flight history.
-2. **Live Tracking**: During gameplay, the app automatically tracks new journal events in real time.
-3. **Export Web Share HTML**: Click "Web共有HTML出力" on any system header to export a standalone orrery HTML file into `exports/`.
-
-#### 💾 Portable Design & `data` Directory Handling
-- **Zero registry footprint**: Everything is stored locally next to the application executable.
-- **Upgrading**: When upgrading to a newer version, **keep your existing `data` folder**. Simply replace the executable or pull the latest code. All flight histories, bookmarks, and notes will migrate automatically and remain intact.
-- **Uninstallation**: Delete the application executable and the `data` folder to remove all traces from your computer.
+#### 💾 Portable Architecture & `data` Directory
+- **Zero Registry Footprint**: All database indexes, notes, and preferences reside locally inside the `data/` directory next to the executable.
+- **Upgrading**: When updating to a newer release, **preserve your existing `data/` folder**. Simply overwrite the executable or update the code; all records migrate seamlessly.
+- **Uninstallation**: Delete the application executable and the `data/` folder to completely remove all traces from your system.
 
 ---
 
-### 🌌 Deep Astrophysical Reality Check via Generative AI (LLM Prompting)
+### 🌌 Astrophysical Reality Check Prompt (for LLMs)
 
-Each exported **Web Share HTML (`{System}_share.html`)** contains the complete observational and orbital dataset (stellar & planetary masses, precise radii, temperatures, semi-major axes, eccentricities, orbital periods, surface pressures, and chemical compositions) embedded inside a `<script id="ed-system-astrophysics-data" type="application/json">` element.
+Each exported **Web Share HTML (`{System}_share.html`)** embeds complete astrophysical and orbital telemetry inside a `<script id="ed-system-astrophysics-data" type="application/json">` block.
 
-By dragging and dropping this HTML file (or the raw JSON) into **ChatGPT, Claude, or Gemini** alongside the prompt below, you can perform a rigorous scientific audit to evaluate whether the system could genuinely exist in physical reality, separate procedural artifacts from true astronomical anomalies, and reconstruct its stellar formation narrative.
-
-#### 📋 Astrophysical Reality Check Prompt Template
+Pass this HTML file (or the raw JSON) to **ChatGPT, Claude, or Gemini** using the prompt below:
 
 ```text
 The attached file contains observational and orbital telemetry from a star system recorded in the space simulator Elite Dangerous.
