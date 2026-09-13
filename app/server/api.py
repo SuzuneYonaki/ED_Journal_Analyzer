@@ -643,7 +643,7 @@ def get_systems(
         star_type_sql_map = {
             "O": "(b.star_type = 'O')",
             "B": "(b.star_type = 'B' OR b.star_type LIKE 'B_%')",
-            "A": "(b.star_type = 'A' OR b.star_type LIKE 'A_%')",
+            "A": "((b.star_type = 'A' OR b.star_type LIKE 'A_%') AND b.star_type NOT LIKE 'AeBe%')",
             "F": "(b.star_type = 'F' OR b.star_type LIKE 'F_%')",
             "G": "(b.star_type = 'G' OR b.star_type LIKE 'G_%')",
             "K": "(b.star_type = 'K' OR b.star_type LIKE 'K_%')",
@@ -651,8 +651,8 @@ def get_systems(
             "L": "(b.star_type = 'L')",
             "T": "(b.star_type = 'T')",
             "Y": "(b.star_type = 'Y')",
-            "TTS": "(b.star_type = 'TTS')",
-            "AeBe": "(b.star_type = 'AeBe')",
+            "TTS": "(b.star_type = 'TTS' OR b.star_type LIKE 'TTS%')",
+            "AeBe": "(b.star_type LIKE 'AeBe%')",
             "W": "(b.star_type LIKE 'W%')",
             "C": "(b.star_type LIKE 'C%' OR b.star_type = 'S' OR b.star_type = 'MS')",
             "D": "(b.star_type LIKE 'D%')",
@@ -857,7 +857,7 @@ def get_systems(
                     CASE 
                         WHEN base.main_star_type = 'O' THEN 10.0
                         WHEN base.main_star_type LIKE 'B%' THEN 20.0
-                        WHEN base.main_star_type LIKE 'A%' AND base.main_star_type != 'AeBe' THEN 30.0
+                        WHEN base.main_star_type LIKE 'A%' AND base.main_star_type NOT LIKE 'AeBe%' THEN 30.0
                         WHEN base.main_star_type LIKE 'F%' THEN 40.0
                         WHEN base.main_star_type LIKE 'G%' THEN 50.0
                         WHEN base.main_star_type LIKE 'K%' THEN 60.0
@@ -865,8 +865,8 @@ def get_systems(
                         WHEN base.main_star_type = 'L' THEN 80.0
                         WHEN base.main_star_type = 'T' THEN 90.0
                         WHEN base.main_star_type = 'Y' THEN 100.0
-                        WHEN base.main_star_type = 'TTS' THEN 110.0
-                        WHEN base.main_star_type = 'AeBe' THEN 120.0
+                        WHEN base.main_star_type LIKE 'TTS%' THEN 110.0
+                        WHEN base.main_star_type LIKE 'AeBe%' THEN 120.0
                         WHEN base.main_star_type LIKE 'W%' THEN 130.0
                         WHEN base.main_star_type LIKE 'C%' OR base.main_star_type IN ('S', 'MS') THEN 140.0
                         WHEN base.main_star_type LIKE 'D%' THEN 150.0
@@ -933,7 +933,7 @@ def get_systems(
                     CASE 
                         WHEN main_star_type = 'O' THEN 10
                         WHEN main_star_type LIKE 'B%' THEN 20
-                        WHEN main_star_type LIKE 'A%' AND main_star_type != 'AeBe' THEN 30
+                        WHEN main_star_type LIKE 'A%' AND main_star_type NOT LIKE 'AeBe%' THEN 30
                         WHEN main_star_type LIKE 'F%' THEN 40
                         WHEN main_star_type LIKE 'G%' THEN 50
                         WHEN main_star_type LIKE 'K%' THEN 60
@@ -941,8 +941,8 @@ def get_systems(
                         WHEN main_star_type = 'L' THEN 80
                         WHEN main_star_type = 'T' THEN 90
                         WHEN main_star_type = 'Y' THEN 100
-                        WHEN main_star_type = 'TTS' THEN 110
-                        WHEN main_star_type = 'AeBe' THEN 120
+                        WHEN main_star_type LIKE 'TTS%' THEN 110
+                        WHEN main_star_type LIKE 'AeBe%' THEN 120
                         WHEN main_star_type LIKE 'W%' THEN 130
                         WHEN main_star_type LIKE 'C%' OR main_star_type IN ('S', 'MS') THEN 140
                         WHEN main_star_type LIKE 'D%' THEN 150

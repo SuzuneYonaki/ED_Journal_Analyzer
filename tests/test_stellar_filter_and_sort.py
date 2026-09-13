@@ -87,3 +87,50 @@ def test_filter_by_stellar_types_all():
     assert len(systems) == 1
     assert systems[0]["system_address"] == 1004
     assert systems[0]["star_system"] == "System Binary-N-H"
+
+def test_filter_aebe_collision_prevention():
+    """Ensure AeBe (and subtypes like AeBe2) does not collide with Class A or Class B filters, and is found by AeBe filter."""
+    from app.server.api import get_db_connection as get_api_db
+    conn = get_api_db()
+    c = conn.cursor()
+    # Add an A-type system, a B-type system, and AeBe systems (both base AeBe and subclass AeBe2)
+    c.execute("""
+        INSERT OR REPLACE INTO systems (system_address, star_system, main_star_type, total_potential_value, last_visited)
+        VALUES (2001, 'System Pure A', 'A', 1000, '2026-09-05T12:00:00'),
+               (2002, 'System Pure B', 'B', 2000, '2026-09-05T12:00:00'),
+               (2003, 'System Herbig AeBe Base', 'AeBe', 3000, '2026-09-05T12:00:00'),
+               (2004, 'System Herbig AeBe2 Subclass', 'AeBe2', 4000, '2026-09-05T12:00:00')
+    """)
+    c.execute("DELETE FROM bodies WHERE system_address IN (2001, 2002, 2003, 2004)")
+    c.execute("INSERT INTO bodies (system_address, body_id, body_name, star_type) VALUES (2001, 1, 'System Pure A 1', 'A')")
+    c.execute("INSERT INTO bodies (system_address, body_id, body_name, star_type) VALUES (2002, 1, 'System Pure B 1', 'B')")
+    c.execute("INSERT INTO bodies (system_address, body_id, body_name, star_type) VALUES (2003, 1, 'System Herbig AeBe Base 1', 'AeBe')")
+    c.execute("INSERT INTO bodies (system_address, body_id, body_name, star_type) VALUES (2004, 1, 'System Herbig AeBe2 Subclass 1', 'AeBe2')")
+    conn.commit()
+    conn.close()
+
+    # 1. Searching for 'A' should match 2001, but NOT 2003 or 2004
+    res_a = client.get("/api/systems?star_types=A")
+    assert res_a.status_code == 200
+    addrs_a = [s["system_address"] for s in res_a.json()["systems"]]
+    assert 2001 in addrs_a
+    assert 2003 not in addrs_a
+    assert 2004 not in addrs_a
+
+    # 2. Searching for 'B' should match 2002, but NOT 2003 or 2004
+    res_b = client.get("/api/systems?star_types=B")
+    assert res_b.status_code == 200
+    addrs_b = [s["system_address"] for s in res_b.json()["systems"]]
+    assert 2002 in addrs_b
+    assert 2003 not in addrs_b
+    assert 2004 not in addrs_b
+
+    # 3. Searching for 'AeBe' should match BOTH 2003 and 2004, but NOT 2001 or 2002
+    res_aebe = client.get("/api/systems?star_types=AeBe")
+    assert res_aebe.status_code == 200
+    addrs_aebe = [s["system_address"] for s in res_aebe.json()["systems"]]
+    assert 2003 in addrs_aebe
+    assert 2004 in addrs_aebe
+    assert 2001 not in addrs_aebe
+    assert 2002 not in addrs_aebe
+
