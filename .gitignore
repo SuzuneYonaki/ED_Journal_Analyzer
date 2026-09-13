@@ -34,3 +34,27 @@ Thumbs.db
 *.eop
 BioInsights_extracted/
 species/
+
+# Release summaries (kept locally for GitHub Releases drafting)
+RELEASE_SUMMARY*.md
+
+# Scratch scripts & temporary verification files
+/scratch/
+scratch_*.py
+
+# External sub-projects & standalone tools
+/star_mapper/
+run_star_mapper.py
+
+# Development notes & research extractions
+agent.md
+INTEROPERABILITY_DESIGN.md
+rhino_field_guide_extracted.md
+
+# Editor & AI assistant rule/state files
+.cursorrules
+.windsurfrules
+.instructions.md
+.antigravity
+.antigravity.md
+
