@@ -268,10 +268,37 @@
                 <button class="chip" data-filter="has_landable_hmc" data-i18n="filter_l_hmc" style="color: #60a5fa; border-color: rgba(96, 165, 250, 0.4);">🪐 HMC</button>
                 <button class="chip" data-filter="has_landable_metal_rich" data-i18n="filter_l_mr" style="color: #fb923c; border-color: rgba(251, 146, 60, 0.4);">🪐 Metal Rich</button>
                 <button class="chip" data-filter="has_landable_rocky" data-i18n="filter_l_rocky" style="color: #cbd5e1; border-color: rgba(203, 213, 225, 0.4);">🪐 Rocky</button>
-                <button class="chip" data-filter="has_landable_icy" data-i18n="filter_l_icy" style="color: #67e8f9; border-color: rgba(103, 232, 249, 0.4);">❄️ Icy</button>
-                <button class="chip" data-filter="has_landable_rocky_ice" data-i18n="filter_l_rocky_ice" style="color: #93c5fd; border-color: rgba(147, 197, 253, 0.4);">🧊 Icy Rocky</button>
-                <button class="chip" data-filter="has_landable_ringed" data-i18n="filter_l_ringed" style="color: #f472b6; border-color: rgba(244, 114, 182, 0.4);">💍 Ringed</button>
-                <button class="chip" data-filter="has_mining_signals" data-i18n="filter_mining_sig" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.5);">⛏️ 採掘地点</button>
+                <button class="chip" data-filter="has_landable_icy" data-i18n="filter_l_icy" style="color: #a5f3fc; border-color: rgba(165, 243, 252, 0.4);">🪐 Icy</button>
+                <button class="chip" data-filter="has_landable_rocky_ice" data-i18n="filter_l_rocky_ice" style="color: #93c5fd; border-color: rgba(147, 197, 253, 0.4);">🪐 Rocky Ice</button>
+                <button class="chip" data-filter="has_landable_ringed" data-i18n="filter_l_ringed" style="color: #f472b6; border-color: rgba(244, 114, 182, 0.4);">💍 Landable w/ Ring</button>
+                <button class="chip" data-filter="has_mining_signals" data-i18n="filter_mining_sig" style="color: #eab308; border-color: rgba(234, 179, 8, 0.4);">⛏️ Mining Signals</button>
+
+                <!-- Mining Scout Candidate Filter -->
+                <div style="width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 4px 0 2px 0;">
+                  <span style="font-size: 0.68rem; color: #f59e0b; font-weight: bold;" data-i18n="filter_mining_scout_group">⛏️ Mining Scout:</span>
+                  <div class="filter-chips" style="display: flex; gap: 4px;">
+                    <button class="chip scout-chip active" data-scout="" data-i18n="scout_all">All</button>
+                    <button class="chip scout-chip" data-scout="high" data-i18n="scout_high" title="Pristine Reserve + Metallic Ring">⭐ High</button>
+                    <button class="chip scout-chip" data-scout="medium" data-i18n="scout_medium" title="Pristine Reserve + Icy Ring">✨ Medium</button>
+                  </div>
+                </div>
+
+                <!-- Large Pad & Arrival Distance Filters -->
+                <div style="width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 6px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.68rem;">
+                  <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: #fde047;" title="Only show systems with Large Pad stations">
+                    <input type="checkbox" id="chk-has-large-pad" style="accent-color: #eab308; cursor: pointer;">
+                    <span data-i18n="filter_has_large_pad">🚀 Has Large Pad</span>
+                  </label>
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="color: var(--text-secondary);" data-i18n="filter_max_arrival_dist">Arrival Dist:</span>
+                    <select id="sel-max-arrival-dist" class="search-input" style="padding: 1px 4px; font-size: 0.68rem; height: 22px;">
+                      <option value="" data-i18n="dist_any">Any</option>
+                      <option value="2000">&lt; 2,000 Ls</option>
+                      <option value="10000">&lt; 10,000 Ls</option>
+                      <option value="50000">&lt; 50,000 Ls</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -706,6 +733,7 @@
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                 <label style="font-size: 0.7rem; color: var(--text-secondary);" data-i18n="bm_note_label">📝 メモ (Markdown対応・星系検索可能):</label>
                 <div style="display: flex; gap: 4px;">
+                  <button id="btn-insert-cmdr-coords" class="view-btn" style="padding: 1px 6px; font-size: 0.68rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" title="Insert live/latest surface coordinates" data-i18n="btn_insert_coords">📍 座標挿入</button>
                   <button id="bm-note-tab-edit" class="view-btn active" style="padding: 1px 6px; font-size: 0.68rem;" data-i18n="tab_edit">編集</button>
                   <button id="bm-note-tab-preview" class="view-btn" style="padding: 1px 6px; font-size: 0.68rem;" data-i18n="tab_preview">プレビュー</button>
                 </div>

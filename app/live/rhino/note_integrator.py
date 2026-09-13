@@ -148,3 +148,74 @@ def update_body_note_in_db(
 
     conn.commit()
     return updated_note
+
+RING_HOTSPOT_HEADER = "### 🪐 Ring DSS Scan (Hotspots)"
+
+def append_ring_hotspots_to_note(
+    existing_note: str,
+    ring_name: str,
+    hotspot_counts: Dict[str, int]
+) -> str:
+    """
+    Appends or updates ring DSS hotspot findings into the markdown note.
+    Formats as: '- [Ring: RingName]: Mineral xCount, ...'
+    """
+    if not hotspot_counts:
+        return existing_note or ""
+
+    items = []
+    for mineral in sorted(hotspot_counts.keys()):
+        count = hotspot_counts[mineral]
+        items.append(f"{mineral} x{count}" if count > 1 else f"{mineral}")
+    line_summary = f"- [Ring: {ring_name}]: {', '.join(items)}"
+
+    note = (existing_note or "").strip()
+    if RING_HOTSPOT_HEADER in note:
+        pattern = re.compile(rf"-\s*\[Ring:\s*{re.escape(ring_name)}\]:.*")
+        if pattern.search(note):
+            return pattern.sub(line_summary, note)
+        else:
+            parts = note.split(RING_HOTSPOT_HEADER, 1)
+            return f"{parts[0]}{RING_HOTSPOT_HEADER}\n{line_summary}\n{parts[1].lstrip()}".strip()
+    else:
+        if note:
+            return f"{note}\n\n{RING_HOTSPOT_HEADER}\n{line_summary}".strip()
+        return f"{RING_HOTSPOT_HEADER}\n{line_summary}".strip()
+
+def update_ring_hotspots_in_db(
+    conn: sqlite3.Connection,
+    system_address: int,
+    body_id: int,
+    body_name: str,
+    star_system: str,
+    ring_name: str,
+    hotspot_counts: Dict[str, int]
+) -> str:
+    """
+    Updates or inserts body_bookmarks record with the scanned ring hotspots.
+    """
+    c = conn.cursor()
+    c.execute("SELECT alias_name, note_markdown FROM body_bookmarks WHERE system_address = ? AND body_id = ?", (system_address, body_id))
+    row = c.fetchone()
+
+    now = datetime.now(timezone.utc).isoformat()
+    if row:
+        alias_name = row["alias_name"] if isinstance(row, sqlite3.Row) else row[0]
+        curr_note = row["note_markdown"] if isinstance(row, sqlite3.Row) else row[1]
+        updated_note = append_ring_hotspots_to_note(curr_note or "", ring_name, hotspot_counts)
+        c.execute("""
+            UPDATE body_bookmarks
+            SET note_markdown = ?, updated_at = ?
+            WHERE system_address = ? AND body_id = ?
+        """, (updated_note, now, system_address, body_id))
+    else:
+        alias_name = ""
+        updated_note = append_ring_hotspots_to_note("", ring_name, hotspot_counts)
+        c.execute("""
+            INSERT INTO body_bookmarks (system_address, body_id, body_name, star_system, alias_name, note_markdown, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (system_address, body_id, body_name, star_system, alias_name, updated_note, now, now))
+
+    conn.commit()
+    return updated_note
+

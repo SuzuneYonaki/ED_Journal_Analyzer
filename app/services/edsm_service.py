@@ -556,13 +556,20 @@ class EDSMService:
             ctrl_fac = st.get("controllingFaction", {})
             ctrl_name = ctrl_fac.get("name") if isinstance(ctrl_fac, dict) else ctrl_fac
 
+            large_pad_types = [
+                "starport", "coriolis", "orbis", "ocellus", "asteroid", "megaship",
+                "mega ship", "fleetcarrier", "fleet carrier", "planetary port"
+            ]
+            st_type_lower = (st_type or "").lower()
+            has_large_pad = 1 if any(t in st_type_lower for t in large_pad_types) else 0
+
             try:
                 c.execute("""
                     INSERT INTO stations (
                         system_address, market_id, station_name, station_type, body_name, body_id,
                         latitude, longitude, distance_to_arrival_ls, allegiance, economy, government,
-                        controlling_faction, is_planetary, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        controlling_faction, is_planetary, has_large_pad, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(system_address, station_name) DO UPDATE SET
                         market_id = COALESCE(excluded.market_id, stations.market_id),
                         station_type = COALESCE(excluded.station_type, stations.station_type),
@@ -576,11 +583,12 @@ class EDSMService:
                         government = COALESCE(excluded.government, stations.government),
                         controlling_faction = COALESCE(excluded.controlling_faction, stations.controlling_faction),
                         is_planetary = CASE WHEN excluded.is_planetary = 1 THEN 1 ELSE stations.is_planetary END,
+                        has_large_pad = CASE WHEN excluded.has_large_pad = 1 THEN 1 ELSE stations.has_large_pad END,
                         updated_at = excluded.updated_at
                 """, (
                     system_address, m_id, st_name, st_type, b_name, b_id,
                     lat, lon, dist_arr, alleg, econ, gov,
-                    ctrl_name, is_planet, now_iso
+                    ctrl_name, is_planet, has_large_pad, now_iso
                 ))
                 count += 1
             except Exception:
@@ -857,6 +865,28 @@ class EDSMService:
         if not row or row["count"] == 0:
             return
 
+        # Evaluate mining scout candidate grade based on Pristine reserve and Metallic/Icy rings
+        c.execute("SELECT system_reserve FROM systems WHERE system_address = ?", (system_address,))
+        sys_res_row = c.fetchone()
+        sys_reserve = sys_res_row["system_reserve"] if sys_res_row else ""
+        is_pristine = (sys_reserve or "").strip().lower() in ["pristine", "$reserve_pristine;"]
+
+        mining_grade = ""
+        if is_pristine:
+            c.execute("""
+                SELECT 
+                    MAX(CASE WHEN rings LIKE '%Metallic%' THEN 1 ELSE 0 END) as has_metallic,
+                    MAX(CASE WHEN rings LIKE '%Icy%' THEN 1 ELSE 0 END) as has_icy
+                FROM bodies
+                WHERE system_address = ? AND rings IS NOT NULL AND rings != ''
+            """, (system_address,))
+            ring_row = c.fetchone()
+            if ring_row:
+                if ring_row["has_metallic"]:
+                    mining_grade = "High"
+                elif ring_row["has_icy"]:
+                    mining_grade = "Medium"
+
         c.execute("""
             UPDATE systems SET
                 scanned_bodies = ?,
@@ -873,7 +903,8 @@ class EDSMService:
                 has_landable = ?,
                 has_high_g = ?,
                 has_anomalies = ?,
-                avg_landable_radius = ?
+                avg_landable_radius = ?,
+                mining_scout_grade = ?
             WHERE system_address = ?
         """, (
             row["count"], row["main_star"], row["sum_fss"] or 0, row["sum_dss"] or 0,
@@ -881,6 +912,7 @@ class EDSMService:
             row["ww"] or 0, row["ammonia"] or 0, row["tf"] or 0, row["bio"] or 0,
             row["landable"] or 0, row["high_g"] or 0, row["anomalies"] or 0,
             row["avg_landable_radius"] or 0,
+            mining_grade,
             system_address
         ))
 

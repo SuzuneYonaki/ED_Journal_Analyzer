@@ -389,7 +389,17 @@ const i18n = {
     lm_sol: "Sol (太陽系)",
     lm_colonia: "Colonia (コロニア)",
     lm_rainbow: "Rainbow's End",
-    lm_eanch: "Explorer's Anchorage"
+    lm_eanch: "Explorer's Anchorage",
+
+    // Mining Scout & Station Distance Filters
+    filter_mining_scout_group: "⛏️ 採掘有望度 (Scout):",
+    scout_all: "すべて",
+    scout_high: "⭐ High",
+    scout_medium: "✨ Medium",
+    filter_has_large_pad: "🚀 大型パッド",
+    filter_max_arrival_dist: "到達距離:",
+    dist_any: "指定なし",
+    btn_insert_coords: "📍 座標挿入"
   },
   en: {
     // Header
@@ -781,7 +791,17 @@ const i18n = {
     lm_sol: "Sol",
     lm_colonia: "Colonia",
     lm_rainbow: "Rainbow's End",
-    lm_eanch: "Explorer's Anchorage"
+    lm_eanch: "Explorer's Anchorage",
+
+    // Mining Scout & Station Distance Filters
+    filter_mining_scout_group: "⛏️ Mining Scout:",
+    scout_all: "All",
+    scout_high: "⭐ High",
+    scout_medium: "✨ Medium",
+    filter_has_large_pad: "🚀 Has Large Pad",
+    filter_max_arrival_dist: "Arrival Dist:",
+    dist_any: "Any",
+    btn_insert_coords: "📍 Insert Coords"
   }
 };
 

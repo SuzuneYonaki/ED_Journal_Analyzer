@@ -293,13 +293,26 @@ class JournalParser:
         st_govt = data.get("StationGovernment_Localised") or data.get("StationGovernment")
         allegiance = data.get("StationAllegiance")
 
+        # Large pad check
+        large_pad_types = [
+            "starport", "coriolis", "orbis", "ocellus", "asteroid", "megaship",
+            "mega ship", "fleetcarrier", "fleet carrier", "planetary port"
+        ]
+        st_type_lower = (st_type or "").lower()
+        pads = data.get("LandingPads")
+        has_large_pad = 0
+        if isinstance(pads, dict) and pads.get("Large", 0) > 0:
+            has_large_pad = 1
+        elif any(t in st_type_lower for t in large_pad_types):
+            has_large_pad = 1
+
         try:
             self.cursor.execute("""
                 INSERT INTO stations (
                     system_address, market_id, station_name, station_type, body_name, body_id,
                     latitude, longitude, distance_to_arrival_ls, allegiance, economy, government,
-                    controlling_faction, is_planetary, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    controlling_faction, is_planetary, has_large_pad, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(system_address, station_name) DO UPDATE SET
                     market_id = COALESCE(excluded.market_id, stations.market_id),
                     station_type = COALESCE(excluded.station_type, stations.station_type),
@@ -313,11 +326,12 @@ class JournalParser:
                     government = COALESCE(excluded.government, stations.government),
                     controlling_faction = COALESCE(excluded.controlling_faction, stations.controlling_faction),
                     is_planetary = CASE WHEN excluded.is_planetary = 1 THEN 1 ELSE stations.is_planetary END,
+                    has_large_pad = CASE WHEN excluded.has_large_pad = 1 THEN 1 ELSE stations.has_large_pad END,
                     updated_at = excluded.updated_at
             """, (
                 sys_addr, market_id, st_name, st_type, body_name, body_id,
                 lat, lon, dist_ls, allegiance, st_econ, st_govt,
-                faction_name, is_planetary, timestamp
+                faction_name, is_planetary, has_large_pad, timestamp
             ))
         except Exception:
             pass
@@ -588,6 +602,33 @@ class JournalParser:
         
         confirmed_genuses_json = json.dumps(confirmed_genuses_list) if confirmed_genuses_list else None
         is_saa_signals = (event_name == "SAASignalsFound")
+
+        # Auto-record ring DSS hotspots into markdown notes
+        if is_saa_signals and signals:
+            hotspot_counts = {}
+            for s in signals:
+                stype = s.get("Type") or ""
+                stype_loc = s.get("Type_Localised") or ""
+                scount = s.get("Count", 1)
+                if "$Hotspot_" in stype or "hotspot" in stype.lower():
+                    min_name = stype_loc or re.sub(r"^\$Hotspot_|_Name;?$", "", stype, flags=re.IGNORECASE).rstrip(";").strip()
+                    if min_name:
+                        hotspot_counts[min_name] = hotspot_counts.get(min_name, 0) + scount
+            
+            if hotspot_counts and (body_id is not None or body_name):
+                try:
+                    from app.live.rhino.note_integrator import update_ring_hotspots_in_db
+                    update_ring_hotspots_in_db(
+                        conn=self.conn,
+                        system_address=sys_addr,
+                        body_id=body_id if body_id is not None else 0,
+                        body_name=body_name or f"Body {body_id}",
+                        star_system=self.current_star_system or "",
+                        ring_name=body_name or "Ring",
+                        hotspot_counts=hotspot_counts
+                    )
+                except Exception as e:
+                    print(f"[Parser] Error recording ring hotspots: {e}")
 
         # Check if body exists
         if body_id is not None:
@@ -1003,6 +1044,28 @@ class JournalParser:
             first_disc_count = 0 if is_populated else (row["first_disc_count"] or 0)
             has_first_disc = 0 if is_populated else (row["has_first_disc"] or 0)
 
+            # Evaluate mining scout candidate grade based on Pristine reserve and Metallic/Icy rings
+            self.cursor.execute("SELECT system_reserve FROM systems WHERE system_address = ?", (sys_addr,))
+            sys_res_row = self.cursor.fetchone()
+            sys_reserve = sys_res_row["system_reserve"] if sys_res_row else ""
+            is_pristine = (sys_reserve or "").strip().lower() in ["pristine", "$reserve_pristine;"]
+
+            mining_grade = ""
+            if is_pristine:
+                self.cursor.execute("""
+                    SELECT 
+                        MAX(CASE WHEN rings LIKE '%Metallic%' THEN 1 ELSE 0 END) as has_metallic,
+                        MAX(CASE WHEN rings LIKE '%Icy%' THEN 1 ELSE 0 END) as has_icy
+                    FROM bodies
+                    WHERE system_address = ? AND rings IS NOT NULL AND rings != ''
+                """, (sys_addr,))
+                ring_row = self.cursor.fetchone()
+                if ring_row:
+                    if ring_row["has_metallic"]:
+                        mining_grade = "High"
+                    elif ring_row["has_icy"]:
+                        mining_grade = "Medium"
+
             self.cursor.execute("""
                 INSERT INTO systems (
                     system_address, star_system, first_visited, last_visited,
@@ -1010,8 +1073,8 @@ class JournalParser:
                     total_potential_value, total_bio_signals, has_elw,
                     has_water_world, has_ammonia, has_terraformable, has_bio,
                     has_landable, has_high_g, has_anomalies, first_discovered_bodies, has_first_discover,
-                    avg_landable_radius
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    avg_landable_radius, mining_scout_grade
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(system_address) DO UPDATE SET
                     scanned_bodies = excluded.scanned_bodies,
                     main_star_type = COALESCE(excluded.main_star_type, systems.main_star_type),
@@ -1029,7 +1092,8 @@ class JournalParser:
                     has_anomalies = excluded.has_anomalies,
                     first_discovered_bodies = excluded.first_discovered_bodies,
                     has_first_discover = excluded.has_first_discover,
-                    avg_landable_radius = excluded.avg_landable_radius
+                    avg_landable_radius = excluded.avg_landable_radius,
+                    mining_scout_grade = CASE WHEN excluded.mining_scout_grade != '' THEN excluded.mining_scout_grade ELSE systems.mining_scout_grade END
             """, (
                 sys_addr, sys_name, ts, ts,
                 row["count"], main_star, row["sum_fss"] or 0, row["sum_dss"] or 0,
@@ -1037,7 +1101,8 @@ class JournalParser:
                 row["ww"] or 0, row["ammonia"] or 0, row["tf"] or 0, row["bio"] or 0,
                 row["landable"] or 0, row["high_g"] or 0, row["anomalies"] or 0,
                 first_disc_count, has_first_disc,
-                row["avg_landable_radius"] or 0
+                row["avg_landable_radius"] or 0,
+                mining_grade
             ))
 
     def parse_file(self, filepath: str, progress_callback=None):

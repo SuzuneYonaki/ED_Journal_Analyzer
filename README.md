@@ -1,4 +1,4 @@
-# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.6)
+# Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.7)
 
 [日本語](#日本語) | [English](#english)
 
@@ -13,6 +13,22 @@ Elite Dangerousのフライトジャーナルログ（`Journal.*.log`）を自�
 > 銀河の遥かなる長旅の記録や、過去の深宇宙探索・初発見の思い出をいつでも鮮明に振り返ることができます。
 
 > **⚠️ 使用上の注意・免責事項**: 本ツールはファンメイドの非公式オープンソースツールです。フロンティア・デベロップメンツ社とは一切関係ありません。ジャーナルログの解釈や探査・採掘データの完全性についてはいかなる保証も致しかねます。本ツールの使用によって生じたゲーム内での損失（機体喪失、採掘リグ耐久値損失、探査データ喪失など）を含むいかなる結果についても開発者は一切の責任を負いません。自己責任においてご利用ください。
+
+### 🚀 v0.1.7 アップデート・サマリー
+- **EDSM天体データに基づく採掘有望度スコア & 検索フィルター新設**:
+  - EDSM天体データおよびジャーナル走査により、埋蔵量（Reserve Level）が **Pristine（最高）** かつ高価値リングを持つ星系を自動判定。
+  - **⛏️ Scout: High**: Pristine + Metallic（金属質）リング（プラチナ・ペイン石など高価値レーザー採掘向け最有望星系）。
+  - **⛏️ Scout: Med**: Pristine + Icy（氷）リング（トリチウム・低温ダイヤモンド等向け有望星系）。
+  - 星系カードおよび詳細ヘッダーにバッジ表示されるほか、左側パネルの採掘フィルターに「すべて / High / Med」チップフィルターを新設。
+- **無駄足を防ぐ大型着艦パッド（Has Large Pad）＆ 到着距離（Arrival Distance）フィルター**:
+  - **🚀 大型パッド（Large Pad）**: 大型宇宙船（Anaconda、Cutter、Type-9等）が着艦可能な Starport、Planetary Port、Megaship、Carrier を持つ星系のみを瞬時に抽出。
+  - **到達距離フィルター**: 星系内のステーションや天体までの到達距離（< 2,000 Ls、< 10,000 Ls、< 50,000 Ls、指定なし）で絞り込み可能。何十万Lsもの長距離スーパークルーズ移動を未然に防止します。
+- **リングDSSスキャン（ホットスポット）の天体Markdownメモ自動記録**:
+  - リング天体へのDSS（詳細サーフェススキャナー）実施時に発生する `SAASignalsFound` イベントを自動検知。
+  - プラチナ、ペイン石、トリチウム等のホットスポット名と重複数を集計し、天体のMarkdownメモへ `### 🪐 Ring DSS Scan (Hotspots)` として自動追記・更新。
+- **天体メモへのリアルタイム現在地座標ワンクリック挿入**:
+  - 天体詳細インスペクターのブックマーク・Markdownメモ編集欄に「📍 座標挿入（Insert Coords）」ボタンを新設。
+  - `Status.json` または最新の地表探査ログから現在の緯度・経度を即座に取得し、エディタのカーソル位置へ自動挿入。地表採掘地点やレア拠点の記録が格段にスムーズになりました。
 
 ### 🚀 v0.1.6 アップデート・サマリー
 - **Web共有HTMLの「対話的マルチ恒星オーラリー（連星系・伴星・周回軌道図）」新設**:
@@ -205,6 +221,22 @@ A local desktop GUI application that automatically parses and monitors Elite Dan
 > Relive and explore your epic expedition memories, first discoveries, and galaxy travels anytime with complete offline privacy.
 
 > **⚠️ Disclaimer**: This tool is an unofficial, fan-made open-source companion and is not affiliated with or endorsed by Frontier Developments plc. No warranties are provided regarding data accuracy or game log interpretation. The developer assumes no responsibility or liability for any in-game losses or damages (including loss of ships, mining rig durability, or exploration data). Use at your own discretion.
+
+### 🚀 v0.1.7 Update Summary
+- **EDSM Mining Scout Candidate Score & Filter**:
+  - Evaluates system mining potential by checking for **Pristine** resource reserves and high-value ring types.
+  - **⛏️ Scout: High**: Pristine + Metallic rings (prime candidate for laser mining platinum, painite, etc.).
+  - **⛏️ Scout: Med**: Pristine + Icy rings (candidate for tritium, low-temperature diamonds, etc.).
+  - Visual badges displayed on system cards and system headers, with interactive quick filter chips ("All / High / Med") in the mining filter group.
+- **Station Pad Size & Arrival Distance Filters (Prevent Fruitless Long Trips)**:
+  - **🚀 Large Pad Checkbox**: Filter systems containing starports, planetary ports, megaships, or carriers equipped with Large Landing Pads suitable for large exploration and trade vessels (Anaconda, Cutter, Type-9, etc.).
+  - **Max Arrival Distance Select**: Filter stations and bodies by arrival distance thresholds (< 2,000 Ls, < 10,000 Ls, < 50,000 Ls, or Any), saving commanders from unnecessary hundreds of thousands Ls supercruise trips.
+- **Automated Ring DSS Scan (Hotspot) Logging into Markdown Notes**:
+  - Automatically captures `SAASignalsFound` events on planetary rings.
+  - Formats detected hotspots (e.g., Platinum x2, Painite x1, Tritium x3) and appends or updates them cleanly under `### 🪐 Ring DSS Scan (Hotspots)` in the body's Markdown note.
+- **One-Click Live CMDR Surface Coordinates Insertion**:
+  - Added a "📍 Insert Coords" button directly in the Body Inspector bookmark note editor.
+  - Pulls real-time telemetry from `Status.json` (or latest surface activity) and inserts the commander's current planetary coordinates directly at the editor cursor.
 
 ### 🚀 v0.1.6 Update Summary
 - **Interactive Multi-Star Orrery & Companion Orbit Hierarchy in Web Share HTML**:

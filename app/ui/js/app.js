@@ -39,6 +39,9 @@ let state = {
   showMiningGravity: localStorage.getItem('mining_display_gravity') !== 'false',
   showMiningTemp: localStorage.getItem('mining_display_temp') !== 'false',
   miningSubFilter: 'all',
+  miningScout: '',
+  hasLargePad: false,
+  maxArrivalDistLs: null,
   sortBy: 'last_visited',
   sortOrder: 'desc',
   sortBy2: null,
@@ -467,6 +470,16 @@ async function fetchSystems(options = {}) {
     if (v) params.append(k, 'true');
   });
 
+  if (state.miningScout) {
+    params.append('mining_scout', state.miningScout);
+  }
+  if (state.hasLargePad) {
+    params.append('has_large_pad', 'true');
+  }
+  if (state.maxArrivalDistLs !== null && state.maxArrivalDistLs !== undefined && state.maxArrivalDistLs !== '') {
+    params.append('max_arrival_dist_ls', state.maxArrivalDistLs);
+  }
+
   try {
     const res = await fetch(`/api/systems?${params.toString()}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -776,6 +789,13 @@ function renderSystemList() {
       tags.push('<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;" title="EDSM星系状態: Investment (投資)">💼 Investment</span>');
     }
 
+    // Mining Scout Candidate Badges
+    if (sys.mining_scout_grade === 'High') {
+      tags.push('<span class="tag-badge badge-scout-high" title="Mining Scout High (Pristine + Metallic Rings)">⛏️ Scout: High</span>');
+    } else if (sys.mining_scout_grade === 'Medium') {
+      tags.push('<span class="tag-badge badge-scout-medium" title="Mining Scout Medium (Pristine + Icy Rings)">⛏️ Scout: Med</span>');
+    }
+
     if (sys.has_high_g) tags.push('<span class="tag-badge tag-high-g">High-G</span>');
     if (sys.has_anomalies) tags.push('<span class="tag-badge tag-anomaly">Rare/Orbit</span>');
     if (sys.bookmarks && sys.bookmarks.length > 0) {
@@ -1050,6 +1070,14 @@ function renderSystemHeader() {
     } else {
       stateBadgeEl.innerHTML = '';
       stateBadgeEl.style.display = 'none';
+    }
+
+    if (sys.mining_scout_grade === 'High') {
+      stateBadgeEl.innerHTML += `<span class="tag-badge badge-scout-high" style="font-size: 0.72rem; padding: 2px 7px;" title="Mining Scout High (Pristine + Metallic Rings)">⛏️ Scout: High</span>`;
+      stateBadgeEl.style.display = 'inline-flex';
+    } else if (sys.mining_scout_grade === 'Medium') {
+      stateBadgeEl.innerHTML += `<span class="tag-badge badge-scout-medium" style="font-size: 0.72rem; padding: 2px 7px;" title="Mining Scout Medium (Pristine + Icy Rings)">⛏️ Scout: Medium</span>`;
+      stateBadgeEl.style.display = 'inline-flex';
     }
   }
 
@@ -2837,6 +2865,37 @@ function renderBodyInspector() {
       };
     }
 
+    // Insert Live CMDR Surface Coordinates Handler
+    const btnInsertCoords = document.getElementById('btn-insert-cmdr-coords');
+    if (btnInsertCoords && bmNoteInput) {
+      btnInsertCoords.onclick = async () => {
+        try {
+          btnInsertCoords.disabled = true;
+          const res = await fetch('/api/cmdr/coordinates');
+          btnInsertCoords.disabled = false;
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.has_coordinates && data.formatted_text) {
+              const cursorPos = bmNoteInput.selectionStart || bmNoteInput.value.length;
+              const textBefore = bmNoteInput.value.substring(0, cursorPos);
+              const textAfter = bmNoteInput.value.substring(cursorPos);
+              const insertion = (textBefore.length > 0 && !textBefore.endsWith('\n') ? '\n' : '') +
+                                data.formatted_text + '\n';
+              bmNoteInput.value = textBefore + insertion + textAfter;
+              bmNoteInput.focus();
+              const newPos = cursorPos + insertion.length;
+              bmNoteInput.setSelectionRange(newPos, newPos);
+            } else {
+              alert(data.message || 'No surface coordinates available (CMDR not currently on surface)');
+            }
+          }
+        } catch (e) {
+          btnInsertCoords.disabled = false;
+          console.error('Failed to fetch cmdr coordinates:', e);
+        }
+      };
+    }
+
     // Save Bookmark Handler
     if (btnBmSave) {
       btnBmSave.onclick = async () => {
@@ -3919,7 +3978,10 @@ function updateCollapsibleBadges() {
   }
 
   const miningKeys = ['has_landable_hmc', 'has_landable_metal_rich', 'has_landable_rocky', 'has_landable_icy', 'has_landable_rocky_ice', 'has_landable_ringed', 'has_mining_signals'];
-  const miningCount = miningKeys.filter(k => state.filters[k]).length;
+  let miningCount = miningKeys.filter(k => state.filters[k]).length;
+  if (state.miningScout) miningCount++;
+  if (state.hasLargePad) miningCount++;
+  if (state.maxArrivalDistLs !== null && state.maxArrivalDistLs !== undefined && state.maxArrivalDistLs !== '') miningCount++;
   const badgeMine = document.getElementById('badge-mining-filters');
   if (badgeMine) {
     badgeMine.innerText = miningCount > 0 ? miningCount : '';
@@ -4406,8 +4468,58 @@ document.addEventListener('DOMContentLoaded', () => {
       e.stopPropagation();
       document.querySelectorAll('#group-mining-filters .chip').forEach(chip => {
         chip.classList.remove('active');
-        state.filters[chip.dataset.filter] = false;
+        if (chip.dataset.filter) {
+          state.filters[chip.dataset.filter] = false;
+        }
       });
+      document.querySelectorAll('.scout-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.scout === '');
+      });
+      state.miningScout = '';
+
+      const chkPad = document.getElementById('chk-has-large-pad');
+      if (chkPad) chkPad.checked = false;
+      state.hasLargePad = false;
+
+      const selDist = document.getElementById('sel-max-arrival-dist');
+      if (selDist) selDist.value = '';
+      state.maxArrivalDistLs = null;
+
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  }
+
+  // Mining Scout Filter Chips
+  document.querySelectorAll('.scout-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const val = chip.dataset.scout || '';
+      state.miningScout = val;
+      document.querySelectorAll('.scout-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  });
+
+  // Large Pad Filter Checkbox
+  const chkLargePad = document.getElementById('chk-has-large-pad');
+  if (chkLargePad) {
+    chkLargePad.addEventListener('change', () => {
+      state.hasLargePad = chkLargePad.checked;
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  }
+
+  // Max Arrival Distance Select Dropdown
+  const selArrivalDist = document.getElementById('sel-max-arrival-dist');
+  if (selArrivalDist) {
+    selArrivalDist.addEventListener('change', () => {
+      state.maxArrivalDistLs = selArrivalDist.value ? Number(selArrivalDist.value) : null;
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });

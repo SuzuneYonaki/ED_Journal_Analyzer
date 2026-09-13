@@ -245,6 +245,68 @@ def get_current_cmdr_location(conn) -> Optional[dict]:
         print("Warning: get_current_cmdr_location failed:", err)
     return None
 
+@app.get("/api/cmdr/coordinates")
+def get_cmdr_coordinates():
+    """
+    Returns live or latest surface coordinates from Status.json or latest journal parsing state.
+    """
+    from app.live.telemetry import telemetry_tracker
+    
+    # 1. Read live Status.json
+    status = telemetry_tracker.read_status_json()
+    lat = status.get("Latitude")
+    lon = status.get("Longitude")
+    altitude = status.get("Altitude")
+    body_name = status.get("BodyName")
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    cmdr_loc = get_current_cmdr_location(conn)
+    star_system = cmdr_loc.get("star_system", "") if cmdr_loc else ""
+    sys_addr = cmdr_loc.get("system_address") if cmdr_loc else None
+
+    # Fallback to journal parser in-memory or DB surface activities if Status.json has no coords
+    if lat is None or lon is None:
+        c.execute("""
+            SELECT body_name, latitude, longitude, star_system, system_address
+            FROM surface_mining_activities
+            WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+            ORDER BY timestamp DESC LIMIT 1
+        """)
+        act_row = c.fetchone()
+        if act_row:
+            lat = act_row["latitude"]
+            lon = act_row["longitude"]
+            body_name = body_name or act_row["body_name"]
+            star_system = star_system or act_row["star_system"]
+            sys_addr = sys_addr or act_row["system_address"]
+
+    conn.close()
+
+    is_surface = (lat is not None and lon is not None)
+    lat_val = round(float(lat), 6) if lat is not None else None
+    lon_val = round(float(lon), 6) if lon is not None else None
+
+    formatted = ""
+    if is_surface:
+        b_str = body_name or (star_system + " Body" if star_system else "Surface Location")
+        formatted = f"{b_str}\nLocation : {lat_val:+.4f} / {lon_val:+.4f}"
+
+    return {
+        "is_surface": is_surface,
+        "has_coordinates": is_surface,
+        "star_system": star_system,
+        "system_address": sys_addr,
+        "body_name": body_name,
+        "latitude": lat_val,
+        "longitude": lon_val,
+        "altitude": altitude,
+        "formatted": formatted,
+        "formatted_text": formatted,
+        "message": "" if is_surface else "No surface coordinates available (CMDR not on surface)"
+    }
+
 @app.get("/api/landmarks")
 def get_landmarks_endpoint():
     """Return static galactic landmark coordinates and metadata."""
@@ -456,6 +518,9 @@ def get_systems(
     luminosity_match_mode: Optional[str] = "any",
     celestial_filters: Optional[List[str]] = Query(None),
     celestial_match_mode: Optional[str] = "all",
+    mining_scout: Optional[str] = None,
+    has_large_pad: Optional[bool] = False,
+    max_arrival_dist_ls: Optional[float] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     date_field: Optional[str] = "last_visited",
@@ -687,6 +752,25 @@ def get_systems(
             else:
                 combined_cf_or = " OR ".join(cf_exprs)
                 conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND ({combined_cf_or}))")
+
+    if mining_scout:
+        ms = str(mining_scout).strip().lower()
+        if ms == "high":
+            conditions.append("systems.mining_scout_grade = 'High'")
+        elif ms == "medium":
+            conditions.append("systems.mining_scout_grade = 'Medium'")
+        elif ms in ["any", "all", "yes", "true", "1"]:
+            conditions.append("(systems.mining_scout_grade = 'High' OR systems.mining_scout_grade = 'Medium')")
+
+    if has_large_pad:
+        conditions.append("EXISTS (SELECT 1 FROM stations st WHERE st.system_address = systems.system_address AND st.has_large_pad = 1)")
+
+    if max_arrival_dist_ls is not None and max_arrival_dist_ls > 0:
+        conditions.append("""(
+            EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.distance_from_arrival_ls > 0 AND b.distance_from_arrival_ls <= ?)
+            OR EXISTS (SELECT 1 FROM stations st WHERE st.system_address = systems.system_address AND st.distance_to_arrival_ls > 0 AND st.distance_to_arrival_ls <= ?)
+        )""")
+        params.extend([float(max_arrival_dist_ls), float(max_arrival_dist_ls)])
 
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 

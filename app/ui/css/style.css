@@ -2643,6 +2643,48 @@ header {
   flex: 1;
 }
 
+/* Mining Scout & Arrival Distance Styles */
+.chip.scout-chip {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.chip.scout-chip.active {
+  background: #f59e0b;
+  color: #000;
+  border-color: #f59e0b;
+  font-weight: bold;
+}
+
+.badge-scout-high {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+  letter-spacing: 0.3px;
+}
+
+.badge-scout-medium {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 4px;
+  background: rgba(6, 182, 212, 0.2);
+  border: 1px solid #06b6d4;
+  color: #67e8f9;
+  letter-spacing: 0.3px;
+}
+
 
 
 

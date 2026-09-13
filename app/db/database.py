@@ -102,7 +102,8 @@ def init_db(conn=None):
         controlling_faction TEXT DEFAULT '',
         system_second_economy TEXT DEFAULT '',
         system_reserve TEXT DEFAULT '',
-        edsm_factions_json TEXT DEFAULT '[]'
+        edsm_factions_json TEXT DEFAULT '[]',
+        mining_scout_grade TEXT DEFAULT ''
     );
     """)
 
@@ -290,6 +291,7 @@ def init_db(conn=None):
         government TEXT,
         controlling_faction TEXT,
         is_planetary INTEGER DEFAULT 0,
+        has_large_pad INTEGER DEFAULT 0,
         updated_at TEXT,
         UNIQUE(system_address, station_name)
     );
@@ -386,14 +388,74 @@ def init_db(conn=None):
         ("system_second_economy", "TEXT DEFAULT ''"),
         ("system_reserve", "TEXT DEFAULT ''"),
         ("edsm_factions_json", "TEXT DEFAULT '[]'"),
+        ("mining_scout_grade", "TEXT DEFAULT ''"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE systems ADD COLUMN {col_def[0]} {col_def[1]};")
         except Exception:
             pass
 
+    for col_def in [
+        ("has_large_pad", "INTEGER DEFAULT 0"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE stations ADD COLUMN {col_def[0]} {col_def[1]};")
+        except Exception:
+            pass
+
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_shared ON systems(is_shared);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_external ON systems(is_external);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_systems_mining_scout ON systems(mining_scout_grade);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_stations_large_pad ON stations(system_address, has_large_pad);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_stations_dist ON stations(system_address, distance_to_arrival_ls);")
+
+    # Backfill has_large_pad on stations table
+    try:
+        cursor.execute("""
+            UPDATE stations
+            SET has_large_pad = 1
+            WHERE has_large_pad = 0 AND (
+                station_type LIKE '%Starport%'
+                OR station_type LIKE '%Coriolis%'
+                OR station_type LIKE '%Orbis%'
+                OR station_type LIKE '%Ocellus%'
+                OR station_type LIKE '%Asteroid%'
+                OR station_type LIKE '%Megaship%'
+                OR station_type LIKE '%Mega ship%'
+                OR station_type LIKE '%FleetCarrier%'
+                OR station_type LIKE '%Fleet Carrier%'
+                OR station_type LIKE '%Planetary Port%'
+            );
+        """)
+    except Exception:
+        pass
+
+    # Backfill mining_scout_grade on systems table
+    try:
+        cursor.execute("""
+            UPDATE systems
+            SET mining_scout_grade = 'High'
+            WHERE (system_reserve = 'Pristine' OR system_reserve = '$reserve_pristine;')
+              AND (mining_scout_grade != 'High' OR mining_scout_grade IS NULL)
+              AND EXISTS (
+                  SELECT 1 FROM bodies b
+                  WHERE b.system_address = systems.system_address
+                    AND b.rings LIKE '%Metallic%'
+              );
+        """)
+        cursor.execute("""
+            UPDATE systems
+            SET mining_scout_grade = 'Medium'
+            WHERE (system_reserve = 'Pristine' OR system_reserve = '$reserve_pristine;')
+              AND (mining_scout_grade = '' OR mining_scout_grade IS NULL)
+              AND EXISTS (
+                  SELECT 1 FROM bodies b
+                  WHERE b.system_address = systems.system_address
+                    AND b.rings LIKE '%Icy%'
+              );
+        """)
+    except Exception:
+        pass
 
     for col_def in [
         ("star_pos_x", "REAL"),
