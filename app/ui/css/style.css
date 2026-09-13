@@ -583,6 +583,28 @@ header {
   box-shadow: 0 0 6px var(--ed-orange-glow);
 }
 
+.search-clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.search-clear-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
 /* External Footprint Check Row & Status Badges */
 .external-check-row {
   display: flex;
@@ -848,6 +870,44 @@ header {
   color: #ffffff !important;
   font-weight: bold;
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+.chip.celestial-chip.active {
+  background: rgba(244, 114, 182, 0.25) !important;
+  border-color: #f472b6 !important;
+  color: #fbcfe8 !important;
+  font-weight: bold;
+  box-shadow: 0 0 6px rgba(244, 114, 182, 0.4);
+}
+.chip.celestial-chip.active[data-celestial="eccentric"],
+.chip.celestial-chip.active[data-celestial="inclined"],
+.chip.celestial-chip.active[data-celestial="fast_orbit"] {
+  background: rgba(236, 72, 153, 0.25) !important;
+  border-color: #ec4899 !important;
+  color: #f472b6 !important;
+}
+.chip.celestial-chip.active[data-celestial="close_binary"],
+.chip.celestial-chip.active[data-celestial="hierarchical_binary"] {
+  background: rgba(168, 85, 247, 0.25) !important;
+  border-color: #c084fc !important;
+  color: #e9d5ff !important;
+}
+.chip.celestial-chip.active[data-celestial="ringed"],
+.chip.celestial-chip.active[data-celestial="wide_ring"],
+.chip.celestial-chip.active[data-celestial="ringed_star"] {
+  background: rgba(251, 191, 36, 0.25) !important;
+  border-color: #f59e0b !important;
+  color: #fef08a !important;
+}
+.chip.celestial-chip.active[data-celestial="high_g"] {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: #ef4444 !important;
+  color: #fca5a5 !important;
+}
+.chip.celestial-chip.active[data-celestial="volcanism"] {
+  background: rgba(249, 115, 22, 0.25) !important;
+  border-color: #f97316 !important;
+  color: #fdba74 !important;
 }
 
 .sort-row {

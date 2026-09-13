@@ -454,6 +454,8 @@ def get_systems(
     star_match_mode: Optional[str] = "any",
     luminosity_classes: Optional[List[str]] = Query(None),
     luminosity_match_mode: Optional[str] = "any",
+    celestial_filters: Optional[List[str]] = Query(None),
+    celestial_match_mode: Optional[str] = "all",
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     date_field: Optional[str] = "last_visited",
@@ -649,6 +651,42 @@ def get_systems(
         else:
             combined_lum_or = " OR ".join(lum_exprs)
             conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND ({combined_lum_or}))")
+
+    # Celestial Bodies, Orbital & Anomaly Filters (Eccentric, Inclined, Fast, Binary, Rings, etc.)
+    active_celestial_filters = []
+    if celestial_filters:
+        for cf in celestial_filters:
+            for item in str(cf).split(","):
+                clean = item.strip()
+                if clean and clean not in active_celestial_filters:
+                    active_celestial_filters.append(clean)
+
+    if active_celestial_filters:
+        celestial_sql_map = {
+            "eccentric": "(b.eccentricity >= 0.5)",
+            "inclined": "(abs(b.orbital_inclination) >= 45.0 OR b.orbital_inclination > 90.0 OR b.orbital_inclination < -90.0)",
+            "fast_orbit": "((b.orbital_period > 0 AND b.orbital_period <= 17280) OR (abs(b.rotation_period) > 0 AND abs(b.rotation_period) <= 7200))",
+            "close_binary": "(b.star_type IS NOT NULL AND ((b.distance_from_arrival_ls > 0 AND b.distance_from_arrival_ls <= 50.0) OR (b.semi_major_axis > 0 AND (b.semi_major_axis / 299792458.0) <= 20.0)))",
+            "hierarchical_binary": "(b.star_type IS NOT NULL AND b.parents LIKE '%Null%Null%')",
+            "ringed": "(b.rings IS NOT NULL AND b.rings != '' AND b.rings != '[]' AND b.rings != '\"\"')",
+            "wide_ring": "(b.anomalies_json LIKE '%giant_ring%' OR (b.rings LIKE '%OuterRad%' AND (b.rings LIKE '%\"OuterRad\": [5-9]%' OR b.rings LIKE '%\"OuterRad\": [1-9][0-9]%')))",
+            "ringed_star": "(b.star_type IS NOT NULL AND b.rings IS NOT NULL AND b.rings != '' AND b.rings != '[]' AND b.rings != '\"\"')",
+            "high_g": "(b.landable = 1 AND (b.surface_gravity_g >= 1.5 OR b.surface_gravity >= 14.71))",
+            "volcanism": "(b.volcanism IS NOT NULL AND b.volcanism != '' AND LOWER(b.volcanism) != 'none')",
+        }
+
+        cf_exprs = []
+        for cf_key in active_celestial_filters:
+            if cf_key in celestial_sql_map:
+                cf_exprs.append(celestial_sql_map[cf_key])
+
+        if cf_exprs:
+            if celestial_match_mode == "all":
+                for expr in cf_exprs:
+                    conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
+            else:
+                combined_cf_or = " OR ".join(cf_exprs)
+                conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND ({combined_cf_or}))")
 
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -1228,6 +1266,14 @@ def get_system_detail(system_address: int):
         system_data["rarity_score"] = None
         system_data["physics_evaluation"] = None
 
+    # Fetch stations & settlements
+    c.execute("""
+        SELECT * FROM stations 
+        WHERE system_address = ? 
+        ORDER BY is_planetary ASC, distance_to_arrival_ls ASC, station_name ASC
+    """, (system_address,))
+    stations = [dict(r) for r in c.fetchall()]
+
     db_mining_sites = get_mining_sites(conn, system_address)
     conn.close()
 
@@ -1404,6 +1450,9 @@ def get_system_detail(system_address: int):
         b["bio_total_base_value"] = body_total_base_val
         b["bio_total_first_value"] = body_total_first_val
 
+        # Attach stations located on or orbiting this body
+        b["stations"] = [st for st in stations if (st.get("body_name") and st.get("body_name") == b_name) or (st.get("body_id") is not None and st.get("body_id") == b_id)]
+
         system_bio_total_base += body_total_base_val
         system_bio_total_first += body_total_first_val
 
@@ -1424,6 +1473,7 @@ def get_system_detail(system_address: int):
         "bodies": bodies,
         "hierarchy": hierarchy,
         "visits": visits,
+        "stations": stations,
         "organics": raw_organics,
         "mining_activities": raw_mining,
         "rhino_mining_sites": final_mining_sites,

@@ -133,6 +133,10 @@ class JournalParser:
             self._handle_mining_refined(event_data, timestamp)
             if self.event_callback:
                 self.event_callback("MiningRefined", event_data)
+        elif event in ["Docked", "ApproachSettlement"]:
+            self._handle_station_event(event_data, timestamp)
+            if self.event_callback:
+                self.event_callback(event, event_data)
 
     def _update_last_targeted_body(self, sys_addr: int, body_id=None, body_name=None):
         if not sys_addr:
@@ -219,14 +223,16 @@ class JournalParser:
                     system_state = COALESCE(NULLIF(?, ''), system_state),
                     controlling_faction = COALESCE(NULLIF(?, ''), controlling_faction),
                     system_reserve = COALESCE(NULLIF(?, ''), system_reserve),
+                    first_visited = COALESCE(first_visited, ?),
                     last_visited = ?,
-                    visit_count = visit_count + 1
+                    visit_count = visit_count + 1,
+                    is_external = 0
                 WHERE system_address = ?
             """, (
                 star_sys, pos_x, pos_y, pos_z, sol_dist, sol_dist, star_class,
                 pop, pop, allegiance, economy, sec_economy, govt, sec,
                 system_state, controlling_faction, reserve_lvl,
-                timestamp, sys_addr
+                timestamp, timestamp, sys_addr
             ))
         else:
             self.cursor.execute("""
@@ -253,6 +259,10 @@ class JournalParser:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (sys_addr, star_sys, timestamp, pos_x, pos_y, pos_z, jump_dist, fuel, taxi))
 
+        # Record station if present in Location / FSDJump
+        if data.get("StationName"):
+            self._handle_station_event(data, timestamp)
+
         # Queue background EDSM discovery verification
         if sys_addr and star_sys:
             try:
@@ -260,6 +270,57 @@ class JournalParser:
                     edsm_service.queue_system_check(sys_addr, star_sys, priority=True)
             except Exception:
                 pass
+
+    def _handle_station_event(self, data: dict, timestamp: str):
+        st_name = data.get("StationName") or data.get("Name")
+        sys_addr = data.get("SystemAddress") or self.current_system_address
+        if not st_name or not sys_addr:
+            return
+
+        market_id = data.get("MarketID")
+        st_type = data.get("StationType")
+        body_name = data.get("Body") or data.get("BodyName")
+        body_id = data.get("BodyID")
+        dist_ls = data.get("DistFromStarLS")
+        lat = data.get("Latitude")
+        lon = data.get("Longitude")
+        is_planetary = 1 if (lat is not None and lon is not None) or (st_type and "Planetary" in st_type) else 0
+
+        # Faction & Economy
+        st_faction = data.get("StationFaction")
+        faction_name = st_faction.get("Name") if isinstance(st_faction, dict) else st_faction
+        st_econ = data.get("StationEconomy_Localised") or data.get("StationEconomy")
+        st_govt = data.get("StationGovernment_Localised") or data.get("StationGovernment")
+        allegiance = data.get("StationAllegiance")
+
+        try:
+            self.cursor.execute("""
+                INSERT INTO stations (
+                    system_address, market_id, station_name, station_type, body_name, body_id,
+                    latitude, longitude, distance_to_arrival_ls, allegiance, economy, government,
+                    controlling_faction, is_planetary, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(system_address, station_name) DO UPDATE SET
+                    market_id = COALESCE(excluded.market_id, stations.market_id),
+                    station_type = COALESCE(excluded.station_type, stations.station_type),
+                    body_name = COALESCE(excluded.body_name, stations.body_name),
+                    body_id = COALESCE(excluded.body_id, stations.body_id),
+                    latitude = COALESCE(excluded.latitude, stations.latitude),
+                    longitude = COALESCE(excluded.longitude, stations.longitude),
+                    distance_to_arrival_ls = COALESCE(excluded.distance_to_arrival_ls, stations.distance_to_arrival_ls),
+                    allegiance = COALESCE(excluded.allegiance, stations.allegiance),
+                    economy = COALESCE(excluded.economy, stations.economy),
+                    government = COALESCE(excluded.government, stations.government),
+                    controlling_faction = COALESCE(excluded.controlling_faction, stations.controlling_faction),
+                    is_planetary = CASE WHEN excluded.is_planetary = 1 THEN 1 ELSE stations.is_planetary END,
+                    updated_at = excluded.updated_at
+            """, (
+                sys_addr, market_id, st_name, st_type, body_name, body_id,
+                lat, lon, dist_ls, allegiance, st_econ, st_govt,
+                faction_name, is_planetary, timestamp
+            ))
+        except Exception:
+            pass
 
     def _handle_fss_discovery_scan(self, data: dict):
         sys_addr = data.get("SystemAddress")

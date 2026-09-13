@@ -272,6 +272,31 @@ def init_db(conn=None):
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_mining_sites_sys_body ON surface_mining_sites(system_address, body_id);")
 
+    # Starports, Outposts, Planetary Ports, and Odyssey Settlements
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS stations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        system_address INTEGER NOT NULL,
+        market_id INTEGER,
+        station_name TEXT NOT NULL,
+        station_type TEXT,
+        body_name TEXT,
+        body_id INTEGER,
+        latitude REAL,
+        longitude REAL,
+        distance_to_arrival_ls REAL,
+        allegiance TEXT,
+        economy TEXT,
+        government TEXT,
+        controlling_faction TEXT,
+        is_planetary INTEGER DEFAULT 0,
+        updated_at TEXT,
+        UNIQUE(system_address, station_name)
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_stations_sys_addr ON stations(system_address);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_stations_body_name ON stations(body_name);")
+
     # Astrophysical evaluations table (ED_Analysys / Stellar Physics Engine)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS system_physics_evaluations (
@@ -504,6 +529,9 @@ def init_db(conn=None):
                 FROM bodies b WHERE b.system_address = systems.system_address
             ), 0);
     """)
+
+    # Correct is_external flag for systems that have been visited
+    cursor.execute("UPDATE systems SET is_external = 0 WHERE visit_count > 0 AND is_external = 1;")
 
     # Backfill star luminosity from journal logs if existing database records lack luminosity
     try:

@@ -13,6 +13,7 @@ import urllib.parse
 import urllib.request
 import threading
 import queue
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 from app.db.database import get_db_connection
@@ -333,6 +334,11 @@ class EDSMService:
         if bodies_list:
             completed_count = self._import_and_complete_bodies(conn, system_address, star_sys_name, bodies_list)
 
+        try:
+            self._import_and_complete_stations(conn, system_address, star_sys_name)
+        except Exception as e:
+            print(f"[EDSM Service] Error importing stations for unvisited system: {e}")
+
         self._update_system_aggregated_stats(conn, system_address)
 
         conn.commit()
@@ -476,6 +482,12 @@ class EDSMService:
         if bodies_list and ENABLE_EDSM_BODY_COMPLETION:
             completed_count = self._import_and_complete_bodies(conn, system_address, system_name, bodies_list)
 
+        # Import stations from EDSM
+        try:
+            self._import_and_complete_stations(conn, system_address, system_name)
+        except Exception as e:
+            print(f"[EDSM Service] Error importing stations: {e}")
+
         # Recalculate and update aggregated system statistics
         self._update_system_aggregated_stats(conn, system_address)
 
@@ -496,6 +508,84 @@ class EDSMService:
             "body_count": body_count,
             "completed_bodies": completed_count
         }
+
+    def _import_and_complete_stations(self, conn, system_address: int, system_name: str) -> int:
+        """
+        Fetches stations and planetary settlements from EDSM and stores/updates in the stations table.
+        """
+        encoded_name = urllib.parse.quote(system_name)
+        stations_url = f"https://www.edsm.net/api-system-v1/stations?systemName={encoded_name}"
+        stations_req = urllib.request.Request(
+            stations_url,
+            headers={"User-Agent": "ED_Journal_Analyzer/v0.1.6 (EDSM Discovery Integration)"}
+        )
+        stations_list = []
+        try:
+            self._throttle_delay()
+            with urllib.request.urlopen(stations_req, timeout=8.0) as st_resp:
+                if st_resp.status == 200:
+                    st_data = json.loads(st_resp.read().decode("utf-8"))
+                    if isinstance(st_data, dict):
+                        stations_list = st_data.get("stations", [])
+        except Exception as e:
+            print(f"[EDSM Service] Error fetching stations for {system_name}: {e}")
+            return 0
+
+        if not stations_list:
+            return 0
+
+        c = conn.cursor()
+        now_iso = datetime.now(timezone.utc).isoformat()
+        count = 0
+        for st in stations_list:
+            st_name = st.get("name")
+            if not st_name:
+                continue
+            st_type = st.get("type")
+            m_id = st.get("marketId")
+            dist_arr = st.get("distanceToArrival")
+            b_obj = st.get("body") or {}
+            b_name = b_obj.get("name") if isinstance(b_obj, dict) else None
+            b_id = b_obj.get("id") if isinstance(b_obj, dict) else None
+            lat = b_obj.get("latitude") if isinstance(b_obj, dict) else None
+            lon = b_obj.get("longitude") if isinstance(b_obj, dict) else None
+            is_planet = 1 if (lat is not None and lon is not None) or (st_type and ("Planetary" in st_type or "Settlement" in st_type)) else 0
+            alleg = st.get("allegiance")
+            econ = st.get("economy")
+            gov = st.get("government")
+            ctrl_fac = st.get("controllingFaction", {})
+            ctrl_name = ctrl_fac.get("name") if isinstance(ctrl_fac, dict) else ctrl_fac
+
+            try:
+                c.execute("""
+                    INSERT INTO stations (
+                        system_address, market_id, station_name, station_type, body_name, body_id,
+                        latitude, longitude, distance_to_arrival_ls, allegiance, economy, government,
+                        controlling_faction, is_planetary, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(system_address, station_name) DO UPDATE SET
+                        market_id = COALESCE(excluded.market_id, stations.market_id),
+                        station_type = COALESCE(excluded.station_type, stations.station_type),
+                        body_name = COALESCE(excluded.body_name, stations.body_name),
+                        body_id = COALESCE(excluded.body_id, stations.body_id),
+                        latitude = COALESCE(excluded.latitude, stations.latitude),
+                        longitude = COALESCE(excluded.longitude, stations.longitude),
+                        distance_to_arrival_ls = COALESCE(excluded.distance_to_arrival_ls, stations.distance_to_arrival_ls),
+                        allegiance = COALESCE(excluded.allegiance, stations.allegiance),
+                        economy = COALESCE(excluded.economy, stations.economy),
+                        government = COALESCE(excluded.government, stations.government),
+                        controlling_faction = COALESCE(excluded.controlling_faction, stations.controlling_faction),
+                        is_planetary = CASE WHEN excluded.is_planetary = 1 THEN 1 ELSE stations.is_planetary END,
+                        updated_at = excluded.updated_at
+                """, (
+                    system_address, m_id, st_name, st_type, b_name, b_id,
+                    lat, lon, dist_arr, alleg, econ, gov,
+                    ctrl_name, is_planet, now_iso
+                ))
+                count += 1
+            except Exception:
+                pass
+        return count
 
     def _import_and_complete_bodies(self, conn, system_address: int, star_system: str, bodies_list: list) -> int:
         """

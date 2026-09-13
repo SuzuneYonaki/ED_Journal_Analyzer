@@ -30,6 +30,8 @@ let state = {
   starMatchMode: 'any',
   luminosityClasses: [],
   luminosityMatchMode: 'any',
+  celestialFilters: [],
+  celestialMatchMode: 'all',
   externalFootprintCheck: localStorage.getItem('ed_external_footprint_check') === 'true',
   uiLayoutMode: localStorage.getItem('ed_ui_layout') || '1col',
   headerStatsCollapsed: localStorage.getItem('ed_header_stats_collapsed') === 'true',
@@ -454,6 +456,11 @@ async function fetchSystems(options = {}) {
   if (state.luminosityClasses && state.luminosityClasses.length > 0) {
     params.append('luminosity_classes', state.luminosityClasses.join(','));
     params.append('luminosity_match_mode', state.luminosityMatchMode || 'any');
+  }
+
+  if (state.celestialFilters && state.celestialFilters.length > 0) {
+    params.append('celestial_filters', state.celestialFilters.join(','));
+    params.append('celestial_match_mode', state.celestialMatchMode || 'all');
   }
 
   Object.entries(state.filters).forEach(([k, v]) => {
@@ -3632,6 +3639,86 @@ function renderBodyInspector() {
     if (propCardMining) propCardMining.style.display = 'none';
   }
 
+  // Stations & Settlements section
+  const stationsSec = document.getElementById('section-stations');
+  const stationsListEl = document.getElementById('inspect-stations-list');
+  const bodyStations = b.stations || (state.currentSystemData && state.currentSystemData.stations ? state.currentSystemData.stations.filter(st => {
+    return (st.body_name && st.body_name === b.body_name) || (st.body_id !== undefined && st.body_id !== null && st.body_id === b.body_id);
+  }) : []);
+
+  if (stationsSec && stationsListEl) {
+    if (bodyStations && bodyStations.length > 0) {
+      stationsSec.style.display = 'block';
+      stationsListEl.innerHTML = bodyStations.map((st) => {
+        const isPlanetary = st.is_planetary || (st.latitude !== null && st.latitude !== undefined);
+        const icon = isPlanetary ? '🏢' : '🛰️';
+        const typeStr = st.station_type || (isPlanetary ? 'Planetary Base' : 'Starport');
+        const distStr = (st.distance_to_arrival_ls !== null && st.distance_to_arrival_ls !== undefined)
+          ? `${Math.round(st.distance_to_arrival_ls).toLocaleString()} Ls`
+          : '-- Ls';
+
+        let locStr = '';
+        let copyCoordBtn = '';
+        if (st.latitude !== null && st.latitude !== undefined && st.longitude !== null && st.longitude !== undefined) {
+          const latNum = Number(st.latitude).toFixed(4);
+          const lonNum = Number(st.longitude).toFixed(4);
+          locStr = `<div style="font-family: var(--font-mono); font-size: 0.72rem; color: #a5f3fc; margin-top: 2px;">📍 Location : ${latNum} / ${lonNum}</div>`;
+          copyCoordBtn = `
+            <button type="button" class="btn-copy-station-coord view-btn" style="padding: 1px 6px; font-size: 0.65rem;" data-coord="${latNum} / ${lonNum}" title="地表座標をコピー">
+              📋 座標コピー
+            </button>
+          `;
+        }
+
+        const facStr = st.controlling_faction ? `<span style="color: #cbd5e1;">${escapeHtml(st.controlling_faction)}</span>` : '';
+        const econStr = st.economy ? `<span class="tag-badge" style="font-size: 0.65rem; background: rgba(255,255,255,0.06);">${escapeHtml(st.economy)}</span>` : '';
+
+        return `
+          <div class="inspector-station-card" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 4px; padding: 6px 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+              <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                <span style="font-size: 0.95rem;">${icon}</span>
+                <span style="font-weight: bold; font-size: 0.82rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(st.station_name)}</span>
+                <span class="tag-badge" style="font-size: 0.65rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">${escapeHtml(typeStr)}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim);">${distStr}</span>
+                ${copyCoordBtn}
+              </div>
+            </div>
+            ${locStr}
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.68rem; margin-top: 3px;">
+              ${facStr}
+              ${econStr}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Bind copy coord buttons
+      stationsListEl.querySelectorAll('.btn-copy-station-coord').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const coord = btn.dataset.coord;
+          if (coord && navigator.clipboard) {
+            navigator.clipboard.writeText(coord).then(() => {
+              const orig = btn.innerHTML;
+              btn.innerHTML = '✓ コピー済';
+              btn.style.color = '#38bdf8';
+              setTimeout(() => {
+                btn.innerHTML = orig;
+                btn.style.color = '';
+              }, 1500);
+            });
+          }
+        });
+      });
+    } else {
+      stationsSec.style.display = 'none';
+      stationsListEl.innerHTML = '';
+    }
+  }
+
   // Orbit parameters
   const smaEl = document.getElementById('prop-semi-major');
   if (b.semi_major_axis) {
@@ -3837,6 +3924,13 @@ function updateCollapsibleBadges() {
   if (badgeMine) {
     badgeMine.innerText = miningCount > 0 ? miningCount : '';
     badgeMine.classList.toggle('active', miningCount > 0);
+  }
+
+  const celestialCount = (state.celestialFilters || []).length;
+  const badgeCelestial = document.getElementById('badge-celestial-filters');
+  if (badgeCelestial) {
+    badgeCelestial.innerText = celestialCount > 0 ? celestialCount : '';
+    badgeCelestial.classList.toggle('active', celestialCount > 0);
   }
 
   const starCount = (state.starTypes || []).length + (state.luminosityClasses || []).length;
@@ -4200,18 +4294,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  document.getElementById('system-search').addEventListener('input', (e) => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      state.searchQuery = e.target.value;
-      state.page = 1;
-      fetchSystems({ autoSelectTop: true });
-      triggerExternalFootprintCheck(state.searchQuery);
-    }, 300);
-  });
+  const searchInput = document.getElementById('system-search');
+  const btnSearchClear = document.getElementById('btn-search-clear');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const val = e.target.value;
+      if (btnSearchClear) {
+        btnSearchClear.style.display = (val && val.trim().length > 0) ? 'block' : 'none';
+      }
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        state.searchQuery = val;
+        state.page = 1;
+        fetchSystems({ autoSelectTop: true });
+        triggerExternalFootprintCheck(state.searchQuery);
+      }, 300);
+    });
 
-  // Filter chips
-  document.querySelectorAll('.chip').forEach(chip => {
+    if (btnSearchClear) {
+      btnSearchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        btnSearchClear.style.display = 'none';
+        state.searchQuery = '';
+        state.page = 1;
+        fetchSystems({ autoSelectTop: true });
+        const resContainer = document.getElementById('external-footprint-result');
+        if (resContainer) {
+          resContainer.style.display = 'none';
+          resContainer.innerHTML = '';
+        }
+        searchInput.focus();
+      });
+    }
+  }
+
+  // Filter chips (General & Mining)
+  document.querySelectorAll('.chip[data-filter]').forEach(chip => {
     chip.addEventListener('click', () => {
       const filterKey = chip.dataset.filter;
       state.filters[filterKey] = !state.filters[filterKey];
@@ -4222,7 +4340,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Clear Filter Buttons (General & Mining groups)
+  // Celestial & Orbital Anomaly Filter chips
+  document.querySelectorAll('.celestial-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const cKey = chip.dataset.celestial;
+      if (!cKey) return;
+      const idx = (state.celestialFilters || []).indexOf(cKey);
+      if (idx >= 0) {
+        state.celestialFilters.splice(idx, 1);
+        chip.classList.remove('active');
+      } else {
+        if (!state.celestialFilters) state.celestialFilters = [];
+        state.celestialFilters.push(cKey);
+        chip.classList.add('active');
+      }
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  });
+
+  // Celestial Match Mode Radio (AND vs OR)
+  document.querySelectorAll('input[name="celestial-match-mode"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      state.celestialMatchMode = e.target.value;
+      if (state.celestialFilters && state.celestialFilters.length > 0) {
+        state.page = 1;
+        fetchSystems({ autoSelectTop: true });
+      }
+    });
+  });
+
+  // Clear Filter Buttons (General, Celestial & Mining groups)
   const btnClearGeneral = document.getElementById('btn-clear-general-filters');
   if (btnClearGeneral) {
     btnClearGeneral.addEventListener('click', (e) => {
@@ -4231,6 +4380,20 @@ document.addEventListener('DOMContentLoaded', () => {
         chip.classList.remove('active');
         state.filters[chip.dataset.filter] = false;
       });
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  }
+
+  const btnClearCelestial = document.getElementById('btn-clear-celestial-filters');
+  if (btnClearCelestial) {
+    btnClearCelestial.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.celestial-chip').forEach(chip => {
+        chip.classList.remove('active');
+      });
+      state.celestialFilters = [];
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });

@@ -51,14 +51,6 @@
 
   <!-- Header -->
   <header>
-    <div class="logo-area">
-      <div class="brand">
-        <img src="/static/icon.png" alt="Logo" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 6px;">
-        <span class="logo-text">ED Journal Explorer</span>
-        <span class="version-badge">v0.1.6</span>
-      </div>
-    </div>
-
     <!-- Header Logged Exploration Stats Group (Collapsible) -->
     <div class="header-logged-group" id="header-logged-group" style="display: flex; align-items: center; background: rgba(255, 113, 0, 0.06); border: 1px solid rgba(255, 113, 0, 0.3); border-radius: 6px; padding: 2px 6px; gap: 8px; transition: all 0.25s ease;">
       <div class="stat-prefix-badge" id="btn-toggle-header-stats" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 2px 6px; background: rgba(255, 113, 0, 0.18); border-radius: 4px; border: 1px solid rgba(255, 113, 0, 0.4); flex-shrink: 0; cursor: pointer;" title="クリックして統計パネルを折り畳み / 展開">
@@ -161,6 +153,7 @@
 
           <div class="search-bar">
             <input type="text" id="system-search" class="search-input" placeholder="星系名を検索 (例: Sol, Beagle Point)...">
+            <button type="button" id="btn-search-clear" class="search-clear-btn" title="検索文字をクリア" style="display: none;">&times;</button>
           </div>
 
           <!-- External Footprint Check Control & Status -->
@@ -198,6 +191,49 @@
                 <button class="chip shared-chip" data-filter="is_shared" data-i18n="filter_shared">🤝 Shared (共有)</button>
                 <button class="chip" data-filter="has_high_g" data-i18n="filter_high_g">高重力 (3G+着陸)</button>
                 <button class="chip" data-filter="has_anomalies" data-i18n="filter_anomalies">特殊・レア</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Collapsible Group 1.5: Celestial & Orbital Anomaly Filters -->
+          <div class="collapsible-group" id="group-celestial-filters">
+            <div class="collapsible-header" data-group="celestial">
+              <div class="collapsible-title">
+                <span class="collapsible-chevron">▼</span>
+                <span data-i18n="section_celestial_filters">🪐 天体特性・軌道フィルター</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button id="btn-clear-celestial-filters" class="btn-page" style="padding: 1px 6px; font-size: 0.65rem;" data-i18n="filter_clear">クリア</button>
+                <span class="collapsible-badge" id="badge-celestial-filters"></span>
+              </div>
+            </div>
+            <div class="collapsible-body" style="padding: 6px 8px; background: rgba(0,0,0,0.25); border-radius: 4px; border: 1px solid var(--border-color);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 0.72rem;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="color: var(--text-secondary);" data-i18n="celestial_mode_label">条件:</span>
+                  <label style="display: flex; align-items: center; gap: 2px; cursor: pointer; color: #fbcfe8;" title="選択したすべての天体特性を満たす星系のみを検索 (AND絞り込み)">
+                    <input type="radio" name="celestial-match-mode" value="all" checked style="cursor: pointer; accent-color: #f472b6;">
+                    <span data-i18n="celestial_mode_all">すべて一致 (AND)</span>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 2px; cursor: pointer; color: #a5f3fc;" title="選択したいずれかの天体特性を含む星系を検索 (OR)">
+                    <input type="radio" name="celestial-match-mode" value="any" style="cursor: pointer; accent-color: var(--ed-cyan);">
+                    <span data-i18n="celestial_mode_any">いずれか (OR)</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Celestial Filter Chips -->
+              <div class="filter-chips" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                <button class="chip celestial-chip" data-celestial="eccentric" data-i18n="filter_c_eccentric" title="離心率 e ≧ 0.5 の極端な楕円軌道">🌀 高離心率 (e≧0.5)</button>
+                <button class="chip celestial-chip" data-celestial="inclined" data-i18n="filter_c_inclined" title="軌道傾斜角 ≧ 45° または 逆行軌道">📐 高傾斜/逆行軌道</button>
+                <button class="chip celestial-chip" data-celestial="fast_orbit" data-i18n="filter_c_fast" title="超短公転周期 (≦0.2日) または 超高速自転 (≦2h)">⚡ 短公転/高速自転</button>
+                <button class="chip celestial-chip" data-celestial="close_binary" data-i18n="filter_c_close_star" title="主星から 50 Ls 以内に位置する近接伴星">✨ 至近連星 (≦50Ls)</button>
+                <button class="chip celestial-chip" data-celestial="hierarchical_binary" data-i18n="filter_c_hierarchical" title="多重バイナリ（バイナリのバイナリ）構成星">🌌 多重連星</button>
+                <button class="chip celestial-chip" data-celestial="ringed" data-i18n="filter_c_ringed" title="環（リング）を保持する惑星・天体">💍 リング保有</button>
+                <button class="chip celestial-chip" data-celestial="wide_ring" data-i18n="filter_c_wide_ring" title="外径 500万km 以上の巨大・ワイドリング">👑 巨大ワイドリング</button>
+                <button class="chip celestial-chip" data-celestial="ringed_star" data-i18n="filter_c_ringed_star" title="環を持つ恒星">⭐ リング付恒星</button>
+                <button class="chip celestial-chip" data-celestial="high_g" data-i18n="filter_c_high_g" title="重力 1.5G 以上の着陸可能天体">⚓ 高重力 (1.5G+)</button>
+                <button class="chip celestial-chip" data-celestial="volcanism" data-i18n="filter_c_volcanism" title="活発な火山活動を持つ天体">🌋 活発な火山活動</button>
               </div>
             </div>
           </div>
@@ -592,13 +628,13 @@
       </div>
 
       <div class="map-view-controls">
-        <span data-i18n="view_label">表示:</span>
-        <button id="btn-view-sysmap" class="view-btn active" style="color: var(--ed-cyan); border-color: rgba(0, 210, 255, 0.4);" data-i18n="view_sysmap">🌌 System Map</button>
-        <button id="btn-view-flat" class="view-btn" data-i18n="view_flat">天体一覧</button>
-        <button id="btn-view-bio" class="view-btn" style="color: var(--ed-green); border-color: rgba(0, 255, 136, 0.4);" data-i18n="view_bio">🌱 Bio天体のみ</button>
-        <button id="btn-view-mining" class="view-btn" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" data-i18n="view_mining">⛏️ 採掘・Landable</button>
-        <button id="btn-view-visits" class="view-btn" data-i18n="view_visits">過去訪問履歴</button>
-        <button id="btn-view-physics" class="view-btn" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" data-i18n="view_physics">🌌 天体物理 (ED_Analysys)</button>
+        <span data-i18n="view_label">View:</span>
+        <button id="btn-view-sysmap" class="view-btn active" style="color: var(--ed-cyan); border-color: rgba(0, 210, 255, 0.4);" data-i18n="view_sysmap">🌌 System</button>
+        <button id="btn-view-flat" class="view-btn" data-i18n="view_flat">🪐 Celestial</button>
+        <button id="btn-view-bio" class="view-btn" style="color: var(--ed-green); border-color: rgba(0, 255, 136, 0.4);" data-i18n="view_bio">🌱 Bio</button>
+        <button id="btn-view-mining" class="view-btn" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" data-i18n="view_mining">⛏️ P Mining</button>
+        <button id="btn-view-visits" class="view-btn" data-i18n="view_visits">⏱️ Visits</button>
+        <button id="btn-view-physics" class="view-btn" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" data-i18n="view_physics">🌌 Astro Rarity</button>
         
         <!-- Bio-only view filter -->
         <label id="bio-filter-hide-completed-container" style="display: none; align-items: center; gap: 4px; font-size: 0.75rem; color: #a7f3d0; cursor: pointer; margin-left: 8px; background: rgba(0, 255, 136, 0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(0, 255, 136, 0.3);">
@@ -760,6 +796,12 @@
               <div id="prop-mining" class="prop-val" style="color: #38bdf8;">--</div>
             </div>
           </div>
+        </div>
+
+        <!-- Stations & Settlements Section -->
+        <div class="inspector-section" id="section-stations" style="display: none;">
+          <div class="section-heading" style="color: #38bdf8;" data-i18n="section_stations">🛰️ ステーション / 拠点 (Stations & Ports)</div>
+          <div id="inspect-stations-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
         </div>
 
         <!-- Planetary Mining Locations Section (Distinct from Biology & Volcanism) -->
