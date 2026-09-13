@@ -1,0 +1,605 @@
+  <!-- Unified Settings Modal (Tabs: Logs / TTS / Credits) -->
+  <div id="settings-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 620px; max-height: 88vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h3 style="color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+          ⚙️ 設定 & ログ同期 & 謝辞
+        </h3>
+        <button id="btn-settings-close" class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Settings Tabs Header -->
+      <div class="settings-tabs" style="display: flex; gap: 4px; border-bottom: 1px solid var(--border-color); padding: 0 16px; background: rgba(0,0,0,0.2);">
+        <button id="tab-btn-logs" class="view-btn active" style="border-bottom: 2px solid var(--ed-orange); border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="tab_logs">
+          📁 ログ同期 & パス
+        </button>
+        <button id="tab-btn-ui" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="tab_ui">
+          🖥️ 画面・文字サイズ
+        </button>
+        <button id="tab-btn-tts" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="tab_tts">
+          🔊 音声読み上げ (TTS)
+        </button>
+        <button id="tab-btn-credits" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="tab_credits">
+          📜 謝辞 & クレジット
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px; overflow-y: auto; flex: 1; font-size: 0.85rem; color: var(--text-primary);">
+        
+        <!-- Tab 1: Logs & Sync -->
+        <div id="tab-pane-logs" class="settings-tab-pane" style="display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.82rem; margin-bottom: 4px; display: block;">
+              📁 ジャーナルログ保存フォルダ:
+            </label>
+            <div style="display: flex; gap: 6px;">
+              <input type="text" id="setting-journal-dir" class="search-input" style="flex: 1; font-size: 0.8rem; font-family: monospace;" placeholder="C:\Users\...\Saved Games\Frontier Developments\Elite Dangerous">
+              <button id="btn-reset-journal-dir" class="view-btn" style="white-space: nowrap; font-size: 0.75rem;" title="既定のパスにリセット" data-i18n="btn_reset_journal_dir">既定に戻す</button>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 4px;">
+              ※ Steam版/Epic版など別ドライブにジャーナルがある場合は上記パスを変更してください
+            </div>
+          </div>
+
+          <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <div style="font-weight: bold; color: #fff;">手動ログスキャン実行</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">全ジャーナルファイルを再解析しデータベースを更新します</div>
+              </div>
+              <button id="btn-modal-rescan" class="btn-primary" style="padding: 6px 14px; font-size: 0.8rem;" data-i18n="btn_modal_rescan">
+                🔄 ログスキャン開始
+              </button>
+            </div>
+            <div id="modal-scan-status-text" style="font-size: 0.75rem; color: var(--ed-cyan); font-family: monospace;"></div>
+          </div>
+        </div>
+
+        <!-- Tab: UI Scaling & Font Size & Language -->
+        <div id="tab-pane-ui" class="settings-tab-pane" style="display: none; flex-direction: column; gap: 14px;">
+          <!-- Language Selector -->
+          <div style="padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.85rem; margin-bottom: 6px; display: block;" data-i18n="settings_lang_label">
+              🌐 表示言語 / Display Language
+            </label>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="btn-modal-lang-ja" class="view-btn active" style="padding: 6px 14px; font-size: 0.82rem;">日本語 (Japanese)</button>
+              <button type="button" id="btn-modal-lang-en" class="view-btn" style="padding: 6px 14px; font-size: 0.82rem;">English (英語)</button>
+            </div>
+          </div>
+
+          <!-- UI Color Theme Preset Selector -->
+          <div style="padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.85rem; margin-bottom: 6px; display: block;" data-i18n="settings_theme_label">
+              🎨 UIカラーテーマ / 配色プリセット
+            </label>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;" data-i18n="settings_theme_desc">
+              コックピット環境や好みに合わせてインターフェース配色を選択できます。
+            </div>
+            <div class="theme-selector-grid">
+              <button type="button" class="theme-card-btn active" data-theme="default" id="theme-btn-default">
+                <div class="theme-preview-palette">
+                  <span style="background: #ff7100;"></span>
+                  <span style="background: #00d8ff;"></span>
+                  <span style="background: #0b1118;"></span>
+                </div>
+                <span class="theme-name" data-i18n="theme_default">🌌 Modern Deep Space</span>
+                <span class="theme-badge-sub" data-i18n="theme_default_sub">標準・ハイコントラスト</span>
+              </button>
+              <button type="button" class="theme-card-btn" data-theme="elite-amber" id="theme-btn-elite-amber">
+                <div class="theme-preview-palette">
+                  <span style="background: #ff7100;"></span>
+                  <span style="background: #ffaa33;"></span>
+                  <span style="background: #0d0602;"></span>
+                </div>
+                <span class="theme-name" data-i18n="theme_elite_amber">🚀 Elite Classic Amber HUD</span>
+                <span class="theme-badge-sub" data-i18n="theme_elite_amber_sub">原作コックピット再現</span>
+              </button>
+              <button type="button" class="theme-card-btn" data-theme="cyan-explorer" id="theme-btn-cyan-explorer">
+                <div class="theme-preview-palette">
+                  <span style="background: #00e5ff;"></span>
+                  <span style="background: #38bdf8;"></span>
+                  <span style="background: #06111a;"></span>
+                </div>
+                <span class="theme-name" data-i18n="theme_cyan">🌐 Cyan Explorer HUD</span>
+                <span class="theme-badge-sub" data-i18n="theme_cyan_sub">サイバー探査機ブルー</span>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.85rem; margin-bottom: 6px; display: block;">
+              🖥️ 基本文字サイズ / UI表示スケール
+            </label>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">
+              アプリ全体の基準文字サイズをピクセル (px) 単位で直接指定・微調整できます。<br>
+              文字数や情報はそのままに、バッジやカードが自然に折り返されて見やすくなります。<br>
+              基準中間サイズは <b>18px</b>（推奨標準）、最小目安は <b>14px</b> です。
+            </div>
+            
+            <!-- Direct Numeric Input & Step Buttons -->
+            <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap;">
+              <span style="font-size: 0.85rem; color: #fff; font-weight: bold;">文字サイズ指定:</span>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <button id="btn-font-dec" class="view-btn" style="padding: 4px 10px; font-size: 0.85rem; font-weight: bold;" title="1px小さく">－</button>
+                <input type="number" id="input-font-size" min="10" max="40" step="1" value="18" class="search-input" style="width: 70px; text-align: center; font-size: 0.95rem; font-weight: bold; color: var(--ed-cyan);" title="実数値（px）を直接入力できます">
+                <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: bold;">px</span>
+                <button id="btn-font-inc" class="view-btn" style="padding: 4px 10px; font-size: 0.85rem; font-weight: bold;" title="1px大きく">＋</button>
+              </div>
+              <button id="btn-reset-font-size" class="btn-primary" style="margin-left: auto; padding: 5px 12px; font-size: 0.78rem; background: rgba(251, 146, 60, 0.2); border-color: var(--ed-orange); color: var(--ed-orange);" title="標準の中間サイズ (18px) にリセット" data-i18n="btn_reset_font">
+                🔄 標準 (18px) にリセット
+              </button>
+            </div>
+
+            <!-- Quick Presets -->
+            <div style="margin-top: 10px;">
+              <span style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-bottom: 6px;">クイックプリセット:</span>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="font-presets-container">
+                <button class="view-btn btn-font-preset" data-size="14" style="padding: 4px 8px; font-size: 0.75rem;">14px (最小目安)</button>
+                <button class="view-btn btn-font-preset" data-size="16" style="padding: 4px 8px; font-size: 0.75rem;">16px (やや小さめ)</button>
+                <button class="view-btn btn-font-preset active" data-size="18" style="padding: 4px 10px; font-size: 0.78rem; font-weight: bold; border-color: var(--ed-cyan); color: var(--ed-cyan);">18px (標準・推奨)</button>
+                <button class="view-btn btn-font-preset" data-size="20" style="padding: 4px 8px; font-size: 0.75rem;">20px (見やすさ重視)</button>
+                <button class="view-btn btn-font-preset" data-size="22" style="padding: 4px 8px; font-size: 0.75rem;">22px (特大)</button>
+                <button class="view-btn btn-font-preset" data-size="24" style="padding: 4px 8px; font-size: 0.75rem;">24px (最大目安)</button>
+              </div>
+            </div>
+
+            <!-- Emergency Safety Notice -->
+            <div style="margin-top: 14px; padding: 8px 12px; background: rgba(251, 191, 36, 0.08); border-left: 3px solid #fbbf24; font-size: 0.72rem; color: #fbbf24; border-radius: 0 4px 4px 0; line-height: 1.5;">
+              🛡️ <b>セーフティ機構</b>: 極端な数値の入力により画面が崩れた場合でも、ヘッダー右上の「⚙️ 設定」ボタンは常に最前面に表示されます。また、キーボードの <kbd style="background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 3px; border: 1px solid #fbbf24; font-family: monospace;">Ctrl + 0</kbd> を押すことでいつでも即座に標準 (18px) にリセットできます。
+            </div>
+
+            <!-- Module Display Customization -->
+            <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+              <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.85rem; margin-bottom: 6px; display: block;" data-i18n="settings_modules_label">
+                🧩 拡張機能モジュール表示設定
+              </label>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px;" data-i18n="settings_modules_desc">
+                表示する拡張機能モジュールを選択できます。チェックを外すことで、画面を天体物理のみのシンプルな表示に切り替えられます。
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" id="cb-mod-exobiology" class="module-toggle-cb" data-module="exobiology" checked style="accent-color: var(--ed-green); cursor: pointer;">
+                  <div>
+                    <span style="color: #6ee7b7; font-weight: bold;" data-i18n="mod_exobiology">🌿 Exobiology（生物予測・BIOバッジ・探査ビュー）</span>
+                    <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 1px;">星系一覧・天体ツリーのBIOバッジ、生物候補予測セクション、生物探査ビューを表示</div>
+                  </div>
+                </label>
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" id="cb-mod-rhino" class="module-toggle-cb" data-module="rhino" checked style="accent-color: #38bdf8; cursor: pointer;">
+                  <div>
+                    <span style="color: #38bdf8; font-weight: bold;" data-i18n="mod_rhino">🦏 Rhino採掘（採掘拠点バッジ・座標マップ・履歴・採掘ビュー）</span>
+                    <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 1px;">星系一覧の採掘拠点バッジ、惑星表面のRhino採掘座標マップや履歴カード、採掘適格ビューを表示</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Landmark Distance Display Customization -->
+            <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+              <label style="font-weight: bold; color: var(--ed-orange); font-size: 0.85rem; margin-bottom: 6px; display: block;" data-i18n="settings_landmarks_label">
+                📍 ランドマーク距離バッジ表示設定
+              </label>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px;" data-i18n="settings_landmarks_desc">
+                星系リストカードおよび星系詳細ヘッダーに表示するランドマーク距離を選択できます。
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="cb-lm-cmdr" class="landmark-toggle-cb" data-landmark="cmdr" checked style="accent-color: var(--ed-orange); cursor: pointer;">
+                  <span style="color: #fed7aa; font-weight: bold;" data-i18n="lm_cmdr">📍 CMDR (現在地)</span>
+                </label>
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="cb-lm-sol" class="landmark-toggle-cb" data-landmark="sol" checked style="accent-color: #38bdf8; cursor: pointer;">
+                  <span style="color: #93c5fd; font-weight: bold;" data-i18n="lm_sol">Sol (太陽系)</span>
+                </label>
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="cb-lm-colonia" class="landmark-toggle-cb" data-landmark="colonia" checked style="accent-color: #c084fc; cursor: pointer;">
+                  <span style="color: #c084fc; font-weight: bold;" data-i18n="lm_colonia">Colonia (コロニア)</span>
+                </label>
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="cb-lm-rainbow" class="landmark-toggle-cb" data-landmark="rainbow" checked style="accent-color: #f472b6; cursor: pointer;">
+                  <span style="color: #f472b6; font-weight: bold;" data-i18n="lm_rainbow">Rainbow's End</span>
+                </label>
+                <label class="star-cb-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer; grid-column: span 2;">
+                  <input type="checkbox" id="cb-lm-eanch" class="landmark-toggle-cb" data-landmark="eanch" checked style="accent-color: #34d399; cursor: pointer;">
+                  <span style="color: #34d399; font-weight: bold;" data-i18n="lm_eanch">Explorer's Anchorage</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: TTS Settings -->
+        <div id="tab-pane-tts" class="settings-tab-pane" style="display: none; flex-direction: column; gap: 14px;">
+          <!-- Separation of Exploration Memories and Audio Alert Notice -->
+          <div style="padding: 8px 12px; background: rgba(56, 189, 248, 0.08); border-left: 3px solid var(--ed-cyan); font-size: 0.72rem; color: #bae6fd; border-radius: 0 4px 4px 0; line-height: 1.5;">
+            💡 <b>旅のしるし（画面表示）と音声通知の完全分離</b><br>
+            Exobiologyの予測やバッジ、Rhino採掘拠点などの画面表示（旅のしるし）は常に維持されます。<br>
+            この画面では、自動で喋る音声読み上げ（TTS）や通知音のみを項目別に自由に外す（OFFにする）ことができます。
+          </div>
+
+          <!-- Enable / Disable Checkbox (Default unchecked) -->
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+            <div>
+              <div style="font-weight: bold; color: var(--text-primary);">未発見（1st Discover）読み上げ通知</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">新星系到着時に未発見天体/星系だった場合、音声で読み上げます</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="tts-enabled-toggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- High-Value Bio Planet Alert (40M+ Cr) -->
+          <div style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); background: rgba(0, 255, 136, 0.04); padding: 10px; border-radius: 6px; border: 1px solid rgba(0, 255, 136, 0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: bold; color: var(--ed-green);">🌿 高額生物天体通知 (40M+ Cr)</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">1st Discover星系で単一天体のBio予測総額が40M Crを超える場合にお知らせ</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="tts-high-bio-toggle">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+              <div>
+                <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">通知音タイプ:</label>
+                <select id="tts-high-bio-mode" class="sort-select" style="width: 100%; padding: 4px 8px; font-size: 0.78rem;">
+                  <option value="both">TTS音声 + ブザーチャイム</option>
+                  <option value="tts">TTS音声のみ</option>
+                  <option value="buzzer">ブザーチャイムのみ</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">読み上げテキスト:</label>
+                <input type="text" id="tts-high-bio-text" class="search-input" value="{body}、高額生物反応です。見込額{value}クレジット。" style="width: 100%; padding: 4px 8px; font-size: 0.75rem;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Engine Selector -->
+          <div>
+            <label style="font-size: 0.78rem; font-weight: bold; color: var(--ed-orange); margin-bottom: 4px; display: block;">
+              TTS エンジン選択:
+            </label>
+            <select id="tts-engine-select" class="sort-select" style="width: 100%; padding: 6px 10px; font-size: 0.82rem;">
+              <option value="web_speech">Web Speech API (Microsoft Multilingual / Windows Natural / ブラウザ標準)</option>
+              <option value="voicevox">VOICEVOX (ローカル連携: http://127.0.0.1:50021)</option>
+            </select>
+          </div>
+
+          <!-- Voice / Speaker Selector -->
+          <div id="tts-voice-container">
+            <label style="font-size: 0.78rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 4px; display: block;">
+              話者 / ボイス:
+            </label>
+            <!-- Web Speech API Voices -->
+            <select id="tts-web-voice-select" class="sort-select" style="width: 100%; padding: 6px 10px; font-size: 0.82rem;">
+              <option value="">システム既定の音声</option>
+            </select>
+            <!-- VOICEVOX Speakers (hidden by default) -->
+            <div id="tts-voicevox-group" style="display: none; flex-direction: column; gap: 6px;">
+              <select id="tts-voicevox-speaker-select" class="sort-select" style="width: 100%; padding: 6px 10px; font-size: 0.82rem;">
+                <option value="3">ずんだもん (ノーマル)</option>
+                <option value="1">ずんだもん (あまあま)</option>
+                <option value="7">ずんだもん (ツンツン)</option>
+                <option value="5">ずんだもん (セクシー)</option>
+                <option value="2">四国めたん (ノーマル)</option>
+                <option value="8">春日部つむぎ (ノーマル)</option>
+                <option value="14">冥鳴ひまり (ノーマル)</option>
+              </select>
+              <div id="tts-voicevox-status" style="font-size: 0.72rem; color: #94a3b8;"></div>
+            </div>
+          </div>
+
+          <!-- Custom Speech Text -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+              <label style="font-size: 0.78rem; font-weight: bold; color: var(--text-secondary);">
+                読み上げメッセージ (変数使用可能):
+              </label>
+              <span style="font-size: 0.7rem; color: var(--ed-cyan);" title="使用可能な変数: {system} = 星系名, {bodies} = 未発見天体数">
+                変数: <code style="color: var(--ed-cyan);">{system}</code> <code style="color: var(--ed-cyan);">{bodies}</code>
+              </span>
+            </div>
+            <input type="text" id="tts-custom-text" class="search-input" value="First discover." placeholder="例: First discovery in {system}." style="width: 100%; font-size: 0.82rem;">
+            
+            <!-- Template quick insert chips -->
+            <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+              <button type="button" class="chip" style="padding: 2px 8px; font-size: 0.7rem; height: auto;" onclick="document.getElementById('tts-custom-text').value='First discover.'">
+                First discover.
+              </button>
+              <button type="button" class="chip" style="padding: 2px 8px; font-size: 0.7rem; height: auto;" onclick="document.getElementById('tts-custom-text').value='First discovery in {system}.'">
+                First discovery in {system}.
+              </button>
+              <button type="button" class="chip" style="padding: 2px 8px; font-size: 0.7rem; height: auto;" onclick="document.getElementById('tts-custom-text').value='{system}、初回発見です。'">
+                {system}、初回発見です。
+              </button>
+            </div>
+          </div>
+
+          <!-- Sliders: Volume & Rate -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary);">
+                <span>音量 (Volume)</span>
+                <span id="tts-vol-val">100%</span>
+              </div>
+              <input type="range" id="tts-volume" min="0" max="1" step="0.05" value="1" style="width: 100%; accent-color: var(--ed-cyan);">
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary);">
+                <span>速度 (Speed)</span>
+                <span id="tts-rate-val">1.0x</span>
+              </div>
+              <input type="range" id="tts-rate" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%; accent-color: var(--ed-cyan);">
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; justify-content: flex-start; gap: 8px; margin-top: 4px;">
+            <button id="btn-tts-test" class="btn-primary" style="background: rgba(0, 210, 255, 0.2); border: 1px solid var(--ed-cyan); color: var(--ed-cyan);">
+              🔊 テスト再生 (Test)
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab 3: Credits & Acknowledgements -->
+        <div id="tab-pane-credits" class="settings-tab-pane" style="display: none; line-height: 1.6; font-size: 0.85rem; color: var(--text-primary);">
+          <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <div style="font-weight: bold; color: var(--ed-orange); font-size: 0.95rem;">🚀 Frontier Developments</div>
+            <div style="color: var(--text-secondary); margin-top: 2px;" data-i18n="credits_fdev">Elite Dangerous の広大な宇宙とジャーナルログAPI仕様を提供</div>
+          </div>
+          <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-weight: bold; color: var(--ed-green); font-size: 0.95rem;">🔬 Canonn Research Group</div>
+              <a href="https://canonn.science/codex/appendices/" target="_blank" style="color: #6ee7b7; font-size: 0.75rem; text-decoration: none;">canonn.science/codex/appendices &rarr;</a>
+            </div>
+            <div style="color: var(--text-secondary); margin-top: 4px; font-size: 0.8rem;" data-i18n="credits_canonn">
+              Exobiology（生体シグナル）の厳密な環境出現条件マトリクス（惑星種別、大気組成、温度帯分布、重力、気圧、火山活動、恒星種別カラーバリアント）およびコロニー距離研究データのリファレンス
+            </div>
+          </div>
+          <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <div style="font-weight: bold; color: var(--ed-cyan); font-size: 0.95rem;">✨ Google & Gemini Flash (Antigravity)</div>
+            <div style="color: var(--text-secondary); margin-top: 2px;" data-i18n="credits_google">リアルタイム解析アーキテクチャの設計、自動化パイプラインおよびUIコードの実装支援・ペアプログラミング</div>
+          </div>
+          <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+            <div style="font-weight: bold; color: #a78bfa; font-size: 0.95rem;">🎙️ VOICEVOX</div>
+            <div style="color: var(--text-secondary); margin-top: 2px;">高品質な日本語音声合成エンジン（ずんだもん、四国めたん、春日部つむぎ等）とのローカル連携</div>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; margin-top: 8px;">
+            Elite Dangerous Journal Analyzer &bull; Built with FastAPI, PyWebView & Vanilla JS
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+        <button id="btn-settings-save" class="btn-primary" data-i18n="btn_save_and_close">
+          設定を保存して閉じる
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Locked Package Export (Safety Consent Modal) -->
+  <div id="modal-export-locked" class="modal-overlay" style="display: none;">
+    <div class="modal-dialog" style="max-width: 580px; background: var(--bg-card); border: 1px solid var(--ed-orange); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
+      <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="color: var(--ed-orange); font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+          <span>🔒</span> <span data-i18n="modal_export_title">星系データ共有の安全性確認 (Lock)</span>
+        </h3>
+        <button id="btn-close-export-modal" class="btn-icon" style="color: var(--text-secondary); cursor: pointer; font-size: 1.1rem; background: transparent; border: none;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px; max-height: 70vh; overflow-y: auto;">
+        
+        <!-- Warning Banner -->
+        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; padding: 12px; margin-bottom: 14px;">
+          <div style="color: #f87171; font-weight: bold; font-size: 0.9rem; margin-bottom: 6px;" data-i18n="modal_export_warn_title">⚠️ 未売却探査データに関する重大な注意事項</div>
+          <ul style="color: #fca5a5; font-size: 0.8rem; padding-left: 18px; line-height: 1.5;" data-i18n-html="modal_export_warn_desc">
+            <li>ゲーム内の宇宙ステーション（Universal Cartographics）で探査データを売却する前にこの星系データを他者に渡すと、相手が現地へ先に飛んで売却した場合、あなたの初発見ボーナス（First Discovery）や発見者名義が失われるリスクがあります。</li>
+            <li>あらかじめゲーム内で探査データを売却済みであること、または信頼できる相手との間でのみやり取りすることを推奨します。</li>
+          </ul>
+        </div>
+
+        <!-- Security & Privacy Banner -->
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 10px; margin-bottom: 14px;">
+          <div style="color: #6ee7b7; font-weight: bold; font-size: 0.85rem; margin-bottom: 4px;" data-i18n="modal_export_safe_title">🛡️ 本アプリ専用受け渡し & 個人情報完全保護</div>
+          <div style="color: #a7f3d0; font-size: 0.78rem; line-height: 1.4;" data-i18n="modal_export_safe_desc">
+            Frontierの生ログ（RAW Journal）は一切含めず、本アプリ閲覧用の一部データのみを抽出します。所持金・艦船装備・全航路履歴などの機密情報は100%除外されます。また、EDDiscoveryやEDMC等の外部ツールがジャーナルとして誤送信することも原理的に不可能です。
+          </div>
+        </div>
+
+        <!-- Target System Info -->
+        <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; margin-bottom: 14px;">
+          <div style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="modal_export_target_label">エクスポート対象星系:</div>
+          <div id="export-target-system-name" style="font-size: 1.05rem; font-weight: bold; color: var(--ed-orange); margin-top: 2px;">--</div>
+        </div>
+
+        <!-- Form fields -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="modal_export_cmdr_label">発見者 CMDR名 (署名用):</label>
+            <input type="text" id="export-cmdr-name" class="search-input" style="width: 100%; font-size: 0.82rem;" placeholder="例: CMDR Yonaki">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="modal_export_notes_label">共有メモ / 説明 (任意):</label>
+            <input type="text" id="export-notes" class="search-input" style="width: 100%; font-size: 0.82rem;" placeholder="例: 生体シグナル豊富・タングステン採掘地点あり">
+          </div>
+        </div>
+
+        <!-- Lock Consent Checkbox -->
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.15);">
+          <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="cb-export-consent" style="margin-top: 3px; accent-color: var(--ed-orange); cursor: pointer; width: 16px; height: 16px;">
+            <span style="font-size: 0.8rem; color: #fed7aa; font-weight: bold; line-height: 1.4;" data-i18n="modal_export_consent">
+              注意事項を理解し、同意の上でパッケージを書き出します
+            </span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; margin-top: 10px; cursor: pointer;">
+            <input type="checkbox" id="cb-export-open-folder" checked style="accent-color: var(--ed-cyan); cursor: pointer; width: 15px; height: 15px;">
+            <span style="font-size: 0.78rem; color: #e2e8f0;" data-i18n="modal_export_open_folder_cb">
+              書き出し完了後に保存先フォルダを開く
+            </span>
+          </label>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+        <button id="btn-cancel-export" class="btn-page" style="padding: 6px 14px;" data-i18n="btn_cancel">キャンセル</button>
+        <button id="btn-submit-export-pkg" class="btn-primary" style="padding: 6px 16px; opacity: 0.5; cursor: not-allowed;" disabled data-i18n="btn_export_confirm">
+          📦 同意して .edsys を保存
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Export Success Notification -->
+  <div id="modal-export-success" class="modal-overlay" style="display: none;">
+    <div class="modal-dialog" style="max-width: 540px; background: var(--bg-card); border: 1px solid var(--ed-cyan); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.85);">
+      <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="color: var(--ed-cyan); font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+          <span>✅</span> <span data-i18n="export_success_title">パッケージ書き出し完了</span>
+        </h3>
+        <button id="btn-close-export-success" class="btn-close-modal" style="background: none; border: none; color: var(--text-secondary); font-size: 1.2rem; cursor: pointer;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px; font-size: 0.85rem; color: var(--text-primary);">
+        <p style="margin-bottom: 12px; color: #fed7aa; font-weight: bold;">
+          星系パッケージ (.edsys) の保存が完了しました。
+        </p>
+        <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; word-break: break-all;">
+          <div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="export_saved_to">保存先:</div>
+          <div id="export-saved-path-display" style="font-family: monospace; font-size: 0.82rem; color: var(--ed-orange); font-weight: bold;">--</div>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+        <button id="btn-reveal-exported-folder" class="btn-primary" style="padding: 6px 14px; background: rgba(0, 210, 255, 0.2); border-color: var(--ed-cyan); color: #fff;" data-i18n="btn_open_folder">
+          📂 保存先フォルダを開く
+        </button>
+        <button id="btn-ok-export-success" class="btn-page" style="padding: 6px 16px;" data-i18n="btn_close">
+          閉じる
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Import Package (.edsys) -->
+  <div id="modal-import-pkg" class="modal-overlay" style="display: none;">
+    <div class="modal-dialog" style="max-width: 600px; background: var(--bg-card); border: 1px solid #a78bfa; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
+      <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="color: #c4b5fd; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+          <span>📥</span> <span data-i18n="modal_import_title">共有星系パッケージ (.edsys) の取り込み</span>
+        </h3>
+        <button id="btn-close-import-modal" class="btn-icon" style="color: var(--text-secondary); cursor: pointer; font-size: 1.1rem; background: transparent; border: none;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px; max-height: 70vh; overflow-y: auto;">
+        
+        <!-- File input drop zone -->
+        <div id="import-drop-zone" style="border: 2px dashed rgba(167, 139, 250, 0.4); border-radius: 8px; padding: 24px; text-align: center; background: rgba(167, 139, 250, 0.05); cursor: pointer; transition: all 0.2s;">
+          <input type="file" id="import-file-input" accept=".edsys,.json" style="display: none;">
+          <div style="font-size: 2rem; margin-bottom: 8px;">📦</div>
+          <div style="font-size: 0.9rem; font-weight: bold; color: #c4b5fd;" data-i18n="import_drop_prompt">クリックして .edsys ファイルを選択、またはここにドラッグ＆ドロップ</div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;" data-i18n="import_drop_sub">対応形式: ED Journal Analyzer 専用パッケージ (.edsys, .json)</div>
+        </div>
+
+        <!-- Preview section (shown after file parsed) -->
+        <div id="import-preview-section" style="display: none; margin-top: 14px;">
+          <div id="import-signature-badge" style="padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 0.82rem; font-weight: bold; display: flex; align-items: center; gap: 6px;"></div>
+
+          <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem;">
+              <div><span style="color: var(--text-secondary);" data-i18n="import_author_label">作成者 (CMDR):</span> <strong id="import-cmdr-name" style="color: #fed7aa;">--</strong></div>
+              <div><span style="color: var(--text-secondary);" data-i18n="import_date_label">エクスポート日時:</span> <span id="import-export-date" style="color: #e2e8f0;">--</span></div>
+              <div><span style="color: var(--text-secondary);" data-i18n="import_sys_count_label">含まれる星系:</span> <strong id="import-sys-count" style="color: var(--ed-cyan);">--</strong></div>
+              <div><span style="color: var(--text-secondary);" data-i18n="import_body_count_label">総天体数:</span> <strong id="import-body-count" style="color: var(--ed-green);">--</strong></div>
+            </div>
+            <div id="import-notes-container" style="margin-top: 8px; font-size: 0.78rem; color: var(--text-secondary); border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+              <span data-i18n="import_notes_label">メモ:</span> <span id="import-notes-text" style="color: #cbd5e1;"></span>
+            </div>
+          </div>
+
+          <div style="font-size: 0.78rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 6px;" data-i18n="import_sys_list_title">取り込み対象星系一覧:</div>
+          <div id="import-systems-list" style="max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 6px 10px; font-size: 0.8rem; border: 1px solid var(--border-color);"></div>
+
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.15);">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="cb-import-consent" style="accent-color: #a78bfa; cursor: pointer; width: 16px; height: 16px;">
+              <span style="font-size: 0.8rem; color: #c4b5fd; font-weight: bold;" data-i18n="import_consent">
+                共有星系（Shared）として本アプリに取り込むことに同意します
+              </span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+        <button id="btn-cancel-import" class="btn-page" style="padding: 6px 14px;" data-i18n="btn_cancel">キャンセル</button>
+        <button id="btn-execute-import-pkg" class="btn-primary" style="background: rgba(167, 139, 250, 0.25); border-color: #a78bfa; color: #c4b5fd; padding: 6px 16px; opacity: 0.5; cursor: not-allowed;" disabled data-i18n="btn_import_execute">
+          📥 取り込みを実行
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit / Add Rhino Surface Mining Site -->
+  <div id="modal-mining-site" class="modal-overlay" style="display: none;">
+    <div class="modal-dialog" style="max-width: 500px; background: var(--bg-card); border: 1px solid #38bdf8; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.85); width: 90%;">
+      <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <h3 id="modal-mining-site-title" style="color: #38bdf8; font-size: 1.05rem; display: flex; align-items: center; gap: 6px; margin: 0;">
+          <span>⛏️</span> <span>採掘地点の編集</span>
+        </h3>
+        <button id="btn-close-mining-site-modal" class="btn-close-modal" style="background: none; border: none; color: var(--text-secondary); font-size: 1.2rem; cursor: pointer;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px; font-size: 0.85rem; color: var(--text-primary);">
+        <input type="hidden" id="input-mining-site-id" value="">
+        <div style="margin-bottom: 10px; font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between;">
+          <span>対象天体: <strong id="modal-mining-site-body-name" style="color: #fff;">--</strong></span>
+          <span style="font-size: 0.7rem; color: var(--text-dim);">Rhino採掘拠点・共有フォーマット対応</span>
+        </div>
+        <div style="background: rgba(56, 189, 248, 0.06); border: 1px dashed rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 0.73rem; color: #38bdf8; font-weight: bold;">📋 テキストから自動入力 (クイックペースト):</span>
+            <span style="font-size: 0.65rem; color: var(--text-dim);">共有テキスト貼付で即時解析</span>
+          </div>
+          <textarea id="input-mining-quick-paste" rows="3" placeholder="例:&#10;Kuk B 2&#10;Hotspot 26&#10;Iridium spot for 3 rig&#10;Location : -28.8859 / -66.7179" style="width: 100%; box-sizing: border-box; padding: 4px 8px; font-size: 0.78rem; font-family: var(--font-mono); background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; resize: vertical;"></textarea>
+          <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+            <button type="button" id="btn-apply-mining-paste" class="btn-page" style="padding: 2px 8px; font-size: 0.72rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); cursor: pointer;">
+              ⚡ テキストを各入力欄に反映
+            </button>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">緯度 (Latitude: -90 ~ +90):</label>
+            <input type="number" id="input-mining-lat" step="any" min="-90" max="90" placeholder="例: 12.3456" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-family: var(--font-mono); font-size: 0.85rem;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">経度 (Longitude: -180 ~ +180):</label>
+            <input type="number" id="input-mining-lon" step="any" min="-180" max="180" placeholder="例: -45.6789" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-family: var(--font-mono); font-size: 0.85rem;">
+          </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">🎯 近傍 Hotspot / PML拠点 (任意):</label>
+          <input type="text" id="input-mining-hotspot" list="mining-hotspots-datalist" placeholder="例: Hotspot 1, 鉄 Hotspot, PML #2 など" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-size: 0.85rem;">
+          <datalist id="mining-hotspots-datalist"></datalist>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">採掘鉱物 / 素材 (カンマ区切り):</label>
+          <input type="text" id="input-mining-minerals" placeholder="例: 鉄, ニッケル, 硫黄, カドミウム" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-size: 0.85rem;">
+        </div>
+        <div style="margin-bottom: 8px;">
+          <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">メモ / 備考 (任意):</label>
+          <textarea id="input-mining-note" rows="2" placeholder="クレーター内部、高密度地帯など" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-size: 0.82rem; resize: vertical;"></textarea>
+        </div>
+        <div id="modal-mining-site-error" style="color: #f87171; font-size: 0.78rem; display: none; margin-top: 6px;"></div>
+      </div>
+      <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+        <button id="btn-cancel-mining-site" class="btn-page" style="padding: 6px 14px;">キャンセル</button>
+        <button id="btn-save-mining-site" class="btn-primary" style="padding: 6px 16px; background: rgba(56, 189, 248, 0.25); border-color: #38bdf8; color: #38bdf8;">
+          💾 保存
+        </button>
+      </div>
+    </div>
+  </div>
+

@@ -2129,10 +2129,17 @@ def get_external_footprint(system_name: str = Query(..., min_length=1)):
     result = footprint_service.check_system_footprint(system_name)
     return result
 
+import jinja2
+
 # Mount static files UI
 ui_dir = BASE_DIR / "app" / "ui"
 ui_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(ui_dir)), name="static")
+
+_jinja_env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(str(ui_dir)),
+    autoescape=False
+)
 
 @app.get("/css/{file_path:path}")
 def get_css(file_path: str):
@@ -2155,9 +2162,11 @@ def get_icon():
         return FileResponse(f)
     return JSONResponse({"error": "not found"}, status_code=404)
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def index():
     index_file = ui_dir / "index.html"
     if index_file.exists():
-        return FileResponse(index_file)
-    return {"message": "UI not initialized"}
+        template = _jinja_env.get_template("index.html")
+        return HTMLResponse(template.render())
+    return HTMLResponse("UI not initialized", status_code=404)
+

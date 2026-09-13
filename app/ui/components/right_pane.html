@@ -1,0 +1,187 @@
+    <!-- Right Pane: Body Inspector & Exobiology Predictor -->
+    <div class="right-pane" id="right-pane">
+      <div class="inspector-header">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+          <div>
+            <div id="inspect-body-name" class="inspector-title" data-i18n="inspector_title">天体詳細インスペクター</div>
+            <div id="inspect-body-alias" class="inspector-alias" style="display: none; font-size: 0.82rem; color: #38bdf8; font-weight: bold; margin-top: 2px;"></div>
+          </div>
+          <button id="btn-inspect-bookmark-toggle" class="view-btn" style="padding: 3px 8px; font-size: 0.75rem; border-color: rgba(251, 191, 36, 0.4); color: #fbbf24; display: none; align-items: center; gap: 4px; white-space: nowrap;" title="この天体をブックマーク登録/解除">
+            <span id="inspect-bm-icon">☆</span> <span id="inspect-bm-text" data-i18n="bm_toggle_btn">ブックマーク</span>
+          </button>
+        </div>
+        <div id="inspect-body-type" class="inspector-subtitle" data-i18n="inspector_subtitle">天体をクリックすると詳細が表示されます</div>
+      </div>
+
+      <div id="inspector-content" style="display: none;">
+        <!-- Bookmark & Custom Notes Section -->
+        <div class="inspector-section" id="section-bookmark" style="display: none; border: 1px solid rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.04); border-radius: 6px; padding: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div class="section-heading" style="margin: 0; color: #fbbf24; font-size: 0.82rem; display: flex; align-items: center; gap: 6px;">
+              <span data-i18n="bm_section_title">🔖 天体ブックマーク & メモ</span>
+              <span id="bm-status-indicator" class="tag-badge" style="display: none; background: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.5); font-size: 0.68rem;" data-i18n="bm_status_active">登録中</span>
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <button id="btn-save-bookmark" class="btn-primary" style="padding: 2px 10px; font-size: 0.72rem; background: #d97706; border-color: #f59e0b;" data-i18n="btn_save_bm">💾 保存</button>
+              <button id="btn-delete-bookmark" class="view-btn" style="padding: 2px 8px; font-size: 0.72rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); display: none;" title="ブックマークを解除" data-i18n="btn_delete_bm">🗑️ 解除</button>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div>
+              <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="bm_alias_label">🏷️ エイリアス (別名・通称):</label>
+              <input type="text" id="bm-alias-input" class="search-input" placeholder="例: 採掘拠点 Alpha, テラフォーミング候補1..." style="width: 100%; padding: 4px 8px; font-size: 0.78rem;">
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                <label style="font-size: 0.7rem; color: var(--text-secondary);" data-i18n="bm_note_label">📝 メモ (Markdown対応・星系検索可能):</label>
+                <div style="display: flex; gap: 4px;">
+                  <button id="btn-insert-cmdr-coords" class="view-btn" style="padding: 1px 6px; font-size: 0.68rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" title="Insert live/latest surface coordinates" data-i18n="btn_insert_coords">📍 座標挿入</button>
+                  <button id="bm-note-tab-edit" class="view-btn active" style="padding: 1px 6px; font-size: 0.68rem;" data-i18n="tab_edit">編集</button>
+                  <button id="bm-note-tab-preview" class="view-btn" style="padding: 1px 6px; font-size: 0.68rem;" data-i18n="tab_preview">プレビュー</button>
+                </div>
+              </div>
+              <textarea id="bm-note-input" class="search-input" rows="4" placeholder="採掘Rig耐久値、適性鉱石、メモなどを記述..." style="width: 100%; padding: 6px 8px; font-size: 0.78rem; font-family: inherit; resize: vertical;"></textarea>
+              <div id="bm-note-preview" style="display: none; padding: 6px 8px; font-size: 0.78rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 4px; min-height: 70px; max-height: 180px; overflow-y: auto; line-height: 1.4;"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Anomaly Tags -->
+        <div class="inspector-section" id="section-anomalies" style="display: none;">
+          <div class="section-heading" data-i18n="section_anomalies">★ 特殊周回・レア天体 特性</div>
+          <div id="inspect-anomaly-tags" class="system-card-tags"></div>
+        </div>
+
+        <!-- Exploration Value Summary -->
+        <div class="inspector-section">
+          <div class="section-heading" data-i18n="section_payout">💰 探査報酬 & マッピング価値</div>
+          <table class="payout-table">
+            <tr>
+              <td data-i18n="val_fss">FSSスキャン価値:</td>
+              <td class="text-right" id="val-fss">0 Cr</td>
+            </tr>
+            <tr>
+              <td data-i18n="val_dss">DSSマッピング価値:</td>
+              <td class="text-right" id="val-dss">0 Cr</td>
+            </tr>
+            <tr>
+              <td data-i18n="val_fd_fss">初回発見ボーナス (FSS):</td>
+              <td class="text-right" id="val-fd-fss">0 Cr</td>
+            </tr>
+            <tr>
+              <td data-i18n="val_fm_dss">初回マッピングボーナス (DSS):</td>
+              <td class="text-right" id="val-fm-dss">0 Cr</td>
+            </tr>
+            <tr>
+              <td data-i18n="val_max_total">最大見込み総額 (FD+FM):</td>
+              <td class="text-right" id="val-max-total">0 Cr</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Exobiology Prediction & Payout -->
+        <div class="inspector-section" id="section-exobiology">
+          <div class="section-heading" data-i18n="section_exobiology">🌱 Exobiology (植物・菌類 予測 & 報酬)</div>
+          <div id="inspect-bio-signals-info" style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 8px;"></div>
+          <div id="inspect-bio-predictions"></div>
+        </div>
+
+        <!-- Landing & Surface Conditions -->
+        <div class="inspector-section">
+          <div class="section-heading" data-i18n="section_surface">🪐 地表・着陸・環境</div>
+          <div class="grid-2col">
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_landable">着陸可否</div>
+              <div id="prop-landable" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_gravity">表面重力</div>
+              <div id="prop-gravity" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_radius">天体半径 (Radius)</div>
+              <div id="prop-radius" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_diameter">天体直径 (Diameter)</div>
+              <div id="prop-diameter" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_temp">表面温度</div>
+              <div id="prop-temperature" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_pressure">大気圧</div>
+              <div id="prop-pressure" class="prop-val">--</div>
+            </div>
+            <div class="prop-card" style="grid-column: span 2;">
+              <div class="prop-label" data-i18n="prop_atmosphere">大気</div>
+              <div id="prop-atmosphere" class="prop-val">--</div>
+            </div>
+            <div class="prop-card" style="grid-column: span 2;">
+              <div class="prop-label" data-i18n="prop_volcanism">火山活動 (Volcanism)</div>
+              <div id="prop-volcanism" class="prop-val">--</div>
+            </div>
+            <div class="prop-card" id="prop-card-mining" style="grid-column: span 2; display: none;">
+              <div class="prop-label" data-i18n="prop_mining_signals">⛏️ 惑星採掘拠点 (Planetary Mining Location)</div>
+              <div id="prop-mining" class="prop-val" style="color: #38bdf8;">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stations & Settlements Section -->
+        <div class="inspector-section" id="section-stations" style="display: none;">
+          <div class="section-heading" style="color: #38bdf8;" data-i18n="section_stations">🛰️ ステーション / 拠点 (Stations & Ports)</div>
+          <div id="inspect-stations-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        </div>
+
+        <!-- Planetary Mining Locations Section (Distinct from Biology & Volcanism) -->
+        <div class="inspector-section" id="section-mining" style="display: none;">
+          <div class="section-heading" style="color: #38bdf8;" data-i18n="section_mining">⛏️ 惑星採掘拠点 & Rhino採掘実績</div>
+          <div id="inspect-mining-signals-info" style="font-size: 0.82rem; color: var(--text-primary); background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <span style="font-weight: bold; color: #38bdf8;">⛏️ 採掘拠点シグナル (Hotspots) 検出:</span>
+              <span id="inspect-mining-count" style="font-weight: bold; font-size: 1.05rem; margin-left: 6px; color: #fff;">0</span> 箇所
+            </div>
+            <span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-size: 0.72rem;">HOTSPOTS / PML</span>
+          </div>
+          <div id="inspect-mining-activities" style="margin-top: 8px;"></div>
+        </div>
+
+        <!-- Orbital Mechanics (周回・位置関係) -->
+        <div class="inspector-section">
+          <div class="section-heading" data-i18n="section_orbit">📐 軌道パラメータ & 周回</div>
+          <div class="grid-2col">
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_semi_major">軌道長半径 (Semi-Major Axis)</div>
+              <div id="prop-semi-major" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_eccentricity">離心率 (Eccentricity)</div>
+              <div id="prop-eccentricity" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_orbital_period">公転周期 (Orbital Period)</div>
+              <div id="prop-orbital-period" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_rotation_period">自転周期 (Rotation Period)</div>
+              <div id="prop-rotation-period" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_inclination">軌道傾斜角 (Inclination)</div>
+              <div id="prop-inclination" class="prop-val">--</div>
+            </div>
+            <div class="prop-card">
+              <div class="prop-label" data-i18n="prop_tidal_lock">潮汐固定 (Tidal Lock)</div>
+              <div id="prop-tidal-lock" class="prop-val">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rings & Materials -->
+        <div class="inspector-section" id="section-rings" style="display: none;">
+          <div class="section-heading" data-i18n="section_rings">💍 リングシステム</div>
+          <div id="inspect-rings-list"></div>
+        </div>
+      </div>
+    </div>

@@ -1,0 +1,114 @@
+    <!-- Center Pane: System Map & Celestial Orbit Hierarchy -->
+    <div class="center-pane">
+      <div class="system-header-bar">
+        <div class="system-title-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <div id="current-system-name" class="current-system-name" data-i18n="select_system_prompt" style="cursor: pointer;" title="クリックして星系名をコピー">星系を選択してください</div>
+          <button id="btn-copy-system" class="btn-icon" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: 4px; padding: 3px 6px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.75rem;" title="クリップボードにコピー">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span id="copy-label" data-i18n="copy_name">コピー</span>
+          </button>
+          
+          <!-- Method 2: Main Standalone Web Share HTML Export -->
+          <button id="btn-export-html" class="btn-icon" style="background: rgba(0, 210, 255, 0.12); border: 1px solid var(--ed-cyan); color: var(--ed-cyan); border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: bold;" title="🌐 単体HTMLファイルを生成（ブラウザだけで星系図・採掘地点・天体を閲覧可能。SNSやDiscord共有向け）">
+            <span data-i18n="btn_export_html">🌐 Web共有HTML</span>
+          </button>
+
+          <!-- Method 1: Locked Multi-System .edsys Package Export -->
+          <button id="btn-export-pkg" class="btn-icon" style="background: rgba(255, 113, 0, 0.12); border: 1px solid var(--ed-orange); color: var(--ed-orange); border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: bold;" title="🔒 .edsys パッケージ書き出し（安全ロック・注意事項確認ダイアログ付き）">
+            <span data-i18n="btn_export_pkg">📦 パッケージ書出</span>
+          </button>
+
+          <!-- Shared Bookmark Toggle Button -->
+          <button id="btn-toggle-shared" class="btn-icon" style="background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.4); color: #c4b5fd; border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem;" title="🤝 共有星系マークの切り替え">
+            <span id="shared-toggle-icon">🤝</span>
+            <span id="shared-toggle-label" data-i18n="btn_toggle_shared">共有マーク</span>
+          </button>
+
+          <div id="current-system-coords" class="system-coords"></div>
+          <div id="current-system-edsm-badge" style="margin-left: 4px; display: inline-flex; align-items: center; gap: 4px;"></div>
+          <button id="btn-sync-edsm" class="btn-icon" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 4px; padding: 2px 6px; cursor: pointer; display: none; align-items: center; gap: 3px; font-size: 0.72rem;" title="EDSMから天体情報・BGS星系状態を即時照会・補完します">
+            <span>🔄 EDSM同期</span>
+          </button>
+          <div id="current-system-state-badge" style="margin-left: 4px; display: inline-flex; align-items: center; gap: 4px;"></div>
+          <div id="current-system-economy-info" style="margin-left: 4px; display: inline-flex; align-items: center; gap: 4px;"></div>
+          <div id="current-system-external-badge" style="margin-left: 4px; display: none;"></div>
+          <div id="current-system-shared-badge" style="margin-left: 4px; display: none;"></div>
+          <div id="current-system-physics-badge" style="margin-left: 4px; display: none; cursor: pointer;" title="クリックして天体物理・レア度レポートを表示"></div>
+          <div id="current-system-distances" style="display: flex; gap: 3px; align-items: center; margin-left: 6px; flex-wrap: wrap;"></div>
+        </div>
+        <div class="system-total-payout" style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+          <div>
+            <div class="payout-label" data-i18n="system_fss_total_label">FSSスキャン合計</div>
+            <div id="current-system-fss-value" class="payout-amount" style="color: var(--ed-cyan); font-size: 0.95rem;">-- Cr</div>
+          </div>
+          <div>
+            <div class="payout-label" data-i18n="system_max_potential_label">天体探査最大 (FD+FM)</div>
+            <div id="current-system-value" class="payout-amount" style="font-size: 0.95rem;">-- Cr</div>
+          </div>
+          <div id="system-bio-payout-box" style="display: none; background: rgba(0, 255, 136, 0.08); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 4px; padding: 2px 10px;">
+            <div style="display: flex; gap: 14px; align-items: flex-end;">
+              <div id="system-bio-scanned-container" style="border-right: 1px solid rgba(0, 255, 136, 0.25); padding-right: 12px;">
+                <div class="payout-label" style="color: #6ee7b7; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+                  <span>✓</span> <span data-i18n="system_bio_scanned_label">スキャン確定</span>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: baseline;">
+                  <span id="current-system-bio-scanned-base" class="payout-amount" style="color: #d1fae5; font-size: 0.85rem;" title="スキャン確定 (通常)">0 Cr</span>
+                  <span style="font-size: 0.68rem; color: var(--text-secondary);">/ 1st:</span>
+                  <span id="current-system-bio-scanned-first" class="payout-amount" style="color: var(--ed-green); font-weight: bold; font-size: 0.95rem;" title="スキャン確定 (1st 5倍)">0 Cr</span>
+                </div>
+              </div>
+              <div>
+                <div class="payout-label" style="color: var(--ed-green); font-weight: bold;" data-i18n="system_bio_total_label">🌱 Exobiology 総見込</div>
+                <div style="display: flex; gap: 6px; align-items: baseline;">
+                  <span id="current-system-bio-base" class="payout-amount" style="color: #a7f3d0; font-size: 0.85rem;" title="総見込 (通常)">-- Cr</span>
+                  <span style="font-size: 0.68rem; color: var(--text-secondary);">/ 1st:</span>
+                  <span id="current-system-bio-first" class="payout-amount" style="color: var(--ed-green); font-size: 1.0rem;" title="総見込 (1st 5倍)">-- Cr</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="map-view-controls">
+        <span data-i18n="view_label">View:</span>
+        <button id="btn-view-sysmap" class="view-btn active" style="color: var(--ed-cyan); border-color: rgba(0, 210, 255, 0.4);" data-i18n="view_sysmap">🌌 System</button>
+        <button id="btn-view-flat" class="view-btn" data-i18n="view_flat">🪐 Celestial</button>
+        <button id="btn-view-bio" class="view-btn" style="color: var(--ed-green); border-color: rgba(0, 255, 136, 0.4);" data-i18n="view_bio">🌱 Bio</button>
+        <button id="btn-view-mining" class="view-btn" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" data-i18n="view_mining">⛏️ P Mining</button>
+        <button id="btn-view-visits" class="view-btn" data-i18n="view_visits">⏱️ Visits</button>
+        <button id="btn-view-physics" class="view-btn" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" data-i18n="view_physics">🌌 Astro Rarity</button>
+        
+        <!-- Bio-only view filter -->
+        <label id="bio-filter-hide-completed-container" style="display: none; align-items: center; gap: 4px; font-size: 0.75rem; color: #a7f3d0; cursor: pointer; margin-left: 8px; background: rgba(0, 255, 136, 0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(0, 255, 136, 0.3);">
+          <input type="checkbox" id="cb-hide-completed-bio" style="cursor: pointer;">
+          <span data-i18n="hide_completed_bio">スキャン完了天体を非表示</span>
+        </label>
+
+        <div style="flex: 1;"></div>
+        <div id="body-sort-wrapper" style="display: none; align-items: center; gap: 4px;">
+          <span style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="body_sort_label">天体ソート:</span>
+          <select id="body-sort-select" class="sort-select" style="font-size: 0.75rem; padding: 2px 6px;">
+            <option value="distance-asc" data-i18n="body_sort_dist">到着距離順 (近い順)</option>
+            <option value="radius-desc" data-i18n="body_sort_radius_desc">半径・サイズ (大きい順)</option>
+            <option value="radius-asc" data-i18n="body_sort_radius_asc">半径・サイズ (小さい順)</option>
+            <option value="value-desc" data-i18n="body_sort_val_desc">探査価値 (高い順)</option>
+            <option value="value-asc" data-i18n="body_sort_val_asc">探査価値 (低い順)</option>
+            <option value="bio-desc" data-i18n="body_sort_bio_desc">Bioシグナル数 (多い順)</option>
+            <option value="pml-desc" data-i18n="body_sort_pml_desc">⛏️ PML数 / Rhino適格 (多い順)</option>
+            <option value="pml-asc" data-i18n="body_sort_pml_asc">⛏️ PML数 / Rhino適格 (少ない順)</option>
+            <option value="gravity-desc" data-i18n="body_sort_g_desc">重力 (高い順)</option>
+            <option value="gravity-asc" data-i18n="body_sort_g_asc">重力 (低い順)</option>
+          </select>
+        </div>
+        <span id="body-count-badge" style="font-family: var(--font-mono); color: var(--text-secondary); margin-left: 8px;"></span>
+      </div>
+
+      <div id="map-content" class="map-content-area">
+        <!-- System hierarchy / flat list / visit timeline injected by JS -->
+        <div style="color: var(--text-secondary); text-align: center; margin-top: 50px;" data-i18n="select_system_desc">
+          左側の星系リストから星系を選択してください。
+        </div>
+      </div>
+    </div>
+

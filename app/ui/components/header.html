@@ -1,0 +1,81 @@
+  <!-- Header -->
+  <header>
+    <!-- Header Logged Exploration Stats Group (Collapsible) -->
+    <div class="header-logged-group" id="header-logged-group" style="display: flex; align-items: center; background: rgba(255, 113, 0, 0.06); border: 1px solid rgba(255, 113, 0, 0.3); border-radius: 6px; padding: 2px 6px; gap: 8px; transition: all 0.25s ease;">
+      <div class="stat-prefix-badge" id="btn-toggle-header-stats" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 2px 6px; background: rgba(255, 113, 0, 0.18); border-radius: 4px; border: 1px solid rgba(255, 113, 0, 0.4); flex-shrink: 0; cursor: pointer;" title="クリックして統計パネルを折り畳み / 展開">
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span style="font-size: 0.72rem; color: var(--ed-orange); font-weight: bold; white-space: nowrap;">🚀 探査・記録済み</span>
+          <span id="header-stats-chevron" style="font-size: 0.65rem; color: var(--ed-orange); transition: transform 0.2s;">◀</span>
+        </div>
+        <span id="header-logged-period" style="font-size: 0.62rem; color: #fed7aa; white-space: nowrap;">全期間</span>
+      </div>
+
+      <div class="header-stats" id="header-stats-content" style="margin: 0; padding: 0; border: none; display: flex; gap: 20px; align-items: center; transition: all 0.25s ease;">
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_systems">訪問星系</span>
+          <span id="stat-systems" class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_bodies">スキャン天体</span>
+          <span id="stat-bodies" class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_elw">ELW (地球型)</span>
+          <span id="stat-elw" class="stat-value highlight">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_ww">WW (海洋惑星)</span>
+          <span id="stat-ww" class="stat-value" style="color: var(--ed-cyan);">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_ammonia">Ammonia</span>
+          <span id="stat-ammonia" class="stat-value" style="color: var(--ed-cyan-dim);">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_bio">生体 (Bio) 星系</span>
+          <span id="stat-bio" class="stat-value" style="color: var(--ed-green);">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label" data-i18n="stat_payout">累積探査総価値</span>
+          <span id="stat-total-payout" class="stat-value credits">0 Cr</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CMDR Location -->
+    <div class="stat-item" id="stat-cmdr-container" style="border-left: 1px solid var(--border-color); padding-left: 10px; flex-shrink: 0; margin-left: 6px;">
+      <span class="stat-label" style="color: var(--ed-orange);" data-i18n="stat_current_loc">📍 CMDR現在地</span>
+      <span id="stat-cmdr-loc" class="stat-value" style="font-size: 0.8rem; color: #fff; max-width: none; white-space: nowrap;">--</span>
+    </div>
+
+    <div class="header-actions">
+      <!-- Manual Log Rescan Button (Instant access without opening settings) -->
+      <button id="btn-rescan" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #fed7aa; background: rgba(255, 113, 0, 0.15); border: 1px solid rgba(255, 113, 0, 0.5); display: flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" title="最新のジャーナルログを即座に再解析・同期します">
+        <span id="rescan-icon">🔄</span>
+        <span id="rescan-text" data-i18n="btn_rescan">ログスキャン</span>
+      </button>
+
+      <!-- Import Shared Package Button -->
+      <button id="btn-import-open" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #c4b5fd; background: rgba(167, 139, 250, 0.15); border: 1px solid #a78bfa; display: flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" title="📥 共有星系パッケージ (.edsys) をインポート">
+        <span data-i18n="btn_import_pkg">📥 共有インポート</span>
+      </button>
+
+      <!-- Unified Settings Modal Button (Logs, UI Scaling, TTS, Credits) -->
+      <button id="btn-settings-open" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #fff; background: rgba(255, 113, 0, 0.15); border: 1px solid var(--ed-orange); display: flex; align-items: center; gap: 5px; z-index: 9999; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px; box-shadow: 0 0 6px rgba(255, 113, 0, 0.2);" title="⚙️ 設定 & 文字サイズ & ログ同期 & TTS & 謝辞">
+        <span data-i18n="btn_settings">⚙️ 設定</span>
+      </button>
+
+      <!-- Layout Switcher Button (1-Column / 2-Columns) -->
+      <button id="btn-toggle-layout" class="view-btn" style="padding: 5px 10px; font-size: 0.8rem; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; display: flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" title="UIレイアウト切替 (1列 / 2列)">
+        <span id="layout-toggle-icon">◫</span>
+        <span id="layout-toggle-text" data-i18n="btn_layout_2col">2列表示</span>
+      </button>
+
+      <!-- Language Switcher -->
+      <div class="lang-switch-group" style="display: flex; gap: 4px; background: var(--bg-card); padding: 2px; border-radius: 4px; border: 1px solid var(--border-color);">
+        <button id="btn-lang-ja" class="view-btn active" style="padding: 4px 8px; font-size: 0.75rem;">JP</button>
+        <button id="btn-lang-en" class="view-btn" style="padding: 4px 8px; font-size: 0.75rem;">EN</button>
+      </div>
+    </div>
+  </header>
+
