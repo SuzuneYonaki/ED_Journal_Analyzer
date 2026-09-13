@@ -52,14 +52,21 @@ function parseParentsList(parentsRaw) {
  * - "AB 1" -> { star: "AB", planet: 1, moon: null, submoon: null, rank: 1 }
  * - "ABCD 1" -> { star: "ABCD", planet: 1, moon: null, submoon: null, rank: 1 }
  */
-function analyzeBodyDesignation(bodyName, systemName, isStar) {
-  const short = getBodyShortName(bodyName, systemName).trim();
-  const tokens = short.split(/\s+/).filter(Boolean);
+function analyzeBodyDesignation(bodyOrName, systemName, isStarOrLetterMap, rootStars = [], bodyByIdMap = new Map()) {
+  const body = (typeof bodyOrName === 'object' && bodyOrName !== null)
+    ? bodyOrName
+    : { body_name: bodyOrName, body_type: (isStarOrLetterMap === true ? 'Star' : 'Planet') };
 
-  if (tokens.length === 0) {
+  const starLetterMap = (isStarOrLetterMap instanceof Map) ? isStarOrLetterMap : new Map();
+  const isStarType = Boolean(body.star_type || (body.body_type && body.body_type.toLowerCase() === 'star') || isStarOrLetterMap === true);
+  const isRootStar = rootStars.some(rs => rs.body_id === body.body_id);
+
+  if (isRootStar) {
+    const assignedLetter = starLetterMap.get(body.body_id) || 'A';
+    const rawShort = getBodyShortName(body.body_name, systemName).trim();
     return {
-      shortName: short || 'Star',
-      starGroup: 'A',
+      shortName: rawShort || (body.body_name ? body.body_name.trim() : 'Star'),
+      starGroup: assignedLetter,
       isStar: true,
       planetNum: null,
       moonLetter: null,
@@ -68,56 +75,78 @@ function analyzeBodyDesignation(bodyName, systemName, isStar) {
     };
   }
 
+  const short = getBodyShortName(body.body_name, systemName).trim();
+  const tokens = short.split(/\s+/).filter(Boolean);
+  const parentsList = parseParentsList(body.parents);
+
   let starGroup = 'A';
   let planetNum = null;
   let moonLetter = null;
   let submoonLetter = null;
   let level = 1;
 
-  let idx = 0;
-  // Check if first token is a Star / Barycentre letter (A, B, C, AB, CD, ABCD etc.)
-  if (/^[A-Z]{1,6}$/.test(tokens[0])) {
-    starGroup = tokens[0];
-    idx = 1;
-  }
-
-  // Next token should be Planet number (1, 2, 3...) or Moon letter
-  if (idx < tokens.length) {
-    const tok = tokens[idx];
-    const numMatch = tok.match(/^(\d+)$/);
-    if (numMatch) {
-      planetNum = parseInt(numMatch[1], 10);
-      idx++;
-      level = 1;
-
-      // Next token: Moon letter (a, b, c...)
-      if (idx < tokens.length && /^[a-z]$/i.test(tokens[idx])) {
-        moonLetter = tokens[idx].toLowerCase();
-        idx++;
-        level = 2;
-
-        // Next token: Submoon letter (a, b, c...)
-        if (idx < tokens.length && /^[a-z]$/i.test(tokens[idx])) {
-          submoonLetter = tokens[idx].toLowerCase();
-          level = 3;
-        }
+  // 1. Determine starGroup from direct parent if possible
+  if (parentsList.length > 0) {
+    const directParent = parentsList[0];
+    if (directParent.Star !== undefined && starLetterMap.has(directParent.Star)) {
+      starGroup = starLetterMap.get(directParent.Star);
+    } else if (directParent.Planet !== undefined) {
+      level = 2; // Direct parent is a planet -> this is a moon
+      if (parentsList.length > 1 && parentsList[1].Planet !== undefined) {
+        level = 3; // Parent of parent is planet -> submoon
       }
-    } else if (/^[a-z]$/i.test(tok)) {
-      moonLetter = tok.toLowerCase();
-      level = 2;
+      // Find parent planet's starGroup
+      const parentPlanet = bodyByIdMap.get(directParent.Planet);
+      if (parentPlanet && parentPlanet.starGroup) {
+        starGroup = parentPlanet.starGroup;
+      }
     }
   }
 
-  // If body has a planet index, it orbits on the planet rail even if it is a sub-stellar dwarf
-  const isActualStar = Boolean(isStar && planetNum === null);
-  if (isActualStar) {
+  // 2. Parse name tokens (e.g. "A 1", "B 3", "AB 1", "Ab 2", "1", "1 a", "Founders World")
+  let idx = 0;
+  if (tokens.length > 0) {
+    // Check star group token (A, B, AB, CD, ABCD, or Ab followed by planet number)
+    if (/^[A-Z]{1,4}$/.test(tokens[0]) || (/^[A-Z][a-z]$/.test(tokens[0]) && tokens.length >= 2 && /^\d+$/.test(tokens[1]))) {
+      starGroup = tokens[0].toUpperCase();
+      idx = 1;
+    }
+
+    if (idx < tokens.length) {
+      const numMatch = tokens[idx].match(/^(\d+)$/);
+      if (numMatch) {
+        planetNum = parseInt(numMatch[1], 10);
+        idx++;
+        if (level < 2) level = 1;
+
+        if (idx < tokens.length && /^[a-z]$/i.test(tokens[idx])) {
+          moonLetter = tokens[idx].toLowerCase();
+          idx++;
+          level = 2;
+
+          if (idx < tokens.length && /^[a-z]$/i.test(tokens[idx])) {
+            submoonLetter = tokens[idx].toLowerCase();
+            level = 3;
+          }
+        }
+      } else if (/^[a-z]$/i.test(tokens[idx])) {
+        moonLetter = tokens[idx].toLowerCase();
+        level = 2;
+      }
+    }
+  }
+
+  if (isStarType && planetNum === null && level < 2) {
     level = 0;
   }
 
+  // If custom name (e.g. "Founders World", "Earth", "Moon"), keep full name as shortName
+  const finalShortName = (planetNum !== null) ? short : (short || body.body_name || '');
+
   return {
-    shortName: short,
+    shortName: finalShortName,
     starGroup: starGroup,
-    isStar: isActualStar,
+    isStar: isStarType && (planetNum === null && level === 0),
     planetNum: planetNum,
     moonLetter: moonLetter,
     submoonLetter: submoonLetter,
@@ -177,6 +206,7 @@ function extractStarLetter(bodyName) {
 /**
  * Pre-analyzes all stars in a system to ensure every root star
  * gets a distinct starGroup letter (A, B, C, D...) and is never overwritten.
+ * Circumstellar stars orbiting another star or barycentre are separated into dwarfPlanets.
  */
 function analyzeSystemStars(flatBodies, systemName) {
   const allStars = flatBodies.filter(b => Boolean(b.star_type || (b.body_type && b.body_type.toLowerCase() === 'star')));
@@ -184,13 +214,18 @@ function analyzeSystemStars(flatBodies, systemName) {
   const dwarfPlanets = [];
 
   allStars.forEach(b => {
-    let short = (b.body_name || '').trim();
-    if (systemName && short.startsWith(systemName)) {
-      short = short.substring(systemName.length).trim();
-    }
+    let short = getBodyShortName(b.body_name, systemName).trim();
     const tokens = short.split(/\s+/).filter(Boolean);
-    // If short name is a pure number (e.g. "1", "2"), it's a sub-stellar dwarf on the planet rail
-    if (tokens.length > 0 && /^\d+$/.test(tokens[0])) {
+    const parentsList = parseParentsList(b.parents);
+
+    // If star has a direct parent Star, it is a circumstellar body orbiting that star
+    const hasParentStar = parentsList.length > 0 && parentsList[0].Star !== undefined;
+
+    // Check if name is like "A 1", "B 3", "AB 1", "Ab 2", or pure number "1"
+    const isOrbitingName = (tokens.length >= 2 && /^(?:[A-Z]{1,4}|[A-Z][a-z])$/.test(tokens[0]) && /^\d+$/.test(tokens[1]))
+                        || (tokens.length > 0 && /^\d+$/.test(tokens[0]));
+
+    if (hasParentStar || isOrbitingName) {
       dwarfPlanets.push(b);
     } else {
       rootStars.push(b);
@@ -211,7 +246,7 @@ function analyzeSystemStars(flatBodies, systemName) {
   const claimedLetters = new Set();
   const starLetterMap = new Map(); // body_id -> letter
 
-  // Pass 1: Explicit letters in name (e.g. "Sagittarius A*" -> "A", "Sys B" -> "B")
+  // Pass 1: Explicit letters in name (e.g. "Sagittarius A*" -> "A", "HIP 99999 A" -> "A")
   rootStars.forEach(s => {
     const letter = extractStarLetter(s.body_name);
     if (letter && !claimedLetters.has(letter)) {
@@ -247,42 +282,20 @@ function buildSystemMapTree(flatBodies, systemName) {
   // 1. Pre-analyze stars to assign unique star letters
   const { rootStars, dwarfPlanets, starLetterMap } = analyzeSystemStars(flatBodies, systemName);
 
+  const bodyByIdMap = new Map();
+  flatBodies.forEach(b => bodyByIdMap.set(b.body_id, b));
+
   // 2. Tag and analyze each body
   const analyzedList = flatBodies.map(b => {
-    const isStarType = Boolean(b.star_type || (b.body_type && b.body_type.toLowerCase() === 'star'));
-    const isRootStar = rootStars.some(rs => rs.body_id === b.body_id);
-
-    let info;
-    if (isRootStar) {
-      const assignedLetter = starLetterMap.get(b.body_id) || 'A';
-      const rawShort = getBodyShortName(b.body_name, systemName).trim();
-      const shortName = rawShort || b.body_name.trim();
-      info = {
-        shortName: shortName,
-        starGroup: assignedLetter,
-        isStar: true,
-        planetNum: null,
-        moonLetter: null,
-        submoonLetter: null,
-        level: 0
-      };
-    } else {
-      info = analyzeBodyDesignation(b.body_name, systemName, isStarType);
-      // If planet has parents pointing directly to a root star, align its starGroup
-      const parentsList = parseParentsList(b.parents);
-      if (parentsList.length > 0 && parentsList[0].Star !== undefined) {
-        const parentStarId = parentsList[0].Star;
-        if (starLetterMap.has(parentStarId)) {
-          info.starGroup = starLetterMap.get(parentStarId);
-        }
-      }
-    }
-    return {
+    const info = analyzeBodyDesignation(b, systemName, starLetterMap, rootStars, bodyByIdMap);
+    const combined = {
       ...b,
       ...info,
       moons: [],
       submoons: []
     };
+    bodyByIdMap.set(b.body_id, combined);
+    return combined;
   });
 
   // 3. Collect Stars and Star Sections (Guaranteed unique keys per root star)
@@ -348,12 +361,14 @@ function buildSystemMapTree(flatBodies, systemName) {
   const moons = analyzedList.filter(b => !b.isStar && b.level === 2);
   const submoons = analyzedList.filter(b => !b.isStar && b.level === 3);
 
-  // Planet Map keyed by `${starGroup}-${planetNum}` (e.g. "A-1", "A-2", "AB-1", "CD-2")
+  const planetByIdMap = new Map();
   const planetKeyMap = new Map();
 
   planets.forEach(p => {
     const sGroup = p.starGroup || 'A';
     const sec = getOrCreateSection(sGroup, p);
+    planetByIdMap.set(p.body_id, p);
+
     const pNum = p.planetNum !== null ? p.planetNum : (p.distance_from_arrival_ls || 0);
     const key = `${sGroup}-${pNum}`;
 
@@ -364,60 +379,92 @@ function buildSystemMapTree(flatBodies, systemName) {
   // 4. Attach Moons to their respective Planets
   moons.forEach(m => {
     const sGroup = m.starGroup || 'A';
-    const key = `${sGroup}-${m.planetNum}`;
+    const parentsList = parseParentsList(m.parents);
+    let attached = false;
 
-    if (planetKeyMap.has(key)) {
-      planetKeyMap.get(key).moons.push(m);
-    } else {
-      // If parent planet not found in map (e.g. not yet scanned), create placeholder
-      const sec = getOrCreateSection(sGroup, m);
-      const placeholderPlanet = {
-        body_id: `p-${key}`,
-        body_name: `${systemName} ${sGroup} ${m.planetNum}`.trim(),
-        shortName: `${sGroup !== 'A' ? sGroup + ' ' : ''}${m.planetNum}`,
-        starGroup: sGroup,
-        isStar: false,
-        planetNum: m.planetNum,
-        planet_class: 'Unscanned Planet',
-        distance_from_arrival_ls: m.distance_from_arrival_ls,
-        level: 1,
-        moons: [m],
-        submoons: []
-      };
-      planetKeyMap.set(key, placeholderPlanet);
-      sec.planets.push(placeholderPlanet);
+    // Try direct parent planet ID first
+    if (parentsList.length > 0 && parentsList[0].Planet !== undefined) {
+      const parentPlanet = planetByIdMap.get(parentsList[0].Planet);
+      if (parentPlanet) {
+        parentPlanet.moons.push(m);
+        attached = true;
+      }
+    }
+
+    if (!attached) {
+      const key = `${sGroup}-${m.planetNum}`;
+      if (planetKeyMap.has(key)) {
+        planetKeyMap.get(key).moons.push(m);
+        attached = true;
+      } else {
+        // If parent planet not found in map (e.g. not yet scanned), create placeholder
+        const sec = getOrCreateSection(sGroup, m);
+        const placeholderPlanet = {
+          body_id: `p-${key}`,
+          body_name: `${systemName} ${sGroup} ${m.planetNum || ''}`.trim(),
+          shortName: `${sGroup !== 'A' ? sGroup + ' ' : ''}${m.planetNum || 'Planet'}`,
+          starGroup: sGroup,
+          isStar: false,
+          planetNum: m.planetNum,
+          planet_class: 'Unscanned Planet',
+          distance_from_arrival_ls: m.distance_from_arrival_ls,
+          level: 1,
+          moons: [m],
+          submoons: []
+        };
+        planetKeyMap.set(key, placeholderPlanet);
+        sec.planets.push(placeholderPlanet);
+      }
     }
   });
 
   // 5. Attach Submoons to their respective Moons
   submoons.forEach(sm => {
     const sGroup = sm.starGroup || 'A';
-    const key = `${sGroup}-${sm.planetNum}`;
-    if (planetKeyMap.has(key)) {
-      const p = planetKeyMap.get(key);
-      const parentMoon = p.moons.find(m => m.moonLetter === sm.moonLetter);
-      if (parentMoon) {
+    const parentsList = parseParentsList(sm.parents);
+    let attached = false;
+
+    if (parentsList.length > 0 && parentsList[0].Planet !== undefined) {
+      const parentMoon = analyzedList.find(b => b.body_id === parentsList[0].Planet);
+      if (parentMoon && parentMoon.submoons) {
         parentMoon.submoons.push(sm);
-      } else {
-        p.moons.push(sm);
+        attached = true;
+      }
+    }
+
+    if (!attached) {
+      const key = `${sGroup}-${sm.planetNum}`;
+      if (planetKeyMap.has(key)) {
+        const p = planetKeyMap.get(key);
+        const parentMoon = p.moons.find(m => m.moonLetter === sm.moonLetter);
+        if (parentMoon) {
+          parentMoon.submoons.push(sm);
+        } else {
+          p.moons.push(sm);
+        }
       }
     }
   });
 
   // 6. Natural Sorting:
   // - Sort Star Sections by getStarGroupSortScore (A, AB, B, BC, C, CD, D, ABCD, E...)
-  // - Sort Planets by planetNum (1, 2, 3...) ascending
-  // - Sort Moons by moonLetter ('a', 'b', 'c', 'd', 'e', 'f'...) ascending
-  // - Sort Submoons by submoonLetter ('a', 'b', 'c'...) ascending
+  // - Sort Planets by orbital distance (semi_major_axis or distance_from_arrival_ls) / planetNum ascending
+  // - Sort Moons by moonLetter / distance ascending
+  // - Sort Submoons by submoonLetter / distance ascending
   const starSections = Array.from(starMap.values());
   starSections.sort((a, b) => getStarGroupSortScore(a.starKey) - getStarGroupSortScore(b.starKey));
 
   starSections.forEach(sec => {
     sec.planets.sort((a, b) => {
+      const distA = (a.semi_major_axis !== undefined && a.semi_major_axis !== null) ? a.semi_major_axis : (a.distance_from_arrival_ls || 0);
+      const distB = (b.semi_major_axis !== undefined && b.semi_major_axis !== null) ? b.semi_major_axis : (b.distance_from_arrival_ls || 0);
+      if (Math.abs(distA - distB) > 0.001) {
+        return distA - distB;
+      }
       if (a.planetNum !== null && b.planetNum !== null) {
         return a.planetNum - b.planetNum;
       }
-      return (a.distance_from_arrival_ls || 0) - (b.distance_from_arrival_ls || 0);
+      return (a.body_id || 0) - (b.body_id || 0);
     });
 
     sec.planets.forEach(p => {
@@ -425,7 +472,9 @@ function buildSystemMapTree(flatBodies, systemName) {
         if (a.moonLetter && b.moonLetter) {
           return a.moonLetter.localeCompare(b.moonLetter);
         }
-        return (a.distance_from_arrival_ls || 0) - (b.distance_from_arrival_ls || 0);
+        const distA = (a.semi_major_axis !== undefined && a.semi_major_axis !== null) ? a.semi_major_axis : (a.distance_from_arrival_ls || 0);
+        const distB = (b.semi_major_axis !== undefined && b.semi_major_axis !== null) ? b.semi_major_axis : (b.distance_from_arrival_ls || 0);
+        return distA - distB;
       });
 
       p.moons.forEach(m => {
@@ -433,7 +482,9 @@ function buildSystemMapTree(flatBodies, systemName) {
           if (a.submoonLetter && b.submoonLetter) {
             return a.submoonLetter.localeCompare(b.submoonLetter);
           }
-          return (a.distance_from_arrival_ls || 0) - (b.distance_from_arrival_ls || 0);
+          const distA = (a.semi_major_axis !== undefined && a.semi_major_axis !== null) ? a.semi_major_axis : (a.distance_from_arrival_ls || 0);
+          const distB = (b.semi_major_axis !== undefined && b.semi_major_axis !== null) ? b.semi_major_axis : (b.distance_from_arrival_ls || 0);
+          return distA - distB;
         });
       });
     });
