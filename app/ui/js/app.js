@@ -228,6 +228,13 @@ function getStarTypeStyle(starType) {
   if (st.startsWith('C') || st.startsWith('MS') || st.startsWith('S')) {
     return { bg: '#7f1d1d', text: '#67e8f9', border: '#dc2626' };
   }
+  // Proto-stars / Young Stellar Objects
+  if (st.startsWith('AEBE')) {
+    return { bg: '#3b0764', text: '#d8b4fe', border: '#c084fc' }; // Herbig Ae/Be -> Purple
+  }
+  if (st.startsWith('TTS')) {
+    return { bg: '#831843', text: '#fbcfe8', border: '#f472b6' }; // T Tauri -> Pink
+  }
   // Main sequence / Giants
   if (st.startsWith('O')) {
     return { bg: '#2563eb', text: '#fde047', border: '#60a5fa' }; // Blue -> Yellow text
