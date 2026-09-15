@@ -51,10 +51,18 @@ def get_pressure_atm(body: Dict[str, Any]) -> float:
     except (ValueError, TypeError):
         return 0.0
 
-    # If value is in Pascals (> 100 Pa), convert to standard atmospheres
-    if val > 100.0:
+    if val <= 0.0:
+        return 0.0
+
+    # In Elite Dangerous journals and DB, SurfacePressure is stored in Pascals (Pa).
+    # 1 atm = 101325 Pa. Odyssey landable planet atmospheres range from ~1 Pa to ~15,000 Pa (~0.15 atm).
+    # If val > 1.0, it is in Pascals.
+    # If body explicitly used journal key 'SurfacePressure', it is always in Pascals.
+    if val > 1.0 or "SurfacePressure" in body:
         return val / 101325.0
-    return max(0.0, val)
+
+    # If val <= 1.0 and passed as surface_pressure (e.g. test fixtures in atm), treat as atm.
+    return val
 
 
 def get_temperature_k(body: Dict[str, Any]) -> float:
@@ -109,12 +117,24 @@ def get_volcanism_string(body: Dict[str, Any]) -> str:
 
 def get_star_type_string(body: Dict[str, Any]) -> str:
     """Extract primary parent star spectral type class."""
-    st = body.get("star_type") or body.get("StarType") or ""
+    st = body.get("star_type") or body.get("StarType")
+    if st:
+        return str(st).strip().upper()
+    # For planets, star_type is not directly on the planet itself. Resolve from parent_star_type,
+    # system_main_star_type, or main_star_type
+    st = (
+        body.get("parent_star_type")
+        or body.get("ParentStarType")
+        or body.get("system_main_star_type")
+        or body.get("main_star_type")
+        or body.get("MainStarType")
+        or ""
+    )
     return str(st).strip().upper()
 
 
 def match_atmosphere(required_types: List[str], current_atm: str) -> bool:
-    """Check if current body atmosphere satisfies required types."""
+    """Check if current body atmosphere satisfies required types, strictly distinguishing plain and -rich atmospheres."""
     if not required_types:
         return True
     
@@ -122,10 +142,23 @@ def match_atmosphere(required_types: List[str], current_atm: str) -> bool:
     if not norm_current or norm_current in ["none", "no atmosphere"]:
         return any(t in ["none", "no atmosphere"] for t in required_types)
 
+    is_current_rich = ("-rich" in norm_current) or (" rich" in norm_current)
+
     for req in required_types:
         norm_req = normalize_string(req)
-        if norm_req in norm_current or norm_current in norm_req:
-            return True
+        is_req_rich = ("-rich" in norm_req) or (" rich" in norm_req)
+
+        # Disallow plain atmosphere from matching rich requirement, and vice versa
+        if is_req_rich != is_current_rich:
+            continue
+
+        # Strip prefixes and suffixes to match base gas name
+        clean_req = re.sub(r"-?rich|atmosphere|thin|hot|thick", "", norm_req).strip()
+        clean_current = re.sub(r"-?rich|atmosphere|thin|hot|thick", "", norm_current).strip()
+
+        if clean_req and clean_current:
+            if clean_req in clean_current or clean_current in clean_req:
+                return True
     return False
 
 
@@ -246,15 +279,29 @@ def match_parent_star(rule: Dict[str, Any], star_type: str, luminosity: Optional
 
 def predict_exobiology_candidates(
     body: Dict[str, Any],
-    system_context_species: Optional[Set[str]] = None
+    system_context_species: Optional[Set[str]] = None,
+    confirmed_genuses: Optional[Any] = None
 ) -> List[Dict[str, Any]]:
     """
     Predict possible Exobiology candidate species for a body using
     strict physical parameter matrix filtering, distinct Species signal budgeting (Z signals -> Z species),
-    and system-level co-occurrence weighting under the same stellar spectrum.
+    confirmed genus pruning from DSS, and system-level co-occurrence weighting under the same stellar spectrum.
     """
     is_landable = body.get("landable") or body.get("Landable")
     if is_landable is False:
+        return []
+
+    # Extract biological signals and mapping status
+    bio_signals = body.get("bio_signals")
+    if bio_signals is None:
+        bio_signals = body.get("BioSignals")
+    
+    is_mapped = bool(body.get("is_mapped_by_user") or body.get("was_mapped"))
+
+    # BioInsights rule: if bio_signals is explicitly 0, or if mapped with 0 signals, NO life exists!
+    if bio_signals is not None and int(bio_signals) == 0:
+        return []
+    if is_mapped and (bio_signals is None or int(bio_signals) == 0):
         return []
 
     # Extract physical attributes
@@ -266,17 +313,37 @@ def predict_exobiology_candidates(
     volcanism = get_volcanism_string(body)
     star_type = get_star_type_string(body)
     luminosity = body.get("luminosity") or body.get("Luminosity")
-    bio_signals = body.get("bio_signals") or body.get("BioSignals") or 0
 
-    # Gas giant exclusion
+    # Gas giant and star exclusion
     if "gas giant" in p_class or "stars" in p_class:
         return []
+
+    # Parse confirmed genuses if present (e.g. from SAASignalsFound)
+    conf_genuses_raw = confirmed_genuses or body.get("confirmed_genuses")
+    confirmed_genus_set: Set[str] = set()
+    if conf_genuses_raw:
+        if isinstance(conf_genuses_raw, str):
+            try:
+                conf_genuses_raw = json.loads(conf_genuses_raw)
+            except Exception:
+                conf_genuses_raw = [conf_genuses_raw]
+        if isinstance(conf_genuses_raw, list):
+            for cg in conf_genuses_raw:
+                clean_cg = re.sub(r"^\$Codex_Ent_|_Genus_Name;?$", "", str(cg), flags=re.IGNORECASE).strip()
+                if clean_cg:
+                    confirmed_genus_set.add(clean_cg.lower())
 
     # Rule evaluation from dynamic SSOT ruleset
     candidates: List[Dict[str, Any]] = []
     active_rules = get_effective_exobiology_rules()
 
     for species_name, rule in active_rules.items():
+        genus_name = rule.get("genus", species_name.split()[0])
+        
+        # If DSS confirmed specific genuses, prune any candidate not in that set
+        if confirmed_genus_set and genus_name.lower() not in confirmed_genus_set:
+            continue
+
         # 1. Planet class check
         if not match_planet_class(rule.get("body_types", []), p_class):
             continue
@@ -324,7 +391,6 @@ def predict_exobiology_candidates(
         fit_score = calculate_environment_fit_score(rule, temp_k, press_atm, grav_g)
 
         # Apply System-level Co-occurrence & Consistency Weighting
-        # If this species is already present or prominent on other bodies in the same system, boost its weight
         is_coherent = False
         if system_context_species and species_name in system_context_species:
             fit_score = min(1.0, fit_score + 0.15)
@@ -333,7 +399,6 @@ def predict_exobiology_candidates(
         match_pct = round(fit_score * 100)
         primary_color, alt_colors = determine_variant_info(rule, star_type, fit_score)
         base_val = rule.get("base_value", 1000000)
-        genus_name = rule.get("genus", species_name.split()[0])
         colony_dist = rule.get("colony_distance_m", 500)
 
         variant_display = f"{species_name} - {primary_color}" if primary_color else species_name
@@ -357,45 +422,46 @@ def predict_exobiology_candidates(
     # Sort candidates by fit score descending, then base value descending
     candidates.sort(key=lambda x: (x["fit_score"], x["base_value"]), reverse=True)
 
-    # Signal Budget Ranking: If BioSignals is Z, emit up to Z distinct species candidates
-    if bio_signals > 0:
+    # Signal Budget Ranking & 1 Species per Genus Law
+    if bio_signals is not None and int(bio_signals) > 0:
         z_budget = int(bio_signals)
-        top_limit = z_budget + 1
-        budget_candidates: List[Dict[str, Any]] = []
-        species_selected = set()
-        genus_selected = set()
-
-        # Pass 1: Prioritize distinct genus diversity for top candidates
+        
+        # Group candidates by Genus
+        # Elite Dangerous Odyssey Physical Law: Only 1 species of a given genus can exist per planet.
+        genus_groups: Dict[str, List[Dict[str, Any]]] = {}
         for c in candidates:
-            if len(budget_candidates) >= top_limit:
-                break
-            if c["genus"] not in genus_selected and c["species"] not in species_selected:
-                genus_selected.add(c["genus"])
-                species_selected.add(c["species"])
-                budget_candidates.append(c)
+            g = c["genus"]
+            if g not in genus_groups:
+                genus_groups[g] = []
+            genus_groups[g].append(c)
 
-        # Pass 2: Fill remaining slots up to Z+1 from highest fit scores with distinct Species
-        if len(budget_candidates) < top_limit:
-            for c in candidates:
-                if len(budget_candidates) >= top_limit:
-                    break
-                if c["species"] not in species_selected:
-                    species_selected.add(c["species"])
-                    budget_candidates.append(c)
+        # For each distinct genus, pick the best candidate (highest fit_score, then base_value)
+        distinct_genus_candidates: List[Dict[str, Any]] = []
+        for g, sp_list in genus_groups.items():
+            sp_list.sort(key=lambda x: (x["fit_score"], x["base_value"]), reverse=True)
+            best_sp = sp_list[0]
+            if len(sp_list) > 1:
+                best_sp["alternate_species"] = [s["species"] for s in sp_list[1:3]]
+            distinct_genus_candidates.append(best_sp)
 
-        if not budget_candidates:
+        # Sort distinct genus candidates by fit score descending
+        distinct_genus_candidates.sort(key=lambda x: (x["fit_score"], x["base_value"]), reverse=True)
+
+        if not distinct_genus_candidates:
             return []
 
-        # Split into definite (top Z) and candidate runner-up (+1)
-        definite_list = budget_candidates[:z_budget]
+        # Split into definite (up to Z) and runner-up (+1)
+        definite_list = distinct_genus_candidates[:z_budget]
         for d in definite_list:
             d["confidence"] = "definite"
 
         result_candidates = list(definite_list)
 
         # Include qualifying runner-up (+1) if within 10% score threshold
-        if len(budget_candidates) > z_budget:
-            runner_up = budget_candidates[z_budget]
+        definite_species_names = {d["species"] for d in definite_list}
+        remaining_candidates = [c for c in candidates if c["species"] not in definite_species_names]
+        if remaining_candidates:
+            runner_up = remaining_candidates[0]
             min_definite_score = min(d["fit_score"] for d in definite_list) if definite_list else 1.0
             score_diff = min_definite_score - runner_up["fit_score"]
 
@@ -405,11 +471,18 @@ def predict_exobiology_candidates(
 
         return result_candidates
     else:
-        # If no explicit bio signals are known yet, return top distinct matches with high fit scores
-        top_matches = candidates[:3]
-        for m in top_matches:
-            m["confidence"] = "possible"
-        return top_matches
+        # bio_signals is None and body is not mapped
+        # Return top distinct genera as unconfirmed/possible candidates
+        genus_seen = set()
+        distinct_matches = []
+        for c in candidates:
+            if c["genus"] not in genus_seen:
+                genus_seen.add(c["genus"])
+                c["confidence"] = "possible"
+                distinct_matches.append(c)
+            if len(distinct_matches) >= 3:
+                break
+        return distinct_matches
 
 
 def predict_system_exobiology_candidates(
