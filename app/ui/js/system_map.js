@@ -446,6 +446,66 @@ function buildSystemMapTree(flatBodies, systemName) {
     }
   });
 
+  // 5.5 Extract Asteroid Belts from Stars and add as independent orbital nodes in the rail
+  stars.forEach(s => {
+    let rawRings = s.rings_list;
+    if (!rawRings && s.rings && s.rings !== '[]' && s.rings !== '""') {
+      try {
+        rawRings = typeof s.rings === 'string' ? JSON.parse(s.rings) : s.rings;
+      } catch (e) {
+        rawRings = [];
+      }
+    }
+    rawRings = Array.isArray(rawRings) ? rawRings : [];
+    const beltItems = rawRings.filter(r => r && (r.Name || '').toLowerCase().includes('belt'));
+
+    if (beltItems.length > 0) {
+      const sGroup = s.starGroup || 'A';
+      const sec = getOrCreateSection(sGroup, s);
+
+      beltItems.forEach((belt, bIdx) => {
+        const beltAvgDistM = (belt.InnerRad && belt.OuterRad) ? (belt.InnerRad + belt.OuterRad) / 2 : (belt.InnerRad || belt.OuterRad || 0);
+        const beltDistLs = beltAvgDistM ? (beltAvgDistM / 299792458) : (s.distance_from_arrival_ls || 0);
+
+        let cleanShortName = belt.Name || 'Belt';
+        if (systemName && cleanShortName.startsWith(systemName)) {
+          cleanShortName = cleanShortName.substring(systemName.length).trim();
+        }
+        if (s.starGroup && cleanShortName.startsWith(s.starGroup + ' ')) {
+          cleanShortName = cleanShortName.substring(s.starGroup.length + 1).trim();
+        }
+        cleanShortName = cleanShortName.replace(/^Asteroid\s+Belt/i, 'Belt').trim();
+        if (!cleanShortName) cleanShortName = `Belt ${bIdx + 1}`;
+
+        const beltNode = {
+          body_id: `belt-${s.body_id}-${bIdx}`,
+          body_name: belt.Name || `${s.body_name} Belt`,
+          shortName: cleanShortName,
+          starGroup: sGroup,
+          isStar: false,
+          isAsteroidBelt: true,
+          planetNum: null,
+          semi_major_axis: beltAvgDistM,
+          distance_from_arrival_ls: beltDistLs,
+          planet_class: 'Asteroid Belt',
+          ring_class: belt.RingClass,
+          inner_radius: belt.InnerRad,
+          outer_radius: belt.OuterRad,
+          mass: belt.MassMT,
+          signals: belt.signals || [],
+          Hotspots: belt.Hotspots || {},
+          reserve_level: s.reserve_level || '',
+          rings_list: [belt],
+          level: 1,
+          moons: [],
+          submoons: []
+        };
+
+        sec.planets.push(beltNode);
+      });
+    }
+  });
+
   // 6. Natural Sorting:
   // - Sort Star Sections by getStarGroupSortScore (A, AB, B, BC, C, CD, D, ABCD, E...)
   // - Sort Planets by orbital distance (semi_major_axis or distance_from_arrival_ls) / planetNum ascending
@@ -668,8 +728,8 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   }
   rawRings = Array.isArray(rawRings) ? rawRings : [];
 
-  const beltItems = rawRings.filter(r => (r.Name || '').toLowerCase().includes('belt'));
-  const ringItems = rawRings.filter(r => !(r.Name || '').toLowerCase().includes('belt'));
+  const beltItems = rawRings.filter(r => r && (r.Name || '').toLowerCase().includes('belt'));
+  const ringItems = rawRings.filter(r => r && !(r.Name || '').toLowerCase().includes('belt'));
   const hasPlanetaryRings = ringItems.length > 0;
   const hasAsteroidBelts = beltItems.length > 0;
 
@@ -724,26 +784,37 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     badgeList.push(`<span class="sysmap-mini-badge" style="background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.4);">${tVal}K</span>`);
   }
 
+  const isAsteroidBelt = Boolean(body.isAsteroidBelt);
+
   // Ring & Belt Badges
   let primaryRingKey = 'icy';
-  if (hasPlanetaryRings) {
+  if (!isAsteroidBelt && hasPlanetaryRings) {
     const primaryInfo = ringParser(ringItems[0].RingClass);
     primaryRingKey = primaryInfo.key;
     const ringLabels = Array.from(new Set(ringItems.map(r => ringParser(r.RingClass).nameJa)));
     badgeList.push(`<span class="sysmap-mini-badge ring-${primaryRingKey}" style="background: ${primaryInfo.bg}; color: ${primaryInfo.color}; border: 1px solid ${primaryInfo.border};">💍 ${primaryInfo.icon} ${ringLabels.join('/')}</span>`);
   }
 
-  let primaryBeltKey = 'metal_rich';
-  if (hasAsteroidBelts) {
-    const primaryBeltInfo = ringParser(beltItems[0].RingClass);
-    primaryBeltKey = primaryBeltInfo.key;
-    const beltLabels = Array.from(new Set(beltItems.map(r => ringParser(r.RingClass).nameJa)));
-    badgeList.push(`<span class="sysmap-mini-badge belt" style="background: ${primaryBeltInfo.bg}; color: ${primaryBeltInfo.color}; border: 1px solid ${primaryBeltInfo.border};">🪐 ${primaryBeltInfo.icon} ${beltLabels.join('/')}ベルト</span>`);
+  if (isAsteroidBelt) {
+    const primaryBeltInfo = ringParser(body.ring_class);
+    badgeList.push(`<span class="sysmap-mini-badge belt" style="background: ${primaryBeltInfo.bg}; color: ${primaryBeltInfo.color}; border: 1px solid ${primaryBeltInfo.border}; font-weight: bold;">🪐 ${primaryBeltInfo.icon} ${primaryBeltInfo.nameJa}ベルト</span>`);
+    if (body.reserve_level) {
+      const reserveParser = (typeof parseReserveLevel === 'function')
+        ? parseReserveLevel
+        : ((typeof window !== 'undefined' && typeof window.parseReserveLevel === 'function') ? window.parseReserveLevel : null);
+      const resInfo = reserveParser ? reserveParser(body.reserve_level) : null;
+      const resJa = resInfo ? resInfo.ja : body.reserve_level;
+      badgeList.push(`<span class="sysmap-mini-badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); font-weight: bold;">${resJa}</span>`);
+    }
   }
 
-  // Ring Hotspots Detection
+  // Ring Hotspots Detection:
+  // For Stars: only detect hotspots on genuine circumstellar rings (ringItems), not extracted belts.
+  // For Belts / Planets: inspect target rings (for asteroid belts, rawRings is [belt]).
+  const targetHotspotRings = (body.isStar || role === 'root-star') ? ringItems : rawRings;
   const allHotspots = {};
-  rawRings.forEach(r => {
+  targetHotspotRings.forEach(r => {
+    if (!r) return;
     const hs = r.Hotspots || {};
     if (Object.keys(hs).length > 0) {
       for (const [mineral, cnt] of Object.entries(hs)) {
@@ -784,22 +855,28 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
         <span class="sysmap-icon-label" style="font-size: 1.35rem; color: #c084fc;">♊</span>
       </div>
     `;
+  } else if (isAsteroidBelt) {
+    const primaryBeltInfo = ringParser(body.ring_class);
+    sphere.innerHTML = `
+      <div class="sysmap-sphere asteroid-belt-sphere ${primaryBeltInfo.key}">
+        <div class="sysmap-asteroid-orbit-ring ${primaryBeltInfo.key}"></div>
+        <span class="sysmap-icon-label" style="font-size: 1.15rem;">🪐</span>
+      </div>
+    `;
   } else {
     const landableArcHtml = isLandable ? '<div class="sysmap-landable-arc"></div>' : '';
     const ringHtml = hasPlanetaryRings ? `<div class="sysmap-ring-system ${primaryRingKey}"></div>` : '';
-    const beltHtml = (hasAsteroidBelts && (role === 'root-star' || body.isStar)) ? `<div class="sysmap-belt-system ${primaryBeltKey}"></div>` : '';
 
     sphere.innerHTML = `
       ${landableArcHtml}
       ${ringHtml}
-      ${beltHtml}
       <div class="sysmap-sphere ${iconClass} ${role}">
         <span class="sysmap-icon-label">${iconLabel}</span>
       </div>
     `;
   }
 
-  // Short Name (e.g. "1", "1 e", "1 f", "2 f", "B 4", "[AB]")
+  // Short Name (e.g. "1", "1 e", "1 f", "2 f", "B 4", "[AB]", "Belt A")
   const shortName = body.shortName || getBodyShortName(body.body_name, systemName);
 
   // Info labels below body with full name tooltip and neat badge plate
@@ -808,15 +885,17 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
 
   const typeDesc = isBary
     ? (body.planet_class || `連星共通軌道 [${body.starGroup}]`)
-    : (body.star_type 
-        ? `Star (${body.star_type})` 
-        : (body.planet_class || 'Planet'));
+    : (isAsteroidBelt
+        ? `Asteroid Belt (${ringParser(body.ring_class).nameJa})`
+        : (body.star_type 
+            ? `Star (${body.star_type})` 
+            : (body.planet_class || 'Planet')));
 
   let ringDesc = '';
-  if (hasPlanetaryRings) {
+  if (!isAsteroidBelt && hasPlanetaryRings) {
     ringDesc = ` [Ring: ${ringItems.map(r => ringParser(r.RingClass).nameJa).join('/')}]`;
-  } else if (hasAsteroidBelts) {
-    ringDesc = ` [Belt: ${beltItems.map(r => ringParser(r.RingClass).nameJa).join('/')}]`;
+  } else if (isAsteroidBelt) {
+    ringDesc = ` [Belt: ${ringParser(body.ring_class).nameJa}]`;
   }
 
   card.title = `${body.body_name} - ${typeDesc}${ringDesc}`;
