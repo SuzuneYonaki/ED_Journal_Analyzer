@@ -459,15 +459,42 @@ class JournalParser:
         # Check if already had bio_signals / geo_signals / mining_signals / confirmed_genuses in existing body record
         self.cursor.execute("SELECT bio_signals, geo_signals, mining_signals, is_mapped_by_user, confirmed_genuses FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
         existing_b = self.cursor.fetchone()
-        existing_bio = existing_b["bio_signals"] if existing_b else 0
+        existing_bio = existing_b["bio_signals"] if (existing_b and existing_b["bio_signals"] is not None) else None
         existing_geo = existing_b["geo_signals"] if existing_b else 0
         existing_mining = existing_b["mining_signals"] if (existing_b and "mining_signals" in existing_b.keys()) else 0
-        existing_mapped = existing_b["is_mapped_by_user"] if existing_b else 0
+        existing_mapped = existing_b["is_mapped_by_user"] if existing_b else (1 if was_mapped == 1 else 0)
         existing_genuses = existing_b["confirmed_genuses"] if existing_b else None
         body_dict["bio_signals"] = existing_bio
+        body_dict["is_mapped_by_user"] = existing_mapped
+        body_dict["was_mapped"] = was_mapped
         body_dict["mining_signals"] = existing_mining
         if existing_genuses:
             body_dict["confirmed_genuses"] = existing_genuses
+
+        # Resolve parent star type for planets if star_type is absent
+        parent_star_type = None
+        if star_type:
+            parent_star_type = star_type
+        else:
+            if parents:
+                try:
+                    p_list = json.loads(parents) if isinstance(parents, str) else parents
+                    for p in p_list:
+                        if isinstance(p, dict) and "Star" in p:
+                            p_star_id = p["Star"]
+                            self.cursor.execute("SELECT star_type FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, p_star_id))
+                            p_row = self.cursor.fetchone()
+                            if p_row and p_row["star_type"]:
+                                parent_star_type = p_row["star_type"]
+                                break
+                except Exception:
+                    pass
+            if not parent_star_type:
+                self.cursor.execute("SELECT main_star_type FROM systems WHERE system_address = ?", (sys_addr,))
+                s_row = self.cursor.fetchone()
+                if s_row and s_row["main_star_type"]:
+                    parent_star_type = s_row["main_star_type"]
+        body_dict["parent_star_type"] = parent_star_type
 
         values = calculate_body_value(body_dict)
         fss_val = values.get("fss_value", 0)
@@ -651,9 +678,18 @@ class JournalParser:
                 b_dict["confirmed_genuses"] = confirmed_genuses_list
             elif existing["confirmed_genuses"]:
                 b_dict["confirmed_genuses"] = existing["confirmed_genuses"]
+
+            if not b_dict.get("parent_star_type") and not b_dict.get("star_type"):
+                self.cursor.execute("SELECT main_star_type FROM systems WHERE system_address = ?", (sys_addr,))
+                s_row = self.cursor.fetchone()
+                if s_row and s_row["main_star_type"]:
+                    b_dict["parent_star_type"] = s_row["main_star_type"]
             
-            bio_predictions = predict_exobiology_candidates(b_dict)
-            self._lock_confirmed_organics_into_predictions(sys_addr, body_id or existing["body_id"], bio_predictions)
+            if bio_count == 0:
+                bio_predictions = []
+            else:
+                bio_predictions = predict_exobiology_candidates(b_dict)
+                self._lock_confirmed_organics_into_predictions(sys_addr, body_id or existing["body_id"], bio_predictions)
             bio_pred_json = json.dumps(bio_predictions)
             anomalies = detect_anomalies(b_dict)
             anomalies_json = json.dumps(anomalies)
@@ -682,8 +718,17 @@ class JournalParser:
                 "is_mapped_by_user": 1 if is_saa_signals else 0,
                 "confirmed_genuses": confirmed_genuses_list if confirmed_genuses_list else None
             }
-            bio_predictions = predict_exobiology_candidates(b_dict)
-            self._lock_confirmed_organics_into_predictions(sys_addr, body_id or 0, bio_predictions)
+            if not b_dict.get("parent_star_type") and not b_dict.get("star_type"):
+                self.cursor.execute("SELECT main_star_type FROM systems WHERE system_address = ?", (sys_addr,))
+                s_row = self.cursor.fetchone()
+                if s_row and s_row["main_star_type"]:
+                    b_dict["parent_star_type"] = s_row["main_star_type"]
+
+            if bio_count == 0:
+                bio_predictions = []
+            else:
+                bio_predictions = predict_exobiology_candidates(b_dict)
+                self._lock_confirmed_organics_into_predictions(sys_addr, body_id or 0, bio_predictions)
             bio_pred_json = json.dumps(bio_predictions)
             anomalies = detect_anomalies(b_dict)
             anomalies_json = json.dumps(anomalies)
