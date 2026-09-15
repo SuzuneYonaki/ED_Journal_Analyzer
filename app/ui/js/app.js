@@ -2995,9 +2995,16 @@ function renderBodyInspector() {
   const isBary = Boolean(b.isBarycentre);
 
   document.getElementById('inspect-body-name').innerText = b.body_name;
-  let typeSubtitle = b.star_type 
-    ? `${t('star_type_label')}: ${b.star_type}` 
-    : `${b.planet_class || 'Body'}${b.terraforming_state ? ' [' + b.terraforming_state + ']' : ''}`;
+  let typeSubtitle = '';
+  if (b.isAsteroidBelt) {
+    const beltRingInfo = typeof parseRingClass === 'function' ? parseRingClass(b.ring_class) : null;
+    const ringNameJa = beltRingInfo ? beltRingInfo.nameJa : '';
+    typeSubtitle = `🪐 Asteroid Belt${ringNameJa ? ' (' + ringNameJa + ')' : ''}`;
+  } else if (b.star_type) {
+    typeSubtitle = `${t('star_type_label')}: ${b.star_type}`;
+  } else {
+    typeSubtitle = `${b.planet_class || 'Body'}${b.terraforming_state ? ' [' + b.terraforming_state + ']' : ''}`;
+  }
   if (b.scan_type === 'EDSM_Known') {
     typeSubtitle += ` · ⭐ EDSM既知 (未スキャン)`;
     if (b.edsm_discovered_by) {
@@ -3019,7 +3026,9 @@ function renderBodyInspector() {
   const inspectBmIcon = document.getElementById('inspect-bm-icon');
   const inspectBmText = document.getElementById('inspect-bm-text');
 
-  if (isBary) {
+  const isBaryOrBelt = Boolean(b.isBarycentre || b.isAsteroidBelt);
+
+  if (isBaryOrBelt) {
     if (btnBmToggle) btnBmToggle.style.display = 'none';
     if (bmSection) bmSection.style.display = 'none';
     if (inspectAlias) {

@@ -2052,6 +2052,75 @@ header {
   box-shadow: 0 0 8px rgba(203, 213, 225, 0.35);
 }
 
+/* Independent Asteroid Belt Rail Node Styling */
+.sysmap-sphere.asteroid-belt-sphere {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.15) 0%, rgba(15, 23, 42, 0.8) 70%, transparent 100%);
+  border: 1.5px dotted rgba(251, 146, 60, 0.5);
+  box-shadow: 0 0 12px rgba(251, 146, 60, 0.2);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sysmap-sphere.asteroid-belt-sphere.icy {
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.18) 0%, rgba(15, 23, 42, 0.8) 70%, transparent 100%);
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.sysmap-sphere.asteroid-belt-sphere.metallic {
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.18) 0%, rgba(15, 23, 42, 0.8) 70%, transparent 100%);
+  border-color: rgba(250, 204, 21, 0.6);
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.25);
+}
+
+.sysmap-sphere.asteroid-belt-sphere.metal_rich {
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.18) 0%, rgba(15, 23, 42, 0.8) 70%, transparent 100%);
+  border-color: rgba(251, 146, 60, 0.6);
+  box-shadow: 0 0 12px rgba(251, 146, 60, 0.25);
+}
+
+.sysmap-sphere.asteroid-belt-sphere.rocky {
+  background: radial-gradient(circle, rgba(203, 213, 225, 0.18) 0%, rgba(15, 23, 42, 0.8) 70%, transparent 100%);
+  border-color: rgba(203, 213, 225, 0.6);
+  box-shadow: 0 0 12px rgba(203, 213, 225, 0.25);
+}
+
+.sysmap-asteroid-orbit-ring {
+  position: absolute;
+  width: 72px;
+  height: 28px;
+  border: 2px dashed rgba(251, 146, 60, 0.75);
+  border-radius: 50%;
+  transform: rotate(-15deg);
+  pointer-events: none;
+  box-shadow: 0 0 10px rgba(251, 146, 60, 0.3);
+}
+
+.sysmap-asteroid-orbit-ring.icy {
+  border-color: rgba(56, 189, 248, 0.8);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+.sysmap-asteroid-orbit-ring.metallic {
+  border-color: rgba(250, 204, 21, 0.85);
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.35);
+}
+
+.sysmap-asteroid-orbit-ring.metal_rich {
+  border-color: rgba(251, 146, 60, 0.85);
+  box-shadow: 0 0 10px rgba(251, 146, 60, 0.35);
+}
+
+.sysmap-asteroid-orbit-ring.rocky {
+  border-color: rgba(203, 213, 225, 0.8);
+  box-shadow: 0 0 8px rgba(203, 213, 225, 0.3);
+}
+
 /* Info Labels */
 .sysmap-body-shortname {
   font-weight: bold;
