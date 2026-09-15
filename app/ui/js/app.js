@@ -1036,6 +1036,35 @@ function renderSystemHeader() {
     };
   }
 
+  // Spansh Sync Button
+  const btnSyncSpansh = document.getElementById('btn-sync-spansh');
+  if (btnSyncSpansh) {
+    btnSyncSpansh.style.display = 'inline-flex';
+    btnSyncSpansh.onclick = async () => {
+      btnSyncSpansh.disabled = true;
+      btnSyncSpansh.innerHTML = '<span>⏳ 照会中...</span>';
+      try {
+        const resp = await fetch(`/api/systems/${sys.system_address}/spansh_sync`, { method: 'POST' });
+        const resData = await resp.json();
+        const hsFound = resData.hotspots_found || 0;
+        const pmlFound = resData.pml_found || 0;
+        btnSyncSpansh.innerHTML = `<span>✓ 完了 (${hsFound} HS / ${pmlFound} PML)</span>`;
+        setTimeout(() => {
+          btnSyncSpansh.disabled = false;
+          btnSyncSpansh.innerHTML = '<span>🪐 Spansh照会</span>';
+        }, 2000);
+        await selectSystem(sys.system_address, true, false);
+      } catch (err) {
+        console.error('Spansh Sync error:', err);
+        btnSyncSpansh.disabled = false;
+        btnSyncSpansh.innerHTML = '<span>❌ 失敗</span>';
+        setTimeout(() => {
+          btnSyncSpansh.innerHTML = '<span>🪐 Spansh照会</span>';
+        }, 2000);
+      }
+    };
+  }
+
   // System State Badge & Economy Info
   const stateBadgeEl = document.getElementById('current-system-state-badge');
   const econInfoEl = document.getElementById('current-system-economy-info');
@@ -2323,14 +2352,186 @@ function renderBioOnlyView(container, bodies) {
 
 function renderMiningView(container, bodies) {
   if (!bodies) return;
+
+  // Collect all ring hotspots across bodies in the system
+  const systemRingHotspots = [];
+  (bodies || []).forEach(b => {
+    let rList = b.rings_list;
+    if (!rList && b.rings && b.rings !== '[]' && b.rings !== '""') {
+      try { rList = typeof b.rings === 'string' ? JSON.parse(b.rings) : b.rings; } catch (e) { rList = []; }
+    }
+    (rList || []).forEach(r => {
+      const hs = r.Hotspots || {};
+      if (Object.keys(hs).length === 0 && Array.isArray(r.signals)) {
+        r.signals.forEach(s => {
+          if (s && s.name) hs[s.name] = (hs[s.name] || 0) + (s.count || 1);
+        });
+      }
+      if (Object.keys(hs).length > 0) {
+        systemRingHotspots.push({
+          body: b,
+          body_name: b.body_name,
+          body_id: b.body_id,
+          ring_name: r.Name || 'Ring',
+          ring_class: r.RingClass,
+          reserve_level: b.reserve_level || (state.currentSystemData && state.currentSystemData.system && state.currentSystemData.system.system_reserve) || '',
+          hotspots: hs,
+          signals_updated_at: r.signals_updated_at
+        });
+      }
+    });
+  });
+
+  function buildRingHotspotCard(hotspotsList) {
+    const card = document.createElement('div');
+    card.className = 'rhino-ring-hotspots-card';
+    card.style.cssText = 'background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(250, 204, 21, 0.4); border-radius: 6px; padding: 10px 14px; font-size: 0.78rem;';
+
+    const ringItemsHtml = hotspotsList.map(item => {
+      const rInfo = parseRingClass(item.ring_class);
+      const isBelt = (item.ring_name || '').toLowerCase().includes('belt');
+      const rBadge = `<span class="tag-badge" style="background: ${rInfo.bg}; color: ${rInfo.color}; border: 1px solid ${rInfo.border}; font-weight: bold; font-size: 0.72rem;">
+        ${rInfo.icon} ${rInfo.nameJa} (${rInfo.nameEn} ${isBelt ? 'Belt' : 'Ring'})
+      </span>`;
+
+      const reserveInfo = parseReserveLevel(item.reserve_level);
+      const reserveBadge = reserveInfo ? `<span class="tag-badge" style="background: rgba(34, 197, 94, 0.15); color: ${reserveInfo.color}; border: 1px solid rgba(34, 197, 94, 0.35); font-size: 0.7rem;">
+        ${reserveInfo.icon} ${reserveInfo.ja}
+      </span>` : '';
+
+      const hsBadges = Object.entries(item.hotspots).map(([mineral, count]) => {
+        const lmin = mineral.toLowerCase();
+        let bColor = '#facc15';
+        let bBg = 'rgba(250, 204, 21, 0.18)';
+        let bBorder = 'rgba(250, 204, 21, 0.5)';
+        let icon = '🎯';
+
+        if (lmin.includes('platinum')) {
+          icon = '🪙'; bColor = '#38bdf8'; bBg = 'rgba(56, 189, 248, 0.2)'; bBorder = '#38bdf8';
+        } else if (lmin.includes('painite')) {
+          icon = '💎'; bColor = '#facc15'; bBg = 'rgba(250, 204, 21, 0.2)'; bBorder = '#facc15';
+        } else if (lmin.includes('tritium')) {
+          icon = '⛽'; bColor = '#22c55e'; bBg = 'rgba(34, 197, 94, 0.2)'; bBorder = '#22c55e';
+        } else if (lmin.includes('void opal') || lmin.includes('low temperature diamond')) {
+          icon = '🧊'; bColor = '#a78bfa'; bBg = 'rgba(167, 139, 250, 0.2)'; bBorder = '#a78bfa';
+        } else if (lmin.includes('monazite') || lmin.includes('musgravite') || lmin.includes('alexandrite') || lmin.includes('benitoite') || lmin.includes('serendibite') || lmin.includes('rhodplumsite')) {
+          icon = '🟣'; bColor = '#e879f9'; bBg = 'rgba(232, 121, 249, 0.2)'; bBorder = '#e879f9';
+        }
+
+        return `<span class="tag-badge" style="background: ${bBg}; color: ${bColor}; border: 1px solid ${bBorder}; font-weight: bold; font-size: 0.72rem; padding: 2px 6px;">
+          ${icon} ${mineral} ${count > 1 ? `x${count}` : ''}
+        </span>`;
+      }).join(' ');
+
+      return `
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 5px; padding: 8px 10px; margin-bottom: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-weight: bold; color: var(--ed-gold); font-size: 0.82rem;">🪐 ${escapeHtml(item.body_name)} - ${escapeHtml(item.ring_name)}</span>
+            </div>
+            <div style="display: flex; gap: 4px; align-items: center;">
+              ${rBadge}
+              ${reserveBadge}
+              <button class="btn-page btn-ring-body-detail" data-body-id="${item.body_id}" style="padding: 2px 8px; font-size: 0.7rem; cursor: pointer;">🔍 詳細</button>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
+            ${hsBadges}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    card.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+        <span style="font-weight: bold; color: #facc15; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+          <span>🪐</span> <span>${t('section_ring_hotspots') || '🪐 環状帯ホットスポット (Ring Mining Hotspots)'}</span>
+        </span>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <span class="tag-badge" style="background: rgba(250, 204, 21, 0.18); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.4); font-weight: bold;">
+            🎯 検出: ${hotspotsList.length} 環
+          </span>
+          <button id="btn-mining-spansh-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; background: rgba(250, 204, 21, 0.2); border-color: #facc15; color: #facc15; cursor: pointer;">🪐 Spansh照会</button>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        ${ringItemsHtml}
+      </div>
+    `;
+
+    setTimeout(() => {
+      const detailBtns = card.querySelectorAll('.btn-ring-body-detail');
+      detailBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const bId = parseInt(btn.getAttribute('data-body-id'), 10);
+          const targetBody = bodies.find(b => b.body_id === bId);
+          if (targetBody && typeof showBodyDetailModal === 'function') {
+            showBodyDetailModal(targetBody);
+          }
+        });
+      });
+
+      const btnSpansh = card.querySelector('#btn-mining-spansh-sync');
+      if (btnSpansh) {
+        btnSpansh.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const curAddr = (state.selectedSystem && state.selectedSystem.system_address) || (state.currentSystemData && state.currentSystemData.system && state.currentSystemData.system.system_address);
+          if (!curAddr) return;
+          btnSpansh.disabled = true;
+          btnSpansh.innerHTML = '⏳ 照会中...';
+          try {
+            const resp = await fetch(`/api/systems/${curAddr}/spansh_sync`, { method: 'POST' });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const resData = await resp.json();
+            btnSpansh.innerHTML = `✓ 完了 (${resData.hotspots_found || 0} HS)`;
+            setTimeout(() => {
+              btnSpansh.disabled = false;
+              btnSpansh.innerHTML = '🪐 Spansh照会';
+            }, 2000);
+            await selectSystem(curAddr, true, false);
+          } catch (err) {
+            console.error('Failed Spansh sync in mining view:', err);
+            btnSpansh.disabled = false;
+            btnSpansh.innerHTML = '❌ 照会失敗';
+            setTimeout(() => {
+              btnSpansh.innerHTML = '🪐 Spansh照会';
+            }, 2000);
+          }
+        });
+      }
+    }, 0);
+
+    return card;
+  }
+
   const landableBodies = bodies.filter(b => b.landable === 1);
 
   if (landableBodies.length === 0) {
+    if (systemRingHotspots.length > 0) {
+      const wrapper = document.createElement('div');
+      wrapper.style.display = 'flex';
+      wrapper.style.flexDirection = 'column';
+      wrapper.style.gap = '12px';
+
+      const infoBanner = document.createElement('div');
+      infoBanner.style.cssText = 'background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #cbd5e1;';
+      infoBanner.innerHTML = `
+        <div style="font-weight: bold; color: #38bdf8; font-size: 0.85rem; margin-bottom: 4px;">⛏️ 星系採掘サマリー</div>
+        <div>この星系には着陸可能な陸上天体はありませんが、<b>${systemRingHotspots.length} 環</b>で環状帯ホットスポットが検出されています。</div>
+      `;
+      wrapper.appendChild(infoBanner);
+      wrapper.appendChild(buildRingHotspotCard(systemRingHotspots));
+      container.innerHTML = '';
+      container.appendChild(wrapper);
+      return;
+    }
+
     container.innerHTML = `
       <div style="color: var(--text-secondary); text-align: center; margin-top: 40px; padding: 20px;">
         <div style="font-size: 2rem; margin-bottom: 8px;">⛏️</div>
         <div style="font-size: 1.1rem; font-weight: bold; color: #fff;">${t('no_landable_bodies')}</div>
-        <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 6px;">この星系には着陸（Landable）可能な天体、およびRhino SRV採掘対象天体は存在しません。</div>
+        <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 6px;">この星系には着陸（Landable）可能な天体、および環ホットスポット採掘対象は存在しません。</div>
       </div>
     `;
     return;
@@ -2384,19 +2585,33 @@ function renderMiningView(container, bodies) {
     `;
   } else if (sStateLower.includes('investment')) {
     stateImpactHtml = `
-      <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-        <span style="color: #38bdf8; font-size: 0.76rem;">💼 【星系状態: Investment (投資)】経済活性化。鉱物需要・取引価格が好調です。</span>
+      <div style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <span style="color: #38bdf8; font-weight: bold; font-size: 0.76rem;">💼 【星系経済状態: Investment (投資)】開発・インフラ需要拡大中！工業用金属・鉱物の需要が高まっています。</span>
         <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">🔄 EDSM最新状態同期</button>
       </div>
     `;
   } else if (sStateLower.includes('expansion')) {
     stateImpactHtml = `
-      <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-        <span style="color: #c084fc; font-size: 0.76rem;">🚀 【星系状態: Expansion (拡張)】開発需要増加中。インフラ素材・金属類の需要が高まっています。</span>
+      <div style="background: rgba(192, 132, 252, 0.12); border: 1px solid rgba(192, 132, 252, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <span style="color: #c084fc; font-weight: bold; font-size: 0.76rem;">🚀 【星系状態: Expansion (拡張)】勢力拡大フェーズ。素材支援や探査データの価値が向上しています。</span>
         <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #c084fc; cursor: pointer;">🔄 EDSM最新状態同期</button>
       </div>
     `;
-  } else if (sStateLower.includes('war') || sStateLower.includes('unrest') || sStateLower.includes('lockdown')) {
+  } else if (sStateLower.includes('war') || sStateLower.includes('civil war')) {
+    stateImpactHtml = `
+      <div style="background: rgba(248, 113, 113, 0.12); border: 1px solid rgba(248, 113, 113, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <span style="color: #f87171; font-weight: bold; font-size: 0.76rem;">⚔️ 【星系状態: War / Civil War (戦争)】交戦宙域。鉱物需要が高まる一方、敵対勢力や海賊の活動リスクに注意。</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #f87171; cursor: pointer;">🔄 EDSM最新状態同期</button>
+      </div>
+    `;
+  } else if (sStateLower.includes('famine') || sStateLower.includes('outbreak')) {
+    stateImpactHtml = `
+      <div style="background: rgba(250, 204, 21, 0.12); border: 1px solid rgba(250, 204, 21, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+        <span style="color: #facc15; font-weight: bold; font-size: 0.76rem;">⚠️ 【星系状態: Crisis (${escapeHtml(sState)})】危機状態。特定支援物資の価値が高騰しています。</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #facc15; cursor: pointer;">🔄 EDSM最新状態同期</button>
+      </div>
+    `;
+  } else if (sStateLower.includes('unrest') || sStateLower.includes('lockdown')) {
     stateImpactHtml = `
       <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
         <span style="color: #f87171; font-size: 0.76rem;">⚠️ 【星系状態: 紛争・治安悪化 (${escapeHtml(sState)})】ステーション機能制限や治安悪化の懸念があります。輸送時の海賊にご注意ください。</span>
@@ -2448,6 +2663,10 @@ function renderMiningView(container, bodies) {
     </div>
   `;
   wrapper.appendChild(guideCard);
+
+  if (systemRingHotspots.length > 0) {
+    wrapper.appendChild(buildRingHotspotCard(systemRingHotspots));
+  }
 
   // Bind EDSM sync button in mining view
   setTimeout(() => {
@@ -3951,6 +4170,53 @@ function renderBodyInspector() {
         </div>`;
       }
 
+      // Check DSS Hotspots on this ring
+      const hotspots = r.Hotspots || {};
+      if (Object.keys(hotspots).length === 0 && Array.isArray(r.signals)) {
+        r.signals.forEach(s => {
+          if (s && s.name) hotspots[s.name] = (hotspots[s.name] || 0) + (s.count || 1);
+        });
+      }
+
+      let hotspotsHtml = '';
+      if (Object.keys(hotspots).length > 0) {
+        const hsBadges = Object.entries(hotspots).map(([mineral, count]) => {
+          const lmin = mineral.toLowerCase();
+          let bColor = '#facc15';
+          let bBg = 'rgba(250, 204, 21, 0.18)';
+          let bBorder = 'rgba(250, 204, 21, 0.5)';
+          let icon = '🎯';
+
+          if (lmin.includes('platinum')) {
+            icon = '🪙'; bColor = '#38bdf8'; bBg = 'rgba(56, 189, 248, 0.2)'; bBorder = '#38bdf8';
+          } else if (lmin.includes('painite')) {
+            icon = '💎'; bColor = '#facc15'; bBg = 'rgba(250, 204, 21, 0.2)'; bBorder = '#facc15';
+          } else if (lmin.includes('tritium')) {
+            icon = '⛽'; bColor = '#22c55e'; bBg = 'rgba(34, 197, 94, 0.2)'; bBorder = '#22c55e';
+          } else if (lmin.includes('void opal') || lmin.includes('low temperature diamond')) {
+            icon = '🧊'; bColor = '#a78bfa'; bBg = 'rgba(167, 139, 250, 0.2)'; bBorder = '#a78bfa';
+          } else if (lmin.includes('monazite') || lmin.includes('musgravite') || lmin.includes('alexandrite') || lmin.includes('benitoite') || lmin.includes('serendibite') || lmin.includes('rhodplumsite')) {
+            icon = '🟣'; bColor = '#e879f9'; bBg = 'rgba(232, 121, 249, 0.2)'; bBorder = '#e879f9';
+          }
+
+          return `<span class="tag-badge" style="background: ${bBg}; color: ${bColor}; border: 1px solid ${bBorder}; font-weight: bold; font-size: 0.72rem; padding: 2px 6px;">
+            ${icon} ${mineral} ${count > 1 ? `x${count}` : ''}
+          </span>`;
+        }).join(' ');
+
+        hotspotsHtml = `
+          <div style="margin-top: 6px; padding: 5px 8px; background: rgba(250, 204, 21, 0.08); border: 1px solid rgba(250, 204, 21, 0.3); border-radius: 4px;">
+            <div style="font-size: 0.72rem; font-weight: bold; color: #facc15; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>🎯 DSS検出ホットスポット (Hotspots):</span>
+              ${r.signals_updated_at ? `<span style="font-size: 0.65rem; color: var(--text-dim); font-weight: normal;">(記録: ${r.signals_updated_at.split('T')[0]})</span>` : ''}
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+              ${hsBadges}
+            </div>
+          </div>
+        `;
+      }
+
       return `
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 5px; padding: 8px 10px; margin-bottom: 6px;">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;">
@@ -3963,6 +4229,7 @@ function renderBodyInspector() {
             <span>幅: <b style="color: #e2e8f0;">${widthKm.toLocaleString()} km</b></span>
             <span>総質量: <b style="color: #e2e8f0;">${massStr}</b></span>
           </div>
+          ${hotspotsHtml}
           ${miningHint}
         </div>
       `;

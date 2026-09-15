@@ -399,7 +399,13 @@ const i18n = {
     filter_has_large_pad: "🚀 大型パッド",
     filter_max_arrival_dist: "到達距離:",
     dist_any: "指定なし",
-    btn_insert_coords: "📍 座標挿入"
+    btn_insert_coords: "📍 座標挿入",
+    btn_sync_spansh: "🪐 Spansh照会",
+    sync_spansh_tip: "Spanshから環ホットスポット・惑星採掘地点を即時照会・補完します",
+    sync_spansh_success: "Spansh同期完了: 天体 {bodies} 件更新, ホットスポット {hotspots} 件, PML {pml} 箇所検出",
+    section_ring_hotspots: "🪐 環状帯ホットスポット (Ring Mining Hotspots)",
+    no_ring_hotspots: "この星系で検出された環ホットスポットはありません（Spansh未登録またはDSS未スキャン）",
+    hotspot_label: "🎯 ホットスポット:"
   },
   en: {
     // Header
@@ -801,7 +807,13 @@ const i18n = {
     filter_has_large_pad: "🚀 Has Large Pad",
     filter_max_arrival_dist: "Arrival Dist:",
     dist_any: "Any",
-    btn_insert_coords: "📍 Insert Coords"
+    btn_insert_coords: "📍 Insert Coords",
+    btn_sync_spansh: "🪐 Spansh Sync",
+    sync_spansh_tip: "Fetch ring DSS hotspots and planetary mining locations from Spansh",
+    sync_spansh_success: "Spansh sync complete: {bodies} bodies updated, {hotspots} hotspots, {pml} PMLs found",
+    section_ring_hotspots: "🪐 Ring Mining Hotspots",
+    no_ring_hotspots: "No ring hotspots recorded for this system (unmapped or not yet in Spansh)",
+    hotspot_label: "🎯 Hotspots:"
   }
 };
 

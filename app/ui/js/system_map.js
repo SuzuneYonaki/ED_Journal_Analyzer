@@ -741,6 +741,42 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     badgeList.push(`<span class="sysmap-mini-badge belt" style="background: ${primaryBeltInfo.bg}; color: ${primaryBeltInfo.color}; border: 1px solid ${primaryBeltInfo.border};">🪐 ${primaryBeltInfo.icon} ${beltLabels.join('/')}ベルト</span>`);
   }
 
+  // Ring Hotspots Detection
+  const allHotspots = {};
+  rawRings.forEach(r => {
+    const hs = r.Hotspots || {};
+    if (Object.keys(hs).length > 0) {
+      for (const [mineral, cnt] of Object.entries(hs)) {
+        allHotspots[mineral] = (allHotspots[mineral] || 0) + cnt;
+      }
+    } else if (Array.isArray(r.signals)) {
+      r.signals.forEach(s => {
+        if (s && s.name) {
+          allHotspots[s.name] = (allHotspots[s.name] || 0) + (s.count || 1);
+        }
+      });
+    }
+  });
+
+  const hotspotCount = Object.values(allHotspots).reduce((a, b) => a + b, 0);
+  if (hotspotCount > 0) {
+    const hsSummary = Object.entries(allHotspots)
+      .map(([m, c]) => `${m} x${c}`)
+      .join(', ');
+    
+    const highlights = [];
+    if (allHotspots['Platinum']) highlights.push(`Pt x${allHotspots['Platinum']}`);
+    if (allHotspots['Painite']) highlights.push(`Pa x${allHotspots['Painite']}`);
+    if (allHotspots['Tritium']) highlights.push(`Tri x${allHotspots['Tritium']}`);
+    if (allHotspots['Void Opal']) highlights.push(`VO x${allHotspots['Void Opal']}`);
+    if (allHotspots['Monazite']) highlights.push(`Mon x${allHotspots['Monazite']}`);
+    if (allHotspots['Musgravite']) highlights.push(`Mus x${allHotspots['Musgravite']}`);
+    if (allHotspots['Alexandrite']) highlights.push(`Alex x${allHotspots['Alexandrite']}`);
+
+    const badgeText = highlights.length > 0 ? `🎯 ${highlights.slice(0, 2).join(' ')}` : `🎯 HS: ${hotspotCount}`;
+    badgeList.push(`<span class="sysmap-mini-badge hotspot" style="background: rgba(250, 204, 21, 0.25); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.6); font-weight: bold;" title="環ホットスポット: ${hsSummary}">${badgeText}</span>`);
+  }
+
   // Sphere HTML with optional ring, belt, and landable arc
   if (isBary) {
     sphere.innerHTML = `
