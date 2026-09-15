@@ -23,6 +23,7 @@ from app.parser.watcher import JournalWatcher
 from app.analyzer.orbit_analyzer import build_system_hierarchy
 from app.parser.exobiology import predict_exobiology_candidates, predict_system_exobiology_candidates
 from app.services.edsm_service import edsm_service
+from app.services.spansh_service import spansh_service
 from app.services.landmark_service import load_landmarks, calculate_landmark_distances
 from app.services.footprint_service import footprint_service
 from app.live.rhino.note_integrator import update_body_note_in_db
@@ -1549,6 +1550,23 @@ def get_system_detail(system_address: int):
     system_data["bio_scanned_count"] = len(system_scanned_organics)
     system_data["bio_completed_count"] = system_bio_completed_count
 
+    # Collect all ring hotspots across bodies for top-level access
+    system_ring_hotspots = []
+    for b in bodies:
+        for r in b.get("rings_list", []):
+            hotspots = r.get("Hotspots")
+            if not hotspots and r.get("signals"):
+                hotspots = {s.get("name"): int(s.get("count", 1)) for s in r.get("signals", []) if s.get("name")}
+            if hotspots:
+                system_ring_hotspots.append({
+                    "body_id": b.get("body_id"),
+                    "body_name": b.get("body_name"),
+                    "ring_name": r.get("Name") or "Ring",
+                    "ring_class": r.get("RingClass"),
+                    "reserve_level": b.get("reserve_level") or system_data.get("system_reserve") or "",
+                    "hotspots": hotspots
+                })
+
     # Build hierarchy tree
     hierarchy = build_system_hierarchy(bodies)
 
@@ -1561,6 +1579,7 @@ def get_system_detail(system_address: int):
         "organics": raw_organics,
         "mining_activities": raw_mining,
         "rhino_mining_sites": final_mining_sites,
+        "ring_hotspots": system_ring_hotspots,
         "system_bio_summary": {
             "total_base_value": system_bio_total_base,
             "total_first_value": system_bio_total_first,
@@ -1588,6 +1607,25 @@ def sync_system_edsm(system_address: int):
 
     sys_name = row["star_system"]
     result = edsm_service.fetch_and_update_system_sync(system_address, sys_name)
+    return JSONResponse(result)
+
+@app.post("/api/systems/{system_address}/spansh_sync")
+def sync_system_spansh(system_address: int):
+    """
+    Directly triggers a Spansh query for ring DSS hotspots and planetary mining locations,
+    updating celestial bodies and markdown notes.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT star_system FROM systems WHERE system_address = ?", (system_address,))
+    row = c.fetchone()
+    if not row or not row["star_system"]:
+        conn.close()
+        return JSONResponse({"error": "System not found"}, status_code=404)
+
+    sys_name = row["star_system"]
+    result = spansh_service.sync_system_spansh(conn, system_address, sys_name)
+    conn.close()
     return JSONResponse(result)
 
 @app.get("/api/systems/{system_address}/physics")
