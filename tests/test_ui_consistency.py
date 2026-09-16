@@ -48,7 +48,7 @@ def test_html_ui_ids_match_js():
     """Verify that critical DOM element IDs match between index.html and app.js."""
     import jinja2
     ui_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app", "ui"))
-    js_path = os.path.join(ui_dir, "js", "app.js")
+    js_dir = os.path.join(ui_dir, "js")
 
     # Verify component modularization
     components_dir = os.path.join(ui_dir, "components")
@@ -60,8 +60,13 @@ def test_html_ui_ids_match_js():
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(ui_dir))
     html_content = env.get_template("index.html").render()
 
-    with open(js_path, "r", encoding="utf-8") as f:
-        js_content = f.read()
+    js_modules = ["app.js", "system_list.js", "mining_view.js", "inspector.js", "utils.js"]
+    js_content = ""
+    for jm in js_modules:
+        p = os.path.join(js_dir, jm)
+        if os.path.isfile(p):
+            with open(p, "r", encoding="utf-8") as f:
+                js_content += "\n" + f.read()
 
     critical_ids = [
         "btn-pane-tab-explorer",
