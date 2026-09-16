@@ -10,6 +10,7 @@ def run_js_system_list_test(script_body):
     if not node_exe:
         pytest.skip("Node.js is not installed or not in PATH")
 
+    i18n_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "i18n.js"
     utils_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "utils.js"
     system_list_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "system_list.js"
 
@@ -21,8 +22,14 @@ def run_js_system_list_test(script_body):
       return {{
         tagName: tag.toUpperCase(),
         innerText: '',
-        innerHTML: '',
+        _innerHTML: '',
+        get innerHTML() {{ return this._innerHTML; }},
+        set innerHTML(val) {{
+          this._innerHTML = val;
+          if (!val) this.children = [];
+        }},
         value: '',
+        title: '',
         style: {{ display: '' }},
         children: [],
         dataset: {{}},
@@ -71,9 +78,9 @@ def run_js_system_list_test(script_body):
       getItem(k) {{ return this._data[k] || null; }},
       setItem(k, v) {{ this._data[k] = String(v); }}
     }};
-    global.t = (k) => k;
     global.selectSystem = () => Promise.resolve();
     global.fetchSystems = () => Promise.resolve();
+    global.t = (k) => k;
     global.state = {{
       systems: [],
       selectedSystem: null,
@@ -262,3 +269,79 @@ def test_clear_system_bio_summary():
     res = json.loads(out)
     assert res["display"] == "none"
     assert res["scannedBase"] == "0 Cr"
+
+
+def test_system_list_bilingual_switching():
+    i18n_path = (Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "i18n.js").as_posix()
+    out = run_js_system_list_test(f"""
+    const i18nMod = require('{i18n_path}');
+    Object.assign(global, i18nMod);
+
+    const testSys = {{
+      system_address: 12345678,
+      star_system: 'Test Sys',
+      total_potential_value: 1000000,
+      scanned_bodies: 5,
+      total_bodies: 5,
+      visit_count: 1,
+      last_visited: '2026-09-16T12:00:00',
+      system_state: 'Boom',
+      controlling_faction: 'Pilots Federation',
+      system_reserve: 'Pristine Reserves',
+      system_economy: 'Refinery',
+      edsm_checked: 1,
+      edsm_registered: 1,
+      edsm_first_discoverer: 'Commander Alpha',
+      cmdr_distance_ly: 50.0,
+      sol_distance_ly: 100.0,
+      colonia_distance_ly: 22000.0,
+      star_pos_x: 0,
+      star_pos_y: 0,
+      star_pos_z: 100
+    }};
+
+    // Japanese mode
+    setLanguage('ja');
+    state.systems = [testSys];
+    state.selectedSystem = testSys;
+    state.currentSystemData = {{ system: testSys }};
+    renderSystemList();
+    renderSystemHeader();
+
+    const ja_card = document.getElementById('system-list').children[0];
+    const ja_card_html = ja_card ? ja_card.innerHTML : '';
+    const ja_state_badge = document.getElementById('current-system-state-badge').innerHTML;
+    const ja_econ_info = document.getElementById('current-system-economy-info').innerHTML;
+
+    // English mode
+    setLanguage('en');
+    renderSystemList();
+    renderSystemHeader();
+
+    const en_card = document.getElementById('system-list').children[0];
+    const en_card_html = en_card ? en_card.innerHTML : '';
+    const en_state_badge = document.getElementById('current-system-state-badge').innerHTML;
+    const en_econ_info = document.getElementById('current-system-economy-info').innerHTML;
+
+    console.log(JSON.stringify({{
+      ja_has_edsm_tip: ja_card_html.includes("EDSM登録済"),
+      ja_has_boom_state: ja_state_badge.includes("好況") || ja_state_badge.includes("Boom"),
+      ja_has_controlling_faction: ja_econ_info.includes("支配勢力"),
+      ja_has_primary_economy: ja_econ_info.includes("主要経済"),
+      en_has_edsm_tip: en_card_html.includes("Registered on EDSM"),
+      en_has_boom_state: en_state_badge.includes("Boom") && !en_state_badge.includes("好況"),
+      en_has_controlling_faction: en_econ_info.includes("Controlling Faction"),
+      en_has_primary_economy: en_econ_info.includes("Primary Economy")
+    }}));
+    """)
+    res = json.loads(out)
+    assert res["ja_has_edsm_tip"] is True
+    assert res["ja_has_boom_state"] is True
+    assert res["ja_has_controlling_faction"] is True
+    assert res["ja_has_primary_economy"] is True
+
+    assert res["en_has_edsm_tip"] is True
+    assert res["en_has_boom_state"] is True
+    assert res["en_has_controlling_faction"] is True
+    assert res["en_has_primary_economy"] is True
+

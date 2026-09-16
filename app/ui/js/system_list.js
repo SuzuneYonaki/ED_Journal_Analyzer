@@ -39,7 +39,10 @@ function generateLandmarkDistanceBadges(sys) {
   // CMDR distance
   if (lmSettings.cmdr && sys.cmdr_distance_ly !== null && sys.cmdr_distance_ly !== undefined) {
     const cmdrSys = state.currentLocation && state.currentLocation.star_system ? ` (${state.currentLocation.star_system})` : '';
-    badges.push(`<span class="tag-badge tag-cmdr-dist" title="現在地${cmdrSys}からの距離: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly">📍 CMDR: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly</span>`);
+    const tip = (t('lm_cmdr_dist_tip') || '現在地{cmdrSys}からの距離: {dist} Ly')
+      .replace('{cmdrSys}', cmdrSys)
+      .replace('{dist}', Math.round(sys.cmdr_distance_ly).toLocaleString());
+    badges.push(`<span class="tag-badge tag-cmdr-dist" title="${tip}">📍 CMDR: ${Math.round(sys.cmdr_distance_ly).toLocaleString()} Ly</span>`);
   }
 
   // Sol distance
@@ -50,7 +53,9 @@ function generateLandmarkDistanceBadges(sys) {
         ? Math.hypot(sys.star_pos_x, sys.star_pos_y, sys.star_pos_z)
         : null);
     if (solDist !== null && solDist !== undefined) {
-      badges.push(`<span class="tag-badge tag-sol-dist" title="太陽系 (Sol) からの距離: ${Math.round(solDist).toLocaleString()} Ly">Sol: ${Math.round(solDist).toLocaleString()} Ly</span>`);
+      const tip = (t('lm_sol_dist_tip') || '太陽系 (Sol) からの距離: {dist} Ly')
+        .replace('{dist}', Math.round(solDist).toLocaleString());
+      badges.push(`<span class="tag-badge tag-sol-dist" title="${tip}">Sol: ${Math.round(solDist).toLocaleString()} Ly</span>`);
     }
   }
 
@@ -62,7 +67,9 @@ function generateLandmarkDistanceBadges(sys) {
         ? Math.hypot(sys.star_pos_x - (-9530.5), sys.star_pos_y - (-910.28125), sys.star_pos_z - 19808.125)
         : null);
     if (coloniaDist !== null && coloniaDist !== undefined) {
-      badges.push(`<span class="tag-badge tag-colonia-dist" title="第2の人類居住圏 (Colonia) からの距離: ${Math.round(coloniaDist).toLocaleString()} Ly">Colonia: ${Math.round(coloniaDist).toLocaleString()} Ly</span>`);
+      const tip = (t('lm_colonia_dist_tip') || '第2の人類居住圏 (Colonia) からの距離: {dist} Ly')
+        .replace('{dist}', Math.round(coloniaDist).toLocaleString());
+      badges.push(`<span class="tag-badge tag-colonia-dist" title="${tip}">Colonia: ${Math.round(coloniaDist).toLocaleString()} Ly</span>`);
     }
   }
 
@@ -74,7 +81,9 @@ function generateLandmarkDistanceBadges(sys) {
         ? Math.hypot(sys.star_pos_x - 21481.40625, sys.star_pos_y - (-1004.5625), sys.star_pos_z - 43369.4375)
         : null);
     if (rbDist !== null && rbDist !== undefined) {
-      badges.push(`<span class="tag-badge tag-rainbow-dist" title="最遠方宇宙港 Rainbow's End (Roefoo ZE-H d10-0 / DW3) からの距離: ${Math.round(rbDist).toLocaleString()} Ly">Rainbow's End: ${Math.round(rbDist).toLocaleString()} Ly</span>`);
+      const tip = (t('lm_rainbow_dist_tip') || "最遠方宇宙港 Rainbow's End (Roefoo ZE-H d10-0 / DW3) からの距離: {dist} Ly")
+        .replace('{dist}', Math.round(rbDist).toLocaleString());
+      badges.push(`<span class="tag-badge tag-rainbow-dist" title="${tip}">Rainbow's End: ${Math.round(rbDist).toLocaleString()} Ly</span>`);
     }
   }
 
@@ -86,7 +95,9 @@ function generateLandmarkDistanceBadges(sys) {
         ? Math.hypot(sys.star_pos_x - 28.6875, sys.star_pos_y - (-19.78125), sys.star_pos_z - 25899.6875)
         : null);
     if (eaDist !== null && eaDist !== undefined) {
-      badges.push(`<span class="tag-badge tag-eanch-dist" title="銀河中心探査基地 Explorer's Anchorage (Stuemeae FG-Y d7561 / Sgr A*近傍) からの距離: ${Math.round(eaDist).toLocaleString()} Ly">E.Anchorage: ${Math.round(eaDist).toLocaleString()} Ly</span>`);
+      const tip = (t('lm_eanch_dist_tip') || "銀河中心探査基地 Explorer's Anchorage (Stuemeae FG-Y d7561 / Sgr A*近傍) からの距離: {dist} Ly")
+        .replace('{dist}', Math.round(eaDist).toLocaleString());
+      badges.push(`<span class="tag-badge tag-eanch-dist" title="${tip}">E.Anchorage: ${Math.round(eaDist).toLocaleString()} Ly</span>`);
     }
   }
 
@@ -138,20 +149,21 @@ function renderSystemList() {
     // EDSM Discovery Status Badges & 1st Discover Registerable Announcement
     if (sys.edsm_checked === 1) {
       if (sys.edsm_registered === 1) {
-        const discText = sys.edsm_first_discoverer ? `⭐ EDSM: ${sys.edsm_first_discoverer}` : '⭐ EDSM登録済';
-        tags.push(`<span class="tag-badge tag-edsm-found" title="EDSM登録済 / 発見者: ${sys.edsm_first_discoverer || '不明'}">${discText}</span>`);
+        const discText = sys.edsm_first_discoverer ? `⭐ EDSM: ${sys.edsm_first_discoverer}` : (t('edsm_found_badge') || '⭐ EDSM登録済');
+        const tip = (t('edsm_found_tip') || 'EDSM登録済 / 発見者: {discoverer}').replace('{discoverer}', sys.edsm_first_discoverer || (t('edsm_unknown_discoverer') || '不明'));
+        tags.push(`<span class="tag-badge tag-edsm-found" title="${tip}">${discText}</span>`);
       } else {
-        tags.push('<span class="tag-badge tag-edsm-unreg" title="EDSM未登録 / あなたの探査データを提出して1st Discoverを登録できます！">✨ 1st Discover 登録可能 (EDSM未登録)</span>');
+        tags.push(`<span class="tag-badge tag-edsm-unreg" title="${t('edsm_unreg_full_tip') || 'EDSM未登録 / あなたの探査データを提出して1st Discoverを登録できます！'}">${t('edsm_unreg_full_badge') || '✨ 1st Discover 登録可能 (EDSM未登録)'}</span>`);
       }
     } else if (sys.has_first_discover || (sys.first_discovered_bodies && sys.first_discovered_bodies > 0)) {
-      tags.push('<span class="tag-badge tag-edsm-unreg" title="ゲーム内初発見 / EDSM 1st Discover 登録可能">✨ 1st Discover 登録可能</span>');
+      tags.push(`<span class="tag-badge tag-edsm-unreg" title="${t('edsm_first_disc_tip') || 'ゲーム内初発見 / EDSM 1st Discover 登録可能'}">${t('badge_first_discover') || '✨ 1st Discover 登録可能'}</span>`);
     }
 
     // EDSM System State (Boom, Investment)
     if (sys.system_state && sys.system_state.toLowerCase().includes('boom')) {
-      tags.push('<span class="tag-badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; font-weight: bold;" title="EDSM星系経済状態: Boom (好況)">📈 Boom</span>');
+      tags.push(`<span class="tag-badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; font-weight: bold;" title="${t('edsm_boom_tip') || 'EDSM星系経済状態: Boom (好況)'}">📈 Boom</span>`);
     } else if (sys.system_state && sys.system_state.toLowerCase().includes('investment')) {
-      tags.push('<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;" title="EDSM星系状態: Investment (投資)">💼 Investment</span>');
+      tags.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;" title="${t('edsm_investment_tip') || 'EDSM星系状態: Investment (投資)'}">💼 Investment</span>`);
     }
 
     // Mining Scout Candidate Badges
@@ -175,10 +187,12 @@ function renderSystemList() {
       tags.push(`<span class="tag-badge tag-shared" style="background: rgba(167, 139, 250, 0.2); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.6); font-weight: bold;" title="${sharedTip}">🤝 Shared</span>`);
     }
     if (sys.is_external || sys.visit_count === 0) {
-      tags.push('<span class="tag-badge tag-external" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-weight: bold;" title="未訪問・EDSM外部参照星系（Web共有/パッケージ書出は不可）">🌐 外部参照 (未訪問)</span>');
+      tags.push(`<span class="tag-badge tag-external" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-weight: bold;" title="${t('badge_external_unvisited_tip') || '未訪問・EDSM外部参照星系（Web共有/パッケージ書出は不可）'}">${t('badge_external_unvisited') || '🌐 外部参照 (未訪問)'}</span>`);
     }
     if (sys.composite_score !== null && sys.composite_score !== undefined) {
-      tags.push(`<span class="tag-badge" style="background: rgba(0, 255, 136, 0.18); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.5); font-weight: bold;" title="総合ブレンドスコア: ${sys.composite_score}pt">★ スコア: ${Math.round(sys.composite_score)}pt</span>`);
+      const compTip = (t('composite_score_tip') || '総合ブレンドスコア: {score}pt').replace('{score}', sys.composite_score);
+      const compLabel = (t('badge_score') || '★ スコア: {score}pt').replace('{score}', Math.round(sys.composite_score));
+      tags.push(`<span class="tag-badge" style="background: rgba(0, 255, 136, 0.18); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.5); font-weight: bold;" title="${compTip}">${compLabel}</span>`);
     }
     if (sys.rarity_score !== null && sys.rarity_score !== undefined) {
       const rScore = Math.round(sys.rarity_score * 10) / 10;
@@ -194,7 +208,10 @@ function renderSystemList() {
         rClass = 'rarity-score-rare';
         rLabel = t('physics_rare');
       }
-      tags.unshift(`<span class="tag-badge ${rClass}" title="ED_Analysys 天体物理レア度: ${rScore} pt [${rLabel}]">🌌 ★ ${rScore} pt</span>`);
+      const rarityTip = (t('astro_rarity_tip') || 'ED_Analysys 天体物理レア度: {score} pt [{label}]')
+        .replace('{score}', rScore)
+        .replace('{label}', rLabel);
+      tags.unshift(`<span class="tag-badge ${rClass}" title="${rarityTip}">🌌 ★ ${rScore} pt</span>`);
     }
 
     const visitedDate = sys.last_visited ? sys.last_visited.substring(0, 10) : '--';
@@ -218,48 +235,26 @@ function renderSystemList() {
       `;
     }
 
+    // Quick Landable Bodies Visual Bar
     let landableHtml = '';
-    const activeMiningFilters = {
-      hmc: !!state.filters.has_landable_hmc,
-      metal_rich: !!state.filters.has_landable_metal_rich,
-      rocky: !!state.filters.has_landable_rocky,
-      icy: !!state.filters.has_landable_icy,
-      rocky_ice: !!state.filters.has_landable_rocky_ice,
-      ringed: !!state.filters.has_landable_ringed,
-      mining: !!state.filters.has_mining_signals
-    };
-    const hasAnyMiningFilter = Object.values(activeMiningFilters).some(Boolean);
-
-    if (modSettings.rhino !== false && hasAnyMiningFilter && sys.landable_bodies && sys.landable_bodies.length > 0) {
-      const matchedBodies = sys.landable_bodies.filter(lb => {
-        if (activeMiningFilters.hmc && lb.type === 'HMC') return true;
-        if (activeMiningFilters.metal_rich && lb.type === 'Metal Rich') return true;
-        if (activeMiningFilters.rocky && lb.type === 'Rocky') return true;
-        if (activeMiningFilters.icy && lb.type === 'Icy') return true;
-        if (activeMiningFilters.rocky_ice && lb.type === 'Icy Rocky') return true;
-        if (activeMiningFilters.ringed && lb.is_ringed) return true;
-        if (activeMiningFilters.mining && lb.mining_signals > 0) return true;
-        return false;
-      });
-
-      if (matchedBodies.length > 0) {
+    if (modSettings.rhino !== false && typeof getMatchedLandableBodies === 'function') {
+      const matchedBodies = getMatchedLandableBodies(sys);
+      if (matchedBodies && matchedBodies.length > 0) {
         const landableBadges = matchedBodies.slice(0, 6).map(lb => {
-          const isRing = lb.is_ringed;
-          const icon = isRing ? '💍' : '🪐';
-          let colorStyle = 'background: rgba(203, 213, 225, 0.12); color: #cbd5e1; border: 1px solid rgba(203, 213, 225, 0.3);';
+          let icon = '🪐';
+          let colorStyle = 'background: rgba(203, 213, 225, 0.12); color: #cbd5e1; border: 1px solid rgba(203, 213, 225, 0.35);';
           if (lb.type === 'HMC') {
             colorStyle = 'background: rgba(96, 165, 250, 0.15); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.4);';
-          } else if (lb.type === 'Metal Rich') {
+          } else if (lb.type === 'MR') {
             colorStyle = 'background: rgba(251, 146, 60, 0.15); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.4);';
           } else if (lb.type === 'Icy') {
+            icon = '❄️';
             colorStyle = 'background: rgba(103, 232, 249, 0.15); color: #67e8f9; border: 1px solid rgba(103, 232, 249, 0.4);';
-          } else if (lb.type === 'Icy Rocky') {
+          } else if (lb.type === 'RockyIce') {
+            icon = '🧊';
             colorStyle = 'background: rgba(147, 197, 253, 0.15); color: #93c5fd; border: 1px solid rgba(147, 197, 253, 0.4);';
           }
-          if (isRing) {
-            colorStyle += ' border-color: rgba(244, 114, 182, 0.7); box-shadow: 0 0 3px rgba(244, 114, 182, 0.3);';
-          }
-
+          const isRing = Boolean(lb.has_rings);
           const statParts = [];
           if (state.showMiningGravity && lb.gravity_g !== null && lb.gravity_g !== undefined) {
             statParts.push(`${lb.gravity_g.toFixed(2)}G`);
@@ -269,11 +264,21 @@ function renderSystemList() {
           }
           const statSuffix = statParts.length > 0 ? ` [${statParts.join(' | ')}]` : '';
 
-          const tip = `${lb.body_name} (${lb.type}) - 重力: ${lb.gravity_g ? lb.gravity_g.toFixed(2) + 'G' : '--'} | 温度: ${lb.temp_k ? lb.temp_k + 'K' : '--'}${isRing ? ' | 環付き (Ringed)' : ''}${lb.mining_signals > 0 ? ' | 採掘拠点: ' + lb.mining_signals + '箇所' : ''}`;
+          const ringStr = isRing ? (t('ringed_tag') || ' | 環付き (Ringed)') : '';
+          const miningStr = lb.mining_signals > 0 ? (t('mining_sites_tip_tag') || ' | 採掘拠点: {count}箇所').replace('{count}', lb.mining_signals) : '';
+          const tip = (t('landable_tip') || '{name} ({type}) - 重力: {gravity} | 温度: {temp}{ring}{mining}')
+            .replace('{name}', lb.body_name)
+            .replace('{type}', lb.type)
+            .replace('{gravity}', lb.gravity_g ? lb.gravity_g.toFixed(2) + 'G' : '--')
+            .replace('{temp}', lb.temp_k ? lb.temp_k + 'K' : '--')
+            .replace('{ring}', ringStr)
+            .replace('{mining}', miningStr);
           return `<span class="tag-badge" style="${colorStyle} font-size: 0.67rem; padding: 1px 4px; margin-right: 2px;" title="${tip}">${icon} ${lb.type}${statSuffix}</span>`;
         });
         if (matchedBodies.length > 6) {
-          landableBadges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.06); color: var(--text-dim); font-size: 0.65rem; padding: 1px 4px;" title="他 ${matchedBodies.length - 6} 件のマッチ天体">+${matchedBodies.length - 6}</span>`);
+          const countDiff = matchedBodies.length - 6;
+          const moreTip = (t('other_matched_bodies_tip') || '他 {count} 件のマッチ天体').replace('{count}', countDiff);
+          landableBadges.push(`<span class="tag-badge" style="background: rgba(255,255,255,0.06); color: var(--text-dim); font-size: 0.65rem; padding: 1px 4px;" title="${moreTip}">+${countDiff}</span>`);
         }
         landableHtml = `
           <div class="system-landable-bar" style="display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; padding-top: 3px; border-top: 1px dashed rgba(255,255,255,0.07);">
@@ -355,13 +360,14 @@ function renderSystemHeader() {
   if (edsmBadgeEl) {
     if (sys.edsm_checked === 1) {
       if (sys.edsm_registered === 1) {
-        const discText = sys.edsm_first_discoverer ? `⭐ EDSM: ${sys.edsm_first_discoverer}` : '⭐ EDSM登録済';
-        edsmBadgeEl.innerHTML = `<span class="tag-badge tag-edsm-found" title="EDSM登録済 / 発見者: ${sys.edsm_first_discoverer || '不明'}">${discText}</span>`;
+        const discText = sys.edsm_first_discoverer ? `⭐ EDSM: ${sys.edsm_first_discoverer}` : (t('edsm_found_badge') || '⭐ EDSM登録済');
+        const tip = (t('edsm_found_tip') || 'EDSM登録済 / 発見者: {discoverer}').replace('{discoverer}', sys.edsm_first_discoverer || (t('edsm_unknown_discoverer') || '不明'));
+        edsmBadgeEl.innerHTML = `<span class="tag-badge tag-edsm-found" title="${tip}">${discText}</span>`;
       } else {
-        edsmBadgeEl.innerHTML = '<span class="tag-badge tag-edsm-unreg" title="EDSM未登録 / 探査データを提出して1st Discoverを登録できます！">✨ 1st Discover 登録可能 (EDSM未登録)</span>';
+        edsmBadgeEl.innerHTML = `<span class="tag-badge tag-edsm-unreg" title="${t('edsm_unreg_full_tip') || 'EDSM未登録 / 探査データを提出して1st Discoverを登録できます！'}">${t('edsm_unreg_full_badge') || '✨ 1st Discover 登録可能 (EDSM未登録)'}</span>`;
       }
     } else if (sys.has_first_discover || (sys.first_discovered_bodies && sys.first_discovered_bodies > 0)) {
-      edsmBadgeEl.innerHTML = '<span class="tag-badge tag-edsm-unreg" title="ゲーム内初発見 / EDSM 1st Discover 登録可能">✨ 1st Discover 登録可能</span>';
+      edsmBadgeEl.innerHTML = `<span class="tag-badge tag-edsm-unreg" title="${t('edsm_first_disc_tip') || 'ゲーム内初発見 / EDSM 1st Discover 登録可能'}">${t('badge_first_discover') || '✨ 1st Discover 登録可能'}</span>`;
     } else {
       edsmBadgeEl.innerHTML = '';
     }
@@ -373,22 +379,22 @@ function renderSystemHeader() {
     btnSyncEdsm.style.display = 'inline-flex';
     btnSyncEdsm.onclick = async () => {
       btnSyncEdsm.disabled = true;
-      btnSyncEdsm.innerHTML = '<span>⏳ 同期中...</span>';
+      btnSyncEdsm.innerHTML = `<span>${t('sync_edsm_running') || '⏳ 同期中...'}</span>`;
       try {
         const resp = await fetch(`/api/systems/${sys.system_address}/edsm_sync`, { method: 'POST' });
         const resData = await resp.json();
-        btnSyncEdsm.innerHTML = '<span>✓ 完了</span>';
+        btnSyncEdsm.innerHTML = `<span>${t('sync_done_label') || '✓ 完了'}</span>`;
         setTimeout(() => {
           btnSyncEdsm.disabled = false;
-          btnSyncEdsm.innerHTML = '<span>🔄 EDSM同期</span>';
+          btnSyncEdsm.innerHTML = `<span>${t('btn_sync_edsm_label') || '🔄 EDSM同期'}</span>`;
         }, 1500);
         await selectSystem(sys.system_address, true, false);
       } catch (err) {
         console.error('EDSM Sync error:', err);
         btnSyncEdsm.disabled = false;
-        btnSyncEdsm.innerHTML = '<span>❌ 失敗</span>';
+        btnSyncEdsm.innerHTML = `<span>${t('sync_failed_label') || '❌ 失敗'}</span>`;
         setTimeout(() => {
-          btnSyncEdsm.innerHTML = '<span>🔄 EDSM同期</span>';
+          btnSyncEdsm.innerHTML = `<span>${t('btn_sync_edsm_label') || '🔄 EDSM同期'}</span>`;
         }, 2000);
       }
     };
@@ -400,24 +406,27 @@ function renderSystemHeader() {
     btnSyncSpansh.style.display = 'inline-flex';
     btnSyncSpansh.onclick = async () => {
       btnSyncSpansh.disabled = true;
-      btnSyncSpansh.innerHTML = '<span>⏳ 照会中...</span>';
+      btnSyncSpansh.innerHTML = `<span>${t('sync_spansh_running') || '⏳ 照会中...'}</span>`;
       try {
         const resp = await fetch(`/api/systems/${sys.system_address}/spansh_sync`, { method: 'POST' });
         const resData = await resp.json();
         const hsFound = resData.hotspots_found || 0;
         const pmlFound = resData.pml_found || 0;
-        btnSyncSpansh.innerHTML = `<span>✓ 完了 (${hsFound} HS / ${pmlFound} PML)</span>`;
+        const resultMsg = (t('sync_spansh_result') || '✓ 完了 ({hs} HS / {pml} PML)')
+          .replace('{hs}', hsFound)
+          .replace('{pml}', pmlFound);
+        btnSyncSpansh.innerHTML = `<span>${resultMsg}</span>`;
         setTimeout(() => {
           btnSyncSpansh.disabled = false;
-          btnSyncSpansh.innerHTML = '<span>🪐 Spansh照会</span>';
+          btnSyncSpansh.innerHTML = `<span>${t('btn_sync_spansh_label') || '🪐 Spansh照会'}</span>`;
         }, 2000);
         await selectSystem(sys.system_address, true, false);
       } catch (err) {
         console.error('Spansh Sync error:', err);
         btnSyncSpansh.disabled = false;
-        btnSyncSpansh.innerHTML = '<span>❌ 失敗</span>';
+        btnSyncSpansh.innerHTML = `<span>${t('sync_failed_label') || '❌ 失敗'}</span>`;
         setTimeout(() => {
-          btnSyncSpansh.innerHTML = '<span>🪐 Spansh照会</span>';
+          btnSyncSpansh.innerHTML = `<span>${t('btn_sync_spansh_label') || '🪐 Spansh照会'}</span>`;
         }, 2000);
       }
     };
@@ -436,30 +445,31 @@ function renderSystemHeader() {
       if (lower.includes('boom')) {
         badgeStyle = 'background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; font-weight: bold; box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);';
         icon = '📈';
-        label = 'Boom (好況)';
+        label = t('bgs_boom_label') || 'Boom (好況)';
       } else if (lower.includes('investment')) {
         badgeStyle = 'background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;';
         icon = '💼';
-        label = 'Investment (投資)';
+        label = t('bgs_investment_label') || 'Investment (投資)';
       } else if (lower.includes('expansion')) {
         badgeStyle = 'background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #c084fc; font-weight: bold;';
         icon = '🚀';
-        label = 'Expansion (拡張)';
+        label = t('bgs_expansion_label') || 'Expansion (拡張)';
       } else if (lower.includes('war') || lower.includes('unrest') || lower.includes('lockdown')) {
         badgeStyle = 'background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #f87171; font-weight: bold;';
         icon = '⚠️';
       } else if (lower.includes('bust')) {
         badgeStyle = 'background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #facc15; font-weight: bold;';
         icon = '📉';
-        label = 'Bust (不況)';
+        label = t('bgs_bust_label') || 'Bust (不況)';
       }
-      stateBadgeEl.innerHTML = `<span class="tag-badge" style="${badgeStyle} font-size: 0.72rem; padding: 2px 7px;" title="EDSM星系経済・BGS状態: ${escapeHtml(sState)}">${icon} ${escapeHtml(label)}</span>`;
+      const bgsTip = (t('bgs_state_tip') || 'EDSM星系経済・BGS状態: {state}').replace('{state}', escapeHtml(sState));
+      stateBadgeEl.innerHTML = `<span class="tag-badge" style="${badgeStyle} font-size: 0.72rem; padding: 2px 7px;" title="${bgsTip}">${icon} ${escapeHtml(label)}</span>`;
       stateBadgeEl.style.display = 'inline-flex';
     } else if (sState && sState.toLowerCase() === 'none') {
-      stateBadgeEl.innerHTML = `<span class="tag-badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.7rem; padding: 2px 6px;" title="EDSM星系状態: 平常 (None)">⚪ 平常 (None)</span>`;
+      stateBadgeEl.innerHTML = `<span class="tag-badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.7rem; padding: 2px 6px;" title="${t('bgs_none_tip') || 'EDSM星系状態: 平常 (None)'}">${t('bgs_none_label') || '⚪ 平常 (None)'}</span>`;
       stateBadgeEl.style.display = 'inline-flex';
     } else if (sys.population === 0) {
-      stateBadgeEl.innerHTML = `<span class="tag-badge" style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); font-size: 0.7rem; padding: 2px 6px;" title="無人星系 (深宇宙)">🌌 無人星系</span>`;
+      stateBadgeEl.innerHTML = `<span class="tag-badge" style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); font-size: 0.7rem; padding: 2px 6px;" title="${t('bgs_uninhabited_tip') || '無人星系 (深宇宙)'}">${t('bgs_uninhabited_label') || '🌌 無人星系'}</span>`;
       stateBadgeEl.style.display = 'inline-flex';
     } else {
       stateBadgeEl.innerHTML = '';
@@ -478,16 +488,16 @@ function renderSystemHeader() {
   if (econInfoEl) {
     const parts = [];
     if (sys.controlling_faction) {
-      parts.push(`<span style="color: #cbd5e1;" title="支配勢力">🎯 ${escapeHtml(sys.controlling_faction)}</span>`);
+      parts.push(`<span style="color: #cbd5e1;" title="${t('faction_controlling_tip') || '支配勢力'}">🎯 ${escapeHtml(sys.controlling_faction)}</span>`);
     }
     if (sys.system_reserve) {
       const isPristine = sys.system_reserve.toLowerCase().includes('pristine');
       const rColor = isPristine ? '#38bdf8; font-weight: bold;' : '#cbd5e1;';
-      parts.push(`<span style="color: ${rColor}" title="資源埋蔵量">💎 ${escapeHtml(sys.system_reserve)} Reserves</span>`);
+      parts.push(`<span style="color: ${rColor}" title="${t('reserve_level_tip') || '資源埋蔵量'}">💎 ${escapeHtml(sys.system_reserve)} Reserves</span>`);
     }
     if (sys.system_economy) {
       const econStr = sys.system_economy + (sys.system_second_economy ? ` / ${sys.system_second_economy}` : '');
-      parts.push(`<span style="color: #94a3b8;" title="主要経済">🏭 ${escapeHtml(econStr)}</span>`);
+      parts.push(`<span style="color: #94a3b8;" title="${t('economy_primary_tip') || '主要経済'}">🏭 ${escapeHtml(econStr)}</span>`);
     }
     if (parts.length > 0) {
       econInfoEl.innerHTML = `<div style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.7rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 6px;">${parts.join('<span style="color: var(--text-dim);">|</span>')}</div>`;
@@ -578,7 +588,7 @@ function renderSystemHeader() {
 
   if (extBadge) {
     if (isUnvisitedExternal) {
-      extBadge.innerHTML = '<span class="tag-badge tag-external" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.6); font-weight: bold;" title="未訪問・EDSM外部参照星系（Web共有およびパッケージ書出は利用できません）">🌐 外部参照 (未訪問)</span>';
+      extBadge.innerHTML = `<span class="tag-badge tag-external" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.6); font-weight: bold;" title="${t('external_unvisited_header_tip') || '未訪問・EDSM外部参照星系（Web共有およびパッケージ書出は利用できません）'}">${t('badge_external_unvisited') || '🌐 外部参照 (未訪問)'}</span>`;
       extBadge.style.display = 'inline-flex';
     } else {
       extBadge.innerHTML = '';
