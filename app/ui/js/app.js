@@ -68,8 +68,11 @@ let state = {
   lastJournalEventVersion: 0,
   jumpState: 'idle', // 'idle' | 'hyperspace' | 'arrived_waiting_fss' | 'scanned'
   targetJumpSystem: '',
-  autoSelectTopNext: false
 };
+
+if (typeof window !== 'undefined') {
+  window.state = state;
+}
 
 // Core utilities, domain parsers, and module settings are loaded from utils.js
 
@@ -782,15 +785,7 @@ function renderCurrentView() {
   }
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+// escapeHtml is defined in utils.js
 
 async function renderPhysicsReport(container, systemData) {
   if (!systemData || !systemData.system) {
@@ -3990,3 +3985,39 @@ function initExportImportModals() {
 }
 
 // Rhino Surface Mining Sites Modal & Management is defined in mining_view.js
+
+// Window / Global Export
+if (typeof window !== 'undefined') {
+  window.selectSystem = selectSystem;
+  window.fetchSystems = fetchSystems;
+  window.fetchGlobalStats = fetchGlobalStats;
+  window.renderCurrentView = renderCurrentView;
+  window.getSortedBodies = getSortedBodies;
+  window.renderHierarchyTree = renderHierarchyTree;
+  window.renderFlatBodiesList = renderFlatBodiesList;
+  window.renderBioOnlyView = renderBioOnlyView;
+  window.renderVisitsTimeline = renderVisitsTimeline;
+  window.renderPhysicsReport = renderPhysicsReport;
+  window.handleLiveJournalEvent = handleLiveJournalEvent;
+  window.updateModuleVisibilityUI = updateModuleVisibilityUI;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    state,
+    selectSystem,
+    fetchSystems,
+    fetchGlobalStats,
+    renderCurrentView,
+    getSortedBodies,
+    renderHierarchyTree,
+    renderFlatBodiesList,
+    renderBioOnlyView,
+    renderVisitsTimeline,
+    renderPhysicsReport,
+    handleLiveJournalEvent,
+    updateModuleVisibilityUI
+  };
+}
+
+
