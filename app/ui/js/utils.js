@@ -21,11 +21,23 @@ function formatDistance(ls) {
   return ls.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' ls';
 }
 
+// App Language Helper
+function getAppLang() {
+  if (typeof currentLang !== 'undefined' && (currentLang === 'en' || currentLang === 'ja')) {
+    return currentLang;
+  }
+  if (typeof window !== 'undefined' && window.currentLang) {
+    return window.currentLang;
+  }
+  return 'ja';
+}
+
 function formatSecondsToDaysOrHours(sec) {
   if (!sec) return '--';
   const hours = Math.abs(sec) / 3600;
-  const hUnit = (typeof t === 'function' ? t('hours_unit') : null) || '時間';
-  const dUnit = (typeof t === 'function' ? t('days_unit') : null) || '日';
+  const lang = getAppLang();
+  const hUnit = (typeof t === 'function' ? t('hours_unit') : null) || (lang === 'en' ? 'h' : '時間');
+  const dUnit = (typeof t === 'function' ? t('days_unit') : null) || (lang === 'en' ? 'd' : '日');
   if (hours < 48) return `${hours.toFixed(1)} ${hUnit}`;
   const days = hours / 24;
   return `${days.toFixed(1)} ${dUnit}`;
@@ -73,10 +85,26 @@ function parseMarkdown(md) {
 
 // Ring Classification Parser
 function parseRingClass(rawClass) {
-  if (!rawClass) return { key: 'unknown', nameEn: 'Unknown', nameJa: '不明', color: '#94a3b8', icon: '💍', bg: 'rgba(148,163,184,0.15)', border: 'rgba(148,163,184,0.4)', description: '' };
-  const lower = rawClass.toLowerCase();
-  if (lower.includes('icy')) {
+  const lang = getAppLang();
+  if (!rawClass) {
     return {
+      key: 'unknown',
+      nameEn: 'Unknown',
+      nameJa: '不明',
+      name: lang === 'en' ? 'Unknown' : '不明',
+      color: '#94a3b8',
+      icon: '💍',
+      bg: 'rgba(148,163,184,0.15)',
+      border: 'rgba(148,163,184,0.4)',
+      descriptionEn: '',
+      descriptionJa: '',
+      description: ''
+    };
+  }
+  const lower = rawClass.toLowerCase();
+  let res;
+  if (lower.includes('icy')) {
+    res = {
       key: 'icy',
       nameEn: 'Icy',
       nameJa: '氷',
@@ -84,11 +112,11 @@ function parseRingClass(rawClass) {
       color: '#38bdf8',
       bg: 'rgba(56, 189, 248, 0.18)',
       border: 'rgba(56, 189, 248, 0.45)',
-      description: 'Fleet Carrier燃料 (Tritium) / 低温ダイヤモンド (LTD) 産地'
+      descriptionEn: 'Fleet Carrier fuel (Tritium) / Low Temperature Diamonds (LTD) source',
+      descriptionJa: 'Fleet Carrier燃料 (Tritium) / 低温ダイヤモンド (LTD) 産地'
     };
-  }
-  if (lower.includes('metallic') || lower.includes('metalic')) {
-    return {
+  } else if (lower.includes('metallic') || lower.includes('metalic')) {
+    res = {
       key: 'metallic',
       nameEn: 'Metallic',
       nameJa: '金属質',
@@ -96,11 +124,11 @@ function parseRingClass(rawClass) {
       color: '#facc15',
       bg: 'rgba(250, 204, 21, 0.18)',
       border: 'rgba(250, 204, 21, 0.5)',
-      description: 'プラチナ (Platinum) / ペイン石 (Painite) 等 最も高価値なレーザー採掘適性'
+      descriptionEn: 'High-value laser mining (Platinum, Painite, etc.) optimal',
+      descriptionJa: 'プラチナ (Platinum) / ペイン石 (Painite) 等 最も高価値なレーザー採掘適性'
     };
-  }
-  if (lower.includes('metal')) {
-    return {
+  } else if (lower.includes('metal')) {
+    res = {
       key: 'metal_rich',
       nameEn: 'Metal Rich',
       nameJa: '金属豊富',
@@ -108,11 +136,11 @@ function parseRingClass(rawClass) {
       color: '#fb923c',
       bg: 'rgba(251, 146, 60, 0.18)',
       border: 'rgba(251, 146, 60, 0.5)',
-      description: '各種工業用・貴金属素材'
+      descriptionEn: 'Industrial and precious metal commodities',
+      descriptionJa: '各種工業用・貴金属素材'
     };
-  }
-  if (lower.includes('rocky')) {
-    return {
+  } else if (lower.includes('rocky')) {
+    res = {
       key: 'rocky',
       nameEn: 'Rocky',
       nameJa: '岩石',
@@ -120,20 +148,26 @@ function parseRingClass(rawClass) {
       color: '#cbd5e1',
       bg: 'rgba(203, 213, 225, 0.18)',
       border: 'rgba(203, 213, 225, 0.45)',
-      description: 'マスグラバイト / アレキサンドライト等 高額深部鉱石コア採掘適性'
+      descriptionEn: 'High-value deep core mining (Musgravite, Alexandrite, etc.)',
+      descriptionJa: 'マスグラバイト / アレキサンドライト等 高額深部鉱石コア採掘適性'
+    };
+  } else {
+    const cleanName = rawClass.replace('eRingClass_', '');
+    res = {
+      key: 'other',
+      nameEn: cleanName,
+      nameJa: cleanName,
+      icon: '💍',
+      color: '#a78bfa',
+      bg: 'rgba(167, 139, 250, 0.18)',
+      border: 'rgba(167, 139, 250, 0.45)',
+      descriptionEn: '',
+      descriptionJa: ''
     };
   }
-  const cleanName = rawClass.replace('eRingClass_', '');
-  return {
-    key: 'other',
-    nameEn: cleanName,
-    nameJa: cleanName,
-    icon: '💍',
-    color: '#a78bfa',
-    bg: 'rgba(167, 139, 250, 0.18)',
-    border: 'rgba(167, 139, 250, 0.45)',
-    description: ''
-  };
+  res.name = lang === 'en' ? res.nameEn : res.nameJa;
+  res.description = lang === 'en' ? res.descriptionEn : res.descriptionJa;
+  return res;
 }
 
 // Reserve Level Parser
@@ -147,7 +181,13 @@ function parseReserveLevel(reserve) {
     'depletedresources': { en: 'Depleted', ja: '枯渇', color: '#ef4444', icon: '🚫' },
   };
   const key = reserve.toLowerCase().replace(/[^a-z]/g, '');
-  return map[key] || { en: reserve, ja: reserve, color: '#94a3b8', icon: '📊' };
+  const base = map[key] || { en: reserve, ja: reserve, color: '#94a3b8', icon: '📊' };
+  const lang = getAppLang();
+  return {
+    ...base,
+    name: lang === 'en' ? base.en : base.ja,
+    label: lang === 'en' ? base.en : `${base.en} (${base.ja})`
+  };
 }
 
 // Star Spectrum Styles
@@ -292,6 +332,7 @@ function saveModuleSettings(settings) {
 
 // Window / Global Export
 if (typeof window !== 'undefined') {
+  window.getAppLang = getAppLang;
   window.formatCredits = formatCredits;
   window.formatNumber = formatNumber;
   window.formatDistance = formatDistance;
@@ -310,6 +351,7 @@ if (typeof window !== 'undefined') {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    getAppLang,
     formatCredits,
     formatNumber,
     formatDistance,

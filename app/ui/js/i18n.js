@@ -240,6 +240,9 @@ const i18n = {
     landable_yes: "✓ 着陸可能 (Landable)",
     landable_no: "不可 (No)",
     extreme_danger: "[超危険]",
+    high_g_warn: "[高重力注意]",
+    tidal_locked_yes: "あり (固定)",
+    tidal_locked_no: "なし",
     hours_unit: "時間",
     days_unit: "日",
     star_type_label: "恒星種別",
@@ -405,7 +408,89 @@ const i18n = {
     sync_spansh_success: "Spansh同期完了: 天体 {bodies} 件更新, ホットスポット {hotspots} 件, PML {pml} 箇所検出",
     section_ring_hotspots: "🪐 環状帯ホットスポット (Ring Mining Hotspots)",
     no_ring_hotspots: "この星系で検出された環ホットスポットはありません（Spansh未登録またはDSS未スキャン）",
-    hotspot_label: "🎯 ホットスポット:"
+    hotspot_label: "🎯 ホットスポット:",
+
+    // Time & Units
+    hours_unit: "時間",
+    days_unit: "日",
+
+    // Mining View & Summaries
+    mining_summary_title: "⛏️ 星系採掘サマリー",
+    mining_summary_desc: "採掘・Landable天体サマリー",
+    mining_econ_boom: "【星系経済状態: Boom (好況)】全鉱石・工業資源の需要と売却単価が大幅上昇中",
+    mining_econ_expansion: "【星系経済状態: Expansion (拡大)】工業素材・貴金属の需要が増大中",
+    mining_econ_investment: "【星系経済状態: Investment (投資)】貴金属・高価値鉱石の取引相場が良好",
+    mining_econ_civil_liberty: "【星系経済状態: Civil Liberty (市民の自由)】治安安定により採掘・輸送活動が極めて安全",
+    mining_econ_neutral: "【星系経済状態: {state}】特筆すべき採掘・資源バフ/デバフはありません",
+    mining_rings_count: "リング保有天体: {count} 件",
+    mining_hotspots_count: "環ホットスポット: {count} 箇所",
+    mining_pml_count: "惑星採掘地点 (PML): {count} 箇所",
+    mining_landables_count: "Landable天体: {count} 件",
+    mining_high_g_count: "高重力着陸 (3G+): {count} 件",
+    mining_bio_sigs_count: "生体シグナル天体: {count} 件",
+    mining_geo_sigs_count: "地質シグナル天体: {count} 件",
+    mining_subfilter_all: "すべて",
+    mining_subfilter_rings: "リング保有",
+    mining_subfilter_pml: "PML (採掘地点)",
+    mining_subfilter_hotspots: "ホットスポット",
+    mining_subfilter_landables: "Landable天体",
+    mining_subfilter_high_g: "高重力 (3G+)",
+    mining_subfilter_geobio: "地質・生体",
+    mining_no_results: "条件に一致する採掘・Landable天体はありません。",
+
+    // PML (Planetary Mining Locations)
+    btn_add_pml: "➕ 採掘地点を追加",
+    btn_quick_paste: "📋 クリップボードから一括登録",
+    pml_panel_title: "🦏 Rhino 採掘拠点",
+    pml_modal_title: "🦏 惑星採掘地点 (PML) の登録",
+    pml_name_label: "地点名 (Site Name):",
+    pml_name_placeholder: "例: Site Alpha - 高純度プラチナ...",
+    pml_lat_label: "緯度 (Latitude):",
+    pml_lon_label: "経度 (Longitude):",
+    pml_target_mat_label: "採掘対象鉱石 (Target Material):",
+    pml_notes_label: "メモ・詳細 (Notes):",
+    pml_save_btn: "💾 地点を保存",
+    pml_cancel_btn: "キャンセル",
+    pml_delete_btn: "🗑️ 削除",
+    pml_clipboard_error: "クリップボードの読み取りに失敗しました",
+    pml_clipboard_empty: "クリップボードに対象のテキストがありません",
+    pml_save_success: "採掘地点を保存しました",
+    pml_delete_confirm: "この採掘地点を削除しますか？",
+    reserve_level_label: "資源埋蔵量 (Reserve Level):",
+
+    // Body Inspector & Signals
+    bio_status_analyzed: "スキャン済",
+    bio_status_predicted: "予測中",
+    bio_status_unscanned: "未スキャン",
+    geo_signals_label: "地質シグナル",
+    bio_signals_label: "生体シグナル",
+    human_signals_label: "人類シグナル",
+    thargoid_signals_label: "サーゴイドシグナル",
+    guardian_signals_label: "ガーディアンシグナル",
+    other_signals_label: "その他のシグナル",
+    ring_hint_icy: "💎 Fleet Carrier燃料（トリチウム / Tritium）採掘適性あり",
+    ring_hint_metallic: "🪙 高価値レーザー採掘（プラチナ / ペイン石等）最適",
+    ring_hint_metal_rich: "🪐 工業用・貴金属素材採掘適性",
+    ring_hint_rocky: "🪨 深部鉱石コア採掘（マスグラバイト / アレキサンドライト等）適性",
+    ring_mass_label: "質量:",
+    ring_inner_rad: "内径:",
+    ring_outer_rad: "外径:",
+    ring_width: "幅:",
+    gravity_label: "重力:",
+    temp_label: "表面温度:",
+    pressure_label: "気圧:",
+    materials_label: "地表素材 (Materials):",
+    atmosphere_label: "大気組成:",
+    composition_label: "天体組成:",
+    volcanism_label: "火山活動:",
+    terraform_state_label: "テラフォーミング:",
+
+    // System List & Cards
+    badge_first_discover: "✨ 1st Discover 登録可能",
+    badge_external_unvisited: "🌐 外部参照 (未訪問)",
+    badge_score: "★ スコア: {score}pt",
+    other_matched_bodies: "他 {count} 件のマッチ天体",
+    single_matched_body: "他 1 件のマッチ天体"
   },
   en: {
     // Header
@@ -764,6 +849,7 @@ const i18n = {
     shared_system: "Shared System",
     shared_by_label: "Shared By",
     unshare_label: "Unshare",
+    share_label: "Share",
     import_sig_ok: "✓ SHA-256 signature verified: Authentic package",
     import_sig_warn: "⚠️ Signature mismatch. Package may be modified or corrupted.",
     import_success: "systems imported successfully.",
@@ -813,15 +899,99 @@ const i18n = {
     sync_spansh_success: "Spansh sync complete: {bodies} bodies updated, {hotspots} hotspots, {pml} PMLs found",
     section_ring_hotspots: "🪐 Ring Mining Hotspots",
     no_ring_hotspots: "No ring hotspots recorded for this system (unmapped or not yet in Spansh)",
-    hotspot_label: "🎯 Hotspots:"
+    hotspot_label: "🎯 Hotspots:",
+
+    // Time & Units
+    hours_unit: "h",
+    days_unit: "d",
+
+    // Mining View & Summaries
+    mining_summary_title: "⛏️ System Mining Summary",
+    mining_summary_desc: "Mining & Landable Bodies Summary",
+    mining_econ_boom: "[Economy State: Boom] High demand and sell prices for all minerals and commodities",
+    mining_econ_expansion: "[Economy State: Expansion] Increased demand for industrial and precious metals",
+    mining_econ_investment: "[Economy State: Investment] Favorable market prices for precious metals and high-value ores",
+    mining_econ_civil_liberty: "[Economy State: Civil Liberty] High security stability makes mining and freight transport very safe",
+    mining_econ_neutral: "[Economy State: {state}] No notable mining buffs or debuffs",
+    mining_rings_count: "Ringed Bodies: {count}",
+    mining_hotspots_count: "Ring Hotspots: {count}",
+    mining_pml_count: "Planetary Mining Locations (PML): {count}",
+    mining_landables_count: "Landable Bodies: {count}",
+    mining_high_g_count: "High-G Landings (3G+): {count}",
+    mining_bio_sigs_count: "Bio Signal Bodies: {count}",
+    mining_geo_sigs_count: "Geo Signal Bodies: {count}",
+    mining_subfilter_all: "All",
+    mining_subfilter_rings: "Ringed",
+    mining_subfilter_pml: "PML Sites",
+    mining_subfilter_hotspots: "Hotspots",
+    mining_subfilter_landables: "Landables",
+    mining_subfilter_high_g: "High-G (3G+)",
+    mining_subfilter_geobio: "Geo/Bio",
+    mining_no_results: "No matching mining or landable bodies found.",
+
+    // PML (Planetary Mining Locations)
+    btn_add_pml: "➕ Add Mining Location",
+    btn_quick_paste: "📋 Quick Paste from Clipboard",
+    pml_panel_title: "🦏 Rhino Mining Sites",
+    pml_modal_title: "🦏 Register Planetary Mining Location (PML)",
+    pml_name_label: "Site Name:",
+    pml_name_placeholder: "e.g. Site Alpha - High Purity Platinum...",
+    pml_lat_label: "Latitude:",
+    pml_lon_label: "Longitude:",
+    pml_target_mat_label: "Target Material:",
+    pml_notes_label: "Notes:",
+    pml_save_btn: "💾 Save Location",
+    pml_cancel_btn: "Cancel",
+    pml_delete_btn: "🗑️ Delete",
+    pml_clipboard_error: "Failed to read clipboard",
+    pml_clipboard_empty: "No valid text found in clipboard",
+    pml_save_success: "Mining location saved",
+    pml_delete_confirm: "Delete this mining location?",
+    reserve_level_label: "Reserve Level:",
+
+    // Body Inspector & Signals
+    bio_status_analyzed: "Analyzed",
+    bio_status_predicted: "Predicted",
+    bio_status_unscanned: "Unscanned",
+    geo_signals_label: "Geological Signals",
+    bio_signals_label: "Biological Signals",
+    human_signals_label: "Human Signals",
+    thargoid_signals_label: "Thargoid Signals",
+    guardian_signals_label: "Guardian Signals",
+    other_signals_label: "Other Signals",
+    ring_hint_icy: "💎 Suitable for Fleet Carrier fuel (Tritium) mining",
+    ring_hint_metallic: "🪙 Optimal for high-value laser mining (Platinum, Painite, etc.)",
+    ring_hint_metal_rich: "🪐 Suitable for industrial and precious metal mining",
+    ring_hint_rocky: "🪨 Suitable for deep core mining (Musgravite, Alexandrite, etc.)",
+    ring_mass_label: "Mass:",
+    ring_inner_rad: "Inner:",
+    ring_outer_rad: "Outer:",
+    ring_width: "Width:",
+    gravity_label: "Gravity:",
+    temp_label: "Surface Temp:",
+    pressure_label: "Pressure:",
+    materials_label: "Surface Materials:",
+    atmosphere_label: "Atmosphere:",
+    composition_label: "Composition:",
+    volcanism_label: "Volcanism:",
+    terraform_state_label: "Terraform State:",
+
+    // System List & Cards
+    badge_first_discover: "✨ 1st Discover Eligible",
+    badge_external_unvisited: "🌐 External (Unvisited)",
+    badge_score: "★ Score: {score}pt",
+    other_matched_bodies: "+{count} other matched bodies",
+    single_matched_body: "+1 other matched body"
   }
 };
 
 let currentLang = 'ja';
 try {
-  const saved = localStorage.getItem("ed_lang");
-  if (saved === 'ja' || saved === 'en') {
-    currentLang = saved;
+  if (typeof localStorage !== 'undefined') {
+    const saved = localStorage.getItem("ed_lang");
+    if (saved === 'ja' || saved === 'en') {
+      currentLang = saved;
+    }
   }
 } catch (e) {
   console.warn("Could not read localStorage for ed_lang:", e);
@@ -837,16 +1007,21 @@ function t(key) {
 function setLanguage(lang, skipServerSync = false) {
   if (lang !== 'ja' && lang !== 'en') return;
   currentLang = lang;
+  if (typeof window !== 'undefined') {
+    window.currentLang = lang;
+  }
   try {
-    localStorage.setItem("ed_lang", lang);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem("ed_lang", lang);
+    }
   } catch (e) {
     console.warn("Could not save language to localStorage:", e);
   }
-  if (document.documentElement) {
+  if (typeof document !== 'undefined' && document.documentElement) {
     document.documentElement.lang = lang;
   }
 
-  if (!skipServerSync) {
+  if (!skipServerSync && typeof fetch === 'function') {
     fetch('/api/app_settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -860,6 +1035,7 @@ function setLanguage(lang, skipServerSync = false) {
 }
 
 async function syncLanguageFromServer() {
+  if (typeof fetch !== 'function') return;
   try {
     const res = await fetch('/api/app_settings');
     if (res.ok) {
@@ -873,4 +1049,20 @@ async function syncLanguageFromServer() {
   } catch (e) {
     console.warn('syncLanguageFromServer error:', e);
   }
+}
+
+if (typeof window !== 'undefined') {
+  window.i18n = i18n;
+  window.t = t;
+  window.setLanguage = setLanguage;
+  window.currentLang = currentLang;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    i18n,
+    t,
+    setLanguage,
+    getCurrentLang: () => currentLang
+  };
 }
