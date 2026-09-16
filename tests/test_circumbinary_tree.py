@@ -309,19 +309,83 @@ def build_system_map_tree(flat_bodies, system_name):
                 else:
                     p["moons"].append(sm)
                     
+    # 5.5 Extract Asteroid Belts from Stars and add as independent orbital nodes in the rail
+    for s in stars:
+        raw_rings = s.get("rings_list")
+        if not raw_rings and s.get("rings") and s.get("rings") not in ['[]', '""']:
+            try:
+                raw_rings = json.loads(s.get("rings")) if isinstance(s.get("rings"), str) else s.get("rings")
+            except Exception:
+                raw_rings = []
+        raw_rings = raw_rings if isinstance(raw_rings, list) else []
+        belt_items = [r for r in raw_rings if r and "belt" in (r.get("Name") or "").lower()]
+
+        if belt_items:
+            s_group = s.get("starGroup") or "A"
+            sec = get_or_create_section(s_group, s)
+            for b_idx, belt in enumerate(belt_items):
+                belt_avg_dist_m = ((belt.get("InnerRad", 0) + belt.get("OuterRad", 0)) / 2.0) if (belt.get("InnerRad") and belt.get("OuterRad")) else (belt.get("InnerRad") or belt.get("OuterRad") or 0)
+                belt_dist_ls = (belt_avg_dist_m / 299792458.0) if belt_avg_dist_m else s.get("distance_from_arrival_ls", 0)
+                
+                clean_short_name = belt.get("Name") or "Belt"
+                if system_name and clean_short_name.startswith(system_name):
+                    clean_short_name = clean_short_name[len(system_name):].strip()
+                if s.get("starGroup") and clean_short_name.startswith(s.get("starGroup") + " "):
+                    clean_short_name = clean_short_name[len(s.get("starGroup")) + 1:].strip()
+                clean_short_name = re.sub(r'^Asteroid\s+Belt', 'Belt', clean_short_name, flags=re.IGNORECASE).strip()
+                if not clean_short_name:
+                    clean_short_name = f"Belt {b_idx + 1}"
+
+                belt_node = {
+                    "body_id": f"belt-{s.get('body_id')}-{b_idx}",
+                    "body_name": belt.get("Name") or f"{s.get('body_name')} Belt",
+                    "shortName": clean_short_name,
+                    "starGroup": s_group,
+                    "isStar": False,
+                    "isAsteroidBelt": True,
+                    "planetNum": None,
+                    "semi_major_axis": belt_avg_dist_m,
+                    "distance_from_arrival_ls": belt_dist_ls,
+                    "planet_class": "Asteroid Belt",
+                    "level": 1,
+                    "moons": [],
+                    "submoons": []
+                }
+                sec["planets"].append(belt_node)
+
+    def get_body_orbital_distance_ls(body, parent_star=None):
+        sma = body.get("semi_major_axis")
+        if sma is not None and sma > 0:
+            return sma / 299792458.0
+        dist = body.get("distance_from_arrival_ls")
+        if dist is not None:
+            if parent_star and parent_star.get("distance_from_arrival_ls") is not None:
+                return abs(dist - parent_star.get("distance_from_arrival_ls", 0))
+            return dist
+        return 0.0
+
     star_sections = list(star_map.values())
     star_sections.sort(key=lambda s: get_star_group_sort_score(s["starKey"]))
     
     for sec in star_sections:
+        parent_star = sec.get("rootStar")
         sec["planets"].sort(key=lambda p: (
-            p.get("semi_major_axis") if p.get("semi_major_axis") is not None else p.get("distance_from_arrival_ls", 0),
+            round(get_body_orbital_distance_ls(p, parent_star), 3),
             p.get("planetNum") if p.get("planetNum") is not None else 0,
-            p.get("body_id", 0)
+            p.get("body_id") if isinstance(p.get("body_id"), int) else 0
         ))
         for p in sec["planets"]:
-            p["moons"].sort(key=lambda m: (m.get("moonLetter") or "", m.get("distance_from_arrival_ls", 0)))
+            p["moons"].sort(key=lambda m: (
+                m.get("moonLetter") or "",
+                round(get_body_orbital_distance_ls(m), 3),
+                m.get("body_id") if isinstance(m.get("body_id"), int) else 0
+            ))
             for m in p["moons"]:
-                m["submoons"].sort(key=lambda sm: (sm.get("submoonLetter") or "", sm.get("distance_from_arrival_ls", 0)))
+                m["submoons"].sort(key=lambda sm: (
+                    sm.get("submoonLetter") or "",
+                    round(get_body_orbital_distance_ls(sm), 3),
+                    sm.get("body_id") if isinstance(sm.get("body_id"), int) else 0
+                ))
                 
     return star_sections
 
@@ -499,4 +563,75 @@ def test_special_stars_sagittarius_a():
     assert js_tree[0]["rootStar"]["body_name"] == "Sagittarius A*"
     assert js_tree[1]["starKey"] == "B"
     assert js_tree[1]["rootStar"]["body_name"] == "Source 2"
+
+
+def test_planet_orbital_distance_sorting_mixed_units():
+    """Verify that planets with SemiMajorAxis (meters) and distance_from_arrival_ls (light seconds)
+    are sorted strictly by actual orbital distance in light seconds from the host star."""
+    # Body 1: Star A at 0 ls
+    # Body 2: Planet 2 with semi_major_axis = 1.496e11 m (~499 Ls)
+    # Body 3: Planet 1 with distance_from_arrival_ls = 100 Ls (no semi_major_axis, e.g. uncompleted scan)
+    # Body 4: Planet 3 with semi_major_axis = 3.0e11 m (~1000 Ls)
+    # Body 5: Planet 4 with distance_from_arrival_ls = 2000 Ls
+    bodies = [
+        {"body_id": 1, "body_name": "Proxima Centauri", "star_type": "M", "parents": '[{"Null": 0}]', "distance_from_arrival_ls": 0.0},
+        {"body_id": 2, "body_name": "Proxima Centauri 2", "planet_class": "Earthlike body", "parents": '[{"Star": 1}]', "semi_major_axis": 149597870700.0, "distance_from_arrival_ls": 499.0},
+        {"body_id": 3, "body_name": "Proxima Centauri 1", "planet_class": "Metal rich body", "parents": '[{"Star": 1}]', "distance_from_arrival_ls": 100.0},
+        {"body_id": 4, "body_name": "Proxima Centauri 3", "planet_class": "Gas giant with water based life", "parents": '[{"Star": 1}]', "semi_major_axis": 299792458000.0, "distance_from_arrival_ls": 1000.0},
+        {"body_id": 5, "body_name": "Proxima Centauri 4", "planet_class": "Icy body", "parents": '[{"Star": 1}]', "distance_from_arrival_ls": 2000.0},
+    ]
+    tree = build_system_map_tree(bodies, "Proxima Centauri")
+    assert len(tree) == 1
+    planets = tree[0]["planets"]
+    assert [p["shortName"] for p in planets] == [
+        "1",                    # 100 Ls
+        "2",                    # ~499 Ls (1.496e11 m)
+        "3",                    # 1000 Ls (3.0e11 m)
+        "4"                     # 2000 Ls
+    ]
+
+    # Verify directly via system_map.js Node execution
+    js_tree = run_js_build_system_map_tree(bodies, "Proxima Centauri")
+    assert len(js_tree) == 1
+    js_planets = js_tree[0]["planets"]
+    assert [p["shortName"] for p in js_planets] == ["1", "2", "3", "4"]
+
+
+def test_asteroid_belt_orbital_distance_sorting():
+    """Verify that Asteroid Belts on the star are positioned accurately by orbital radius between planets."""
+    # Star A at 0 Ls with an asteroid belt between 200 Ls and 300 Ls (avg 250 Ls = ~7.5e10 m)
+    # Planet 1 at 100 Ls
+    # Planet 2 at 500 Ls
+    bodies = [
+        {
+            "body_id": 1,
+            "body_name": "Alpha Test A",
+            "star_type": "G",
+            "parents": '[{"Null": 0}]',
+            "distance_from_arrival_ls": 0.0,
+            "rings_list": [
+                {
+                    "Name": "Alpha Test A Asteroid Belt",
+                    "RingClass": "eRingClass_MetalRich",
+                    "InnerRad": 60000000000.0,  # ~200 Ls
+                    "OuterRad": 90000000000.0,  # ~300 Ls
+                    "MassMT": 5000000.0
+                }
+            ]
+        },
+        {"body_id": 2, "body_name": "Alpha Test A 1", "planet_class": "Metal rich body", "parents": '[{"Star": 1}]', "distance_from_arrival_ls": 100.0},
+        {"body_id": 3, "body_name": "Alpha Test A 2", "planet_class": "High metal content body", "parents": '[{"Star": 1}]', "distance_from_arrival_ls": 500.0},
+    ]
+    tree = build_system_map_tree(bodies, "Alpha Test")
+    assert len(tree) == 1
+    planets = tree[0]["planets"]
+    # Order should strictly be: Planet 1 (100 Ls) -> Belt (250 Ls) -> Planet 2 (500 Ls)
+    assert [p["shortName"] for p in planets] == ["A 1", "Belt", "A 2"]
+
+    # Verify directly via system_map.js Node execution
+    js_tree = run_js_build_system_map_tree(bodies, "Alpha Test")
+    assert len(js_tree) == 1
+    js_planets = js_tree[0]["planets"]
+    assert [p["shortName"] for p in js_planets] == ["A 1", "Belt", "A 2"]
+
 
