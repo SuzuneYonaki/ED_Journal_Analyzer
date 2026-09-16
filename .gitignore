@@ -37,6 +37,8 @@ species/
 
 # Release summaries (kept locally for GitHub Releases drafting)
 RELEASE_SUMMARY*.md
+RELEASE_NOTES*.md
+RELEASE_NOTES.md
 
 # Scratch scripts & temporary verification files
 /scratch/
