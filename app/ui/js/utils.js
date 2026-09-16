@@ -31,6 +31,17 @@ function formatSecondsToDaysOrHours(sec) {
   return `${days.toFixed(1)} ${dUnit}`;
 }
 
+// HTML Escaper
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Markdown Parser
 function parseMarkdown(md) {
   if (!md) return '';
@@ -285,6 +296,7 @@ if (typeof window !== 'undefined') {
   window.formatNumber = formatNumber;
   window.formatDistance = formatDistance;
   window.formatSecondsToDaysOrHours = formatSecondsToDaysOrHours;
+  window.escapeHtml = escapeHtml;
   window.parseMarkdown = parseMarkdown;
   window.parseRingClass = parseRingClass;
   window.parseReserveLevel = parseReserveLevel;
@@ -295,3 +307,23 @@ if (typeof window !== 'undefined') {
   window.getModuleSettings = getModuleSettings;
   window.saveModuleSettings = saveModuleSettings;
 }
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    formatCredits,
+    formatNumber,
+    formatDistance,
+    formatSecondsToDaysOrHours,
+    escapeHtml,
+    parseMarkdown,
+    parseRingClass,
+    parseReserveLevel,
+    getStarTypeStyle,
+    getBodyIconClass,
+    getBodyIconLabel,
+    defaultModuleSettings,
+    getModuleSettings,
+    saveModuleSettings
+  };
+}
+
