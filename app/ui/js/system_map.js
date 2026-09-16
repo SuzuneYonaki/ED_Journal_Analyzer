@@ -341,7 +341,15 @@ function buildSystemMapTree(flatBodies, systemName) {
         ? (sGroup.length > 2 ? `Multi-Star Orbit [${sGroup}]` : `Circumbinary Orbit [${sGroup}]`)
         : 'Star System',
       barycentreStars: sGroup.split(''),
-      distance_from_arrival_ls: sampleBody ? sampleBody.distance_from_arrival_ls : 0,
+      distance_from_arrival_ls: (() => {
+        if (rootStars && rootStars.length > 0) {
+          const memberStars = rootStars.filter(s => sGroup.includes(starLetterMap.get(s.body_id) || ''));
+          if (memberStars.length > 0) {
+            return memberStars.reduce((sum, s) => sum + (s.distance_from_arrival_ls || 0), 0) / memberStars.length;
+          }
+        }
+        return 0;
+      })(),
       level: 0,
       moons: [],
       submoons: []
@@ -507,11 +515,19 @@ function buildSystemMapTree(flatBodies, systemName) {
   });
 
   // Helper to get orbital distance in Light Seconds (Ls) for comparison:
-  // SemiMajorAxis is in meters (m) in ED Journal; convert to Ls (m / 299792458).
-  // Fallback to distance_from_arrival_ls if semi_major_axis is not present.
+  // - If body orbits an intermediate/sub-barycentre (binary planet pair), semi_major_axis is
+  //   only the mutual orbit radius around that local barycentre, NOT around the host star/system.
+  //   In this case, distance_from_arrival_ls relative to the parent star/barycentre is used.
+  // - Otherwise, SemiMajorAxis in meters (m) is converted to Ls (m / 299792458).
+  // - Fallback to distance_from_arrival_ls if semi_major_axis is not present.
   function getBodyOrbitalDistanceLs(body, parentStar) {
-    if (body.semi_major_axis !== undefined && body.semi_major_axis !== null && body.semi_major_axis > 0) {
-      return body.semi_major_axis / 299792458.0;
+    const parentsList = parseParentsList(body.parents);
+    const orbitsSubBarycentre = parentsList.length > 1 && parentsList[0].Null !== undefined;
+
+    if (!orbitsSubBarycentre) {
+      if (body.semi_major_axis !== undefined && body.semi_major_axis !== null && body.semi_major_axis > 0) {
+        return body.semi_major_axis / 299792458.0;
+      }
     }
     if (body.distance_from_arrival_ls !== undefined && body.distance_from_arrival_ls !== null) {
       if (parentStar && parentStar.distance_from_arrival_ls !== undefined && parentStar.distance_from_arrival_ls !== null) {
@@ -524,7 +540,7 @@ function buildSystemMapTree(flatBodies, systemName) {
 
   // 6. Natural Sorting:
   // - Sort Star Sections by getStarGroupSortScore (A, AB, B, BC, C, CD, D, ABCD, E...)
-  // - Sort Planets by orbital distance in light seconds / planetNum ascending
+  // - Sort Planets by planetNum / orbital distance in light seconds ascending
   // - Sort Moons by moonLetter / distance ascending
   // - Sort Submoons by submoonLetter / distance ascending
   const starSections = Array.from(starMap.values());
@@ -533,6 +549,9 @@ function buildSystemMapTree(flatBodies, systemName) {
   starSections.forEach(sec => {
     const parentStar = sec.rootStar;
     sec.planets.sort((a, b) => {
+      if (a.planetNum !== null && b.planetNum !== null && a.planetNum !== b.planetNum) {
+        return a.planetNum - b.planetNum;
+      }
       const distA = getBodyOrbitalDistanceLs(a, parentStar);
       const distB = getBodyOrbitalDistanceLs(b, parentStar);
       if (Math.abs(distA - distB) > 0.001) {
