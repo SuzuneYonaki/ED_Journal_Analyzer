@@ -66,7 +66,7 @@ function renderMiningView(container, bodies) {
 
       const reserveInfo = parseReserveLevel(item.reserve_level);
       const reserveBadge = reserveInfo ? `<span class="tag-badge" style="background: rgba(34, 197, 94, 0.15); color: ${reserveInfo.color}; border: 1px solid rgba(34, 197, 94, 0.35); font-size: 0.7rem;">
-        ${reserveInfo.icon} ${reserveInfo.ja}
+        ${reserveInfo.icon} ${reserveInfo.label || reserveInfo.name}
       </span>` : '';
 
       const hsBadges = Object.entries(item.hotspots).map(([mineral, count]) => {
@@ -102,7 +102,7 @@ function renderMiningView(container, bodies) {
             <div style="display: flex; gap: 4px; align-items: center;">
               ${rBadge}
               ${reserveBadge}
-              <button class="btn-page btn-ring-body-detail" data-body-id="${item.body_id}" style="padding: 2px 8px; font-size: 0.7rem; cursor: pointer;">🔍 詳細</button>
+              <button class="btn-page btn-ring-body-detail" data-body-id="${item.body_id}" style="padding: 2px 8px; font-size: 0.7rem; cursor: pointer;">${t('btn_body_detail') || '🔍 詳細'}</button>
             </div>
           </div>
           <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
@@ -119,9 +119,9 @@ function renderMiningView(container, bodies) {
         </span>
         <div style="display: flex; gap: 6px; align-items: center;">
           <span class="tag-badge" style="background: rgba(250, 204, 21, 0.18); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.4); font-weight: bold;">
-            🎯 検出: ${hotspotsList.length} 環
+            🎯 ${(t('detected_count') || '検出: {count}').replace('{count}', hotspotsList.length)} ${(t('section_rings') || '環')}
           </span>
-          <button id="btn-mining-spansh-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; background: rgba(250, 204, 21, 0.2); border-color: #facc15; color: #facc15; cursor: pointer;">🪐 Spansh照会</button>
+          <button id="btn-mining-spansh-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; background: rgba(250, 204, 21, 0.2); border-color: #facc15; color: #facc15; cursor: pointer;">${t('btn_sync_spansh') || '🪐 Spansh照会'}</button>
         </div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -149,23 +149,23 @@ function renderMiningView(container, bodies) {
           const curAddr = (state.selectedSystem && state.selectedSystem.system_address) || (state.currentSystemData && state.currentSystemData.system && state.currentSystemData.system.system_address);
           if (!curAddr) return;
           btnSpansh.disabled = true;
-          btnSpansh.innerHTML = '⏳ 照会中...';
+          btnSpansh.innerHTML = t('sync_spansh_querying') || '⏳ 照会中...';
           try {
             const resp = await fetch(`/api/systems/${curAddr}/spansh_sync`, { method: 'POST' });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             const resData = await resp.json();
-            btnSpansh.innerHTML = `✓ 完了 (${resData.hotspots_found || 0} HS)`;
+            btnSpansh.innerHTML = (t('sync_spansh_done') || '✓ 完了 ({count} HS)').replace('{count}', resData.hotspots_found || 0);
             setTimeout(() => {
               btnSpansh.disabled = false;
-              btnSpansh.innerHTML = '🪐 Spansh照会';
+              btnSpansh.innerHTML = t('btn_sync_spansh') || '🪐 Spansh照会';
             }, 2000);
             await selectSystem(curAddr, true, false);
           } catch (err) {
             console.error('Failed Spansh sync in mining view:', err);
             btnSpansh.disabled = false;
-            btnSpansh.innerHTML = '❌ 照会失敗';
+            btnSpansh.innerHTML = t('sync_spansh_failed') || '❌ 照会失敗';
             setTimeout(() => {
-              btnSpansh.innerHTML = '🪐 Spansh照会';
+              btnSpansh.innerHTML = t('btn_sync_spansh') || '🪐 Spansh照会';
             }, 2000);
           }
         });
@@ -187,8 +187,8 @@ function renderMiningView(container, bodies) {
       const infoBanner = document.createElement('div');
       infoBanner.style.cssText = 'background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #cbd5e1;';
       infoBanner.innerHTML = `
-        <div style="font-weight: bold; color: #38bdf8; font-size: 0.85rem; margin-bottom: 4px;">⛏️ 星系採掘サマリー</div>
-        <div>この星系には着陸可能な陸上天体はありませんが、<b>${systemRingHotspots.length} 環</b>で環状帯ホットスポットが検出されています。</div>
+        <div style="font-weight: bold; color: #38bdf8; font-size: 0.85rem; margin-bottom: 4px;">${t('mining_summary_title') || '⛏️ 星系採掘サマリー'}</div>
+        <div>${(t('ring_hotspots_desc') || 'この星系には着陸可能な陸上天体はありませんが、<b>{count} 環</b>で環状帯ホットスポットが検出されています。').replace('{count}', systemRingHotspots.length)}</div>
       `;
       wrapper.appendChild(infoBanner);
       wrapper.appendChild(buildRingHotspotCard(systemRingHotspots));
@@ -201,7 +201,7 @@ function renderMiningView(container, bodies) {
       <div style="color: var(--text-secondary); text-align: center; margin-top: 40px; padding: 20px;">
         <div style="font-size: 2rem; margin-bottom: 8px;">⛏️</div>
         <div style="font-size: 1.1rem; font-weight: bold; color: #fff;">${t('no_landable_bodies')}</div>
-        <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 6px;">この星系には着陸（Landable）可能な天体、および環ホットスポット採掘対象は存在しません。</div>
+        <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 6px;">${t('mining_no_data_prompt') || 'この星系には着陸（Landable）可能な天体、および環ホットスポット採掘対象は存在しません。'}</div>
       </div>
     `;
     return;
@@ -249,64 +249,72 @@ function renderMiningView(container, bodies) {
   if (sStateLower.includes('boom')) {
     stateImpactHtml = `
       <div style="background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-        <span style="color: #4ade80; font-weight: bold; font-size: 0.76rem;">📈 【星系経済状態: Boom (好況)】採掘物資の高額売却ボーナス & 需要急増中！Rhino採掘素材の放出やミッションに最適な状態です。</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; background: rgba(34, 197, 94, 0.2); border-color: #4ade80; color: #4ade80; cursor: pointer;">🔄 EDSM最新状態同期</button>
+        <span style="color: #4ade80; font-weight: bold; font-size: 0.76rem;">📈 ${t('mining_econ_boom_desc') || '【星系経済状態: Boom (好況)】採掘物資の高額売却ボーナス & 需要急増中！Rhino採掘素材の放出やミッションに最適な状態です。'}</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; background: rgba(34, 197, 94, 0.2); border-color: #4ade80; color: #4ade80; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('investment')) {
     stateImpactHtml = `
       <div style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-        <span style="color: #38bdf8; font-weight: bold; font-size: 0.76rem;">💼 【星系経済状態: Investment (投資)】開発・インフラ需要拡大中！工業用金属・鉱物の需要が高まっています。</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">🔄 EDSM最新状態同期</button>
+        <span style="color: #38bdf8; font-weight: bold; font-size: 0.76rem;">💼 ${t('mining_econ_investment_desc') || '【星系経済状態: Investment (投資)】開発・インフラ需要拡大中！工業用金属・鉱物の需要が高まっています。'}</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('expansion')) {
     stateImpactHtml = `
       <div style="background: rgba(192, 132, 252, 0.12); border: 1px solid rgba(192, 132, 252, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-        <span style="color: #c084fc; font-weight: bold; font-size: 0.76rem;">🚀 【星系状態: Expansion (拡張)】勢力拡大フェーズ。素材支援や探査データの価値が向上しています。</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #c084fc; cursor: pointer;">🔄 EDSM最新状態同期</button>
+        <span style="color: #c084fc; font-weight: bold; font-size: 0.76rem;">🚀 ${t('mining_econ_expansion_desc') || '【星系状態: Expansion (拡張)】勢力拡大フェーズ。素材支援や探査データの価値が向上しています。'}</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #c084fc; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('war') || sStateLower.includes('civil war')) {
     stateImpactHtml = `
       <div style="background: rgba(248, 113, 113, 0.12); border: 1px solid rgba(248, 113, 113, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-        <span style="color: #f87171; font-weight: bold; font-size: 0.76rem;">⚔️ 【星系状態: War / Civil War (戦争)】交戦宙域。鉱物需要が高まる一方、敵対勢力や海賊の活動リスクに注意。</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #f87171; cursor: pointer;">🔄 EDSM最新状態同期</button>
+        <span style="color: #f87171; font-weight: bold; font-size: 0.76rem;">⚔️ ${t('mining_econ_war') || '【星系状態: War / Civil War (戦争)】交戦宙域。鉱物需要が高まる一方、敵対勢力や海賊の活動リスクに注意。'}</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #f87171; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('famine') || sStateLower.includes('outbreak')) {
+    const crisisMsg = (t('mining_econ_crisis') || '【星系状態: Crisis ({state})】危機状態。特定支援物資の価値が高騰しています。').replace('{state}', escapeHtml(sState));
     stateImpactHtml = `
       <div style="background: rgba(250, 204, 21, 0.12); border: 1px solid rgba(250, 204, 21, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-        <span style="color: #facc15; font-weight: bold; font-size: 0.76rem;">⚠️ 【星系状態: Crisis (${escapeHtml(sState)})】危機状態。特定支援物資の価値が高騰しています。</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #facc15; cursor: pointer;">🔄 EDSM最新状態同期</button>
+        <span style="color: #facc15; font-weight: bold; font-size: 0.76rem;">⚠️ ${crisisMsg}</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #facc15; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('unrest') || sStateLower.includes('lockdown')) {
+    const unrestMsg = (t('mining_econ_unrest') || '【星系状態: 紛争・治安悪化 ({state})】ステーション機能制限や治安悪化の懸念があります。輸送時の海賊にご注意ください。').replace('{state}', escapeHtml(sState));
     stateImpactHtml = `
       <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-        <span style="color: #f87171; font-size: 0.76rem;">⚠️ 【星系状態: 紛争・治安悪化 (${escapeHtml(sState)})】ステーション機能制限や治安悪化の懸念があります。輸送時の海賊にご注意ください。</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #f87171; cursor: pointer;">🔄 EDSM最新状態同期</button>
+        <span style="color: #f87171; font-size: 0.76rem;">⚠️ ${unrestMsg}</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #f87171; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('bust')) {
     stateImpactHtml = `
       <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-        <span style="color: #facc15; font-size: 0.76rem;">📉 【星系状態: Bust (不況)】市場価格が低迷傾向です。近隣の好況星系（Boom）での売却を推奨します。</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #facc15; cursor: pointer;">🔄 EDSM最新状態同期</button>
+        <span style="color: #facc15; font-size: 0.76rem;">📉 ${t('mining_econ_bust_desc') || '【星系状態: Bust (不況)】市場価格が低迷傾向です。近隣の好況星系（Boom）での売却を推奨します。'}</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #facc15; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (curSys.population === 0) {
     stateImpactHtml = `
       <div style="background: rgba(100, 116, 139, 0.08); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-        <span style="color: #94a3b8; font-size: 0.76rem;">🌌 【無人星系】ステーション等はありませんが、未開拓の豊富な資源（Pristine Reserves等）に恵まれた採掘適地です。</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">🔄 EDSM最新状態同期</button>
+        <span style="color: #94a3b8; font-size: 0.76rem;">🌌 ${t('mining_econ_uninhabited') || '【無人星系】ステーション等はありませんが、未開拓の豊富な資源（Pristine Reserves等）に恵まれた採掘適地です。'}</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else {
+    const factionStr = curSys.controlling_faction ? (t('faction_label') || '| 支配: {faction}').replace('{faction}', escapeHtml(curSys.controlling_faction)) : '';
+    const resStr = curSys.system_reserve ? (t('reserve_label') || '| 埋蔵量: {reserve}').replace('{reserve}', escapeHtml(curSys.system_reserve)) : '';
+    const stateLabel = (t('mining_econ_status_label') || '🏛️ 星系状態: {state} {faction} {reserve}')
+      .replace('{state}', sState ? escapeHtml(sState) : 'None')
+      .replace('{faction}', factionStr)
+      .replace('{reserve}', resStr);
     stateImpactHtml = `
       <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-        <span style="color: var(--text-secondary); font-size: 0.76rem;">🏛️ 星系状態: ${sState ? escapeHtml(sState) : '平常 (None)'} ${curSys.controlling_faction ? `| 支配: ${escapeHtml(curSys.controlling_faction)}` : ''} ${curSys.system_reserve ? `| 埋蔵量: ${escapeHtml(curSys.system_reserve)}` : ''}</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">🔄 EDSM最新状態同期</button>
+        <span style="color: var(--text-secondary); font-size: 0.76rem;">${stateLabel}</span>
+        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   }
@@ -320,16 +328,16 @@ function renderMiningView(container, bodies) {
         <span>⛏️</span> <span>${t('mining_field_guide_title') || '採掘・Landable天体サマリー'}</span>
       </span>
       <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-        <span class="tag-badge" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">🪐 着陸可能: ${totalLandable} 天体</span>
-        <span class="tag-badge" style="background: rgba(0, 255, 136, 0.15); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.35);">⛏️ 採掘地点: ${totalMiningSignals} 箇所</span>
-        ${ringedBodies.length > 0 ? `<span class="tag-badge" style="background: rgba(244, 114, 182, 0.18); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.4);">💍 環付きLandable: ${ringedBodies.length} 天体</span>` : ''}
+        <span class="tag-badge" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">${(t('mining_landable_count') || '🪐 着陸可能:').replace(':', '')}: ${totalLandable} ${(t('other_matched_bodies') || '天体').includes('bodies') ? 'bodies' : '天体'}</span>
+        <span class="tag-badge" style="background: rgba(0, 255, 136, 0.15); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.35);">${(t('mining_locations_total') || '⛏️ 採掘地点:').replace(':', '')}: ${totalMiningSignals} ${(t('mining_locations_total') || '').includes('Total') ? 'locations' : '箇所'}</span>
+        ${ringedBodies.length > 0 ? `<span class="tag-badge" style="background: rgba(244, 114, 182, 0.18); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.4);">${(t('mining_ringed_landables_count') || '💍 環付きLandable: {count} 天体').replace('{count}', ringedBodies.length)}</span>` : ''}
       </div>
     </div>
     ${stateImpactHtml}
     <div style="color: var(--text-secondary); margin-top: 6px; line-height: 1.45; font-size: 0.73rem; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 6px;">
-      ・<b>推奨天体</b>: <b>Rocky / Metal Rich / HMC</b> はバストネサイト（Bastnäsite）等の希少鉱石・高価値素材の主産地。<br>
-      ・<b>天体半径 & 重力</b>: 大半径天体は平坦な平原が広がりやすく操縦・リグ展開に有利。高重力(3G+)での着陸には注意。<br>
-      ・<b>環付きLandable</b>: 景観美に加え、固有の鉱物密集地帯としてコミュニティで最重要探索対象。
+      ・${t('mining_guide_surface') || '推奨天体: Rocky / Metal Rich / HMC はバストネサイト（Bastnäsite）等の希少鉱石・高価値素材の主産地。'}<br>
+      ・${t('mining_guide_gravity') || '天体半径 & 重力: 大半径天体は平坦な平原が広がりやすく操縦・リグ展開に有利。高重力(3G+)での着陸には注意。'}<br>
+      ・${t('mining_guide_ringed') || '環付きLandable: 景観美に加え、固有の鉱物密集地帯としてコミュニティで最重要探索対象。'}
     </div>
   `;
   wrapper.appendChild(guideCard);
@@ -346,22 +354,22 @@ function renderMiningView(container, bodies) {
         e.stopPropagation();
         if (!curSys.system_address) return;
         btnMiningSync.disabled = true;
-        btnMiningSync.innerHTML = '⏳ 取得中...';
+        btnMiningSync.innerHTML = t('sync_edsm_syncing') || '⏳ 取得中...';
         try {
           const resp = await fetch(`/api/systems/${curSys.system_address}/edsm_sync`, { method: 'POST' });
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           await selectSystem(curSys.system_address, true, false);
-          btnMiningSync.innerHTML = '✓ 更新完了';
+          btnMiningSync.innerHTML = t('sync_edsm_done') || '✓ 更新完了';
           setTimeout(() => {
             btnMiningSync.disabled = false;
-            btnMiningSync.innerHTML = '🔄 EDSM最新状態同期';
+            btnMiningSync.innerHTML = t('btn_sync_edsm') || '🔄 EDSM最新状態同期';
           }, 1500);
         } catch (err) {
           console.error('Failed to sync EDSM in mining view:', err);
           btnMiningSync.disabled = false;
-          btnMiningSync.innerHTML = '❌ 取得失敗';
+          btnMiningSync.innerHTML = t('sync_edsm_failed') || '❌ 取得失敗';
           setTimeout(() => {
-            btnMiningSync.innerHTML = '🔄 EDSM最新状態同期';
+            btnMiningSync.innerHTML = t('btn_sync_edsm') || '🔄 EDSM最新状態同期';
           }, 2000);
         }
       });
@@ -373,14 +381,14 @@ function renderMiningView(container, bodies) {
   subFilterBar.style.cssText = 'display: flex; align-items: center; gap: 6px; flex-wrap: wrap; background: rgba(0,0,0,0.25); padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border-color);';
   
   const subFilters = [
-    { key: 'all', label: `すべて (${totalLandable})`, icon: '🪐' },
+    { key: 'all', label: `${t('mining_subfilter_all') || 'すべて'} (${totalLandable})`, icon: '🪐' },
     { key: 'hmc', label: `HMC (${hmcCount})`, icon: '🪐', color: '#60a5fa' },
     { key: 'metal_rich', label: `Metal Rich (${mrCount})`, icon: '🪐', color: '#fb923c' },
     { key: 'rocky', label: `Rocky (${rockyCount})`, icon: '🪐', color: '#cbd5e1' },
     { key: 'icy', label: `Icy (${icyCount})`, icon: '❄️', color: '#67e8f9' },
     { key: 'rocky_ice', label: `Icy Rocky (${rockyIceCount})`, icon: '🧊', color: '#93c5fd' },
-    { key: 'ringed', label: `💍 Ringed (${ringedBodies.length})`, icon: '', color: '#f472b6' },
-    { key: 'has_mining', label: `⛏️ 採掘地点あり (${landableBodies.filter(b => (b.mining_signals || 0) > 0).length})`, icon: '', color: '#38bdf8' }
+    { key: 'ringed', label: `${t('mining_subfilter_rings') || '💍 Ringed'} (${ringedBodies.length})`, icon: '', color: '#f472b6' },
+    { key: 'has_mining', label: (t('mining_subfilter_has_mining') || '⛏️ 採掘地点あり ({count})').replace('{count}', landableBodies.filter(b => (b.mining_signals || 0) > 0).length), icon: '', color: '#38bdf8' }
   ];
 
   subFilters.forEach(sf => {
@@ -400,7 +408,7 @@ function renderMiningView(container, bodies) {
   if (displayBodies.length === 0) {
     const emptySub = document.createElement('div');
     emptySub.style.cssText = 'color: var(--text-secondary); text-align: center; padding: 25px;';
-    emptySub.innerText = '選択された絞り込み条件に一致するLandable天体はありません。';
+    emptySub.innerText = t('mining_no_results') || '選択された絞り込み条件に一致するLandable天体はありません。';
     wrapper.appendChild(emptySub);
   } else {
     displayBodies.forEach(body => {
@@ -473,7 +481,7 @@ function renderMiningView(container, bodies) {
             });
             matHtml = `
               <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.06); align-items: center;">
-                <span style="font-size: 0.68rem; color: var(--text-dim); margin-right: 2px;">地表含有素材:</span>
+                <span style="font-size: 0.68rem; color: var(--text-dim); margin-right: 2px;">${t('materials_label') || '地表素材 (Materials):'}</span>
                 ${matChips.join('')}
               </div>
             `;
@@ -510,7 +518,7 @@ function renderMiningView(container, bodies) {
 
         minedActHtml = `
           <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(56, 189, 248, 0.25); align-items: center;">
-            <span style="font-size: 0.68rem; color: #38bdf8; font-weight: bold; margin-right: 2px;">🦏 Rhino採掘:</span>
+            <span style="font-size: 0.68rem; color: #38bdf8; font-weight: bold; margin-right: 2px;">${t('mining_rhino_sites_label') || '🦏 Rhino採掘:'}</span>
             ${commBadges}
             ${locBadges}
           </div>
@@ -533,7 +541,7 @@ function renderMiningView(container, bodies) {
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                   <span class="node-name" style="font-size: 0.95rem; ${isTarget ? 'color: var(--ed-cyan); font-weight: bold;' : ''}">${body.body_name}</span>
                   ${aliasTag}
-                  <button class="view-btn btn-copy-body-sub" style="padding: 1px 5px; font-size: 0.68rem;" title="天体名をクリップボードにコピー">📋</button>
+                  <button class="view-btn btn-copy-body-sub" style="padding: 1px 5px; font-size: 0.68rem;" title="${t('focus_in_sysmap_tip') || '天体名をクリップボードにコピー'}">📋</button>
                 </div>
                 <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary);">
                   ${formatDistance(body.distance_from_arrival_ls)} LS
@@ -555,28 +563,29 @@ function renderMiningView(container, bodies) {
                     return rList.map(r => {
                       const info = parseRingClass(r.RingClass);
                       const isB = (r.Name || '').toLowerCase().includes('belt');
+                      const rPrefix = t('ring_or_belt_label') || '💍 環:';
                       return `<span class="tag-badge" style="background: ${info.bg}; color: ${info.color}; border: 1px solid ${info.border}; font-weight: bold; box-shadow: 0 0 4px ${info.bg};" title="${r.Name || ''} - ${info.description}">
-                        💍 環: ${info.icon} ${info.nameJa} (${info.nameEn}${isB ? ' Belt' : ''})
+                        ${rPrefix} ${info.icon} ${info.label || info.name}
                       </span>`;
                     }).join(' ');
                   }
-                  return '<span class="tag-badge" style="background: rgba(244, 114, 182, 0.2); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.6); font-weight: bold;">💍 環付き (Ringed Landable)</span>';
+                  return `<span class="tag-badge" style="background: rgba(244, 114, 182, 0.2); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.6); font-weight: bold;">${t('badge_ringed_landable') || '💍 環付き (Ringed Landable)'}</span>`;
                 })()}
                 <span class="tag-badge" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: bold;">
-                  🪐 半径: ${radKm.toLocaleString()} km (直径: ${diamKm.toLocaleString()} km)
+                  ${(t('radius_and_diameter') || '🪐 半径: {radius} km (直径: {diameter} km)').replace('{radius}', radKm.toLocaleString()).replace('{diameter}', diamKm.toLocaleString())}
                 </span>
                 ${state.showMiningGravity ? `<span class="tag-badge" style="${gStyle}">${gVal.toFixed(2)} G</span>` : ''}
                 ${state.showMiningTemp ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-weight: bold;">🌡️ ${Math.round(body.surface_temperature || 0)} K</span>` : ''}
-                ${body.mining_signals > 0 ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.25); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;">⛏️ 採掘地点: ${body.mining_signals} 箇所 (Rhino適格)</span>` : ''}
+                ${body.mining_signals > 0 ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.25); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;">${(t('mining_body_signals_label') || '⛏️ 採掘地点: {count} 箇所 (Rhino適格)').replace('{count}', body.mining_signals)}</span>` : ''}
                 ${suitabilityBadge}
               </div>
 
               <!-- Physical Details & Atmosphere -->
               <div style="display: flex; gap: 12px; margin-top: 5px; font-size: 0.72rem; color: var(--text-secondary); flex-wrap: wrap; align-items: center;">
-                <span style="${state.showMiningTemp ? 'color: #38bdf8; font-weight: bold;' : ''}">表面温度: <b style="color: #fff;">${Math.round(body.surface_temperature || 0)} K (${Math.round((body.surface_temperature || 0) - 273.15)} ℃)</b></span>
-                <span style="${state.showMiningGravity ? 'color: var(--ed-orange); font-weight: bold;' : ''}">重力: <b style="color: #fff;">${gVal.toFixed(2)} G</b></span>
-                <span>大気: <b style="color: #fff;">${body.atmosphere || 'None'}</b></span>
-                ${body.volcanism ? `<span>火山活動: <b style="color: #fff;">${body.volcanism}</b></span>` : ''}
+                <span style="${state.showMiningTemp ? 'color: #38bdf8; font-weight: bold;' : ''}">${t('temp_label') || '表面温度:'} <b style="color: #fff;">${Math.round(body.surface_temperature || 0)} K (${Math.round((body.surface_temperature || 0) - 273.15)} ℃)</b></span>
+                <span style="${state.showMiningGravity ? 'color: var(--ed-orange); font-weight: bold;' : ''}">${t('gravity_label') || '重力:'} <b style="color: #fff;">${gVal.toFixed(2)} G</b></span>
+                <span>${t('atmosphere_label') || '大気:'} <b style="color: #fff;">${body.atmosphere || (t('atmo_none') || 'None')}</b></span>
+                ${body.volcanism ? `<span>${t('volcanism_label') || '火山活動:'} <b style="color: #fff;">${body.volcanism}</b></span>` : ''}
               </div>
 
               ${matHtml}
@@ -679,7 +688,7 @@ function openMiningSiteModal(opts) {
   }
 
   if (opts.isNew) {
-    if (titleEl) titleEl.innerHTML = '<span>➕</span> <span>採掘地点の追加</span>';
+    if (titleEl) titleEl.innerHTML = `<span>➕</span> <span>${t('pml_modal_title_new') || '採掘地点の追加'}</span>`;
     if (idInput) idInput.value = '';
     if (latInput) latInput.value = '';
     if (lonInput) lonInput.value = '';
@@ -688,7 +697,7 @@ function openMiningSiteModal(opts) {
     if (noteInput) noteInput.value = '';
   } else {
     const s = opts.site || {};
-    if (titleEl) titleEl.innerHTML = '<span>⛏️</span> <span>採掘地点の編集</span>';
+    if (titleEl) titleEl.innerHTML = `<span>⛏️</span> <span>${t('pml_modal_title_edit') || '採掘地点の編集'}</span>`;
     if (idInput) idInput.value = s.id || '';
     if (latInput) latInput.value = (s.latitude !== null && s.latitude !== undefined) ? s.latitude : '';
     if (lonInput) lonInput.value = (s.longitude !== null && s.longitude !== undefined) ? s.longitude : '';
@@ -804,28 +813,28 @@ function initMiningSiteModal() {
       };
 
       if (!latRaw || isNaN(parseFloat(latRaw))) {
-        showError('有効な緯度 (-90 ～ +90) を入力してください。');
+        showError(t('pml_err_lat') || '有効な緯度 (-90 ～ +90) を入力してください。');
         return;
       }
       if (!lonRaw || isNaN(parseFloat(lonRaw))) {
-        showError('有効な経度 (-180 ～ +180) を入力してください。');
+        showError(t('pml_err_lon') || '有効な経度 (-180 ～ +180) を入力してください。');
         return;
       }
 
       const lat = parseFloat(latRaw);
       const lon = parseFloat(lonRaw);
       if (lat < -90 || lat > 90) {
-        showError('緯度は -90 ～ +90 の範囲で入力してください。');
+        showError(t('pml_err_lat_range') || '緯度は -90 ～ +90 の範囲で入力してください。');
         return;
       }
       if (lon < -180 || lon > 180) {
-        showError('経度は -180 ～ +180 の範囲で入力してください。');
+        showError(t('pml_err_lon_range') || '経度は -180 ～ +180 の範囲で入力してください。');
         return;
       }
 
       const origText = btnSave.innerHTML;
       btnSave.disabled = true;
-      btnSave.innerHTML = '⏳ 保存中...';
+      btnSave.innerHTML = t('pml_btn_saving') || '⏳ 保存中...';
 
       try {
         if (idVal) {
@@ -874,7 +883,8 @@ function initMiningSiteModal() {
         await refreshMiningSitesForBody(b);
       } catch (err) {
         console.error('Failed to save mining site:', err);
-        showError('保存に失敗しました: ' + (err.message || 'エラーが発生しました'));
+        const errMsg = (t('pml_err_save_failed') || '保存に失敗しました: {error}').replace('{error}', err.message || 'Error');
+        showError(errMsg);
       } finally {
         btnSave.disabled = false;
         btnSave.innerHTML = origText;

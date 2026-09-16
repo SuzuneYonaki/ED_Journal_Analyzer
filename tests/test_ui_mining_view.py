@@ -195,3 +195,74 @@ def test_render_mining_view_landable_body():
     assert res["wrapperExists"] is True
     # guideCard, subFilterBar, and body card
     assert res["childCount"] >= 3
+
+
+def test_mining_view_bilingual_switching():
+    i18n_path = (Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "i18n.js").as_posix()
+    out = run_js_mining_test(f"""
+    const i18nMod = require('{i18n_path}');
+    Object.assign(global, i18nMod);
+
+    state.selectedSystem = {{
+      system_name: "Test Mining System",
+      system_state: "Boom",
+      system_address: 123456
+    }};
+
+    const container = document.createElement('div');
+    const bodies = [
+      {{
+        body_id: 20,
+        body_name: 'Test Miner 1',
+        landable: 1,
+        planet_class: 'High metal content body',
+        surface_gravity_g: 1.2,
+        surface_temperature: 300,
+        radius: 4000000,
+        mining_signals: 3,
+        rings_list: [
+          {{
+            Name: '1 A Ring',
+            RingClass: 'eRingClass_Metalic',
+            Hotspots: {{ 'Platinum': 2 }}
+          }}
+        ]
+      }}
+    ];
+
+    // Japanese rendering
+    setLanguage('ja');
+    renderMiningView(container, bodies);
+    const ja_wrapper = container.children[0];
+    const ja_all_html = (ja_wrapper ? ja_wrapper.children.map(c => c.innerHTML || c.innerText || '').join(' ') : '') + (container.innerHTML || '');
+
+    // English rendering
+    const containerEn = document.createElement('div');
+    setLanguage('en');
+    renderMiningView(containerEn, bodies);
+    const en_wrapper = containerEn.children[0];
+    const en_all_html = (en_wrapper ? en_wrapper.children.map(c => c.innerHTML || c.innerText || '').join(' ') : '') + (containerEn.innerHTML || '');
+
+    console.log(JSON.stringify({{
+      ja_has_summary: ja_all_html.includes("星系採掘サマリー") || ja_all_html.includes("採掘・Landable天体サマリー"),
+      ja_has_boom: ja_all_html.includes("好況"),
+      ja_has_sites: ja_all_html.includes("採掘地点"),
+      ja_has_spansh: ja_all_html.includes("Spansh照会"),
+      en_has_summary: en_all_html.includes("System Mining Summary") || en_all_html.includes("Mining & Landable Bodies Summary") || en_all_html.includes("Field Guide"),
+      en_has_boom: en_all_html.includes("Boom"),
+      en_has_sites: en_all_html.includes("Mining Sites") || en_all_html.includes("locations"),
+      en_has_spansh: en_all_html.includes("Query") || en_all_html.includes("Spansh")
+    }}));
+    """)
+    res = json.loads(out)
+    assert res["ja_has_summary"] is True
+    assert res["ja_has_boom"] is True
+    assert res["ja_has_sites"] is True
+    assert res["ja_has_spansh"] is True
+
+    assert res["en_has_summary"] is True
+    assert res["en_has_boom"] is True
+    assert res["en_has_sites"] is True
+    assert res["en_has_spansh"] is True
+
+
