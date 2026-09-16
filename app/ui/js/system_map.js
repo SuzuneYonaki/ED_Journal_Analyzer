@@ -506,18 +506,35 @@ function buildSystemMapTree(flatBodies, systemName) {
     }
   });
 
+  // Helper to get orbital distance in Light Seconds (Ls) for comparison:
+  // SemiMajorAxis is in meters (m) in ED Journal; convert to Ls (m / 299792458).
+  // Fallback to distance_from_arrival_ls if semi_major_axis is not present.
+  function getBodyOrbitalDistanceLs(body, parentStar) {
+    if (body.semi_major_axis !== undefined && body.semi_major_axis !== null && body.semi_major_axis > 0) {
+      return body.semi_major_axis / 299792458.0;
+    }
+    if (body.distance_from_arrival_ls !== undefined && body.distance_from_arrival_ls !== null) {
+      if (parentStar && parentStar.distance_from_arrival_ls !== undefined && parentStar.distance_from_arrival_ls !== null) {
+        return Math.abs(body.distance_from_arrival_ls - parentStar.distance_from_arrival_ls);
+      }
+      return body.distance_from_arrival_ls;
+    }
+    return 0;
+  }
+
   // 6. Natural Sorting:
   // - Sort Star Sections by getStarGroupSortScore (A, AB, B, BC, C, CD, D, ABCD, E...)
-  // - Sort Planets by orbital distance (semi_major_axis or distance_from_arrival_ls) / planetNum ascending
+  // - Sort Planets by orbital distance in light seconds / planetNum ascending
   // - Sort Moons by moonLetter / distance ascending
   // - Sort Submoons by submoonLetter / distance ascending
   const starSections = Array.from(starMap.values());
   starSections.sort((a, b) => getStarGroupSortScore(a.starKey) - getStarGroupSortScore(b.starKey));
 
   starSections.forEach(sec => {
+    const parentStar = sec.rootStar;
     sec.planets.sort((a, b) => {
-      const distA = (a.semi_major_axis !== undefined && a.semi_major_axis !== null) ? a.semi_major_axis : (a.distance_from_arrival_ls || 0);
-      const distB = (b.semi_major_axis !== undefined && b.semi_major_axis !== null) ? b.semi_major_axis : (b.distance_from_arrival_ls || 0);
+      const distA = getBodyOrbitalDistanceLs(a, parentStar);
+      const distB = getBodyOrbitalDistanceLs(b, parentStar);
       if (Math.abs(distA - distB) > 0.001) {
         return distA - distB;
       }
@@ -529,22 +546,28 @@ function buildSystemMapTree(flatBodies, systemName) {
 
     sec.planets.forEach(p => {
       p.moons.sort((a, b) => {
-        if (a.moonLetter && b.moonLetter) {
+        if (a.moonLetter && b.moonLetter && a.moonLetter !== b.moonLetter) {
           return a.moonLetter.localeCompare(b.moonLetter);
         }
-        const distA = (a.semi_major_axis !== undefined && a.semi_major_axis !== null) ? a.semi_major_axis : (a.distance_from_arrival_ls || 0);
-        const distB = (b.semi_major_axis !== undefined && b.semi_major_axis !== null) ? b.semi_major_axis : (b.distance_from_arrival_ls || 0);
-        return distA - distB;
+        const distA = getBodyOrbitalDistanceLs(a);
+        const distB = getBodyOrbitalDistanceLs(b);
+        if (Math.abs(distA - distB) > 0.001) {
+          return distA - distB;
+        }
+        return (a.body_id || 0) - (b.body_id || 0);
       });
 
       p.moons.forEach(m => {
         m.submoons.sort((a, b) => {
-          if (a.submoonLetter && b.submoonLetter) {
+          if (a.submoonLetter && b.submoonLetter && a.submoonLetter !== b.submoonLetter) {
             return a.submoonLetter.localeCompare(b.submoonLetter);
           }
-          const distA = (a.semi_major_axis !== undefined && a.semi_major_axis !== null) ? a.semi_major_axis : (a.distance_from_arrival_ls || 0);
-          const distB = (b.semi_major_axis !== undefined && b.semi_major_axis !== null) ? b.semi_major_axis : (b.distance_from_arrival_ls || 0);
-          return distA - distB;
+          const distA = getBodyOrbitalDistanceLs(a);
+          const distB = getBodyOrbitalDistanceLs(b);
+          if (Math.abs(distA - distB) > 0.001) {
+            return distA - distB;
+          }
+          return (a.body_id || 0) - (b.body_id || 0);
         });
       });
     });
