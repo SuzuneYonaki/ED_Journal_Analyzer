@@ -15,7 +15,7 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = io.StringIO()
 
-from app.config import HOST, BASE_DIR, DATA_DIR, WEBVIEW_CACHE_DIR
+from app.config import HOST, BASE_DIR, DATA_DIR, WEBVIEW_CACHE_DIR, APP_VERSION
 from app.db.database import checkpoint_wal
 from app.server.api import app
 
@@ -218,7 +218,7 @@ def main():
         # Create Desktop Window with pywebview using dedicated cache directory
         if is_ready:
             window = webview.create_window(
-                title="Elite Dangerous Journal Analyzer & Exploration Orrery (v0.1.6)",
+                title=f"Elite Dangerous Journal Analyzer & Exploration Orrery (v{APP_VERSION})",
                 url=url,
                 width=1400,
                 height=900,

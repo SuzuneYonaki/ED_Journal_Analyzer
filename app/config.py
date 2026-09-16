@@ -2,6 +2,8 @@ import os
 import sys
 from pathlib import Path
 
+APP_VERSION = "0.1.7"
+
 # PyInstaller one-file extraction support
 if getattr(sys, 'frozen', False):
     EXE_DIR = Path(sys.executable).resolve().parent
