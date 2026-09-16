@@ -55,17 +55,17 @@ function renderBodyInspector() {
   let typeSubtitle = '';
   if (b.isAsteroidBelt) {
     const beltRingInfo = typeof parseRingClass === 'function' ? parseRingClass(b.ring_class) : null;
-    const ringNameJa = beltRingInfo ? beltRingInfo.nameJa : '';
-    typeSubtitle = `🪐 Asteroid Belt${ringNameJa ? ' (' + ringNameJa + ')' : ''}`;
+    const ringName = beltRingInfo ? (beltRingInfo.name || beltRingInfo.nameJa) : '';
+    typeSubtitle = `🪐 Asteroid Belt${ringName ? ' (' + ringName + ')' : ''}`;
   } else if (b.star_type) {
     typeSubtitle = `${t('star_type_label')}: ${b.star_type}`;
   } else {
     typeSubtitle = `${b.planet_class || 'Body'}${b.terraforming_state ? ' [' + b.terraforming_state + ']' : ''}`;
   }
   if (b.scan_type === 'EDSM_Known') {
-    typeSubtitle += ` · ⭐ EDSM既知 (未スキャン)`;
+    typeSubtitle += ` · ⭐ ${t('edsm_known_unscanned')}`;
     if (b.edsm_discovered_by) {
-      typeSubtitle += ` / 発見者: CMDR ${b.edsm_discovered_by}`;
+      typeSubtitle += ` / ${t('discoverer_prefix')}: CMDR ${b.edsm_discovered_by}`;
     }
   }
   document.getElementById('inspect-body-type').innerText = typeSubtitle;
@@ -99,7 +99,7 @@ function renderBodyInspector() {
     const isBookmarked = Boolean(b.bookmark);
     if (isBookmarked) {
       if (inspectBmIcon) inspectBmIcon.innerText = '★';
-      if (inspectBmText) inspectBmText.innerText = 'ブックマーク中';
+      if (inspectBmText) inspectBmText.innerText = t('bm_status_active') || 'ブックマーク中';
       if (btnBmToggle) {
         btnBmToggle.classList.add('active');
         btnBmToggle.style.background = 'rgba(251, 191, 36, 0.2)';
@@ -119,7 +119,7 @@ function renderBodyInspector() {
       }
     } else {
       if (inspectBmIcon) inspectBmIcon.innerText = '☆';
-      if (inspectBmText) inspectBmText.innerText = 'ブックマーク';
+      if (inspectBmText) inspectBmText.innerText = t('filter_bookmarks') || 'ブックマーク';
       if (btnBmToggle) {
         btnBmToggle.classList.remove('active');
         btnBmToggle.style.background = '';
@@ -151,7 +151,7 @@ function renderBodyInspector() {
       bmTabPreview.onclick = () => {
         bmTabPreview.classList.add('active');
         bmTabEdit.classList.remove('active');
-        bmNotePreview.innerHTML = parseMarkdown(bmNoteInput.value.trim() || '*メモは入力されていません*');
+        bmNotePreview.innerHTML = parseMarkdown(bmNoteInput.value.trim() || t('bm_no_notes'));
         bmNoteInput.style.display = 'none';
         bmNotePreview.style.display = 'block';
       };
@@ -283,9 +283,9 @@ function renderBodyInspector() {
     const starList = (b.barycentreStars || []).map(s => `Star ${s}`).join(' & ');
     anomTags.innerHTML = `
       <div style="background: rgba(147, 51, 234, 0.15); border: 1px solid rgba(147, 51, 234, 0.5); padding: 8px; border-radius: 6px; color: #e9d5ff; font-size: 0.8rem; line-height: 1.4;">
-        <div style="font-weight: bold; color: #c084fc; margin-bottom: 4px;">♊ 連星系共通重心（Barycentre）</div>
-        <div>構成恒星: <strong>${starList}</strong></div>
-        <div style="margin-top: 4px; color: var(--text-secondary);">この共通重心軌道上を周回する天体（${b.starGroup} 1, ${b.starGroup} 2...）の親軌道ノードです。</div>
+        <div style="font-weight: bold; color: #c084fc; margin-bottom: 4px;">♊ ${t('barycentre_title')}</div>
+        <div>${t('barycentre_stars')}: <strong>${starList}</strong></div>
+        <div style="margin-top: 4px; color: var(--text-secondary);">${t('barycentre_desc')} (${b.starGroup} 1, ${b.starGroup} 2...)</div>
       </div>
     `;
   } else if (b.anomalies && b.anomalies.length > 0) {
@@ -362,20 +362,20 @@ function renderBodyInspector() {
 
         let colorBadges = '';
         if (bio.variant_color) {
-          colorBadges += `<span class="tag-badge" style="background: rgba(250, 204, 21, 0.15); color: #fde047; border: 1px solid rgba(250, 204, 21, 0.35); font-size: 0.65rem;" title="恒星スペクトル型による主要カラー">🎨 ${bio.variant_color}</span>`;
+          colorBadges += `<span class="tag-badge" style="background: rgba(250, 204, 21, 0.15); color: #fde047; border: 1px solid rgba(250, 204, 21, 0.35); font-size: 0.65rem;" title="${t('bio_color_main_tip')}">🎨 ${bio.variant_color}</span>`;
         }
         if (bio.alternate_variants && bio.alternate_variants.length > 0) {
           colorBadges += bio.alternate_variants.slice(0, 3).map(c => `
-            <span class="tag-badge" style="background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.62rem;" title="可能性のある他カラー候補">🎨 ${c}</span>
+            <span class="tag-badge" style="background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.62rem;" title="${t('bio_color_candidate_tip')}">🎨 ${c}</span>
           `).join('');
         }
         const isExcluded = scannedGenusSet.has(gen) || isFullyScanned;
         const matchPct = bio.possible_pct !== undefined ? bio.possible_pct : (bio.match_percentage !== undefined ? bio.match_percentage : (bio.fit_score ? Math.round(bio.fit_score * 100) : null));
         const pctBadge = (matchPct !== null && matchPct !== undefined) 
-          ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.65rem;" title="環境適合度 (Possible %)">📊 Possible: ${matchPct}%</span>` 
+          ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.65rem;" title="${t('bio_match_pct_tip')}">📊 Possible: ${matchPct}%</span>` 
           : '';
         const coherentBadge = bio.is_system_coherent 
-          ? `<span class="tag-badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); font-size: 0.65rem;" title="同一星系内で他天体と同一種として共起重み付け">🪐 同星系共起</span>` 
+          ? `<span class="tag-badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); font-size: 0.65rem;" title="${t('bio_cooccurrence_tip')}">🪐 ${t('bio_cooccurrence_badge')}</span>` 
           : '';
         const isDefinite = bio.confidence === 'definite';
         const statusLabel = isDefinite ? (t('bio_status_definite') || '有力候補') : (t('bio_status_potential') || '次点候補');
@@ -520,7 +520,7 @@ function renderBodyInspector() {
     const pctStr = (diffPct !== null && diffPct !== undefined) ? ` (${sign}${diffPct.toFixed(1)}%)` : '';
     const labelStr = avgLabel ? ` vs ${avgLabel}` : '';
 
-    return `<span class="prop-diff-badge ${cls}" title="平均値との差異: ${sign}${diffStr} ${unit}${pctStr}${labelStr}">${arrow} ${sign}${diffStr} ${unit}${pctStr}</span>`;
+    return `<span class="prop-diff-badge ${cls}" title="${t('diff_title_prefix') || '平均値との差異: '}${sign}${diffStr} ${unit}${pctStr}${labelStr}">${arrow} ${sign}${diffStr} ${unit}${pctStr}</span>`;
   }
 
   const gravEl = document.getElementById('prop-gravity');
@@ -532,7 +532,7 @@ function renderBodyInspector() {
     if (avgGravity !== null && gravBodies.length > 1) {
       const diffG = gVal - avgGravity;
       const diffPctG = (diffG / avgGravity) * 100;
-      diffBadge = formatAvgDiffBadge(diffG, diffPctG, 'G', t('prop_gravity') + '平均', gravBodies.length);
+      diffBadge = formatAvgDiffBadge(diffG, diffPctG, 'G', (t('prop_gravity') || '表面重力') + (t('avg_label_general') || '平均'), gravBodies.length);
       gravEl.className = diffG > 0 ? 'prop-val val-above-avg' : (diffG < 0 ? 'prop-val val-below-avg' : 'prop-val');
     } else {
       gravEl.className = 'prop-val';
@@ -563,7 +563,7 @@ function renderBodyInspector() {
     const diamKm = (b.radius * 2) / 1000;
 
     const targetAvgRadius = b.landable ? (avgLandableRadius || avgSystemRadius) : avgSystemRadius;
-    const avgLabel = b.landable ? t('avg_landable_size_label') : '平均';
+    const avgLabel = b.landable ? t('avg_landable_size_label') : (t('avg_label_general') || '平均');
     const benchmarkCount = b.landable ? landableSysBodies.length : allRadBodies.length;
 
     let radDiffBadge = '';
@@ -610,7 +610,11 @@ function renderBodyInspector() {
   };
 
   function formatAtmosphereDescription(rawAtmo) {
-    if (!rawAtmo || rawAtmo === 'None') return 'None (なし)';
+    if (!rawAtmo || rawAtmo === 'None') return t('atmo_none') || 'None (なし)';
+    const lang = (typeof getAppLang === 'function' ? getAppLang() : (typeof currentLang !== 'undefined' ? currentLang : 'ja'));
+    if (lang === 'en') {
+      return rawAtmo;
+    }
     let lower = rawAtmo.toLowerCase();
     for (const [enKey, jaVal] of Object.entries(ATMOSPHERE_JA_MAP)) {
       if (lower.includes(enKey)) {
@@ -639,7 +643,7 @@ function renderBodyInspector() {
     if (avgTemp !== null && tempBodies.length > 1) {
       const diffK = b.surface_temperature - avgTemp;
       const diffPctK = (diffK / avgTemp) * 100;
-      tempDiffBadge = formatAvgDiffBadge(diffK, diffPctK, 'K', '平均温度', tempBodies.length);
+      tempDiffBadge = formatAvgDiffBadge(diffK, diffPctK, 'K', t('avg_label_temp') || '平均温度', tempBodies.length);
       tempEl.className = diffK > 0 ? 'prop-val val-above-avg' : (diffK < 0 ? 'prop-val val-below-avg' : 'prop-val');
     } else {
       tempEl.className = 'prop-val';
@@ -656,7 +660,7 @@ function renderBodyInspector() {
   if (b.surface_pressure !== null && b.surface_pressure !== undefined && avgPress !== null && pressBodies.length > 1) {
     const diffPress = b.surface_pressure - avgPress;
     const diffPctPress = (diffPress / avgPress) * 100;
-    pressDiffBadge = formatAvgDiffBadge(diffPress, diffPctPress, 'atm', '平均気圧', pressBodies.length);
+    pressDiffBadge = formatAvgDiffBadge(diffPress, diffPctPress, 'atm', t('avg_label_press') || '平均気圧', pressBodies.length);
     pressEl.className = diffPress > 0 ? 'prop-val val-above-avg' : (diffPress < 0 ? 'prop-val val-below-avg' : 'prop-val');
   } else {
     pressEl.className = 'prop-val';
@@ -690,7 +694,7 @@ function renderBodyInspector() {
     }
     if (propCardMining) {
       propCardMining.style.display = miningSigCount > 0 ? 'block' : 'none';
-      if (propMining) propMining.innerText = `${miningSigCount} 箇所 (Planetary Mining Locations)`;
+      if (propMining) propMining.innerText = t('mining_locations_unit').replace('{count}', miningSigCount);
     }
 
     if (miningActivitiesEl) {
@@ -699,7 +703,7 @@ function renderBodyInspector() {
         if (site.latitude === null || site.longitude === null) return '';
         const cx = Number(site.longitude);
         const cy = -Number(site.latitude);
-        const commNames = (site.commodities || []).join(', ') || (site.minerals || '採掘地点');
+        const commNames = (site.commodities || []).join(', ') || (site.minerals || (t('mining_subfilter_pml') || '採掘地点'));
         const latFmt = (site.latitude >= 0 ? '+' : '') + Number(site.latitude).toFixed(4);
         const lonFmt = (site.longitude >= 0 ? '+' : '') + Number(site.longitude).toFixed(4);
         const markerTitle = `${site.hotspot ? `[Hotspot: ${site.hotspot}] ` : ''}${commNames} (Lat: ${latFmt}°, Lon: ${lonFmt}°)`;
@@ -718,9 +722,9 @@ function renderBodyInspector() {
         <div class="mining-map-container" style="background: radial-gradient(circle at center, #0e1b2e 0%, #060913 100%); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 8px; position: relative; margin-top: 6px; box-shadow: inset 0 0 16px rgba(0,0,0,0.6);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.72rem;">
             <span style="color: #38bdf8; font-weight: bold; display: flex; align-items: center; gap: 4px;">
-              <span>🌐</span> <span>惑星表面 採掘座標マップ (2D Grid)</span>
+              <span>🌐</span> <span>${t('mining_coord_map_title')}</span>
             </span>
-            <span style="color: var(--text-dim); font-family: var(--font-mono); font-size: 0.68rem;">記録地点: ${miningSites.length} 箇所</span>
+            <span style="color: var(--text-dim); font-family: var(--font-mono); font-size: 0.68rem;">${t('mining_recorded_sites_count').replace('{count}', miningSites.length)}</span>
           </div>
           <div style="position: relative; width: 100%;">
             <svg viewBox="-180 -90 360 180" style="width: 100%; height: auto; max-height: 150px; display: block; background: rgba(5, 10, 20, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px;">
@@ -735,18 +739,18 @@ function renderBodyInspector() {
               <!-- Labels -->
               <text x="-176" y="-76" fill="#64748b" font-size="7" font-family="sans-serif">N 90°</text>
               <text x="-176" y="86" fill="#64748b" font-size="7" font-family="sans-serif">S -90°</text>
-              <text x="-176" y="-3" fill="#38bdf8" font-size="6.5" font-family="sans-serif" opacity="0.8">0° (赤道)</text>
-              <text x="2" y="-76" fill="#38bdf8" font-size="6.5" font-family="sans-serif" opacity="0.8">0° (子午線)</text>
-              <text x="-176" y="12" fill="#64748b" font-size="6" font-family="sans-serif">-180°</text>
-              <text x="154" y="12" fill="#64748b" font-size="6" font-family="sans-serif">+180°</text>
+              <text x="-176" y="-3" fill="#38bdf8" font-size="6.5" font-family="sans-serif" opacity="0.8">${t('mining_equator')}</text>
+              <text x="2" y="-76" fill="#38bdf8" font-size="6.5" font-family="sans-serif" opacity="0.8">${t('mining_meridian')}</text>
+              <text x="-176" y="12" fill="#64748b" font-size="6.5" font-family="sans-serif">-180°</text>
+              <text x="154" y="12" fill="#64748b" font-size="6.5" font-family="sans-serif">+180°</text>
               <!-- Markers -->
               ${markersSvg}
             </svg>
           </div>
           <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.62rem; color: var(--text-dim);">
-            <span>西半球 (-180° ~ 0°)</span>
-            <span>子午線 (0°) / 赤道 (0°)</span>
-            <span>東半球 (0° ~ +180°)</span>
+            <span>${t('mining_west_hemi')}</span>
+            <span>${t('mining_center_hemi')}</span>
+            <span>${t('mining_east_hemi')}</span>
           </div>
         </div>
       ` : '';
@@ -755,8 +759,7 @@ function renderBodyInspector() {
       if (miningSites.length === 0) {
         cardsHtml = `
           <div style="background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 12px; text-align: center; color: var(--text-dim); font-size: 0.75rem; margin-top: 8px;">
-            この天体で記録された採掘地点はありません。<br>
-            「➕ 採掘地点を追加」ボタンから手動登録するか、Rhino SRVで採掘を行うと自動記録されます。
+            ${t('mining_no_sites_body')}
           </div>
         `;
       } else {
@@ -802,31 +805,31 @@ function renderBodyInspector() {
                     <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                       <span style="color: var(--ed-orange); font-size: 0.85rem;">📍</span>
                       <span style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: bold; color: #fff;">
-                        ${hasCoord ? `Location : ${latNum.toFixed(4)} / ${lonNum.toFixed(4)}` : '<span style="color: var(--text-dim);">座標記録なし</span>'}
+                        ${hasCoord ? `Location : ${latNum.toFixed(4)} / ${lonNum.toFixed(4)}` : `<span style="color: var(--text-dim);">${t('mining_no_coord')}</span>`}
                       </span>
                       ${site.hotspot ? `
-                        <span class="tag-badge" style="background: rgba(234, 88, 12, 0.2); color: #fb923c; border: 1px solid rgba(234, 88, 12, 0.45); font-size: 0.7rem; padding: 2px 6px; font-weight: bold;" title="近傍 Hotspot / PML拠点">
+                        <span class="tag-badge" style="background: rgba(234, 88, 12, 0.2); color: #fb923c; border: 1px solid rgba(234, 88, 12, 0.45); font-size: 0.7rem; padding: 2px 6px; font-weight: bold;" title="${t('mining_pml_near_tip')}">
                           🎯 ${escapeHtml(site.hotspot)}
                         </span>
                       ` : ''}
                     </div>
                     <div style="display: flex; gap: 4px; align-items: center;">
-                      <button type="button" class="view-btn btn-copy-mining-site" data-copy-text="${encodeURIComponent(copyText)}" data-coords="${rawCoords}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="4行共有フォーマットでクリップボードにコピー">
-                        📋 コピー
+                      <button type="button" class="view-btn btn-copy-mining-site" data-copy-text="${encodeURIComponent(copyText)}" data-coords="${rawCoords}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="${t('mining_copy_site_tip')}">
+                        ${t('mining_btn_copy')}
                       </button>
-                      <button type="button" class="view-btn btn-edit-mining-site" data-site-idx="${idx}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(147, 197, 253, 0.15); border-color: rgba(147, 197, 253, 0.4); color: #93c5fd; cursor: pointer;" title="この地点を編集">
-                        ✏️ 編集
+                      <button type="button" class="view-btn btn-edit-mining-site" data-site-idx="${idx}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(147, 197, 253, 0.15); border-color: rgba(147, 197, 253, 0.4); color: #93c5fd; cursor: pointer;" title="${t('mining_edit_site_tip')}">
+                        ${t('mining_btn_edit')}
                       </button>
                       ${site.id ? `
-                        <button type="button" class="view-btn btn-delete-mining-site" data-site-id="${site.id}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.4); color: #f87171; cursor: pointer;" title="この地点を削除">
-                          🗑️ 削除
+                        <button type="button" class="view-btn btn-delete-mining-site" data-site-id="${site.id}" style="padding: 2px 7px; font-size: 0.68rem; background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.4); color: #f87171; cursor: pointer;" title="${t('mining_delete_site_tip')}">
+                          ${t('mining_btn_delete')}
                         </button>
                       ` : ''}
                     </div>
                   </div>
                   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                      ${mineralBadges || '<span style="color: var(--text-dim); font-size: 0.7rem;">採掘鉱物未記録</span>'}
+                      ${mineralBadges || `<span style="color: var(--text-dim); font-size: 0.7rem;">${t('mining_no_minerals')}</span>`}
                     </div>
                     ${lastTime ? `
                       <span style="font-size: 0.65rem; color: var(--text-dim); font-family: var(--font-mono);">
@@ -836,7 +839,7 @@ function renderBodyInspector() {
                   </div>
                   ${site.note ? `
                     <div style="margin-top: 5px; font-size: 0.72rem; color: #cbd5e1; background: rgba(0,0,0,0.25); border-radius: 4px; padding: 3px 6px;">
-                      📝 <span style="color: #94a3b8;">メモ:</span> ${escapeHtml(site.note)}
+                      📝 <span style="color: #94a3b8;">${t('mining_note_label')}</span> ${escapeHtml(site.note)}
                     </div>
                   ` : ''}
                 </div>
@@ -850,17 +853,17 @@ function renderBodyInspector() {
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 10px; margin-top: 6px;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; flex-wrap: wrap; gap: 6px;">
             <span style="font-size: 0.78rem; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
-              <span>🦏</span> <span>Rhino 惑星表面採掘地点 & 鉱物</span>
+              <span>🦏</span> <span>${t('mining_rhino_panel_title')}</span>
             </span>
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              <span style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">記録地点: ${miningSites.length} 箇所</span>
+              <span style="font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">${t('mining_recorded_sites_count').replace('{count}', miningSites.length)}</span>
               ${miningSites.length > 0 ? `
-                <button type="button" id="btn-copy-all-mining-sites" class="view-btn" style="padding: 2px 8px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="この天体の全採掘地点を共有テキスト形式で一括コピー">
-                  📋 全地点共有コピー
+                <button type="button" id="btn-copy-all-mining-sites" class="view-btn" style="padding: 2px 8px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; cursor: pointer;" title="${t('mining_copy_all_tip')}">
+                  ${t('mining_copy_all_btn')}
                 </button>
               ` : ''}
-              <button type="button" id="btn-add-mining-site" class="view-btn" style="padding: 2px 8px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #38bdf8; cursor: pointer; font-weight: bold;" title="新しい採掘地点を手動で追加">
-                ➕ 採掘地点を追加
+              <button type="button" id="btn-add-mining-site" class="view-btn" style="padding: 2px 8px; font-size: 0.68rem; background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #38bdf8; cursor: pointer; font-weight: bold;" title="${t('mining_add_site_tip')}">
+                ${t('mining_add_site_btn')}
               </button>
             </div>
           </div>
@@ -898,7 +901,7 @@ function renderBodyInspector() {
           if (allText && navigator.clipboard) {
             navigator.clipboard.writeText(allText).then(() => {
               const orig = btnCopyAll.innerHTML;
-              btnCopyAll.innerHTML = '✓ 全地点コピー済';
+              btnCopyAll.innerHTML = t('mining_copy_all_copied');
               btnCopyAll.style.color = '#38bdf8';
               btnCopyAll.style.borderColor = '#38bdf8';
               setTimeout(() => {
@@ -919,7 +922,7 @@ function renderBodyInspector() {
           if (text && navigator.clipboard) {
             navigator.clipboard.writeText(text).then(() => {
               const orig = btn.innerHTML;
-              btn.innerHTML = '✓ コピー済';
+              btn.innerHTML = t('mining_btn_copied');
               btn.style.color = '#38bdf8';
               btn.style.borderColor = '#38bdf8';
               setTimeout(() => {
@@ -950,18 +953,18 @@ function renderBodyInspector() {
           e.stopPropagation();
           const siteId = btn.dataset.siteId;
           if (!siteId) return;
-          if (!confirm('この採掘地点の記録を削除しますか？')) return;
+          if (!confirm(t('mining_delete_confirm_msg'))) return;
           btn.disabled = true;
-          btn.innerHTML = '⏳ 削除中...';
+          btn.innerHTML = t('mining_btn_deleting');
           try {
             const res = await fetch(`/api/mining_sites/${siteId}`, { method: 'DELETE' });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             await refreshMiningSitesForBody(b);
           } catch (err) {
             console.error('Failed to delete mining site:', err);
-            alert('採掘地点の削除に失敗しました: ' + (err.message || 'エラー'));
+            alert(t('mining_delete_failed') + (err.message || 'Error'));
             btn.disabled = false;
-            btn.innerHTML = '🗑️ 削除';
+            btn.innerHTML = t('mining_btn_delete');
           }
         });
       });
@@ -1015,8 +1018,8 @@ function renderBodyInspector() {
           const lonNum = Number(st.longitude).toFixed(4);
           locStr = `<div style="font-family: var(--font-mono); font-size: 0.72rem; color: #a5f3fc; margin-top: 2px;">📍 Location : ${latNum} / ${lonNum}</div>`;
           copyCoordBtn = `
-            <button type="button" class="btn-copy-station-coord view-btn" style="padding: 1px 6px; font-size: 0.65rem;" data-coord="${latNum} / ${lonNum}" title="地表座標をコピー">
-              📋 座標コピー
+            <button type="button" class="btn-copy-station-coord view-btn" style="padding: 1px 6px; font-size: 0.65rem;" data-coord="${latNum} / ${lonNum}" title="${t('station_copy_coord_tip') || '地表座標をコピー'}">
+              ${t('station_btn_copy_coord') || '📋 座標コピー'}
             </button>
           `;
         }
@@ -1054,7 +1057,7 @@ function renderBodyInspector() {
           if (coord && navigator.clipboard) {
             navigator.clipboard.writeText(coord).then(() => {
               const orig = btn.innerHTML;
-              btn.innerHTML = '✓ コピー済';
+              btn.innerHTML = t('station_coord_copied') || '✓ コピー済';
               btn.style.color = '#38bdf8';
               setTimeout(() => {
                 btn.innerHTML = orig;
@@ -1079,7 +1082,7 @@ function renderBodyInspector() {
       const diffSma = b.semi_major_axis - avgSma;
       const diffPctSma = (diffSma / avgSma) * 100;
       const diffLs = diffSma / 299792458;
-      smaDiffBadge = formatAvgDiffBadge(diffLs, diffPctSma, 'ls', '平均軌道長半径', smaBodies.length);
+      smaDiffBadge = formatAvgDiffBadge(diffLs, diffPctSma, 'ls', t('avg_label_sma') || '平均軌道長半径', smaBodies.length);
       smaEl.className = diffSma > 0 ? 'prop-val val-above-avg' : (diffSma < 0 ? 'prop-val val-below-avg' : 'prop-val');
     } else {
       smaEl.className = 'prop-val';
@@ -1096,7 +1099,7 @@ function renderBodyInspector() {
     let eccDiffBadge = '';
     if (avgEcc !== null && eccBodies.length > 1) {
       const diffEcc = b.eccentricity - avgEcc;
-      eccDiffBadge = formatAvgDiffBadge(diffEcc, null, '', '平均離心率', eccBodies.length);
+      eccDiffBadge = formatAvgDiffBadge(diffEcc, null, '', t('avg_label_ecc') || '平均離心率', eccBodies.length);
       if (b.eccentricity >= 0.8) {
         eccEl.className = 'prop-val warning';
       } else {
@@ -1118,7 +1121,7 @@ function renderBodyInspector() {
     if (avgOrb !== null && orbBodies.length > 1) {
       const diffOrb = b.orbital_period - avgOrb;
       const diffPctOrb = (diffOrb / avgOrb) * 100;
-      orbDiffBadge = formatAvgDiffBadge(diffOrb / 86400, diffPctOrb, t('days_unit'), '平均公転周期', orbBodies.length);
+      orbDiffBadge = formatAvgDiffBadge(diffOrb / 86400, diffPctOrb, t('days_unit'), t('avg_label_orb') || '平均公転周期', orbBodies.length);
       orbEl.className = diffOrb > 0 ? 'prop-val val-above-avg' : (diffOrb < 0 ? 'prop-val val-below-avg' : 'prop-val');
     } else {
       orbEl.className = 'prop-val';
@@ -1136,7 +1139,7 @@ function renderBodyInspector() {
     if (avgRot !== null && rotBodies.length > 1) {
       const diffRot = b.rotation_period - avgRot;
       const diffPctRot = (diffRot / avgRot) * 100;
-      rotDiffBadge = formatAvgDiffBadge(diffRot / 86400, diffPctRot, t('days_unit'), '平均自転周期', rotBodies.length);
+      rotDiffBadge = formatAvgDiffBadge(diffRot / 86400, diffPctRot, t('days_unit'), t('avg_label_rot') || '平均自転周期', rotBodies.length);
       rotEl.className = diffRot > 0 ? 'prop-val val-above-avg' : (diffRot < 0 ? 'prop-val val-below-avg' : 'prop-val');
     } else {
       rotEl.className = 'prop-val';
@@ -1153,7 +1156,7 @@ function renderBodyInspector() {
     let incDiffBadge = '';
     if (avgInc !== null && incBodies.length > 1) {
       const diffInc = b.orbital_inclination - avgInc;
-      incDiffBadge = formatAvgDiffBadge(diffInc, null, '°', '平均軌道傾斜角', incBodies.length);
+      incDiffBadge = formatAvgDiffBadge(diffInc, null, '°', t('avg_label_inc') || '平均軌道傾斜角', incBodies.length);
       incEl.className = diffInc > 0 ? 'prop-val val-above-avg' : (diffInc < 0 ? 'prop-val val-below-avg' : 'prop-val');
     } else {
       incEl.className = 'prop-val';
@@ -1196,9 +1199,9 @@ function renderBodyInspector() {
     const reserveBadge = reserveInfo ? `
       <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.35); border-radius: 4px; padding: 6px 10px; margin-bottom: 8px; font-size: 0.78rem; display: flex; align-items: center; justify-content: space-between;">
         <span style="color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
-          <span>${reserveInfo.icon}</span> <span>資源埋蔵量 (Reserve Level):</span>
+          <span>${reserveInfo.icon}</span> <span>${t('reserve_level_badge_label') || '資源埋蔵量 (Reserve Level):'}</span>
         </span>
-        <span style="color: ${reserveInfo.color}; font-weight: bold;">${reserveInfo.en} (${reserveInfo.ja})</span>
+        <span style="color: ${reserveInfo.color}; font-weight: bold;">${reserveInfo.label || reserveInfo.name}</span>
       </div>
     ` : '';
 
@@ -1213,26 +1216,29 @@ function renderBodyInspector() {
         ? `${(massMt / 1e6).toLocaleString(undefined, {maximumFractionDigits: 1})} M MT` 
         : `${Math.round(massMt).toLocaleString()} MT`;
 
+      const lang = (typeof getAppLang === 'function' ? getAppLang() : (typeof currentLang !== 'undefined' ? currentLang : 'ja'));
+      const ringLabel = lang === 'en' ? `${rInfo.nameEn} ${isBelt ? 'Belt' : 'Ring'}` : `${rInfo.nameJa} (${rInfo.nameEn} ${isBelt ? 'Belt' : 'Ring'})`;
+
       const typeBadge = `<span class="tag-badge" style="background: ${rInfo.bg}; color: ${rInfo.color}; border: 1px solid ${rInfo.border}; font-weight: bold; font-size: 0.72rem;">
-        ${rInfo.icon} ${rInfo.nameJa} (${rInfo.nameEn} ${isBelt ? 'Belt' : 'Ring'})
+        ${rInfo.icon} ${ringLabel}
       </span>`;
 
       let miningHint = '';
       if (rInfo.key === 'icy') {
         miningHint = `<div style="margin-top: 5px; font-size: 0.72rem; color: #7dd3fc; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; padding: 3px 6px; border-radius: 2px;">
-          💎 Fleet Carrier燃料（トリチウム / Tritium）採掘適性あり
+          ${t('ring_hint_icy')}
         </div>`;
       } else if (rInfo.key === 'metallic') {
         miningHint = `<div style="margin-top: 5px; font-size: 0.72rem; color: #fde047; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #facc15; padding: 3px 6px; border-radius: 2px;">
-          🪙 プラチナ / ペイン石 / オスミウム等 高額金属レーザー採掘の最重要スポット
+          ${t('ring_hint_metallic_full')}
         </div>`;
       } else if (rInfo.key === 'rocky') {
         miningHint = `<div style="margin-top: 5px; font-size: 0.72rem; color: #e2e8f0; background: rgba(203, 213, 225, 0.1); border-left: 3px solid #cbd5e1; padding: 3px 6px; border-radius: 2px;">
-          🪨 マスグラバイト / アレキサンドライト等 高額深部鉱石のコア破砕採掘適性
+          ${t('ring_hint_rocky_full')}
         </div>`;
       } else if (rInfo.key === 'metal_rich') {
         miningHint = `<div style="margin-top: 5px; font-size: 0.72rem; color: #fdba74; background: rgba(251, 146, 60, 0.1); border-left: 3px solid #fb923c; padding: 3px 6px; border-radius: 2px;">
-          🪐 金属豊富ベルト/リング (各種工業用・貴金属素材)
+          ${t('ring_hint_metal_rich_full')}
         </div>`;
       }
 
@@ -1273,8 +1279,8 @@ function renderBodyInspector() {
         hotspotsHtml = `
           <div style="margin-top: 6px; padding: 5px 8px; background: rgba(250, 204, 21, 0.08); border: 1px solid rgba(250, 204, 21, 0.3); border-radius: 4px;">
             <div style="font-size: 0.72rem; font-weight: bold; color: #facc15; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
-              <span>🎯 DSS検出ホットスポット (Hotspots):</span>
-              ${r.signals_updated_at ? `<span style="font-size: 0.65rem; color: var(--text-dim); font-weight: normal;">(記録: ${r.signals_updated_at.split('T')[0]})</span>` : ''}
+              <span>${t('ring_dss_hotspots_title')}</span>
+              ${r.signals_updated_at ? `<span style="font-size: 0.65rem; color: var(--text-dim); font-weight: normal;">${t('ring_recorded_date').replace('{date}', r.signals_updated_at.split('T')[0])}</span>` : ''}
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 4px;">
               ${hsBadges}
@@ -1290,10 +1296,10 @@ function renderBodyInspector() {
             ${typeBadge}
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; font-size: 0.72rem; color: var(--text-secondary); background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 4px;">
-            <span>内径: <b style="color: #e2e8f0;">${innerKm.toLocaleString()} km</b></span>
-            <span>外径: <b style="color: #e2e8f0;">${outerKm.toLocaleString()} km</b></span>
-            <span>幅: <b style="color: #e2e8f0;">${widthKm.toLocaleString()} km</b></span>
-            <span>総質量: <b style="color: #e2e8f0;">${massStr}</b></span>
+            <span>${t('ring_inner_rad_val') || '内径:'} <b style="color: #e2e8f0;">${innerKm.toLocaleString()} km</b></span>
+            <span>${t('ring_outer_rad_val') || '外径:'} <b style="color: #e2e8f0;">${outerKm.toLocaleString()} km</b></span>
+            <span>${t('ring_width_val') || '幅:'} <b style="color: #e2e8f0;">${widthKm.toLocaleString()} km</b></span>
+            <span>${t('ring_total_mass_val') || '総質量:'} <b style="color: #e2e8f0;">${massStr}</b></span>
           </div>
           ${hotspotsHtml}
           ${miningHint}

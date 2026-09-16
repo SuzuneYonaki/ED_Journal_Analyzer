@@ -167,3 +167,41 @@ def test_inspector_handles_asteroid_belt_bookmark_guard():
     assert res['bmDisplay'] == 'none', "Bookmark section should be hidden for asteroid belts"
     assert res['bmToggleDisplay'] == 'none', "Bookmark toggle should be hidden for asteroid belts"
     assert res['ringsDisplay'] == 'block', "Rings/belt section should be visible"
+
+
+def test_inspector_bilingual_switching():
+    i18n_path = (Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "i18n.js").as_posix()
+    script = f"""
+    const i18nMod = require('{i18n_path}');
+    Object.assign(global, i18nMod);
+
+    state.selectedBody = {{
+      body_id: 10,
+      body_name: "Tidal Test Body",
+      planet_class: "Rocky body",
+      scan_type: "EDSM_Known",
+      edsm_discovered_by: "ExplorerOne",
+      tidal_lock: true
+    }};
+
+    setLanguage('ja');
+    renderBodyInspector();
+    const ja_sub = document.getElementById('inspect-body-type').innerText;
+    const ja_tidal = document.getElementById('prop-tidal-lock').innerText;
+
+    setLanguage('en');
+    renderBodyInspector();
+    const en_sub = document.getElementById('inspect-body-type').innerText;
+    const en_tidal = document.getElementById('prop-tidal-lock').innerText;
+
+    const result = {{ ja_sub, ja_tidal, en_sub, en_tidal }};
+    console.log(JSON.stringify(result));
+    """
+    res = run_js_inspector_test(script)
+    assert "EDSM既知" in res['ja_sub']
+    assert "発見者" in res['ja_sub']
+    assert "あり (固定)" in res['ja_tidal']
+
+    assert "Known in EDSM" in res['en_sub']
+    assert "Discovered by" in res['en_sub']
+    assert "Yes (Locked)" in res['en_tidal']
