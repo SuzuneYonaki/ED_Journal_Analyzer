@@ -223,6 +223,12 @@ def build_system_map_tree(flat_bodies, system_name):
         if s_group in star_map:
             return star_map[s_group]
         is_multi = len(s_group) > 1
+        bary_dist = 0.0
+        if root_stars:
+            member_stars = [s for s in root_stars if (star_letter_map.get(s.get("body_id")) or "") in s_group]
+            if member_stars:
+                bary_dist = sum(s.get("distance_from_arrival_ls", 0) for s in member_stars) / len(member_stars)
+
         bary_node = {
             "body_id": f"barycentre-{s_group}",
             "body_name": f"{system_name} [{s_group}] Orbit" if is_multi else f"{system_name} {s_group}",
@@ -230,7 +236,7 @@ def build_system_map_tree(flat_bodies, system_name):
             "starGroup": s_group,
             "isStar": False,
             "isBarycentre": is_multi,
-            "distance_from_arrival_ls": sample_body.get("distance_from_arrival_ls", 0) if sample_body else 0,
+            "distance_from_arrival_ls": bary_dist,
             "level": 0,
             "moons": [],
             "submoons": []
@@ -354,9 +360,13 @@ def build_system_map_tree(flat_bodies, system_name):
                 sec["planets"].append(belt_node)
 
     def get_body_orbital_distance_ls(body, parent_star=None):
-        sma = body.get("semi_major_axis")
-        if sma is not None and sma > 0:
-            return sma / 299792458.0
+        parents_list = parse_parents_list(body.get("parents"))
+        orbits_sub_barycentre = len(parents_list) > 1 and "Null" in parents_list[0]
+
+        if not orbits_sub_barycentre:
+            sma = body.get("semi_major_axis")
+            if sma is not None and sma > 0:
+                return sma / 299792458.0
         dist = body.get("distance_from_arrival_ls")
         if dist is not None:
             if parent_star and parent_star.get("distance_from_arrival_ls") is not None:
@@ -367,13 +377,25 @@ def build_system_map_tree(flat_bodies, system_name):
     star_sections = list(star_map.values())
     star_sections.sort(key=lambda s: get_star_group_sort_score(s["starKey"]))
     
+    import functools
+    def compare_planets(p1, p2, parent_star):
+        p1_num = p1.get("planetNum")
+        p2_num = p2.get("planetNum")
+        if p1_num is not None and p2_num is not None and p1_num != p2_num:
+            return p1_num - p2_num
+        dist_a = get_body_orbital_distance_ls(p1, parent_star)
+        dist_b = get_body_orbital_distance_ls(p2, parent_star)
+        if abs(dist_a - dist_b) > 0.001:
+            return -1 if dist_a < dist_b else 1
+        if p1_num is not None and p2_num is not None:
+            return p1_num - p2_num
+        id_a = p1.get("body_id") if isinstance(p1.get("body_id"), int) else 0
+        id_b = p2.get("body_id") if isinstance(p2.get("body_id"), int) else 0
+        return id_a - id_b
+
     for sec in star_sections:
         parent_star = sec.get("rootStar")
-        sec["planets"].sort(key=lambda p: (
-            round(get_body_orbital_distance_ls(p, parent_star), 3),
-            p.get("planetNum") if p.get("planetNum") is not None else 0,
-            p.get("body_id") if isinstance(p.get("body_id"), int) else 0
-        ))
+        sec["planets"].sort(key=functools.cmp_to_key(lambda a, b: compare_planets(a, b, parent_star)))
         for p in sec["planets"]:
             p["moons"].sort(key=lambda m: (
                 m.get("moonLetter") or "",
@@ -633,5 +655,71 @@ def test_asteroid_belt_orbital_distance_sorting():
     assert len(js_tree) == 1
     js_planets = js_tree[0]["planets"]
     assert [p["shortName"] for p in js_planets] == ["A 1", "Belt", "A 2"]
+
+
+def test_binary_planets_sorting_rl_h_b12_2():
+    """Verify that binary planet pair AB 5 and AB 6 in Col 285 Sector RL-H b12-2 are not moved to front."""
+    bodies = [
+        {"body_id": 1, "body_name": "Col 285 Sector RL-H b12-2 A", "star_type": "K", "distance_from_arrival_ls": 0.0, "parents": '[{"Null": 0}]'},
+        {"body_id": 2, "body_name": "Col 285 Sector RL-H b12-2 B", "star_type": "M", "distance_from_arrival_ls": 183.5, "parents": '[{"Null": 0}]'},
+        {"body_id": 3, "body_name": "Col 285 Sector RL-H b12-2 AB 1", "planet_class": "Metal rich body", "distance_from_arrival_ls": 954.0, "semi_major_axis": 288844227790.0, "parents": '[{"Null": 0}]'},
+        {"body_id": 4, "body_name": "Col 285 Sector RL-H b12-2 AB 2", "planet_class": "High metal content body", "distance_from_arrival_ls": 1512.0, "semi_major_axis": 444621837139.0, "parents": '[{"Null": 0}]'},
+        {"body_id": 5, "body_name": "Col 285 Sector RL-H b12-2 AB 3", "planet_class": "High metal content body", "distance_from_arrival_ls": 1723.0, "semi_major_axis": 533198010921.0, "parents": '[{"Null": 0}]'},
+        {"body_id": 7, "body_name": "Col 285 Sector RL-H b12-2 AB 4", "planet_class": "High metal content body", "distance_from_arrival_ls": 2392.0, "semi_major_axis": 735021567344.0, "parents": '[{"Null": 0}]'},
+        {"body_id": 9, "body_name": "Col 285 Sector RL-H b12-2 AB 5", "planet_class": "Gas giant with water based life", "distance_from_arrival_ls": 3441.0, "semi_major_axis": 1316813468.0, "parents": '[{"Null": 8}, {"Null": 0}]'},
+        {"body_id": 10, "body_name": "Col 285 Sector RL-H b12-2 AB 6", "planet_class": "Gas giant with ammonia based life", "distance_from_arrival_ls": 3455.0, "semi_major_axis": 2502896964.0, "parents": '[{"Null": 8}, {"Null": 0}]'},
+        {"body_id": 11, "body_name": "Col 285 Sector RL-H b12-2 AB 7", "planet_class": "Icy body", "distance_from_arrival_ls": 4517.0, "semi_major_axis": 1343899130821.0, "parents": '[{"Null": 0}]'},
+    ]
+    tree = build_system_map_tree(bodies, "Col 285 Sector RL-H b12-2")
+    sec_ab = next(s for s in tree if s["starKey"] == "AB")
+    names = [p["shortName"] for p in sec_ab["planets"]]
+    assert names == ["AB 1", "AB 2", "AB 3", "AB 4", "AB 5", "AB 6", "AB 7"]
+
+    # Verify directly via system_map.js Node execution
+    js_tree = run_js_build_system_map_tree(bodies, "Col 285 Sector RL-H b12-2")
+    js_sec_ab = next(s for s in js_tree if s["starKey"] == "AB")
+    js_names = [p["shortName"] for p in js_sec_ab["planets"]]
+    assert js_names == ["AB 1", "AB 2", "AB 3", "AB 4", "AB 5", "AB 6", "AB 7"]
+
+
+def test_binary_planets_sorting_zc_e_b14_2():
+    """Verify that co-orbiting binary planets 4 & 5 and 11 & 12 in Col 285 Sector ZC-E b14-2 sort in order after Belt and 1, 2, 3."""
+    bodies = [
+        {
+            "body_id": 0,
+            "body_name": "Col 285 Sector ZC-E b14-2 A",
+            "star_type": "K",
+            "distance_from_arrival_ls": 0.0,
+            "rings_list": [
+                {
+                    "Name": "Col 285 Sector ZC-E b14-2 A Belt",
+                    "RingClass": "eRingClass_MetalRich",
+                    "InnerRad": 1139000000.0,
+                    "OuterRad": 1148000000.0,
+                    "MassMT": 1000000.0
+                }
+            ]
+        },
+        {"body_id": 8, "body_name": "Col 285 Sector ZC-E b14-2 1", "planet_class": "Metal rich body", "distance_from_arrival_ls": 12.38, "semi_major_axis": 3713564038.0, "parents": '[{"Star": 0}]'},
+        {"body_id": 9, "body_name": "Col 285 Sector ZC-E b14-2 2", "planet_class": "Metal rich body", "distance_from_arrival_ls": 22.14, "semi_major_axis": 6637232065.0, "parents": '[{"Star": 0}]'},
+        {"body_id": 10, "body_name": "Col 285 Sector ZC-E b14-2 3", "planet_class": "Metal rich body", "distance_from_arrival_ls": 40.99, "semi_major_axis": 12287930250.0, "parents": '[{"Star": 0}]'},
+        {"body_id": 12, "body_name": "Col 285 Sector ZC-E b14-2 4", "planet_class": "High metal content body", "distance_from_arrival_ls": 67.10, "semi_major_axis": 57490655.0, "parents": '[{"Null": 11}, {"Star": 0}]'},
+        {"body_id": 13, "body_name": "Col 285 Sector ZC-E b14-2 5", "planet_class": "High metal content body", "distance_from_arrival_ls": 67.09, "semi_major_axis": 58291876.0, "parents": '[{"Null": 11}, {"Star": 0}]'},
+        {"body_id": 14, "body_name": "Col 285 Sector ZC-E b14-2 6", "planet_class": "High metal content body", "distance_from_arrival_ls": 90.11, "semi_major_axis": 27014853358.0, "parents": '[{"Star": 0}]'},
+        {"body_id": 76, "body_name": "Col 285 Sector ZC-E b14-2 11", "planet_class": "Sudarsky class I gas giant", "distance_from_arrival_ls": 1962.92, "semi_major_axis": 631486576.0, "parents": '[{"Null": 75}, {"Star": 0}]'},
+        {"body_id": 83, "body_name": "Col 285 Sector ZC-E b14-2 12", "planet_class": "Gas giant with water based life", "distance_from_arrival_ls": 1973.99, "semi_major_axis": 11610624790.0, "parents": '[{"Null": 75}, {"Star": 0}]'},
+        {"body_id": 85, "body_name": "Col 285 Sector ZC-E b14-2 13", "planet_class": "Sudarsky class I gas giant", "distance_from_arrival_ls": 2841.15, "semi_major_axis": 851754361391.0, "parents": '[{"Star": 0}]'},
+    ]
+    tree = build_system_map_tree(bodies, "Col 285 Sector ZC-E b14-2")
+    sec_a = next(s for s in tree if s["starKey"] == "A")
+    names = [p["shortName"] for p in sec_a["planets"]]
+    assert names == ["Belt", "1", "2", "3", "4", "5", "6", "11", "12", "13"]
+
+    # Verify directly via system_map.js Node execution
+    js_tree = run_js_build_system_map_tree(bodies, "Col 285 Sector ZC-E b14-2")
+    js_sec_a = next(s for s in js_tree if s["starKey"] == "A")
+    js_names = [p["shortName"] for p in js_sec_a["planets"]]
+    assert js_names == ["Belt", "1", "2", "3", "4", "5", "6", "11", "12", "13"]
+
 
 
