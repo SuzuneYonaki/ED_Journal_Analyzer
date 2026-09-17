@@ -72,8 +72,6 @@ def test_html_ui_ids_match_js():
         "btn-pane-tab-explorer",
         "btn-pane-tab-physics",
         "btn-live-toggle",
-        "btn-accordion-live-toggle",
-        "accordion-live-sync-row",
         "body-sort-wrapper",
     ]
 

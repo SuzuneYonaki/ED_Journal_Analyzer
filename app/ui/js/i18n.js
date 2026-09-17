@@ -699,7 +699,10 @@ const i18n = {
     star_tip_c: "Carbon & S-type (炭素星・S型)",
     star_tip_d: "White Dwarf (白色矮星: D, DA, DB, DC, DQ, DX...)",
     star_tip_n: "Neutron Star (中性子星: N)",
-    star_tip_h: "Black Hole (ブラックホール: H, 超大質量)"
+    star_tip_h: "Black Hole (ブラックホール: H, 超大質量)",
+    filter_date_from_tip: "開始日",
+    filter_date_to_tip: "終了日",
+    sort_composite_mode_tip: "1次〜3次の各項目を総合スコアリング（加重ブレンド）して並び替えます"
   },
   en: {
     // Header
@@ -1399,7 +1402,10 @@ const i18n = {
     star_tip_c: "Carbon & S-type stars",
     star_tip_d: "White Dwarf (D, DA, DB, DC, DQ, DX...)",
     star_tip_n: "Neutron Star (N)",
-    star_tip_h: "Black Hole (H, Supermassive)"
+    star_tip_h: "Black Hole (H, Supermassive)",
+    filter_date_from_tip: "Start Date",
+    filter_date_to_tip: "End Date",
+    sort_composite_mode_tip: "Sort by composite score combining 1st to 3rd priority criteria (weighted blend)"
   }
 };
 
