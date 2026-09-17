@@ -252,4 +252,9 @@ Note: Please avoid boilerplate pleasantries and maintain an objective, academic 
 
 ## License
 
-This project is licensed under the Apache License 2.0.
+This project is licensed under the **GNU General Public License v3.0 (GPLv3)**.
+
+> [!NOTE]
+> **License Transition Notice (v0.8.1)**:
+> Starting from version **0.8.1**, the project license has transitioned from Apache 2.0 to **GNU General Public License v3.0 (GPLv3)** to protect open-source integrity, prevent proprietary lock-in / closed-source forks, and guarantee that all derived enhancements remain free and open to the Elite Dangerous community.
+
