@@ -109,3 +109,21 @@ def test_sns_snippet_button_and_listener():
     assert "/api/export/snippet/${sysAddr}" in js_content, "app.js must handle snippet API endpoint fetch"
     assert "btn-copy-sns-snippet" in js_content
 
+
+def test_summary_png_export_and_drag_drop():
+    """Verify that summary PNG export button exists and drag-and-drop handler is registered."""
+    center_html_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "components" / "center_pane.html"
+    html_content = center_html_path.read_text(encoding="utf-8")
+    assert 'id="btn-export-png"' in html_content, "btn-export-png not found in center_pane.html"
+
+    app_js_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "app.js"
+    js_content = app_js_path.read_text(encoding="utf-8")
+    assert "/api/export/image/${sysAddr}" in js_content, "app.js must handle /api/export/image endpoint fetch"
+    assert "/api/import/png" in js_content, "app.js must handle /api/import/png for PNG drops"
+    assert "window.addEventListener('drop'" in js_content, "window drop listener must be registered"
+
+    system_list_js = Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "system_list.js"
+    sys_js_content = system_list_js.read_text(encoding="utf-8")
+    assert "btnExportPng" in sys_js_content, "system_list.js must manage btnExportPng visibility"
+
+

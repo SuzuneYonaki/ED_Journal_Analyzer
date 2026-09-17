@@ -447,3 +447,92 @@ def test_api_export_and_import_endpoints():
     })
     assert exec_resp.status_code == 200
     assert exec_resp.json()["success"] is True
+
+def test_summary_png_card_generation_and_metadata():
+    from app.services.export_service import generate_summary_png_card, extract_package_from_png
+
+    sys_data = {
+        "star_system": "Col 285 PNG Test",
+        "main_star_type": "K",
+        "star_pos_x": -100.5,
+        "star_pos_y": 50.0,
+        "star_pos_z": 1234.5,
+        "total_fss_value": 3000000,
+        "total_bio_signals": 5
+    }
+    bodies = [
+        {"body_id": 1, "body_name": "Col 285 PNG Test A", "star_type": "K"},
+        {"body_id": 2, "body_name": "Col 285 PNG Test 1", "planet_class": "Earthlike body", "bio_signals": 3, "geo_signals": 2},
+        {"body_id": 3, "body_name": "Col 285 PNG Test 2", "planet_class": "Water world", "bio_signals": 2, "rings": '[{"RingClass": "eRingClass_Metallic"}]'},
+        {"body_id": 4, "body_name": "Col 285 PNG Test 3", "planet_class": "High metal content world", "eccentricity": 0.45}
+    ]
+    pkg_dict = {
+        "format": "ED_JOURNAL_ANALYZER_PACKAGE_V1",
+        "metadata": {"cmdr_name": "CMDR Test", "exported_at": "2026-09-17T00:00:00Z"},
+        "systems": [{"system_address": 777888, "star_system": "Col 285 PNG Test", "bodies": bodies}]
+    }
+
+    # 1. Generate JA card
+    png_bytes_ja = generate_summary_png_card(sys_data, bodies, package_dict=pkg_dict, lang="ja")
+    assert isinstance(png_bytes_ja, bytes)
+    assert png_bytes_ja.startswith(b"\x89PNG\r\n\x1a\n")
+
+    # 2. Extract embedded package
+    extracted_pkg = extract_package_from_png(png_bytes_ja)
+    assert extracted_pkg is not None
+    assert extracted_pkg["format"] == "ED_JOURNAL_ANALYZER_PACKAGE_V1"
+    assert extracted_pkg["metadata"]["cmdr_name"] == "CMDR Test"
+    assert len(extracted_pkg["systems"]) == 1
+
+    # 3. Generate EN card
+    png_bytes_en = generate_summary_png_card(sys_data, bodies, package_dict=pkg_dict, lang="en")
+    assert isinstance(png_bytes_en, bytes)
+    assert png_bytes_en.startswith(b"\x89PNG\r\n\x1a\n")
+
+    # 4. Corrupted or plain bytes extraction returns None
+    assert extract_package_from_png(b"not a png image") is None
+
+
+def test_api_export_and_import_png_endpoints():
+    from fastapi.testclient import TestClient
+    from app.server.api import app
+    from app.db.database import get_db_connection, init_db
+
+    client = TestClient(app)
+    conn = get_db_connection()
+    init_db(conn)
+    c = conn.cursor()
+    c.execute(
+        "INSERT OR REPLACE INTO systems (system_address, star_system, main_star_type, star_pos_x, star_pos_y, star_pos_z, visit_count, is_external) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (999123, "PNG Endpoint System", "G", 12.0, 34.0, 56.0, 1, 0)
+    )
+    c.execute(
+        "INSERT OR REPLACE INTO bodies (system_address, body_id, body_name, planet_class, distance_from_arrival_ls, bio_signals) VALUES (?, ?, ?, ?, ?, ?)",
+        (999123, 1, "PNG Endpoint System 1", "Earthlike body", 350.0, 3)
+    )
+    conn.commit()
+    conn.close()
+
+    # 1. Test GET /api/export/image/{system_address}
+    resp_img = client.get("/api/export/image/999123?lang=ja")
+    assert resp_img.status_code == 200
+    assert resp_img.headers["content-type"] == "image/png"
+    png_data = resp_img.content
+    assert png_data.startswith(b"\x89PNG\r\n\x1a\n")
+
+    # 2. Test POST /api/import/png with valid PNG card
+    files = {"file": ("summary.png", png_data, "image/png")}
+    resp_import = client.post("/api/import/png", files=files)
+    assert resp_import.status_code == 200
+    pdata = resp_import.json()
+    assert pdata["is_valid"] is True
+    assert pdata["system_count"] == 1
+    assert pdata["systems"][0]["star_system"] == "PNG Endpoint System"
+    assert "package" in pdata
+
+    # 3. Test POST /api/import/png with invalid file
+    bad_files = {"file": ("bad.png", b"invalid png content", "image/png")}
+    bad_resp = client.post("/api/import/png", files=bad_files)
+    assert bad_resp.status_code == 400
+    assert "メタデータ" in bad_resp.json()["error"]
+
