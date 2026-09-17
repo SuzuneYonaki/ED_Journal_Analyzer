@@ -78,23 +78,27 @@ if (typeof window !== 'undefined') {
 
 // I18n UI Update
 function updateStaticTexts() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.dataset.i18n;
-    if (key) {
-      if (el.tagName === 'INPUT') {
-        el.placeholder = t(key);
-      } else {
-        el.innerText = t(key);
+  if (typeof applyI18n === 'function') {
+    applyI18n();
+  } else {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if (key) {
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+          el.placeholder = t(key);
+        } else {
+          el.innerText = t(key);
+        }
       }
-    }
-  });
+    });
 
-  document.querySelectorAll('[data-i18n-html]').forEach(el => {
-    const key = el.dataset.i18nHtml;
-    if (key) {
-      el.innerHTML = t(key);
-    }
-  });
+    document.querySelectorAll('[data-i18n-html]').forEach(el => {
+      const key = el.dataset.i18nHtml;
+      if (key) {
+        el.innerHTML = t(key);
+      }
+    });
+  }
 
   // Update language buttons
   const btnJa = document.getElementById('btn-lang-ja');

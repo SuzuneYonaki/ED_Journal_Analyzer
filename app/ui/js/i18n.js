@@ -657,7 +657,10 @@ const i18n = {
     btn_physics_badge_tip: "クリックして天体物理・レア度レポートを表示",
     stat_header_prefix: "🚀 探査・記録済み",
     stat_header_toggle_tip: "クリックして統計パネルを折り畳み / 展開",
-    stat_period_all: "全期間"
+    stat_period_all: "全期間",
+    unknown: "不明",
+    none: "なし",
+    n_a: "N/A"
   },
   en: {
     // Header
@@ -1315,7 +1318,10 @@ const i18n = {
     btn_physics_badge_tip: "Click to view astrophysical rarity report",
     stat_header_prefix: "🚀 Exploration Log",
     stat_header_toggle_tip: "Click to collapse / expand stats panel",
-    stat_period_all: "All Time"
+    stat_period_all: "All Time",
+    unknown: "Unknown",
+    none: "None",
+    n_a: "N/A"
   }
 };
 
@@ -1331,11 +1337,131 @@ try {
   console.warn("Could not read localStorage for ed_lang:", e);
 }
 
-function t(key) {
-  if (i18n[currentLang] && i18n[currentLang][key]) {
-    return i18n[currentLang][key];
+/**
+ * Core translation lookup with interpolation and fallback.
+ * @param {string} key - Translation key
+ * @param {Object|string|null} params - Key-value map for {placeholder} replacement, or fallback text if string
+ * @param {string|null} fallback - Fallback string if key is not found
+ * @returns {string} Translated string
+ */
+function t(key, params = null, fallback = null) {
+  if (typeof params === 'string' && fallback === null) {
+    fallback = params;
+    params = null;
   }
-  return (i18n.ja && i18n.ja[key]) || key;
+  let text = null;
+  if (i18n[currentLang] && i18n[currentLang][key] !== undefined) {
+    text = i18n[currentLang][key];
+  } else {
+    // Check other language as fallback
+    const fallbackLang = currentLang === 'en' ? 'ja' : 'en';
+    if (i18n[fallbackLang] && i18n[fallbackLang][key] !== undefined) {
+      text = i18n[fallbackLang][key];
+    } else if (fallback !== null) {
+      text = fallback;
+    } else {
+      text = key;
+    }
+  }
+
+  if (params && typeof params === 'object') {
+    return String(text).replace(/\{([a-zA-Z0-9_]+)\}/g, (match, paramKey) => {
+      return params[paramKey] !== undefined ? params[paramKey] : match;
+    });
+  }
+  return text;
+}
+
+/**
+ * Register or extend dictionary for a given language.
+ * Enables modular localization and adding new languages.
+ * @param {string} lang - Language code (e.g. 'ja', 'en', 'fr')
+ * @param {Object} dictionary - Key-value dictionary
+ */
+function registerTranslations(lang, dictionary) {
+  if (!lang || typeof dictionary !== 'object') return;
+  if (!i18n[lang]) {
+    i18n[lang] = {};
+  }
+  Object.assign(i18n[lang], dictionary);
+}
+
+/**
+ * Get list of currently supported/registered language codes.
+ * @returns {string[]}
+ */
+function getSupportedLanguages() {
+  return Object.keys(i18n);
+}
+
+/**
+ * Get the current active language code ('ja' or 'en').
+ * @returns {string}
+ */
+function getAppLang() {
+  return currentLang;
+}
+
+/**
+ * Convenience helper to format "Unknown" / "不明" consistently.
+ * @param {*} val - Value to check
+ * @param {string|null} fallback - Optional custom fallback
+ * @returns {string}
+ */
+function translateUnknown(val, fallback = null) {
+  if (val === null || val === undefined || val === '' || val === '不明' || String(val).toLowerCase() === 'unknown') {
+    return t('unknown', fallback || (currentLang === 'ja' ? '不明' : 'Unknown'));
+  }
+  return val;
+}
+
+/**
+ * Apply translations to DOM container elements.
+ * Scans [data-i18n], [data-i18n-html], [data-i18n-title], [data-i18n-placeholder], [data-i18n-aria-label].
+ * @param {HTMLElement|Document} [container] - Optional root container, defaults to document
+ */
+function applyI18n(container) {
+  const root = container || (typeof document !== 'undefined' ? document : null);
+  if (!root || typeof root.querySelectorAll !== 'function') return;
+
+  root.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (key) {
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        el.placeholder = t(key);
+      } else {
+        el.innerText = t(key);
+      }
+    }
+  });
+
+  root.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.dataset.i18nHtml;
+    if (key) {
+      el.innerHTML = t(key);
+    }
+  });
+
+  root.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.dataset.i18nTitle;
+    if (key) {
+      el.title = t(key);
+    }
+  });
+
+  root.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.dataset.i18nPlaceholder;
+    if (key) {
+      el.placeholder = t(key);
+    }
+  });
+
+  root.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+    const key = el.dataset.i18nAriaLabel;
+    if (key) {
+      el.setAttribute('aria-label', t(key));
+    }
+  });
 }
 
 function setLanguage(lang, skipServerSync = false) {
@@ -1362,6 +1488,8 @@ function setLanguage(lang, skipServerSync = false) {
       body: JSON.stringify({ language: lang })
     }).catch(err => console.warn('Could not save language to server:', err));
   }
+
+  applyI18n();
 
   if (typeof updateStaticTexts === 'function') {
     updateStaticTexts();
@@ -1390,6 +1518,12 @@ if (typeof window !== 'undefined') {
   window.t = t;
   window.setLanguage = setLanguage;
   window.currentLang = currentLang;
+  window.getAppLang = getAppLang;
+  window.getCurrentLang = getAppLang;
+  window.registerTranslations = registerTranslations;
+  window.getSupportedLanguages = getSupportedLanguages;
+  window.translateUnknown = translateUnknown;
+  window.applyI18n = applyI18n;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -1397,6 +1531,11 @@ if (typeof module !== 'undefined' && module.exports) {
     i18n,
     t,
     setLanguage,
-    getCurrentLang: () => currentLang
+    getCurrentLang: getAppLang,
+    getAppLang,
+    registerTranslations,
+    getSupportedLanguages,
+    translateUnknown,
+    applyI18n
   };
 }
