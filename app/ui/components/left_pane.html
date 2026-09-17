@@ -322,9 +322,9 @@
                 </div>
                 <div id="custom-date-inputs" style="display: none; flex-direction: column; gap: 4px; margin-top: 2px;">
                   <div style="display: flex; align-items: center; gap: 4px;">
-                    <input type="date" id="filter-date-from" class="search-input" style="padding: 3px 6px; font-size: 0.75rem; flex: 1;" title="開始日">
+                    <input type="date" id="filter-date-from" class="search-input" style="padding: 3px 6px; font-size: 0.75rem; flex: 1;" data-i18n-title="filter_date_from_tip" title="開始日">
                     <span style="font-size: 0.75rem; color: var(--text-secondary);">〜</span>
-                    <input type="date" id="filter-date-to" class="search-input" style="padding: 3px 6px; font-size: 0.75rem; flex: 1;" title="終了日">
+                    <input type="date" id="filter-date-to" class="search-input" style="padding: 3px 6px; font-size: 0.75rem; flex: 1;" data-i18n-title="filter_date_to_tip" title="終了日">
                   </div>
                   <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
                     <select id="date-field-select" class="sort-select" style="flex: 1; font-size: 0.72rem;">
@@ -335,15 +335,6 @@
                     <button id="btn-clear-date" class="btn-page" style="padding: 2px 8px; font-size: 0.72rem;" data-i18n="btn_clear_date">クリア</button>
                   </div>
                 </div>
-              </div>
-
-              <!-- Real-time Live Sync Helper Row inside Accordion -->
-              <div id="accordion-live-sync-row" class="live-sync-accordion-row paused">
-                <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
-                  <span class="live-indicator-dot" id="accordion-live-dot" style="background: #888; animation: none;"></span>
-                  <span style="font-size: 0.72rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="accordion-live-status-text">⏹️ LIVE停止中（手動ソート有効）</span>
-                </div>
-                <button type="button" id="btn-accordion-live-toggle" class="btn-live-accordion-toggle" data-i18n="sort_live_resume_btn">LIVE再開</button>
               </div>
 
               <!-- Sort Controls Section -->
@@ -422,7 +413,7 @@
                   </select>
                 </div>
                 <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 2px;">
-                  <label style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; cursor: pointer; color: #a5f3fc;" title="1次〜3次の各項目を総合スコアリング（加重ブレンド）して並び替えます">
+                  <label style="display: flex; align-items: center; gap: 6px; font-size: 0.74rem; cursor: pointer; color: #a5f3fc;" data-i18n-title="sort_composite_mode_tip" title="1次〜3次の各項目を総合スコアリング（加重ブレンド）して並び替えます">
                     <input type="checkbox" id="cb-sort-composite" checked style="cursor: pointer;">
                     <span data-i18n="sort_composite_mode">⚡ 総合スコア（加重ブレンド）</span>
                   </label>
