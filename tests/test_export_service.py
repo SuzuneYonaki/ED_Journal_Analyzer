@@ -95,6 +95,10 @@ def test_standalone_html_generation():
     assert '<script type="application/json" id="ed-system-astrophysics-data">' in html_out
     assert "ED_JOURNAL_ANALYZER_ASTROPHYSICS_DATA_V1" in html_out
     assert "生成AI（LLM）天体物理分析" in html_out
+    # Check astrophysical parameters summary exists without AI inference label
+    assert "詳細天体物理パラメータ" in html_out
+    assert "(AI推論用)" not in html_out
+    assert "（AI推論用）" not in html_out
     # Check that no external script or stylesheet links exist
     assert "<script src=" not in html_out
     assert '<link rel="stylesheet"' not in html_out

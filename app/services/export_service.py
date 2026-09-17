@@ -748,7 +748,7 @@ def generate_standalone_html(
         if astro_summary:
             details_html = f"""
             <details class="astro-details">
-                <summary>🔬 詳細天体物理パラメータ (AI推論用)</summary>
+                <summary>🔬 詳細天体物理パラメータ</summary>
                 <div class="astro-details-content">{astro_summary}</div>
             </details>
             """
