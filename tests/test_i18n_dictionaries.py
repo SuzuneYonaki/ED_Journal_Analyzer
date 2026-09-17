@@ -72,3 +72,85 @@ def test_bilingual_time_formatting():
 
     en_time = run_js_eval('formatSecondsToDaysOrHours(3600 * 5)', setup_code='setLanguage("en");')
     assert 'h' in en_time
+
+
+def test_i18n_interpolation_and_fallback():
+    # Interpolation
+    res_interp = run_js_eval('t("custom_tpl", { user: "Commander", count: 42 })', setup_code="""
+    registerTranslations('en', { custom_tpl: "Hello {user}, you found {count} items!" });
+    setLanguage('en');
+    """)
+    assert res_interp == "Hello Commander, you found 42 items!"
+
+    # Fallback string when key is missing
+    res_fallback = run_js_eval('t("non_existing_key", "Default Fallback Value")')
+    assert res_fallback == "Default Fallback Value"
+
+
+def test_i18n_dynamic_registration():
+    res = run_js_eval(
+        "getSupportedLanguages()",
+        setup_code="registerTranslations('fr', { greeting: 'Bonjour' });"
+    )
+    assert 'fr' in res
+
+
+def test_i18n_translate_unknown():
+    res_ja_null = run_js_eval('translateUnknown(null)', setup_code='setLanguage("ja");')
+    assert res_ja_null == "不明"
+
+    res_en_null = run_js_eval('translateUnknown(null)', setup_code='setLanguage("en");')
+    assert res_en_null == "Unknown"
+
+    res_en_from_ja = run_js_eval('translateUnknown("不明")', setup_code='setLanguage("en");')
+    assert res_en_from_ja == "Unknown"
+
+    res_valid = run_js_eval('translateUnknown("High Metal Content")', setup_code='setLanguage("en");')
+    assert res_valid == "High Metal Content"
+
+
+def test_i18n_apply_dom():
+    setup_code = """
+    function createEl(tag = 'div') {
+      return {
+        tagName: tag.toUpperCase(),
+        innerText: '',
+        innerHTML: '',
+        placeholder: '',
+        title: '',
+        dataset: {},
+        setAttribute(k, v) { this[k] = v; }
+      };
+    }
+    const elText = createEl('span');
+    elText.dataset.i18n = 'unknown';
+    const elTitle = createEl('button');
+    elTitle.dataset.i18nTitle = 'unknown';
+    const elInput = createEl('input');
+    elInput.dataset.i18nPlaceholder = 'unknown';
+
+    const container = {
+      querySelectorAll(sel) {
+        if (sel === '[data-i18n]') return [elText];
+        if (sel === '[data-i18n-html]') return [];
+        if (sel === '[data-i18n-title]') return [elTitle];
+        if (sel === '[data-i18n-placeholder]') return [elInput];
+        if (sel === '[data-i18n-aria-label]') return [];
+        return [];
+      }
+    };
+
+    setLanguage('en');
+    applyI18n(container);
+    """
+    res = run_js_eval("""
+    ({
+      text: elText.innerText,
+      title: elTitle.title,
+      placeholder: elInput.placeholder
+    })
+    """, setup_code=setup_code)
+    assert res["text"] == "Unknown"
+    assert res["title"] == "Unknown"
+    assert res["placeholder"] == "Unknown"
+
