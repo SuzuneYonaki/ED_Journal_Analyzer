@@ -375,6 +375,57 @@ function updateModuleVisibilityUI() {
   if (btnViewBio) btnViewBio.style.display = modSettings.exobiology ? 'inline-block' : 'none';
   if (btnViewMining) btnViewMining.style.display = modSettings.rhino ? 'inline-block' : 'none';
 
+  // Left pane Mining Landable Filters group
+  const groupMining = document.getElementById('group-mining-filters');
+  if (groupMining) {
+    groupMining.style.display = modSettings.rhino ? '' : 'none';
+  }
+
+  // If Rhino is disabled, turn off any active mining filters
+  if (!modSettings.rhino) {
+    let filterReset = false;
+    const miningKeys = ['has_landable_hmc', 'has_landable_metal_rich', 'has_landable_rocky', 'has_landable_icy', 'has_landable_rocky_ice', 'has_landable_ringed', 'has_mining_signals'];
+    miningKeys.forEach(k => {
+      if (state.filters && state.filters[k]) {
+        state.filters[k] = false;
+        filterReset = true;
+      }
+    });
+    if (state.miningScout) {
+      state.miningScout = '';
+      filterReset = true;
+    }
+    if (state.hasLargePad) {
+      state.hasLargePad = false;
+      filterReset = true;
+    }
+    if (state.maxArrivalDistLs !== null && state.maxArrivalDistLs !== undefined && state.maxArrivalDistLs !== '') {
+      state.maxArrivalDistLs = null;
+      filterReset = true;
+    }
+
+    if (filterReset) {
+      document.querySelectorAll('#group-mining-filters .chip').forEach(chip => {
+        chip.classList.remove('active');
+      });
+      document.querySelectorAll('.scout-chip').forEach(c => {
+        c.classList.toggle('active', Boolean(c.dataset && c.dataset.scout === ''));
+      });
+      const chkPad = document.getElementById('chk-has-large-pad');
+      if (chkPad) chkPad.checked = false;
+      const selDist = document.getElementById('sel-max-arrival-dist');
+      if (selDist) selDist.value = '';
+
+      if (typeof updateCollapsibleBadges === 'function') {
+        updateCollapsibleBadges();
+      }
+      if (typeof fetchSystems === 'function') {
+        state.page = 1;
+        fetchSystems({ autoSelectTop: true });
+      }
+    }
+  }
+
   // If currently selected view became hidden, fallback to sysmap
   if (state.currentView === 'bio' && !modSettings.exobiology) {
     state.currentView = 'sysmap';
@@ -1478,6 +1529,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof syncLanguageFromServer === 'function') {
     syncLanguageFromServer();
   }
+  updateModuleVisibilityUI();
   initSettingsModal();
   initExportImportModals();
   initMiningSiteModal();

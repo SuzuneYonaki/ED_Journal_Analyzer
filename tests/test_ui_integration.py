@@ -84,6 +84,10 @@ def run_js_integration_test(script_body):
         writeText: () => Promise.resolve()
       }}
     }};
+    global.fetch = () => Promise.resolve({{
+      ok: true,
+      json: () => Promise.resolve({{ systems: [], total: 0 }})
+    }});
     global.t = (k) => k;
 
     // Load in exact browser order: utils -> inspector -> mining_view -> system_list -> app
@@ -177,3 +181,47 @@ def test_cross_module_view_switching():
     assert res["view2"] == "flat"
     assert res["view3"] == "bio"
     assert res["view4"] == "mining"
+
+
+def test_rhino_module_hides_mining_filters_and_resets_state():
+    out = run_js_integration_test("""
+    const groupMining = document.getElementById('group-mining-filters');
+
+    // Case 1: Default (rhino is false)
+    state.filters.has_landable_hmc = true;
+    state.miningScout = 'high';
+    state.hasLargePad = true;
+    state.maxArrivalDistLs = 2000;
+    
+    // Save settings with rhino: false
+    saveModuleSettings({ exobiology: true, rhino: false });
+    updateModuleVisibilityUI();
+
+    const hiddenDisplay = groupMining.style.display;
+    const filterReset1 = state.filters.has_landable_hmc;
+    const scoutReset1 = state.miningScout;
+    const padReset1 = state.hasLargePad;
+    const distReset1 = state.maxArrivalDistLs;
+
+    // Case 2: Turn rhino: true
+    saveModuleSettings({ exobiology: true, rhino: true });
+    updateModuleVisibilityUI();
+    const visibleDisplay = groupMining.style.display;
+
+    console.log(JSON.stringify({
+      hiddenDisplay,
+      filterReset1,
+      scoutReset1,
+      padReset1,
+      distReset1,
+      visibleDisplay
+    }));
+    """)
+    res = json.loads(out)
+    assert res["hiddenDisplay"] == "none"
+    assert res["filterReset1"] is False
+    assert res["scoutReset1"] == ""
+    assert res["padReset1"] is False
+    assert res["distReset1"] is None
+    assert res["visibleDisplay"] == ""
+
