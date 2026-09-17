@@ -12,6 +12,7 @@ import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Optional
 
+from app.config import APP_VERSION
 from app.db.database import get_db_connection
 
 CACHE_TTL_SEC = 900.0  # 15 minutes cache
@@ -129,7 +130,7 @@ class FootprintService:
         url = f"https://www.edsm.net/api-v1/system?systemName={encoded}&showInformation=1&showCoordinates=1&showId=1"
         req = urllib.request.Request(
             url,
-            headers={"User-Agent": "EDJournalAnalyzer/v0.1.7 (Footprint Check)"}
+            headers={"User-Agent": f"EDJournalAnalyzer/v{APP_VERSION} (Footprint Check)"}
         )
         try:
             with urllib.request.urlopen(req, timeout=EXTERNAL_TIMEOUT_SEC) as resp:
@@ -166,7 +167,7 @@ class FootprintService:
             url,
             data=json.dumps(payload).encode("utf-8"),
             headers={
-                "User-Agent": "EDJournalAnalyzer/v0.1.7 (Footprint Check)",
+                "User-Agent": f"EDJournalAnalyzer/v{APP_VERSION} (Footprint Check)",
                 "Content-Type": "application/json"
             }
         )
