@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List
 from pydantic import BaseModel
-from fastapi import FastAPI, Query, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Query, BackgroundTasks, WebSocket, WebSocketDisconnect, Response, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,6 +31,8 @@ from app.live.rhino.tracker import sync_body_mining_to_note, extract_all_mining_
 from app.services.export_service import (
     generate_standalone_html,
     generate_share_snippet,
+    generate_summary_png_card,
+    extract_package_from_png,
     create_edsys_package,
     import_edsys_package,
     verify_package_signature
@@ -1964,6 +1966,73 @@ def export_snippet_endpoint(system_address: int, lang: str = "ja"):
     snippet = generate_share_snippet(system_data, bodies, lang=lang)
     return {"status": "ok", "system_address": system_address, "snippet": snippet}
 
+@app.get("/api/export/image/{system_address}")
+def export_summary_image_endpoint(system_address: int, lang: str = "ja"):
+    """
+    Generates a ComfyUI-style SNS summary PNG card (1200x630) with embedded .edsys package metadata.
+    Deliberately omits Orrery and Credit payout values to entice viewers to drop into the app.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM systems WHERE system_address = ?", (system_address,))
+    sys_row = c.fetchone()
+    if not sys_row:
+        conn.close()
+        return JSONResponse({"error": "System not found"}, status_code=404)
+
+    # Restriction: Unvisited external systems cannot be exported
+    if sys_row["is_external"] == 1 or (sys_row["visit_count"] or 0) == 0:
+        conn.close()
+        return JSONResponse({"error": "外部参照（未訪問）星系のため、サマリー画像のエクスポートは行えません。"}, status_code=403)
+
+    system_data = dict(sys_row)
+    c.execute("SELECT * FROM bodies WHERE system_address = ? ORDER BY distance_from_arrival_ls ASC, body_id ASC", (system_address,))
+    bodies = [dict(r) for r in c.fetchall()]
+
+    # Retrieve CMDR name if available
+    cmdr_name = "Explorer"
+    try:
+        c.execute("SELECT commander_name FROM commanders ORDER BY last_seen DESC LIMIT 1")
+        cmdr_row = c.fetchone()
+        if cmdr_row and cmdr_row["commander_name"]:
+            cmdr_name = cmdr_row["commander_name"]
+    except Exception:
+        pass
+
+    # Create embedded package dict
+    package = create_edsys_package(
+        conn,
+        system_addresses=[system_address],
+        cmdr_name=cmdr_name,
+        notes="Exported via Summary PNG Card"
+    )
+    conn.close()
+
+    png_bytes = generate_summary_png_card(
+        system_data=system_data,
+        bodies=bodies,
+        package_dict=package,
+        lang=lang
+    )
+
+    safe_sys_name = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in system_data.get("star_system", "system"))
+    filename = f"{safe_sys_name}_summary.png"
+    local_file_path = EXPORTS_DIR / filename
+    try:
+        local_file_path.write_bytes(png_bytes)
+    except Exception as e:
+        print(f"Failed to save local export image {local_file_path}: {e}")
+
+    return Response(
+        content=png_bytes,
+        media_type="image/png",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Export-Path": str(local_file_path.resolve()),
+            "Access-Control-Expose-Headers": "X-Export-Path, Content-Disposition"
+        }
+    )
+
 class OpenLocationRequest(BaseModel):
     path: Optional[str] = None
 
@@ -2085,6 +2154,28 @@ def reveal_file_in_explorer(payload: RevealPathRequest):
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
     return JSONResponse({"error": "File not found"}, status_code=404)
+
+@app.post("/api/import/png")
+async def import_png_preview_endpoint(file: UploadFile = File(...)):
+    """
+    Extracts embedded .edsys package from an uploaded ComfyUI-style PNG summary card,
+    then returns the package preview structure.
+    """
+    try:
+        contents = await file.read()
+        pkg = extract_package_from_png(contents)
+        if not pkg:
+            return JSONResponse(
+                {"error": "PNG画像内に有効なED Journal Analyzerメタデータ（ed_journal_data）が見つかりませんでした。"},
+                status_code=400
+            )
+        # Delegate to preview logic
+        preview = import_package_preview(pkg)
+        # Include raw package in response so the frontend can execute import
+        preview["package"] = pkg
+        return preview
+    except Exception as e:
+        return JSONResponse({"error": f"PNGの解析に失敗しました: {str(e)}"}, status_code=400)
 
 @app.post("/api/import/package/preview")
 def import_package_preview(package: dict):

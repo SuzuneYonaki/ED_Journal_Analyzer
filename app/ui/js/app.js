@@ -3617,6 +3617,55 @@ function initExportImportModals() {
     });
   }
 
+  // Method 4: ComfyUI-style Summary PNG Card Export
+  const btnExportPng = document.getElementById('btn-export-png');
+  if (btnExportPng) {
+    btnExportPng.addEventListener('click', async () => {
+      if (!state.selectedSystem || !state.selectedSystem.system_address) return;
+      const sysAddr = state.selectedSystem.system_address;
+      const sysName = (state.selectedSystem.star_system || 'System').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+      const origHtml = btnExportPng.innerHTML;
+      btnExportPng.innerHTML = `<span>⏳ ${t('exporting') || '生成中...'}</span>`;
+      btnExportPng.disabled = true;
+
+      try {
+        const lang = (typeof getAppLang === 'function') ? getAppLang() : (typeof currentLang !== 'undefined' ? currentLang : 'ja');
+        const res = await fetch(`/api/export/image/${sysAddr}?lang=${encodeURIComponent(lang)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const exportPath = res.headers.get('X-Export-Path') || '';
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${sysName}_summary.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        // Show toast with location & trigger explorer reveal
+        showExportSuccessToast('サマリー画像を出力しました', exportPath);
+        if (exportPath) {
+          try {
+            await fetch('/api/export/open_location', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: exportPath })
+            });
+          } catch (e) {}
+        }
+      } catch (err) {
+        console.error('Failed to export PNG card:', err);
+        alert(t('export_failed') || 'サマリー画像の出力に失敗しました');
+      } finally {
+        btnExportPng.innerHTML = origHtml;
+        btnExportPng.disabled = false;
+      }
+    });
+  }
+
   // Method 3: Compact SNS / Twitch Stream Snippet Copy
   const btnCopySnsSnippet = document.getElementById('btn-copy-sns-snippet');
   if (btnCopySnsSnippet) {
@@ -3915,27 +3964,49 @@ function initExportImportModals() {
 
   async function handleImportFile(file) {
     try {
-      const text = await file.text();
+      let preview;
       let pkg;
-      try {
-        pkg = JSON.parse(text);
-      } catch (pe) {
-        throw new Error(t('import_invalid_format') || 'ファイルの形式が不正です (.edsys または JSON を指定してください)');
+
+      const isPng = file.name.toLowerCase().endsWith('.png') || file.type === 'image/png';
+      if (isPng) {
+        // Upload PNG to /api/import/png to extract embedded package
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/import/png', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || errData.error || `HTTP ${res.status}`);
+        }
+
+        preview = await res.json();
+        pkg = preview.package;
+      } else {
+        const text = await file.text();
+        try {
+          pkg = JSON.parse(text);
+        } catch (pe) {
+          throw new Error(t('import_invalid_format') || 'ファイルの形式が不正です (.edsys, .json または サマリーPNG を指定してください)');
+        }
+
+        // Call preview API
+        const res = await fetch('/api/import/package/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pkg)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || errData.error || `HTTP ${res.status}`);
+        }
+
+        preview = await res.json();
       }
 
-      // Call preview API
-      const res = await fetch('/api/import/package/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pkg)
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || errData.error || `HTTP ${res.status}`);
-      }
-
-      const preview = await res.json();
       pendingImportPackage = pkg;
 
       // Populate preview UI
@@ -3974,6 +4045,23 @@ function initExportImportModals() {
       alert(err.message || 'パッケージの読み込みに失敗しました');
     }
   }
+
+  // Global Drag and Drop onto Window
+  window.addEventListener('dragover', (e) => {
+    e.preventDefault();
+  });
+
+  window.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      const fn = file.name.toLowerCase();
+      if (fn.endsWith('.png') || fn.endsWith('.edsys') || fn.endsWith('.json')) {
+        openImportModal();
+        handleImportFile(file);
+      }
+    }
+  });
 
   if (cbImportConsent && btnExecuteImport) {
     cbImportConsent.addEventListener('change', () => {

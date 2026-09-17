@@ -1508,3 +1508,167 @@ def generate_share_snippet(system_data: Dict[str, Any], bodies: List[Dict[str, A
 
     return f"{header}\n{highlights_line}{link_line}"
 
+
+def _get_card_font(size: int, bold: bool = False):
+    """
+    Helper to resolve a readable TrueType font across Windows environments.
+    Falls back to default Pillow font if TrueType fonts are unavailable.
+    """
+    from PIL import ImageFont
+    candidates = [
+        "C:/Windows/Fonts/meiryo.ttc",
+        "C:/Windows/Fonts/msgothic.ttc",
+        "C:/Windows/Fonts/segoeui.ttf",
+        "C:/Windows/Fonts/arial.ttf"
+    ]
+    for cp in candidates:
+        try:
+            return ImageFont.truetype(cp, size)
+        except Exception:
+            continue
+    return ImageFont.load_default()
+
+
+def generate_summary_png_card(
+    system_data: Dict[str, Any],
+    bodies: List[Dict[str, Any]],
+    package_dict: Optional[Dict[str, Any]] = None,
+    lang: str = "ja"
+) -> bytes:
+    """
+    Generates a 1200x630 SNS/OGP summary PNG card containing:
+    - System Name, Main Star Type, Galactic Coordinates
+    - Rare Worlds (ELW/WW/AW), Bio signals, Geo signals, Rings
+    - Special Orbits badge (if present)
+    - Invitation footer directing viewers to drop the PNG into ED Journal Analyzer
+    - ComfyUI-style embedded metadata chunk ('ed_journal_data' with full .edsys package JSON)
+    - Deliberately omits Orrery and Credit payout values to induce engagement.
+    """
+    import io
+    from PIL import Image, ImageDraw, PngImagePlugin
+
+    is_ja = (lang == "ja")
+    sys_name = system_data.get("star_system") or "Unknown System"
+    main_star = system_data.get("main_star_type") or "Unknown"
+    pos_x = system_data.get("star_pos_x", 0.0)
+    pos_y = system_data.get("star_pos_y", 0.0)
+    pos_z = system_data.get("star_pos_z", 0.0)
+
+    # 1. Prepare statistics
+    elw = sum(1 for b in bodies if "earth" in (b.get("planet_class") or "").lower())
+    ww = sum(1 for b in bodies if "water world" in (b.get("planet_class") or "").lower())
+    ammonia = sum(1 for b in bodies if "ammonia" in (b.get("planet_class") or "").lower())
+
+    rare_parts = []
+    if elw > 0:
+        rare_parts.append(f"🌍 ELW: {elw}")
+    if ww > 0:
+        rare_parts.append(f"💧 WW: {ww}")
+    if ammonia > 0:
+        rare_parts.append(f"🧪 AW: {ammonia}")
+    rare_val = " | ".join(rare_parts) if rare_parts else ("なし" if is_ja else "None")
+
+    bio_count = system_data.get("total_bio_signals", 0) or sum(b.get("bio_signals", 0) or 0 for b in bodies)
+    bio_bodies = sum(1 for b in bodies if (b.get("bio_signals", 0) or 0) > 0)
+    if bio_count > 0:
+        bio_val = f"🌱 {bio_count} 箇所 ({bio_bodies}天体)" if is_ja else f"🌱 {bio_count} ({bio_bodies} bodies)"
+    else:
+        bio_val = "なし" if is_ja else "None"
+
+    geo_count = sum(b.get("geo_signals", 0) or 0 for b in bodies)
+    geo_bodies = sum(1 for b in bodies if (b.get("geo_signals", 0) or 0) > 0)
+    if geo_count > 0:
+        geo_val = f"🌋 {geo_count} 箇所 ({geo_bodies}天体)" if is_ja else f"🌋 {geo_count} ({geo_bodies} bodies)"
+    else:
+        geo_val = "なし" if is_ja else "None"
+
+    ring_desc = extract_system_ring_summary(bodies, lang=lang)
+    if ring_desc:
+        ring_val = f"🪐 {ring_desc}"
+    else:
+        ring_val = "なし" if is_ja else "None"
+
+    special_orbit = has_special_orbits(bodies)
+
+    # 2. Render image (1200x630)
+    img = Image.new("RGB", (1200, 630), "#0a0e17")
+    draw = ImageDraw.Draw(img)
+
+    f_title = _get_card_font(34, bold=True)
+    f_sub = _get_card_font(18)
+    f_box_label = _get_card_font(16, bold=True)
+    f_box_val = _get_card_font(24, bold=True)
+    f_badge = _get_card_font(16, bold=True)
+    f_footer = _get_card_font(15)
+
+    # Outer decorative border
+    draw.rounded_rectangle([(15, 15), (1185, 615)], radius=16, outline="#1e293b", width=2)
+
+    # Header: System Title & Subheader
+    draw.text((45, 42), f"🌌 {sys_name}", fill="#f8fafc", font=f_title)
+    if is_ja:
+        sub_text = f"主星: {main_star}型 | 座標: [ {pos_x:.1f}, {pos_y:.1f}, {pos_z:.1f} ]"
+    else:
+        sub_text = f"Main Star: Class {main_star} | Coordinates: [ {pos_x:.1f}, {pos_y:.1f}, {pos_z:.1f} ]"
+    draw.text((45, 92), sub_text, fill="#94a3b8", font=f_sub)
+
+    # 4 Highlight Metric Cards
+    boxes = [
+        ("希少天体 (ELW / WW / AW)" if is_ja else "Rare Worlds (ELW / WW / AW)", rare_val, "#38bdf8", "#0369a1"),
+        ("生体シグナル (Bio Signals)" if is_ja else "Biological Signals (Bio)", bio_val, "#4ade80", "#15803d"),
+        ("地質シグナル (Geo Signals)" if is_ja else "Geological Signals (Geo)", geo_val, "#fb923c", "#c2410c"),
+        ("環・小惑星帯 (Rings)" if is_ja else "Rings & Asteroid Belts", ring_val, "#e879f9", "#a21caf")
+    ]
+
+    for i, (label, val, text_col, border_col) in enumerate(boxes):
+        bx = 45 + (i % 2) * 565
+        by = 145 + (i // 2) * 125
+        draw.rounded_rectangle([(bx, by), (bx + 545, by + 105)], radius=10, fill="#111827", outline=border_col, width=1)
+        draw.text((bx + 20, by + 16), label, fill=text_col, font=f_box_label)
+        draw.text((bx + 20, by + 48), val, fill="#f8fafc", font=f_box_val)
+
+    # Special Orbit Badge (if applicable)
+    if special_orbit:
+        orbit_text = "⚡ 特殊な天体軌道あり (High Eccentricity / Tilt / Hot Jupiter)" if is_ja else "⚡ Special Orbits Detected (High Eccentricity / Tilt / Hot Jupiter)"
+        draw.rounded_rectangle([(45, 415), (780, 465)], radius=8, fill="#2e1065", outline="#a855f7", width=1)
+        draw.text((65, 428), orbit_text, fill="#d8b4fe", font=f_badge)
+
+    # Footer Action Banner (invitation to app / D&D)
+    footer_bg = "#1e293b"
+    draw.rounded_rectangle([(45, 520), (1155, 585)], radius=8, fill=footer_bg)
+    if is_ja:
+        footer_msg = "📥 このPNG画像を ED Journal Analyzer にドラッグ＆ドロップすると、全軌道図(Orrery)や詳細天体を展開・閲覧できます"
+    else:
+        footer_msg = "📥 Drop this PNG into ED Journal Analyzer to explore full System Orrery & Celestial Survey Data"
+    draw.text((65, 540), footer_msg, fill="#38bdf8", font=f_footer)
+
+    # 3. ComfyUI-style PNG metadata embedding
+    png_info = PngImagePlugin.PngInfo()
+    if package_dict:
+        raw_json = json.dumps(package_dict, ensure_ascii=False)
+        png_info.add_text("ed_journal_data", raw_json)
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", pnginfo=png_info)
+    return buf.getvalue()
+
+
+def extract_package_from_png(png_bytes: bytes) -> Optional[Dict[str, Any]]:
+    """
+    Extracts the embedded ED Journal Analyzer package JSON from a PNG's 'ed_journal_data' tEXt chunk.
+    Returns parsed dictionary or None if not present or invalid.
+    """
+    import io
+    from PIL import Image
+
+    try:
+        buf = io.BytesIO(png_bytes)
+        img = Image.open(buf)
+        meta_str = img.info.get("ed_journal_data")
+        if not meta_str:
+            return None
+        return json.loads(meta_str)
+    except Exception:
+        return None
+
+
