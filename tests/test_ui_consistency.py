@@ -161,5 +161,41 @@ def test_ring_and_barycenter_i18n_keys():
     assert "${info.nameJa}環" not in app_js, "app.js must not hardcode '${info.nameJa}環'"
 
 
+def test_settings_modal_i18n_keys():
+    """Verify that all i18n keys used in Settings modal exist in both ja and en dictionaries."""
+    from bs4 import BeautifulSoup
+    modals_path = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "components", "modals.html")
+    with open(modals_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    soup = BeautifulSoup(content, "html.parser")
+    modal = soup.find(id="settings-modal")
+    assert modal is not None, "#settings-modal must exist in modals.html"
+
+    found_keys = set()
+    for el in modal.find_all(True):
+        for attr in ["data-i18n", "data-i18n-html", "data-i18n-title", "data-i18n-placeholder"]:
+            if el.has_attr(attr):
+                found_keys.add(el[attr])
+
+    assert len(found_keys) >= 25, f"Expected at least 25 i18n keys in settings modal, found {len(found_keys)}"
+
+    i18n_path = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "js", "i18n.js")
+    with open(i18n_path, "r", encoding="utf-8") as f:
+        i18n_content = f.read()
+
+    ja_match = re.search(r"ja:\s*\{(.*?)\n\s*\},", i18n_content, re.DOTALL)
+    en_match = re.search(r"en:\s*\{(.*?)\n\s*\}\n\};", i18n_content, re.DOTALL)
+    assert ja_match and en_match
+
+    ja_text = ja_match.group(1)
+    en_text = en_match.group(1)
+
+    for k in found_keys:
+        assert f"{k}:" in ja_text, f"Key '{k}' used in settings modal must exist in ja dictionary"
+        assert f"{k}:" in en_text, f"Key '{k}' used in settings modal must exist in en dictionary"
+
+
+
 
 

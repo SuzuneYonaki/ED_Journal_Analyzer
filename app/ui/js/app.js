@@ -3034,9 +3034,9 @@ async function checkVoicevoxConnection() {
       });
     }
 
-    statusEl.innerHTML = '<span style="color: #6ee7b7;">🟢 VOICEVOX 接続成功 (127.0.0.1:50021)</span>';
+    statusEl.innerHTML = `<span style="color: #6ee7b7;">${(typeof t === 'function' ? t('voicevox_connected') : null) || '🟢 VOICEVOX 接続成功 (127.0.0.1:50021)'}</span>`;
   } catch (err) {
-    statusEl.innerHTML = '<span style="color: #94a3b8;">🔴 VOICEVOX 未検出 (起動すると自動連携されます。未起動時はWeb Speech APIが使われます)</span>';
+    statusEl.innerHTML = `<span style="color: #94a3b8;">${(typeof t === 'function' ? t('voicevox_not_found') : null) || '🔴 VOICEVOX 未検出 (起動すると自動連携されます。未起動時はWeb Speech APIが使われます)'}</span>`;
   }
 }
 
@@ -3406,7 +3406,7 @@ async function initSettingsModal() {
       // Trigger scan
       await triggerManualRescan();
       if (modalScanStatusText) {
-        modalScanStatusText.innerText = 'ログスキャンを開始しました...';
+        modalScanStatusText.innerText = (typeof t === 'function' ? t('scan_started') : null) || 'ログスキャンを開始しました...';
       }
     });
   }
