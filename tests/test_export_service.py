@@ -129,7 +129,7 @@ def test_interactive_orrery_binary_and_moons():
     assert "Col 285 Binary System B 1" in html_out
     # Verify Moon B 1 a exists in Orrery
     assert "Col 285 Binary System B 1 a" in html_out
-    # Verify Quick Jump buttons for both Star A and Star B
+    # Verify Quick Jump buttons for both Star A and Star B (default JA)
     assert "主星 A" in html_out
     assert "伴星 B" in html_out
     # Verify Zoom / Pan UI controls and SVG interactive layer
@@ -138,6 +138,66 @@ def test_interactive_orrery_binary_and_moons():
     assert 'id="orrery-wrapper"' in html_out
     assert 'zoomOrrery' in html_out
     assert 'resetOrreryView' in html_out
+
+    # Test English Orrery
+    html_en = generate_standalone_html(sys_data, bodies, [], [], cmdr_name="Yonaki", lang="en")
+    assert "Primary A" in html_en
+    assert "Companion B" in html_en
+    assert "Zoom In" in html_en
+    assert "Zoom Out" in html_en
+    assert "Reset" in html_en
+
+
+def test_standalone_html_generation_english():
+    sys_data = {
+        "star_system": "Eol Prou Test EN",
+        "main_star_type": "K",
+        "star_pos_x": 100.0,
+        "star_pos_y": -50.0,
+        "star_pos_z": 300.0,
+        "total_fss_value": 1500000,
+        "total_potential_value": 4500000,
+        "total_bio_signals": 3
+    }
+    bodies = [
+        {"body_id": 1, "body_name": "Eol Prou Test EN A", "star_type": "K", "distance_from_arrival_ls": 0, "stellar_mass": 0.8},
+        {"body_id": 2, "body_name": "Eol Prou Test EN 1", "planet_class": "High metal content world", "radius": 4500000, "surface_gravity_g": 1.1, "landable": 1, "bio_signals": 3, "semi_major_axis": 149597870700, "orbital_period": 864000}
+    ]
+    mining_sites = [
+        {"latitude": -12.3456, "longitude": 45.6789, "body_name": "Eol Prou Test EN 1", "commodities": ["Tungsten", "Molybdenum"]}
+    ]
+    bookmarks = [
+        {"body_id": 2, "alias_name": "Mining Haven", "note_markdown": "Rich in high tier raw materials."}
+    ]
+
+    html_out = generate_standalone_html(sys_data, bodies, mining_sites, bookmarks, cmdr_name="Yonaki", lang="en")
+    assert '<html lang="en">' in html_out
+    assert "Coordinates:" in html_out
+    assert "Sol Distance:" in html_out
+    assert "Main Star:" in html_out
+    assert "Generative AI (LLM) Astrophysical Analysis" in html_out
+    assert "Full Observation JSON Embedded" in html_out
+    assert "Estimated Max Value" in html_out
+    assert "FSS Scan Value" in html_out
+    assert "Celestial Bodies" in html_out
+    assert "Bio Signals" in html_out
+    assert "System Composition & Survey Inventory" in html_out
+    assert "Body Name" in html_out
+    assert "Class / Tag" in html_out
+    assert "Distance" in html_out
+    assert "Gravity" in html_out
+    assert "Surface Temp" in html_out
+    assert "Atmosphere" in html_out
+    assert "Scan Value" in html_out
+    assert "Detailed Astrophysical Parameters" in html_out
+    assert "(AI推論用)" not in html_out
+    assert "（AI推論用）" not in html_out
+    assert "Mass:" in html_out
+    assert "Radius:" in html_out
+    assert "Semi-Major Axis:" in html_out
+    assert "Orbital Period:" in html_out
+    assert "Rhino SRV Surface Mining Sites" in html_out
+    assert "Extracted Materials:" in html_out
 
 
 def test_package_export_and_import():
@@ -205,11 +265,17 @@ def test_api_export_and_import_endpoints():
     conn.commit()
     conn.close()
 
-    # 1. Test HTML export endpoint
+    # 1. Test HTML export endpoint (default ja and en)
     html_resp = client.get("/api/export/html/888123?cmdr_name=Tester")
     assert html_resp.status_code == 200
     assert "text/html" in html_resp.headers["content-type"]
     assert "Test API System" in html_resp.text
+    assert '<html lang="ja">' in html_resp.text
+
+    html_en_resp = client.get("/api/export/html/888123?cmdr_name=Tester&lang=en")
+    assert html_en_resp.status_code == 200
+    assert '<html lang="en">' in html_en_resp.text
+    assert "Coordinates:" in html_en_resp.text
 
     # 2. Test package export without consent (should fail with 400)
     fail_resp = client.post("/api/export/package", json={

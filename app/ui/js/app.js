@@ -3581,7 +3581,8 @@ function initExportImportModals() {
       btnExportHtml.disabled = true;
 
       try {
-        const res = await fetch(`/api/export/html/${sysAddr}`);
+        const lang = (typeof getAppLang === 'function') ? getAppLang() : (typeof currentLang !== 'undefined' ? currentLang : 'ja');
+        const res = await fetch(`/api/export/html/${sysAddr}?lang=${encodeURIComponent(lang)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         
         const exportPath = res.headers.get('X-Export-Path') || '';

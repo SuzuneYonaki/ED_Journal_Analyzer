@@ -1885,7 +1885,8 @@ def import_edsm_external_system(system_name: str):
 def export_standalone_html_endpoint(
     system_address: int,
     cmdr_name: Optional[str] = None,
-    is_anonymous: bool = False
+    is_anonymous: bool = False,
+    lang: str = "ja"
 ):
     conn = get_db_connection()
     c = conn.cursor()
@@ -1922,7 +1923,8 @@ def export_standalone_html_endpoint(
         mining_sites=mining_sites,
         bookmarks=bookmarks,
         cmdr_name=cmdr_name,
-        is_anonymous=is_anonymous
+        is_anonymous=is_anonymous,
+        lang=lang
     )
     safe_sys_name = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in system_data.get("star_system", "system"))
     filename = f"{safe_sys_name}_share.html"

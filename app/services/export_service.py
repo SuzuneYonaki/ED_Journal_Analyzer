@@ -428,8 +428,133 @@ def extract_body_sub_tokens(body_name: str, sys_name: str) -> Dict[str, Any]:
     return {"star": star, "planet": planet, "moon": moon, "submoon": submoon}
 
 
-def build_interactive_orrery(system_data: Dict[str, Any], bodies: List[Dict[str, Any]]) -> str:
+HTML_I18N = {
+    "ja": {
+        "html_lang": "ja",
+        "coords": "座標",
+        "sol_dist": "Sol距離",
+        "main_star": "主星",
+        "star_class_suffix": "型",
+        "star_type_label": "{type}型 恒星",
+        "star_key_label": "{key}: {type}型",
+        "barycentre_label": "重心 {key}",
+        "binary_orbit": "連星軌道",
+        "anon_shared": "匿名共有",
+        "cmdr_shared": "発見・共有: CMDR {cmdr}",
+        "ai_banner_title": "生成AI（LLM）天体物理分析・星系形成史シナリオ推論対応",
+        "ai_badge": "完全観測JSON内包",
+        "ai_banner_desc": "本HTMLファイルには、星系および全天体の完全な天体物理・軌道観測データ（質量・半径・軌道長半径・離心率・公転周期・詳細大気組成など）が JSON 形式で内包されています。<br>ChatGPT、Claude、Gemini 等の生成AIに本HTMLファイルをそのままアップロードし、推論プロンプトを入力することで、現代の天文学・惑星形成理論に基づいた詳細な形成史シナリオや景観描写の推論を行わせることができます。",
+        "ai_prompt_hint": "このJSONには星系および全天体の完全な天体物理・軌道観測パラメータ（質量・半径・軌道長半径・離心率・公転周期・詳細大気組成等）が含まれています。天体物理学・惑星科学の観点から星系の形成史や軌道進化の推論にそのまま利用できます。",
+        "stat_max_pot": "推定最大探査価値",
+        "stat_fss_val": "FSSスキャン価値",
+        "stat_bodies": "天体数",
+        "stat_bodies_val": "{count} 天体",
+        "stat_bio": "生体 (Bio) シグナル",
+        "stat_bio_val": "{count} 箇所",
+        "orrery_title": "🪐 System Orrery & Orbital Hierarchy (対話的ズーム・全星系軌道図)",
+        "orrery_zoom_in": "🔍＋ 拡大",
+        "orrery_zoom_out": "🔍－ 縮小",
+        "orrery_reset": "🔄 全体リセット",
+        "orrery_zoom_in_title": "拡大",
+        "orrery_zoom_out_title": "縮小",
+        "orrery_reset_title": "星系全体を表示",
+        "orrery_jump_bar": "フォーカスジャンプ:",
+        "orrery_primary_star": "☀️ 主星 {key}",
+        "orrery_companion_star": "⭐ 伴星 {key}{dist}",
+        "orrery_companion_orbit": "── 伴星 {key} 周回軌道 ({dist}) ──",
+        "orrery_hint": "🖱️ マウスホイールで無段階ズーム / ドラッグで自由移動 / 伴星ボタンで拡大ジャンプ",
+        "tooltip_dist": "到着距離: ",
+        "tooltip_grav": "表面重力: ",
+        "tooltip_temp": "表面温度: ",
+        "table_section_title": "🪐 天体構成・探査インベントリ ({count} 天体)",
+        "th_name": "天体名",
+        "th_class": "分類 / タグ",
+        "th_dist": "到着距離",
+        "th_grav": "重力",
+        "th_temp": "表面温度",
+        "th_atmo": "大気",
+        "th_value": "探査価値",
+        "astro_summary_heading": "🔬 詳細天体物理パラメータ",
+        "param_mass": "質量",
+        "param_radius": "半径",
+        "param_semi_major_axis": "軌道長半径",
+        "param_eccentricity": "離心率",
+        "param_orbital_period": "公転周期",
+        "param_rotation_period": "自転周期",
+        "param_axial_tilt": "軸傾斜",
+        "param_days_unit": "日",
+        "param_composition": "組成",
+        "atmo_none": "なし",
+        "mining_section_title": "⛏️ Rhino SRV 惑星表面採掘ポイント ({count} 箇所)",
+        "mining_extracted": "⛏️ 抽出・精製物: <strong>{comms}</strong>",
+        "footer": "Elite Dangerous Journal Analyzer &bull; Standalone Web Share Edition &bull; Exported on {now}"
+    },
+    "en": {
+        "html_lang": "en",
+        "coords": "Coordinates",
+        "sol_dist": "Sol Distance",
+        "main_star": "Main Star",
+        "star_class_suffix": "",
+        "star_type_label": "Class {type} Star",
+        "star_key_label": "{key}: Class {type}",
+        "barycentre_label": "Barycentre {key}",
+        "binary_orbit": "Binary Orbit",
+        "anon_shared": "Shared Anonymously",
+        "cmdr_shared": "Discovered / Shared by CMDR {cmdr}",
+        "ai_banner_title": "Generative AI (LLM) Astrophysical Analysis & System Formation Reasoning",
+        "ai_badge": "Full Observation JSON Embedded",
+        "ai_banner_desc": "This HTML file contains complete astrophysical and orbital observation data for the system and all celestial bodies (mass, radius, semi-major axis, eccentricity, orbital period, detailed atmospheric composition, etc.) in embedded JSON format.<br>Upload this HTML directly to ChatGPT, Claude, Gemini, or other LLMs with your prompt to infer deep system formation scenarios, geological evolutions, and vista descriptions based on astrophysical science.",
+        "ai_prompt_hint": "This JSON contains complete astrophysical and orbital observation parameters (mass, radius, semi-major axis, eccentricity, orbital period, detailed atmospheric composition, etc.). It can be directly utilized for reasoning about system formation history and orbital evolution from astrophysical perspectives.",
+        "stat_max_pot": "Estimated Max Value",
+        "stat_fss_val": "FSS Scan Value",
+        "stat_bodies": "Celestial Bodies",
+        "stat_bodies_val": "{count} bodies",
+        "stat_bio": "Bio Signals",
+        "stat_bio_val": "{count} sites",
+        "orrery_title": "🪐 System Orrery & Orbital Hierarchy (Interactive Zoom & Orbit Map)",
+        "orrery_zoom_in": "🔍＋ Zoom In",
+        "orrery_zoom_out": "🔍－ Zoom Out",
+        "orrery_reset": "🔄 Reset",
+        "orrery_zoom_in_title": "Zoom in",
+        "orrery_zoom_out_title": "Zoom out",
+        "orrery_reset_title": "Show entire system",
+        "orrery_jump_bar": "Focus Jump:",
+        "orrery_primary_star": "☀️ Primary {key}",
+        "orrery_companion_star": "⭐ Companion {key}{dist}",
+        "orrery_companion_orbit": "── Companion Star {key} Orbit ({dist}) ──",
+        "orrery_hint": "🖱️ Mouse wheel to zoom / Drag to pan / Click companion buttons to focus",
+        "tooltip_dist": "Arrival Distance: ",
+        "tooltip_grav": "Surface Gravity: ",
+        "tooltip_temp": "Surface Temperature: ",
+        "table_section_title": "🪐 System Composition & Survey Inventory ({count} bodies)",
+        "th_name": "Body Name",
+        "th_class": "Class / Tag",
+        "th_dist": "Distance",
+        "th_grav": "Gravity",
+        "th_temp": "Surface Temp",
+        "th_atmo": "Atmosphere",
+        "th_value": "Scan Value",
+        "astro_summary_heading": "🔬 Detailed Astrophysical Parameters",
+        "param_mass": "Mass",
+        "param_radius": "Radius",
+        "param_semi_major_axis": "Semi-Major Axis",
+        "param_eccentricity": "Eccentricity",
+        "param_orbital_period": "Orbital Period",
+        "param_rotation_period": "Rotation Period",
+        "param_axial_tilt": "Axial Tilt",
+        "param_days_unit": "d",
+        "param_composition": "Composition",
+        "atmo_none": "None",
+        "mining_section_title": "⛏️ Rhino SRV Surface Mining Sites ({count} sites)",
+        "mining_extracted": "⛏️ Extracted Materials: <strong>{comms}</strong>",
+        "footer": "Elite Dangerous Journal Analyzer &bull; Standalone Web Share Edition &bull; Exported on {now}"
+    }
+}
+
+
+def build_interactive_orrery(system_data: Dict[str, Any], bodies: List[Dict[str, Any]], lang: str = "ja") -> str:
     import math
+    strings = HTML_I18N.get(lang if lang in HTML_I18N else "ja")
     sys_name = system_data.get("star_system", "System")
     stars = [b for b in bodies if b.get("star_type")]
     if not stars:
@@ -525,12 +650,14 @@ def build_interactive_orrery(system_data: Dict[str, Any], bodies: List[Dict[str,
         pos_data = star_positions[comp["key"]]
         orbit_r = pos_data[2]
         dist_ls = comp["star_body"].get("distance_from_arrival_ls") or 0
-        dist_str = f"{dist_ls:,} Ls" if dist_ls else "Binary Orbit"
+        dist_str = f"{dist_ls:,} Ls" if dist_ls else strings["binary_orbit"]
+        orbit_text = strings["orrery_companion_orbit"].format(key=comp["key"], dist=dist_str)
         svg_elements.append(f'<circle cx="{center_cx}" cy="{center_cy}" r="{orbit_r:.1f}" fill="none" stroke="rgba(255, 170, 0, 0.22)" stroke-width="1.2" stroke-dasharray="5,4" />')
-        svg_elements.append(f'<text x="{center_cx}" y="{center_cy - orbit_r - 5:.1f}" font-size="9" fill="#f59e0b" text-anchor="middle" font-family="monospace">── 伴星 {comp["key"]} 周回軌道 ({dist_str}) ──</text>')
+        svg_elements.append(f'<text x="{center_cx}" y="{center_cy - orbit_r - 5:.1f}" font-size="9" fill="#f59e0b" text-anchor="middle" font-family="monospace">{orbit_text}</text>')
 
     jump_buttons_html = []
-    jump_buttons_html.append(f'<button type="button" class="orrery-btn" onclick="focusOrreryTarget({center_cx}, {center_cy}, 1.8)">☀️ 主星 {primary_key}</button>')
+    primary_btn_text = strings["orrery_primary_star"].format(key=primary_key)
+    jump_buttons_html.append(f'<button type="button" class="orrery-btn" onclick="focusOrreryTarget({center_cx}, {center_cy}, 1.8)">{primary_btn_text}</button>')
 
     # Render stars & planets
     for star_key, s_data in star_map.items():
@@ -546,23 +673,27 @@ def build_interactive_orrery(system_data: Dict[str, Any], bodies: List[Dict[str,
 
         if not is_prim:
             dist_tag = f" ({dist_val:,} Ls)" if dist_val else ""
-            jump_buttons_html.append(f'<button type="button" class="orrery-btn" onclick="focusOrreryTarget({sx:.1f}, {sy:.1f}, 2.4)">⭐ 伴星 {star_key}{dist_tag}</button>')
+            comp_btn_text = strings["orrery_companion_star"].format(key=star_key, dist=dist_tag)
+            jump_buttons_html.append(f'<button type="button" class="orrery-btn" onclick="focusOrreryTarget({sx:.1f}, {sy:.1f}, 2.4)">{comp_btn_text}</button>')
 
         if is_bary:
+            bary_text = strings["barycentre_label"].format(key=star_key)
             svg_elements.append(f'<g class="orrery-node" data-name="{html.escape(s_body.get("body_name", ""))}" data-type="Barycentre" data-dist="{dist_val}">')
             svg_elements.append(f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="8" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="2,2" />')
             svg_elements.append(f'<line x1="{sx-12:.1f}" y1="{sy:.1f}" x2="{sx+12:.1f}" y2="{sy:.1f}" stroke="#a855f7" stroke-width="1" />')
             svg_elements.append(f'<line x1="{sx:.1f}" y1="{sy-12:.1f}" x2="{sx:.1f}" y2="{sy+12:.1f}" stroke="#a855f7" stroke-width="1" />')
-            svg_elements.append(f'<text x="{sx:.1f}" y="{sy+20:.1f}" font-size="10" fill="#d8b4fe" text-anchor="middle" font-family="sans-serif">重心 {star_key}</text>')
+            svg_elements.append(f'<text x="{sx:.1f}" y="{sy+20:.1f}" font-size="10" fill="#d8b4fe" text-anchor="middle" font-family="sans-serif">{bary_text}</text>')
             svg_elements.append('</g>')
         else:
             r_star = 18 if is_prim else 13
             glow_id = "star-glow" if is_prim else "companion-glow"
             b_name = html.escape(s_body.get("body_name", f"Star {star_key}"))
             temp_val = f'{s_body.get("surface_temperature", "--")} K'
-            svg_elements.append(f'<g class="orrery-node" data-name="{b_name}" data-type="{s_type}型 恒星" data-dist="{dist_val}" data-temp="{temp_val}">')
+            star_type_text = strings["star_type_label"].format(type=s_type)
+            star_key_text = strings["star_key_label"].format(key=star_key, type=s_type)
+            svg_elements.append(f'<g class="orrery-node" data-name="{b_name}" data-type="{star_type_text}" data-dist="{dist_val}" data-temp="{temp_val}">')
             svg_elements.append(f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="{r_star}" fill="{s_color}" filter="url(#{glow_id})" />')
-            svg_elements.append(f'<text x="{sx:.1f}" y="{sy + r_star + 13:.1f}" font-size="10" font-weight="bold" fill="#fed7aa" text-anchor="middle" font-family="sans-serif">{star_key}: {s_type}型</text>')
+            svg_elements.append(f'<text x="{sx:.1f}" y="{sy + r_star + 13:.1f}" font-size="10" font-weight="bold" fill="#fed7aa" text-anchor="middle" font-family="sans-serif">{star_key_text}</text>')
             svg_elements.append('</g>')
 
         planets_dict = s_data["planets"]
@@ -615,16 +746,16 @@ def build_interactive_orrery(system_data: Dict[str, Any], bodies: List[Dict[str,
     orrery_html = f"""
     <div class="orrery-container" id="orrery-container-root">
         <div class="orrery-header-bar">
-            <h2>🪐 System Orrery & Orbital Hierarchy (対話的ズーム・全星系軌道図)</h2>
+            <h2>{strings["orrery_title"]}</h2>
             <div class="orrery-controls">
-                <button type="button" class="orrery-btn" onclick="zoomOrrery(1.3)" title="拡大">🔍＋ 拡大</button>
-                <button type="button" class="orrery-btn" onclick="zoomOrrery(0.7)" title="縮小">🔍－ 縮小</button>
-                <button type="button" class="orrery-btn" onclick="resetOrreryView()" title="星系全体を表示">🔄 全体リセット</button>
+                <button type="button" class="orrery-btn" onclick="zoomOrrery(1.3)" title="{strings["orrery_zoom_in_title"]}">{strings["orrery_zoom_in"]}</button>
+                <button type="button" class="orrery-btn" onclick="zoomOrrery(0.7)" title="{strings["orrery_zoom_out_title"]}">{strings["orrery_zoom_out"]}</button>
+                <button type="button" class="orrery-btn" onclick="resetOrreryView()" title="{strings["orrery_reset_title"]}">{strings["orrery_reset"]}</button>
             </div>
         </div>
 
         <div class="orrery-jump-bar">
-            <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: bold; margin-right: 4px;">フォーカスジャンプ:</span>
+            <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: bold; margin-right: 4px;">{strings["orrery_jump_bar"]}</span>
             {jump_bar_inner}
         </div>
 
@@ -640,7 +771,7 @@ def build_interactive_orrery(system_data: Dict[str, Any], bodies: List[Dict[str,
 
             <!-- Hint overlay -->
             <div style="position: absolute; bottom: 8px; left: 12px; font-size: 0.7rem; color: #64748b; pointer-events: none;">
-                🖱️ マウスホイールで無段階ズーム / ドラッグで自由移動 / 伴星ボタンで拡大ジャンプ
+                {strings["orrery_hint"]}
             </div>
         </div>
     </div>
@@ -654,12 +785,14 @@ def generate_standalone_html(
     mining_sites: List[Dict[str, Any]],
     bookmarks: List[Dict[str, Any]],
     cmdr_name: Optional[str] = None,
-    is_anonymous: bool = False
+    is_anonymous: bool = False,
+    lang: str = "ja"
 ) -> str:
     """
     Generates a self-contained, responsive, beautiful HTML view of the system.
     Runs entirely in any web browser without internet connection or external CDN.
     """
+    strings = HTML_I18N.get(lang if lang in HTML_I18N else "ja")
     sys_name = html.escape(system_data.get("star_system") or "Unknown System")
     main_star = html.escape(system_data.get("main_star_type") or "Unknown")
     pos_x = system_data.get("star_pos_x", 0.0)
@@ -670,7 +803,7 @@ def generate_standalone_html(
     max_pot = system_data.get("total_potential_value", 0)
     bio_signals = system_data.get("total_bio_signals", 0)
 
-    author_badge = "Shared Anonymously" if (is_anonymous or not cmdr_name) else f"Discovered / Shared by CMDR {html.escape(cmdr_name)}"
+    author_badge = strings["anon_shared"] if (is_anonymous or not cmdr_name) else strings["cmdr_shared"].format(cmdr=html.escape(cmdr_name))
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     # Build clean full astrophysical JSON payload for AI prompting / external scientific tools
@@ -679,12 +812,12 @@ def generate_standalone_html(
         "format": "ED_JOURNAL_ANALYZER_ASTROPHYSICS_DATA_V1",
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "cmdr_name": "Anonymous" if is_anonymous else (cmdr_name or "Explorer"),
-        "ai_prompt_hint": "このJSONには星系および全天体の完全な天体物理・軌道観測パラメータ（質量・半径・軌道長半径・離心率・公転周期・詳細大気組成等）が含まれています。天体物理学・惑星科学の観点から星系の形成史や軌道進化の推論にそのまま利用できます。"
+        "ai_prompt_hint": strings["ai_prompt_hint"]
     }
     json_str = json.dumps(full_data, ensure_ascii=False, indent=2).replace("</script>", "<\\/script>")
 
     # Build interactive multi-star and orbital hierarchy Orrery
-    orrery_html_block = build_interactive_orrery(system_data, bodies)
+    orrery_html_block = build_interactive_orrery(system_data, bodies, lang=lang)
 
     # Build bodies table rows with deep astrophysics parameter disclosure
     body_rows_html = []
@@ -694,7 +827,7 @@ def generate_standalone_html(
         dist = f"{round(b.get('distance_from_arrival_ls', 0)):,} Ls" if b.get('distance_from_arrival_ls') is not None else "--"
         grav = f"{b.get('surface_gravity_g', 0):.2f} G" if b.get("surface_gravity_g") is not None else "--"
         temp = f"{round(b.get('surface_temperature', 0))} K" if b.get("surface_temperature") is not None else "--"
-        atmo = html.escape(b.get("atmosphere") or "None")
+        atmo = html.escape(b.get("atmosphere") or strings["atmo_none"])
         bio = b.get("bio_signals", 0)
         bio_badge = f'<span class="badge badge-bio">🌱 {bio}</span>' if bio > 0 else ""
         land_badge = '<span class="badge badge-land">Landable</span>' if b.get("landable") else ""
@@ -707,26 +840,26 @@ def generate_standalone_html(
         # Format astrophysics details
         astro_params = []
         if b.get("stellar_mass"):
-            astro_params.append(f"質量: {b['stellar_mass']:.4f} M☉")
+            astro_params.append(f"{strings['param_mass']}: {b['stellar_mass']:.4f} M☉")
         elif b.get("mass_em"):
-            astro_params.append(f"質量: {b['mass_em']:.4f} M⊕")
+            astro_params.append(f"{strings['param_mass']}: {b['mass_em']:.4f} M⊕")
         if b.get("radius"):
-            astro_params.append(f"半径: {round(b['radius']/1000):,} km")
+            astro_params.append(f"{strings['param_radius']}: {round(b['radius']/1000):,} km")
         if b.get("semi_major_axis"):
             sma_au = b['semi_major_axis'] / 1.495978707e11
-            astro_params.append(f"軌道長半径: {sma_au:.4f} AU")
+            astro_params.append(f"{strings['param_semi_major_axis']}: {sma_au:.4f} AU")
         if b.get("eccentricity") is not None:
-            astro_params.append(f"離心率: {b['eccentricity']:.4f}")
+            astro_params.append(f"{strings['param_eccentricity']}: {b['eccentricity']:.4f}")
         if b.get("orbital_period"):
             orb_days = b['orbital_period'] / 86400
-            astro_params.append(f"公転周期: {orb_days:.2f} 日")
+            astro_params.append(f"{strings['param_orbital_period']}: {orb_days:.2f} {strings['param_days_unit']}")
         if b.get("rotation_period"):
             rot_days = b['rotation_period'] / 86400
-            astro_params.append(f"自転周期: {rot_days:.2f} 日")
+            astro_params.append(f"{strings['param_rotation_period']}: {rot_days:.2f} {strings['param_days_unit']}")
         if b.get("axial_tilt") is not None:
             import math
             tilt_deg = math.degrees(b['axial_tilt'])
-            astro_params.append(f"軸傾斜: {tilt_deg:.1f}°")
+            astro_params.append(f"{strings['param_axial_tilt']}: {tilt_deg:.1f}°")
         
         atmo_comp_str = ""
         comp_raw = b.get("atmosphere_composition")
@@ -734,9 +867,9 @@ def generate_standalone_html(
             try:
                 comp_obj = json.loads(comp_raw) if isinstance(comp_raw, str) else comp_raw
                 if isinstance(comp_obj, dict):
-                    atmo_comp_str = "組成: " + ", ".join(f"{k} {v:.1f}%" for k, v in comp_obj.items())
+                    atmo_comp_str = f"{strings['param_composition']}: " + ", ".join(f"{k} {v:.1f}%" for k, v in comp_obj.items())
                 elif isinstance(comp_obj, list):
-                    atmo_comp_str = "組成: " + ", ".join(f"{item.get('Name')}: {item.get('Percent', 0):.1f}%" for item in comp_obj if isinstance(item, dict))
+                    atmo_comp_str = f"{strings['param_composition']}: " + ", ".join(f"{item.get('Name')}: {item.get('Percent', 0):.1f}%" for item in comp_obj if isinstance(item, dict))
             except Exception:
                 pass
 
@@ -748,7 +881,7 @@ def generate_standalone_html(
         if astro_summary:
             details_html = f"""
             <details class="astro-details">
-                <summary>🔬 詳細天体物理パラメータ</summary>
+                <summary>{strings["astro_summary_heading"]}</summary>
                 <div class="astro-details-content">{astro_summary}</div>
             </details>
             """
@@ -778,16 +911,16 @@ def generate_standalone_html(
             lat = f"{s.get('latitude'):.4f}" if s.get('latitude') is not None else "--"
             lon = f"{s.get('longitude'):.4f}" if s.get('longitude') is not None else "--"
             bname = html.escape(s.get("body_name") or "Surface")
-            comms = ", ".join(html.escape(c) for c in s.get("commodities", [])) or "Refined Materials"
+            comms = ", ".join(html.escape(c) for c in s.get("commodities", [])) or ("Refined Materials" if lang == "en" else "精製マテリアル")
             mining_cards.append(f"""
             <div class="mining-card">
                 <div class="mining-card-header">📍 {bname} &bull; Lat: {lat}, Lon: {lon}</div>
-                <div class="mining-card-body">⛏️ 抽出・精製物: <strong>{comms}</strong></div>
+                <div class="mining-card-body">{strings["mining_extracted"].format(comms=comms)}</div>
             </div>
             """)
         mining_section_html = f"""
         <div class="section-container">
-            <h2>⛏️ Rhino SRV 惑星表面採掘ポイント ({len(mining_sites)} 箇所)</h2>
+            <h2>{strings["mining_section_title"].format(count=len(mining_sites))}</h2>
             <div class="mining-grid">
                 {''.join(mining_cards)}
             </div>
@@ -795,8 +928,10 @@ def generate_standalone_html(
         """
 
     # Assemble complete HTML
+    main_star_display = f"{main_star}型" if lang != "en" else f"Class {main_star}"
+    coords_bar_html = f'{strings["coords"]}: <code>[{pos_x:.2f}, {pos_y:.2f}, {pos_z:.2f}]</code> &bull; {strings["sol_dist"]}: <code>{sol_dist:,} Ly</code> &bull; {strings["main_star"]}: <code>{main_star_display}</code>'
     html_doc = f"""<!DOCTYPE html>
-<html lang="ja">
+<html lang="{strings['html_lang']}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1014,54 +1149,53 @@ footer {{ text-align: center; font-size: 0.75rem; color: var(--text-secondary); 
             <div class="author-badge">{author_badge}</div>
         </div>
         <div class="coords-bar">
-            座標: <code>[{pos_x:.2f}, {pos_y:.2f}, {pos_z:.2f}]</code> &bull; Sol距離: <code>{sol_dist:,} Ly</code> &bull; 主星: <code>{main_star}型</code>
+            {coords_bar_html}
         </div>
     </header>
 
     <div class="ai-banner">
         <div class="ai-banner-title">
-            <span>🤖</span> <span>生成AI（LLM）天体物理分析・星系形成史シナリオ推論対応</span>
-            <span class="ai-badge">完全観測JSON内包</span>
+            <span>🤖</span> <span>{strings["ai_banner_title"]}</span>
+            <span class="ai-badge">{strings["ai_badge"]}</span>
         </div>
         <div class="ai-banner-desc">
-            本HTMLファイルには、星系および全天体の完全な天体物理・軌道観測データ（質量・半径・軌道長半径・離心率・公転周期・詳細大気組成など）が JSON 形式で内包されています。<br>
-            ChatGPT、Claude、Gemini 等の生成AIに本HTMLファイルをそのままアップロードし、推論プロンプトを入力することで、現代の天文学・惑星形成理論に基づいた詳細な形成史シナリオや景観描写の推論を行わせることができます。
+            {strings["ai_banner_desc"]}
         </div>
     </div>
 
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="label">推定最大探査価値</div>
+            <div class="label">{strings["stat_max_pot"]}</div>
             <div class="value" style="color: var(--ed-green);">{max_pot:,} Cr</div>
         </div>
         <div class="stat-card">
-            <div class="label">FSSスキャン価値</div>
+            <div class="label">{strings["stat_fss_val"]}</div>
             <div class="value" style="color: var(--ed-cyan);">{fss_val:,} Cr</div>
         </div>
         <div class="stat-card">
-            <div class="label">天体数</div>
-            <div class="value">{len(bodies)} 天体</div>
+            <div class="label">{strings["stat_bodies"]}</div>
+            <div class="value">{strings["stat_bodies_val"].format(count=len(bodies))}</div>
         </div>
         <div class="stat-card">
-            <div class="label">生体 (Bio) シグナル</div>
-            <div class="value" style="color: var(--ed-green);">{bio_signals} 箇所</div>
+            <div class="label">{strings["stat_bio"]}</div>
+            <div class="value" style="color: var(--ed-green);">{strings["stat_bio_val"].format(count=bio_signals)}</div>
         </div>
     </div>
 
     {orrery_html_block}
 
     <div class="section-container">
-        <h2>🪐 天体構成・探査インベントリ ({len(bodies)} 天体)</h2>
+        <h2>{strings["table_section_title"].format(count=len(bodies))}</h2>
         <table>
             <thead>
                 <tr>
-                    <th>天体名</th>
-                    <th>分類 / タグ</th>
-                    <th>到着距離</th>
-                    <th>重力</th>
-                    <th>表面温度</th>
-                    <th>大気</th>
-                    <th style="text-align: right;">探査価値</th>
+                    <th>{strings["th_name"]}</th>
+                    <th>{strings["th_class"]}</th>
+                    <th>{strings["th_dist"]}</th>
+                    <th>{strings["th_grav"]}</th>
+                    <th>{strings["th_temp"]}</th>
+                    <th>{strings["th_atmo"]}</th>
+                    <th style="text-align: right;">{strings["th_value"]}</th>
                 </tr>
             </thead>
             <tbody>
@@ -1073,7 +1207,7 @@ footer {{ text-align: center; font-size: 0.75rem; color: var(--text-secondary); 
     {mining_section_html}
 
     <footer>
-        Elite Dangerous Journal Analyzer &bull; Standalone Web Share Edition &bull; Exported on {now_str}
+        {strings["footer"].format(now=now_str)}
     </footer>
 </div>
 
@@ -1211,9 +1345,9 @@ footer {{ text-align: center; font-size: 0.75rem; color: var(--text-secondary); 
             const temp = node.getAttribute('data-temp');
 
             let content = '<b style="color: var(--ed-orange);">' + name + '</b><br><span style="color: var(--ed-cyan);">' + type + '</span>';
-            if (dist && dist !== '0') content += '<br>到着距離: ' + Number(dist).toLocaleString() + ' Ls';
-            if (grav && grav !== '--') content += '<br>表面重力: ' + grav;
-            if (temp && temp !== '--') content += '<br>表面温度: ' + temp;
+            if (dist && dist !== '0') content += '<br>{strings["tooltip_dist"]}' + Number(dist).toLocaleString() + ' Ls';
+            if (grav && grav !== '--') content += '<br>{strings["tooltip_grav"]}' + grav;
+            if (temp && temp !== '--') content += '<br>{strings["tooltip_temp"]}' + temp;
 
             tooltip.innerHTML = content;
             tooltip.style.display = 'block';

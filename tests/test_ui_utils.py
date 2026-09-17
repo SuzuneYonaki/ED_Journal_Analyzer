@@ -90,3 +90,10 @@ def test_app_state_live_sync_default():
     assert m is not None, "liveSyncEnabled property not found in app.js"
     assert m.group(1) == "false", f"Expected liveSyncEnabled to be false, got {m.group(1)}"
 
+
+def test_export_html_url_includes_lang():
+    """Verify that export html fetch in app.js includes ?lang= parameter."""
+    app_js_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "app.js"
+    content = app_js_path.read_text(encoding="utf-8")
+    assert "/api/export/html/${sysAddr}?lang=" in content, "app.js must pass ?lang= query param to /api/export/html"
+
