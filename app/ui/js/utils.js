@@ -297,7 +297,7 @@ function getBodyIconLabel(body) {
 
 // Module Settings (Exobiology & Rhino Mining)
 const defaultModuleSettings = {
-  exobiology: false,
+  exobiology: true,
   rhino: false
 };
 

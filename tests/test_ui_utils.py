@@ -76,7 +76,7 @@ def test_body_icons():
 
 def test_module_settings_defaults():
     settings = run_js_utils_eval('getModuleSettings()')
-    assert settings['exobiology'] is False
+    assert settings['exobiology'] is True
     assert settings['rhino'] is False
 
 

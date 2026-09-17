@@ -613,7 +613,7 @@ function renderSystemHeader() {
     if (btnExportHtml) btnExportHtml.style.display = 'inline-flex';
     if (btnExportPng) btnExportPng.style.display = 'inline-flex';
     if (btnCopySnsSnippet) btnCopySnsSnippet.style.display = 'inline-flex';
-    if (btnExportPkg) btnExportPkg.style.display = 'inline-flex';
+    if (btnExportPkg) btnExportPkg.style.display = 'none'; // edsys feature disabled and hidden
 
     if (sharedBadge) {
       if (sys.is_shared) {
