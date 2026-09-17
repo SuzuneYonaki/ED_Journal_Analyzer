@@ -101,3 +101,34 @@ def test_all_components_included_in_root_index():
             assert include_tag in root_content, f"Component {comp_file} must be included in index.html via {include_tag}"
 
 
+def test_luminosity_english_and_left_pane_tooltips():
+    """Verify that luminosity labels in left_pane.html are in English, and all data-i18n-title exist in i18n."""
+    left_pane_path = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "components", "left_pane.html")
+    with open(left_pane_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Luminosity labels must be English
+    expected_labels = [
+        "I Supergiants",
+        "II Bright Giants",
+        "III Giants",
+        "IV Subgiants",
+        "V Main Sequence",
+        "VI Subdwarfs",
+        "VII Degenerate Stars"
+    ]
+    for label in expected_labels:
+        assert label in content, f"Luminosity label '{label}' must exist in left_pane.html"
+
+    # All data-i18n-title must exist in i18n dictionaries
+    i18n_path = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "js", "i18n.js")
+    with open(i18n_path, "r", encoding="utf-8") as f:
+        i18n_content = f.read()
+
+    title_keys = re.findall(r'data-i18n-title="([^"]+)"', content)
+    assert len(title_keys) > 0, "There should be data-i18n-title keys in left_pane.html"
+    for tk in set(title_keys):
+        assert f"{tk}:" in i18n_content, f"Tooltip key '{tk}' must exist in i18n.js"
+
+
+
