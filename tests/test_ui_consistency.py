@@ -196,6 +196,61 @@ def test_settings_modal_i18n_keys():
         assert f"{k}:" in en_text, f"Key '{k}' used in settings modal must exist in en dictionary"
 
 
+def test_all_components_unlocalized_audit():
+    """Verify that no unlocalized Japanese text/title/placeholder remains in any HTML component."""
+    import glob
+    from bs4 import BeautifulSoup, NavigableString, Comment
+
+    jp_regex = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]")
+    components_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app", "ui", "components"))
+    html_files = glob.glob(os.path.join(components_dir, "*.html"))
+    assert len(html_files) >= 5, "Must find at least 5 component HTML files"
+
+    unlocalized = []
+    for file_path in html_files:
+        with open(file_path, "r", encoding="utf-8") as f:
+            html = f.read()
+
+        soup = BeautifulSoup(html, "html.parser")
+
+        # 1. Check title attributes
+        for tag in soup.find_all(lambda t: t.has_attr("title")):
+            title_val = tag["title"]
+            if jp_regex.search(title_val) and not tag.has_attr("data-i18n-title"):
+                unlocalized.append((os.path.basename(file_path), "title", str(tag)[:60], title_val))
+
+        # 2. Check placeholder attributes
+        for tag in soup.find_all(lambda t: t.has_attr("placeholder")):
+            ph_val = tag["placeholder"]
+            if jp_regex.search(ph_val) and not tag.has_attr("data-i18n-placeholder"):
+                unlocalized.append((os.path.basename(file_path), "placeholder", str(tag)[:60], ph_val))
+
+        # 3. Check text nodes
+        for text_node in soup.find_all(string=True):
+            if not isinstance(text_node, NavigableString) or isinstance(text_node, Comment):
+                continue
+            text_str = text_node.strip()
+            if not text_str or not jp_regex.search(text_str):
+                continue
+
+            curr = text_node.parent
+            has_i18n = False
+            while curr:
+                if curr.has_attr and (curr.has_attr("data-i18n") or curr.has_attr("data-i18n-html")):
+                    has_i18n = True
+                    break
+                curr = curr.parent
+
+            if not has_i18n:
+                parent_id = text_node.parent.get("id", "") if text_node.parent.has_attr("id") else ""
+                if "btn-modal-lang-ja" in parent_id or "btn-modal-lang-en" in parent_id:
+                    continue
+                unlocalized.append((os.path.basename(file_path), "text", str(text_node.parent)[:60], text_str))
+
+    assert unlocalized == [], f"Found unlocalized items: {unlocalized}"
+
+
+
 
 
 

@@ -6,19 +6,19 @@
           <!-- Left Pane Mode Switcher Header Row with LIVE Toggle -->
           <div class="left-pane-concept-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.06); gap: 4px;">
             <div class="left-concept-tabs" style="display: inline-flex; gap: 2px; background: rgba(0,0,0,0.25); padding: 1px 3px; border-radius: 4px; border: 1px solid var(--border-color); flex-shrink: 1; min-width: 0;">
-              <button id="btn-pane-tab-explorer" class="concept-tab-btn active" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: var(--ed-orange); background: rgba(255, 113, 0, 0.15); white-space: nowrap;" title="ジャーナル探査リスト">🧭 <span data-i18n="concept_tab_explorer_short">探査</span></button>
-              <button id="btn-pane-tab-physics" class="concept-tab-btn" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: #a5f3fc; background: transparent; white-space: nowrap;" title="天体物理・レア度解析">🌌 <span data-i18n="concept_tab_physics_short">天体物理</span></button>
+              <button id="btn-pane-tab-explorer" class="concept-tab-btn active" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: var(--ed-orange); background: rgba(255, 113, 0, 0.15); white-space: nowrap;" data-i18n-title="tip_tab_explorer" title="ジャーナル探査リスト">🧭 <span data-i18n="concept_tab_explorer_short">探査</span></button>
+              <button id="btn-pane-tab-physics" class="concept-tab-btn" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: #a5f3fc; background: transparent; white-space: nowrap;" data-i18n-title="tip_tab_physics" title="天体物理・レア度解析">🌌 <span data-i18n="concept_tab_physics_short">天体物理</span></button>
             </div>
 
             <!-- Real-time Live Sync Toggle Button (Always visible & responsive) -->
-            <button id="btn-live-toggle" class="btn-live paused" style="padding: 3px 8px; font-size: 0.72rem; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap;" title="リアルタイム自動更新の有効/無効を切り替え（オフにすると過去ジャーナル閲覧時に自動ジャンプや再取得が行われません）">
+            <button id="btn-live-toggle" class="btn-live paused" style="padding: 3px 8px; font-size: 0.72rem; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap;" data-i18n-title="live_sync_tip" title="リアルタイム自動更新の有効/無効を切り替え（オフにすると過去ジャーナル閲覧時に自動ジャンプや再取得が行われません）">
               <span class="live-indicator-dot"></span>
               <span id="live-status-text" data-i18n="live_sync_off">PAUSED</span>
             </button>
           </div>
 
           <div class="search-bar">
-            <input type="text" id="system-search" class="search-input" data-i18n="search_placeholder" placeholder="星系名を検索 (例: Sol, Beagle Point)...">
+            <input type="text" id="system-search" class="search-input" data-i18n-placeholder="search_placeholder" placeholder="星系名を検索 (例: Sol, Beagle Point)...">
             <button type="button" id="btn-search-clear" class="search-clear-btn" data-i18n-title="filter_clear" title="クリア" style="display: none;">&times;</button>
           </div>
 
@@ -417,7 +417,7 @@
                     <input type="checkbox" id="cb-sort-composite" checked style="cursor: pointer;">
                     <span data-i18n="sort_composite_mode">⚡ 総合スコア（加重ブレンド）</span>
                   </label>
-                  <span style="font-size: 0.65rem; color: var(--text-dim);">1次 50% / 2次 35% / 3次 15%</span>
+                  <span style="font-size: 0.65rem; color: var(--text-dim);" data-i18n="sort_weights_distribution">1次 50% / 2次 35% / 3次 15%</span>
                 </div>
               </div>
             </div>

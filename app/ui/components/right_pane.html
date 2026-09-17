@@ -6,7 +6,7 @@
             <div id="inspect-body-name" class="inspector-title" data-i18n="inspector_title">天体詳細インスペクター</div>
             <div id="inspect-body-alias" class="inspector-alias" style="display: none; font-size: 0.82rem; color: #38bdf8; font-weight: bold; margin-top: 2px;"></div>
           </div>
-          <button id="btn-inspect-bookmark-toggle" class="view-btn" style="padding: 3px 8px; font-size: 0.75rem; border-color: rgba(251, 191, 36, 0.4); color: #fbbf24; display: none; align-items: center; gap: 4px; white-space: nowrap;" title="この天体をブックマーク登録/解除">
+          <button id="btn-inspect-bookmark-toggle" class="view-btn" style="padding: 3px 8px; font-size: 0.75rem; border-color: rgba(251, 191, 36, 0.4); color: #fbbf24; display: none; align-items: center; gap: 4px; white-space: nowrap;" data-i18n-title="tip_inspect_bm_toggle" title="この天体をブックマーク登録/解除">
             <span id="inspect-bm-icon">☆</span> <span id="inspect-bm-text" data-i18n="bm_toggle_btn">ブックマーク</span>
           </button>
         </div>
@@ -23,13 +23,13 @@
             </div>
             <div style="display: flex; gap: 4px;">
               <button id="btn-save-bookmark" class="btn-primary" style="padding: 2px 10px; font-size: 0.72rem; background: #d97706; border-color: #f59e0b;" data-i18n="btn_save_bm">💾 保存</button>
-              <button id="btn-delete-bookmark" class="view-btn" style="padding: 2px 8px; font-size: 0.72rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); display: none;" title="ブックマークを解除" data-i18n="btn_delete_bm">🗑️ 解除</button>
+              <button id="btn-delete-bookmark" class="view-btn" style="padding: 2px 8px; font-size: 0.72rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); display: none;" data-i18n-title="tip_delete_bm" title="ブックマークを解除" data-i18n="btn_delete_bm">🗑️ 解除</button>
             </div>
           </div>
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <div>
               <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="bm_alias_label">🏷️ エイリアス (別名・通称):</label>
-              <input type="text" id="bm-alias-input" class="search-input" placeholder="例: 採掘拠点 Alpha, テラフォーミング候補1..." style="width: 100%; padding: 4px 8px; font-size: 0.78rem;">
+              <input type="text" id="bm-alias-input" class="search-input" data-i18n-placeholder="bm_alias_placeholder" placeholder="例: 採掘拠点 Alpha, テラフォーミング候補1..." style="width: 100%; padding: 4px 8px; font-size: 0.78rem;">
             </div>
             <div>
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
@@ -40,7 +40,7 @@
                   <button id="bm-note-tab-preview" class="view-btn" style="padding: 1px 6px; font-size: 0.68rem;" data-i18n="tab_preview">プレビュー</button>
                 </div>
               </div>
-              <textarea id="bm-note-input" class="search-input" rows="4" placeholder="採掘Rig耐久値、適性鉱石、メモなどを記述..." style="width: 100%; padding: 6px 8px; font-size: 0.78rem; font-family: inherit; resize: vertical;"></textarea>
+              <textarea id="bm-note-input" class="search-input" rows="4" data-i18n-placeholder="bm_note_placeholder" placeholder="採掘Rig耐久値、適性鉱石、メモなどを記述..." style="width: 100%; padding: 6px 8px; font-size: 0.78rem; font-family: inherit; resize: vertical;"></textarea>
               <div id="bm-note-preview" style="display: none; padding: 6px 8px; font-size: 0.78rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 4px; min-height: 70px; max-height: 180px; overflow-y: auto; line-height: 1.4;"></div>
             </div>
           </div>
@@ -139,8 +139,8 @@
           <div class="section-heading" style="color: #38bdf8;" data-i18n="section_mining">⛏️ 惑星採掘拠点 & Rhino採掘実績</div>
           <div id="inspect-mining-signals-info" style="font-size: 0.82rem; color: var(--text-primary); background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <span style="font-weight: bold; color: #38bdf8;">⛏️ 採掘拠点シグナル (Hotspots) 検出:</span>
-              <span id="inspect-mining-count" style="font-weight: bold; font-size: 1.05rem; margin-left: 6px; color: #fff;">0</span> 箇所
+              <span style="font-weight: bold; color: #38bdf8;" data-i18n="inspect_hotspots_found">⛏️ 採掘拠点シグナル (Hotspots) 検出:</span>
+              <span id="inspect-mining-count" style="font-weight: bold; font-size: 1.05rem; margin-left: 6px; color: #fff;">0</span> <span data-i18n="unit_locations">箇所</span>
             </div>
             <span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-size: 0.72rem;">HOTSPOTS / PML</span>
           </div>

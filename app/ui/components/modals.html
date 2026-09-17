@@ -34,7 +34,7 @@
             </label>
             <div style="display: flex; gap: 6px;">
               <input type="text" id="setting-journal-dir" class="search-input" style="flex: 1; font-size: 0.8rem; font-family: monospace;" placeholder="C:\Users\...\Saved Games\Frontier Developments\Elite Dangerous">
-              <button id="btn-reset-journal-dir" class="view-btn" style="white-space: nowrap; font-size: 0.75rem;" title="既定のパスにリセット" data-i18n="btn_reset_journal_dir">既定に戻す</button>
+              <button id="btn-reset-journal-dir" class="view-btn" style="white-space: nowrap; font-size: 0.75rem;" data-i18n-title="btn_reset_journal_dir_tip" title="既定のパスにリセット" data-i18n="btn_reset_journal_dir">既定に戻す</button>
             </div>
             <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 4px;" data-i18n="settings_log_dir_note">
               ※ Steam版/Epic版など別ドライブにジャーナルがある場合は上記パスを変更してください
@@ -121,12 +121,12 @@
             <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap;">
               <span style="font-size: 0.85rem; color: #fff; font-weight: bold;" data-i18n="settings_font_specify">文字サイズ指定:</span>
               <div style="display: flex; align-items: center; gap: 4px;">
-                <button id="btn-font-dec" class="view-btn" style="padding: 4px 10px; font-size: 0.85rem; font-weight: bold;" title="1px小さく">－</button>
-                <input type="number" id="input-font-size" min="10" max="40" step="1" value="18" class="search-input" style="width: 70px; text-align: center; font-size: 0.95rem; font-weight: bold; color: var(--ed-cyan);" title="実数値（px）を直接入力できます">
+                <button id="btn-font-dec" class="view-btn" style="padding: 4px 10px; font-size: 0.85rem; font-weight: bold;" data-i18n-title="tip_font_dec" title="1px小さく">－</button>
+                <input type="number" id="input-font-size" min="10" max="40" step="1" value="18" class="search-input" style="width: 70px; text-align: center; font-size: 0.95rem; font-weight: bold; color: var(--ed-cyan);" data-i18n-title="tip_font_input" title="実数値（px）を直接入力できます">
                 <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: bold;">px</span>
-                <button id="btn-font-inc" class="view-btn" style="padding: 4px 10px; font-size: 0.85rem; font-weight: bold;" title="1px大きく">＋</button>
+                <button id="btn-font-inc" class="view-btn" style="padding: 4px 10px; font-size: 0.85rem; font-weight: bold;" data-i18n-title="tip_font_inc" title="1px大きく">＋</button>
               </div>
-              <button id="btn-reset-font-size" class="btn-primary" style="margin-left: auto; padding: 5px 12px; font-size: 0.78rem; background: rgba(251, 146, 60, 0.2); border-color: var(--ed-orange); color: var(--ed-orange);" title="標準の中間サイズ (18px) にリセット" data-i18n="btn_reset_font">
+              <button id="btn-reset-font-size" class="btn-primary" style="margin-left: auto; padding: 5px 12px; font-size: 0.78rem; background: rgba(251, 146, 60, 0.2); border-color: var(--ed-orange); color: var(--ed-orange);" data-i18n-title="tip_font_reset" title="標準の中間サイズ (18px) にリセット" data-i18n="btn_reset_font">
                 🔄 標準 (18px) にリセット
               </button>
             </div>
@@ -281,13 +281,13 @@
             <!-- VOICEVOX Speakers (hidden by default) -->
             <div id="tts-voicevox-group" style="display: none; flex-direction: column; gap: 6px;">
               <select id="tts-voicevox-speaker-select" class="sort-select" style="width: 100%; padding: 6px 10px; font-size: 0.82rem;">
-                <option value="3">ずんだもん (ノーマル)</option>
-                <option value="1">ずんだもん (あまあま)</option>
-                <option value="7">ずんだもん (ツンツン)</option>
-                <option value="5">ずんだもん (セクシー)</option>
-                <option value="2">四国めたん (ノーマル)</option>
-                <option value="8">春日部つむぎ (ノーマル)</option>
-                <option value="14">冥鳴ひまり (ノーマル)</option>
+                <option value="3" data-i18n="tts_voice_zundamon_normal">ずんだもん (ノーマル)</option>
+                <option value="1" data-i18n="tts_voice_zundamon_sweet">ずんだもん (あまあま)</option>
+                <option value="7" data-i18n="tts_voice_zundamon_tsun">ずんだもん (ツンツン)</option>
+                <option value="5" data-i18n="tts_voice_zundamon_sexy">ずんだもん (セクシー)</option>
+                <option value="2" data-i18n="tts_voice_metan_normal">四国めたん (ノーマル)</option>
+                <option value="8" data-i18n="tts_voice_tsumugi_normal">春日部つむぎ (ノーマル)</option>
+                <option value="14" data-i18n="tts_voice_himari_normal">冥鳴ひまり (ノーマル)</option>
               </select>
               <div id="tts-voicevox-status" style="font-size: 0.72rem; color: #94a3b8;"></div>
             </div>
@@ -303,7 +303,7 @@
                 変数: <code style="color: var(--ed-cyan);">{system}</code> <code style="color: var(--ed-cyan);">{bodies}</code>
               </span>
             </div>
-            <input type="text" id="tts-custom-text" class="search-input" value="First discover." placeholder="例: First discovery in {system}." style="width: 100%; font-size: 0.82rem;">
+            <input type="text" id="tts-custom-text" class="search-input" value="First discover." data-i18n-placeholder="ph_tts_custom_text" placeholder="例: First discovery in {system}." style="width: 100%; font-size: 0.82rem;">
             
             <!-- Template quick insert chips -->
             <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
@@ -313,7 +313,7 @@
               <button type="button" class="chip" style="padding: 2px 8px; font-size: 0.7rem; height: auto;" onclick="document.getElementById('tts-custom-text').value='First discovery in {system}.'">
                 First discovery in {system}.
               </button>
-              <button type="button" class="chip" style="padding: 2px 8px; font-size: 0.7rem; height: auto;" onclick="document.getElementById('tts-custom-text').value='{system}、初回発見です。'">
+              <button type="button" class="chip" style="padding: 2px 8px; font-size: 0.7rem; height: auto;" onclick="document.getElementById('tts-custom-text').value=(typeof t === 'function' ? t('tts_chip_sample_val') : '{system}、初回発見です。');" data-i18n="tts_chip_first_disc">
                 {system}、初回発見です。
               </button>
             </div>
@@ -421,11 +421,11 @@
         <div style="display: flex; flex-direction: column; gap: 10px;">
           <div>
             <label style="display: block; font-size: 0.78rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="modal_export_cmdr_label">発見者 CMDR名 (署名用):</label>
-            <input type="text" id="export-cmdr-name" class="search-input" style="width: 100%; font-size: 0.82rem;" placeholder="例: CMDR Yonaki">
+            <input type="text" id="export-cmdr-name" class="search-input" style="width: 100%; font-size: 0.82rem;" data-i18n-placeholder="ph_export_cmdr_name" placeholder="例: CMDR Yonaki">
           </div>
           <div>
             <label style="display: block; font-size: 0.78rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="modal_export_notes_label">共有メモ / 説明 (任意):</label>
-            <input type="text" id="export-notes" class="search-input" style="width: 100%; font-size: 0.82rem;" placeholder="例: 生体シグナル豊富・タングステン採掘地点あり">
+            <input type="text" id="export-notes" class="search-input" style="width: 100%; font-size: 0.82rem;" data-i18n-placeholder="ph_export_notes" placeholder="例: 生体シグナル豊富・タングステン採掘地点あり">
           </div>
         </div>
 
@@ -465,9 +465,7 @@
         <button id="btn-close-export-success" class="btn-close-modal" style="background: none; border: none; color: var(--text-secondary); font-size: 1.2rem; cursor: pointer;">&times;</button>
       </div>
       <div class="modal-body" style="padding: 16px; font-size: 0.85rem; color: var(--text-primary);">
-        <p style="margin-bottom: 12px; color: #fed7aa; font-weight: bold;">
-          星系パッケージ (.edsys) の保存が完了しました。
-        </p>
+        <p style="margin-bottom: 12px; color: #fed7aa; font-weight: bold;" data-i18n="export_success_msg">星系パッケージ (.edsys) の保存が完了しました。</p>
         <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; word-break: break-all;">
           <div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="export_saved_to">保存先:</div>
           <div id="export-saved-path-display" style="font-family: monospace; font-size: 0.82rem; color: var(--ed-orange); font-weight: bold;">--</div>
@@ -547,50 +545,48 @@
     <div class="modal-dialog" style="max-width: 500px; background: var(--bg-card); border: 1px solid #38bdf8; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.85); width: 90%;">
       <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
         <h3 id="modal-mining-site-title" style="color: #38bdf8; font-size: 1.05rem; display: flex; align-items: center; gap: 6px; margin: 0;">
-          <span>⛏️</span> <span>採掘地点の編集</span>
+          <span>⛏️</span> <span data-i18n="mining_modal_title">採掘地点の編集</span>
         </h3>
         <button id="btn-close-mining-site-modal" class="btn-close-modal" style="background: none; border: none; color: var(--text-secondary); font-size: 1.2rem; cursor: pointer;">&times;</button>
       </div>
       <div class="modal-body" style="padding: 16px; font-size: 0.85rem; color: var(--text-primary);">
         <input type="hidden" id="input-mining-site-id" value="">
         <div style="margin-bottom: 10px; font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between;">
-          <span>対象天体: <strong id="modal-mining-site-body-name" style="color: #fff;">--</strong></span>
-          <span style="font-size: 0.7rem; color: var(--text-dim);">Rhino採掘拠点・共有フォーマット対応</span>
+          <span><span data-i18n="mining_modal_target_body">対象天体:</span> <strong id="modal-mining-site-body-name" style="color: #fff;">--</strong></span>
+          <span style="font-size: 0.7rem; color: var(--text-dim);" data-i18n="mining_modal_format_hint">Rhino採掘拠点・共有フォーマット対応</span>
         </div>
         <div style="background: rgba(56, 189, 248, 0.06); border: 1px dashed rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <span style="font-size: 0.73rem; color: #38bdf8; font-weight: bold;">📋 テキストから自動入力 (クイックペースト):</span>
-            <span style="font-size: 0.65rem; color: var(--text-dim);">共有テキスト貼付で即時解析</span>
+            <span style="font-size: 0.73rem; color: #38bdf8; font-weight: bold;" data-i18n="mining_modal_quick_paste_title">📋 テキストから自動入力 (クイックペースト):</span>
+            <span style="font-size: 0.65rem; color: var(--text-dim);" data-i18n="mining_modal_quick_paste_hint">共有テキスト貼付で即時解析</span>
           </div>
-          <textarea id="input-mining-quick-paste" rows="3" placeholder="例:&#10;Kuk B 2&#10;Hotspot 26&#10;Iridium spot for 3 rig&#10;Location : -28.8859 / -66.7179" style="width: 100%; box-sizing: border-box; padding: 4px 8px; font-size: 0.78rem; font-family: var(--font-mono); background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; resize: vertical;"></textarea>
+          <textarea id="input-mining-quick-paste" rows="3" data-i18n-placeholder="ph_mining_quick_paste" placeholder="例:&#10;Kuk B 2&#10;Hotspot 26&#10;Iridium spot for 3 rig&#10;Location : -28.8859 / -66.7179" style="width: 100%; box-sizing: border-box; padding: 4px 8px; font-size: 0.78rem; font-family: var(--font-mono); background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; resize: vertical;"></textarea>
           <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
-            <button type="button" id="btn-apply-mining-paste" class="btn-page" style="padding: 2px 8px; font-size: 0.72rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); cursor: pointer;">
-              ⚡ テキストを各入力欄に反映
-            </button>
+            <button type="button" id="btn-apply-mining-paste" class="btn-page" style="padding: 2px 8px; font-size: 0.72rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); cursor: pointer;" data-i18n="mining_modal_apply_paste">⚡ テキストを各入力欄に反映</button>
           </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
           <div>
-            <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">緯度 (Latitude: -90 ~ +90):</label>
-            <input type="number" id="input-mining-lat" step="any" min="-90" max="90" placeholder="例: 12.3456" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-family: var(--font-mono); font-size: 0.85rem;">
+            <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="mining_modal_lat_label">緯度 (Latitude: -90 ~ +90):</label>
+            <input type="number" id="input-mining-lat" step="any" min="-90" max="90" data-i18n-placeholder="ph_mining_lat" placeholder="例: 12.3456" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-family: var(--font-mono); font-size: 0.85rem;">
           </div>
           <div>
-            <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">経度 (Longitude: -180 ~ +180):</label>
-            <input type="number" id="input-mining-lon" step="any" min="-180" max="180" placeholder="例: -45.6789" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-family: var(--font-mono); font-size: 0.85rem;">
+            <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="mining_modal_lon_label">経度 (Longitude: -180 ~ +180):</label>
+            <input type="number" id="input-mining-lon" step="any" min="-180" max="180" data-i18n-placeholder="ph_mining_lon" placeholder="例: -45.6789" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-family: var(--font-mono); font-size: 0.85rem;">
           </div>
         </div>
         <div style="margin-bottom: 12px;">
-          <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">🎯 近傍 Hotspot / PML拠点 (任意):</label>
-          <input type="text" id="input-mining-hotspot" list="mining-hotspots-datalist" placeholder="例: Hotspot 1, 鉄 Hotspot, PML #2 など" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-size: 0.85rem;">
+          <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="mining_modal_hotspot_label">🎯 近傍 Hotspot / PML拠点 (任意):</label>
+          <input type="text" id="input-mining-hotspot" list="mining-hotspots-datalist" data-i18n-placeholder="ph_mining_hotspot" placeholder="例: Hotspot 1, 鉄 Hotspot, PML #2 など" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-size: 0.85rem;">
           <datalist id="mining-hotspots-datalist"></datalist>
         </div>
         <div style="margin-bottom: 12px;">
-          <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">採掘鉱物 / 素材 (カンマ区切り):</label>
-          <input type="text" id="input-mining-minerals" placeholder="例: 鉄, ニッケル, 硫黄, カドミウム" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-size: 0.85rem;">
+          <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="mining_modal_minerals_label">採掘鉱物 / 素材 (カンマ区切り):</label>
+          <input type="text" id="input-mining-minerals" data-i18n-placeholder="ph_mining_minerals" placeholder="例: 鉄, ニッケル, 硫黄, カドミウム" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-size: 0.85rem;">
         </div>
         <div style="margin-bottom: 8px;">
-          <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">メモ / 備考 (任意):</label>
-          <textarea id="input-mining-note" rows="2" placeholder="クレーター内部、高密度地帯など" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-size: 0.82rem; resize: vertical;"></textarea>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="mining_modal_note_label">メモ / 備考 (任意):</label>
+          <textarea id="input-mining-note" rows="2" data-i18n-placeholder="ph_mining_note" placeholder="クレーター内部、高密度地帯など" style="width: 100%; box-sizing: border-box; padding: 6px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; font-size: 0.82rem; resize: vertical;"></textarea>
         </div>
         <div id="modal-mining-site-error" style="color: #f87171; font-size: 0.78rem; display: none; margin-top: 6px;"></div>
       </div>
