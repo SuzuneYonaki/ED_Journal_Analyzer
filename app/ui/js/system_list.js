@@ -553,7 +553,8 @@ function renderSystemHeader() {
   const bioBaseEl = document.getElementById('current-system-bio-base');
   const bioFirstEl = document.getElementById('current-system-bio-first');
 
-  if (sys.bio_total_base_value > 0 || sys.bio_signals_count > 0 || (state.currentSystemData && state.currentSystemData.system_bio_summary && (state.currentSystemData.system_bio_summary.total_base_value > 0 || state.currentSystemData.system_bio_summary.scanned_base_value > 0))) {
+  const modSettings = getModuleSettings();
+  if (modSettings.exobiology !== false && (sys.bio_total_base_value > 0 || sys.bio_signals_count > 0 || (state.currentSystemData && state.currentSystemData.system_bio_summary && (state.currentSystemData.system_bio_summary.total_base_value > 0 || state.currentSystemData.system_bio_summary.scanned_base_value > 0)))) {
     const summary = (state.currentSystemData && state.currentSystemData.system_bio_summary) || {};
     const scannedBaseVal = sys.bio_scanned_base_value !== undefined ? sys.bio_scanned_base_value : (summary.scanned_base_value || 0);
     const scannedFirstVal = sys.bio_scanned_first_value !== undefined ? sys.bio_scanned_first_value : (summary.scanned_first_value || 0);
