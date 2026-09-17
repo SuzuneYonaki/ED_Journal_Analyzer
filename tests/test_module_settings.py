@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from fastapi.testclient import TestClient
 from app.server.api import app
 
@@ -8,12 +8,12 @@ def test_module_settings_api(tmp_path, monkeypatch):
     test_file = tmp_path / "module_settings.json"
     monkeypatch.setattr("app.server.api.MODULE_SETTINGS_FILE", test_file)
 
-    # Initial get should return defaults
+    # Initial get should return defaults (both False)
     res = client.get("/api/module_settings")
     assert res.status_code == 200
     data = res.json()
-    assert data["exobiology"] is True
-    assert data["rhino"] is True
+    assert data["exobiology"] is False
+    assert data["rhino"] is False
 
     # Post new settings (turn off rhino)
     post_res = client.post("/api/module_settings", json={"exobiology": True, "rhino": False})

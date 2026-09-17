@@ -63,7 +63,7 @@ let state = {
   bodySortOrder: 'asc',
   page: 1,
   limit: 50,
-  liveSyncEnabled: true,
+  liveSyncEnabled: false,
   lastEventVersion: 0,
   lastJournalEventVersion: 0,
   jumpState: 'idle', // 'idle' | 'hyperspace' | 'arrived_waiting_fss' | 'scanned'

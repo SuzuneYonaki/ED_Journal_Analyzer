@@ -1808,8 +1808,8 @@ MODULE_SETTINGS_FILE = DATA_DIR / "module_settings.json"
 @app.get("/api/module_settings")
 def get_module_settings_endpoint():
     default_settings = {
-        "exobiology": True,
-        "rhino": True
+        "exobiology": False,
+        "rhino": False
     }
     if MODULE_SETTINGS_FILE.exists():
         try:

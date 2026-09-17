@@ -111,15 +111,22 @@ def test_mining_view_exports():
 
 def test_render_body_mining_block():
     out = run_js_mining_test("""
+    // By default rhino module is false, so it returns empty string
+    const defaultBlock = renderBodyMiningBlock({ mining_signals: 3 });
+
+    // When rhino module is enabled
+    global.localStorage = { getItem: () => JSON.stringify({ rhino: true }) };
     const blockWithMining = renderBodyMiningBlock({ mining_signals: 3 });
     const blockZeroMining = renderBodyMiningBlock({ mining_signals: 0 });
 
     console.log(JSON.stringify({
+      defaultBlock: defaultBlock,
       hasMining: blockWithMining,
       zeroMining: blockZeroMining
     }));
     """)
     res = json.loads(out)
+    assert res["defaultBlock"] == ""
     assert "MINING: 3" in res["hasMining"]
     assert "⛏️" in res["hasMining"]
     assert res["zeroMining"] == ""

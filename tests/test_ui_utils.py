@@ -76,5 +76,17 @@ def test_body_icons():
 
 def test_module_settings_defaults():
     settings = run_js_utils_eval('getModuleSettings()')
-    assert settings['exobiology'] is True
-    assert settings['rhino'] is True
+    assert settings['exobiology'] is False
+    assert settings['rhino'] is False
+
+
+def test_app_state_live_sync_default():
+    """Verify that state.liveSyncEnabled in app.js defaults to false."""
+    app_js_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "app.js"
+    content = app_js_path.read_text(encoding="utf-8")
+    # Verify state definition defaults liveSyncEnabled to false
+    import re
+    m = re.search(r'liveSyncEnabled:\s*(true|false)', content)
+    assert m is not None, "liveSyncEnabled property not found in app.js"
+    assert m.group(1) == "false", f"Expected liveSyncEnabled to be false, got {m.group(1)}"
+

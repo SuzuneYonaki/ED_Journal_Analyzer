@@ -11,9 +11,9 @@
             </div>
 
             <!-- Real-time Live Sync Toggle Button (Always visible & responsive) -->
-            <button id="btn-live-toggle" class="btn-live active" style="padding: 3px 8px; font-size: 0.72rem; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap;" title="リアルタイム自動更新の有効/無効を切り替え（オフにすると過去ジャーナル閲覧時に自動ジャンプや再取得が行われません）">
+            <button id="btn-live-toggle" class="btn-live paused" style="padding: 3px 8px; font-size: 0.72rem; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap;" title="リアルタイム自動更新の有効/無効を切り替え（オフにすると過去ジャーナル閲覧時に自動ジャンプや再取得が行われません）">
               <span class="live-indicator-dot"></span>
-              <span id="live-status-text" data-i18n="live_sync_on">LIVE</span>
+              <span id="live-status-text" data-i18n="live_sync_off">PAUSED</span>
             </button>
           </div>
 
@@ -338,12 +338,12 @@
               </div>
 
               <!-- Real-time Live Sync Helper Row inside Accordion -->
-              <div id="accordion-live-sync-row" class="live-sync-accordion-row">
+              <div id="accordion-live-sync-row" class="live-sync-accordion-row paused">
                 <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
-                  <span class="live-indicator-dot" id="accordion-live-dot"></span>
-                  <span style="font-size: 0.72rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="accordion-live-status-text" data-i18n="sort_live_hint">⚡ リアルタイム追従中（手動ソートするにはLIVEを解除してください）</span>
+                  <span class="live-indicator-dot" id="accordion-live-dot" style="background: #888; animation: none;"></span>
+                  <span style="font-size: 0.72rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="accordion-live-status-text">⏹️ LIVE停止中（手動ソート有効）</span>
                 </div>
-                <button type="button" id="btn-accordion-live-toggle" class="btn-live-accordion-toggle active" data-i18n="sort_live_unlock_btn">LIVE解除</button>
+                <button type="button" id="btn-accordion-live-toggle" class="btn-live-accordion-toggle" data-i18n="sort_live_resume_btn">LIVE再開</button>
               </div>
 
               <!-- Sort Controls Section -->
