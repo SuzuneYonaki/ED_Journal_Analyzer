@@ -97,3 +97,15 @@ def test_export_html_url_includes_lang():
     content = app_js_path.read_text(encoding="utf-8")
     assert "/api/export/html/${sysAddr}?lang=" in content, "app.js must pass ?lang= query param to /api/export/html"
 
+
+def test_sns_snippet_button_and_listener():
+    """Verify that snippet copy button exists in center_pane.html and handled in app.js."""
+    center_html_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "components" / "center_pane.html"
+    html_content = center_html_path.read_text(encoding="utf-8")
+    assert 'id="btn-copy-sns-snippet"' in html_content, "btn-copy-sns-snippet not found in center_pane.html"
+
+    app_js_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "app.js"
+    js_content = app_js_path.read_text(encoding="utf-8")
+    assert "/api/export/snippet/${sysAddr}" in js_content, "app.js must handle snippet API endpoint fetch"
+    assert "btn-copy-sns-snippet" in js_content
+

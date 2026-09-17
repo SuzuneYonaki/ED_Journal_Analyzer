@@ -577,6 +577,7 @@ function renderSystemHeader() {
 
   // Export buttons & Shared / External Badge in Header
   const btnExportHtml = document.getElementById('btn-export-html');
+  const btnCopySnsSnippet = document.getElementById('btn-copy-sns-snippet');
   const btnExportPkg = document.getElementById('btn-export-pkg');
   const btnToggleShared = document.getElementById('btn-toggle-shared');
   const sharedBadge = document.getElementById('current-system-shared-badge');
@@ -599,6 +600,7 @@ function renderSystemHeader() {
   if (isUnvisitedExternal) {
     // 外部参照・未訪問星系は、Web共有・パッケージ書出・共有マーク付与を禁止（非表示化）
     if (btnExportHtml) btnExportHtml.style.display = 'none';
+    if (btnCopySnsSnippet) btnCopySnsSnippet.style.display = 'none';
     if (btnExportPkg) btnExportPkg.style.display = 'none';
     if (btnToggleShared) btnToggleShared.style.display = 'none';
     if (sharedBadge) {
@@ -607,6 +609,7 @@ function renderSystemHeader() {
     }
   } else {
     if (btnExportHtml) btnExportHtml.style.display = 'inline-flex';
+    if (btnCopySnsSnippet) btnCopySnsSnippet.style.display = 'inline-flex';
     if (btnExportPkg) btnExportPkg.style.display = 'inline-flex';
 
     if (sharedBadge) {

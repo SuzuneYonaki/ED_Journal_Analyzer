@@ -111,6 +111,12 @@ const i18n = {
     times: "回",
     copy_name: "コピー",
     copied_name: "コピー完了!",
+    btn_export_html: "🌐 Web共有HTML",
+    btn_copy_sns_snippet: "📋 配信/SNS短評",
+    snippet_copied: "短評コピー完了!",
+    snippet_copy_failed: "短評取得失敗",
+    btn_export_pkg: "📦 パッケージ書出",
+    btn_toggle_shared: "共有マーク",
 
     // Center Pane
     select_system_prompt: "星系を選択してください",
@@ -762,6 +768,12 @@ const i18n = {
     times: "times",
     copy_name: "Copy",
     copied_name: "Copied!",
+    btn_export_html: "🌐 Share HTML",
+    btn_copy_sns_snippet: "📋 Stream/SNS Snippet",
+    snippet_copied: "Snippet Copied!",
+    snippet_copy_failed: "Snippet Failed",
+    btn_export_pkg: "📦 Export Pkg",
+    btn_toggle_shared: "Share Mark",
 
     // Center Pane
     select_system_prompt: "Select a Star System",

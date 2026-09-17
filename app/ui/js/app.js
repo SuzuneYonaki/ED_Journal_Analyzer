@@ -3617,6 +3617,51 @@ function initExportImportModals() {
     });
   }
 
+  // Method 3: Compact SNS / Twitch Stream Snippet Copy
+  const btnCopySnsSnippet = document.getElementById('btn-copy-sns-snippet');
+  if (btnCopySnsSnippet) {
+    btnCopySnsSnippet.addEventListener('click', async () => {
+      if (!state.selectedSystem || !state.selectedSystem.system_address) return;
+      const sysAddr = state.selectedSystem.system_address;
+      const origHtml = btnCopySnsSnippet.innerHTML;
+      btnCopySnsSnippet.innerHTML = `<span>⏳ ...</span>`;
+      btnCopySnsSnippet.disabled = true;
+
+      try {
+        const lang = (typeof getAppLang === 'function') ? getAppLang() : (typeof currentLang !== 'undefined' ? currentLang : 'ja');
+        const res = await fetch(`/api/export/snippet/${sysAddr}?lang=${encodeURIComponent(lang)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const snippetText = data.snippet || '';
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(snippetText);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = snippetText;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+
+        btnCopySnsSnippet.innerHTML = `<span>✅ ${t('copied_name') || 'コピー完了!'}</span>`;
+        if (typeof showExportSuccessToast === 'function') {
+          showExportSuccessToast(t('snippet_copied') || '配信・SNS向け短評テキストをコピーしました！', '');
+        }
+        setTimeout(() => {
+          btnCopySnsSnippet.innerHTML = origHtml;
+          btnCopySnsSnippet.disabled = false;
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy SNS snippet:', err);
+        alert(t('snippet_copy_failed') || '短評テキストの取得に失敗しました');
+        btnCopySnsSnippet.innerHTML = origHtml;
+        btnCopySnsSnippet.disabled = false;
+      }
+    });
+  }
+
   // Method 1: Locked Package Export (.edsys)
   const modalExportLocked = document.getElementById('modal-export-locked');
   const btnExportPkg = document.getElementById('btn-export-pkg');

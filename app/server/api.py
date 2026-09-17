@@ -30,6 +30,7 @@ from app.live.rhino.note_integrator import update_body_note_in_db
 from app.live.rhino.tracker import sync_body_mining_to_note, extract_all_mining_materials_for_body
 from app.services.export_service import (
     generate_standalone_html,
+    generate_share_snippet,
     create_edsys_package,
     import_edsys_package,
     verify_package_signature
@@ -1944,6 +1945,24 @@ def export_standalone_html_endpoint(
             "Access-Control-Expose-Headers": "X-Export-Path, Content-Disposition"
         }
     )
+
+@app.get("/api/export/snippet/{system_address}")
+def export_snippet_endpoint(system_address: int, lang: str = "ja"):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM systems WHERE system_address = ?", (system_address,))
+    sys_row = c.fetchone()
+    if not sys_row:
+        conn.close()
+        return JSONResponse({"error": "System not found"}, status_code=404)
+
+    system_data = dict(sys_row)
+    c.execute("SELECT * FROM bodies WHERE system_address = ? ORDER BY distance_from_arrival_ls ASC, body_id ASC", (system_address,))
+    bodies = [dict(r) for r in c.fetchall()]
+    conn.close()
+
+    snippet = generate_share_snippet(system_data, bodies, lang=lang)
+    return {"status": "ok", "system_address": system_address, "snippet": snippet}
 
 class OpenLocationRequest(BaseModel):
     path: Optional[str] = None

@@ -8,6 +8,9 @@ from app.services.export_service import (
     create_edsys_package,
     import_edsys_package,
     generate_standalone_html,
+    generate_share_snippet,
+    has_special_orbits,
+    extract_system_ring_summary,
     sanitize_system_for_export
 )
 
@@ -200,6 +203,87 @@ def test_standalone_html_generation_english():
     assert "Extracted Materials:" in html_out
 
 
+def test_has_special_orbits():
+    # 1. Normal system with standard circular orbits
+    normal_bodies = [
+        {"body_name": "Sol 1", "eccentricity": 0.02, "axial_tilt": 0.1, "planet_class": "High metal content world"},
+        {"body_name": "Sol 2", "eccentricity": 0.05, "axial_tilt": 0.2, "planet_class": "Rocky body"}
+    ]
+    assert has_special_orbits(normal_bodies) is False
+
+    # 2. Extreme eccentricity (e >= 0.35)
+    eccentric_bodies = [
+        {"body_name": "Sol 1", "eccentricity": 0.75, "planet_class": "High metal content world"}
+    ]
+    assert has_special_orbits(eccentric_bodies) is True
+
+    # 3. Extreme axial tilt (> 80 degrees / retrograde)
+    import math
+    tilted_bodies = [
+        {"body_name": "Sol 1", "axial_tilt": math.radians(95.0), "planet_class": "Icy body"}
+    ]
+    assert has_special_orbits(tilted_bodies) is True
+
+    # 4. Hot Jupiter (gas giant with orbital period < 3 days)
+    hot_jupiter_bodies = [
+        {"body_name": "Sol 1", "orbital_period": 86400 * 1.5, "planet_class": "Gas giant with water based life"}
+    ]
+    assert has_special_orbits(hot_jupiter_bodies) is True
+
+    # 5. Sub-moon (nested moon 1 a a)
+    submoon_bodies = [
+        {"body_name": "Sol 1 a a", "planet_class": "Rocky body"}
+    ]
+    assert has_special_orbits(submoon_bodies) is True
+
+
+def test_generate_share_snippet_ja_and_en():
+    sys_data = {
+        "system_address": 777999,
+        "star_system": "Synuefe CE-R c21-6",
+        "main_star_type": "K",
+        "star_pos_x": 125.4,
+        "star_pos_y": -32.1,
+        "star_pos_z": 890.5,
+        "total_bio_signals": 5
+    }
+    bodies = [
+        {"body_id": 1, "body_name": "Synuefe CE-R c21-6 A", "star_type": "K"},
+        {"body_id": 2, "body_name": "Synuefe CE-R c21-6 1", "planet_class": "Earthlike body", "geo_signals": 3},
+        {"body_id": 3, "body_name": "Synuefe CE-R c21-6 2", "planet_class": "Water world", "rings": '[{"Name": "Ring A", "RingClass": "eRingClass_Metallic"}]'},
+        {"body_id": 4, "body_name": "Synuefe CE-R c21-6 3", "planet_class": "High metal content world", "eccentricity": 0.55}
+    ]
+
+    # Japanese snippet
+    snippet_ja = generate_share_snippet(sys_data, bodies, lang="ja")
+    assert "Synuefe CE-R c21-6" in snippet_ja
+    assert "主星: K型" in snippet_ja
+    assert "座標: [125.4, -32.1, 890.5]" in snippet_ja
+    assert "ELW: 1" in snippet_ja
+    assert "水の世界: 1" in snippet_ja
+    assert "生体: 5箇所" in snippet_ja
+    assert "地質: 3箇所" in snippet_ja
+    assert "環: あり" in snippet_ja
+    assert "特殊な天体軌道あり" in snippet_ja
+    assert "https://spansh.co.uk/system/777999" in snippet_ja
+    # Must NOT reveal Orrery or Cr
+    assert "Orrery" not in snippet_ja
+    assert "Cr" not in snippet_ja
+
+    # English snippet
+    snippet_en = generate_share_snippet(sys_data, bodies, lang="en")
+    assert "Synuefe CE-R c21-6" in snippet_en
+    assert "Main Star: Class K" in snippet_en
+    assert "Coords: [125.4, -32.1, 890.5]" in snippet_en
+    assert "ELW: 1" in snippet_en
+    assert "Water World: 1" in snippet_en
+    assert "Bio: 5" in snippet_en
+    assert "Geo: 3" in snippet_en
+    assert "Rings: Yes" in snippet_en
+    assert "Special Orbits Detected" in snippet_en
+    assert "https://spansh.co.uk/system/777999" in snippet_en
+
+
 def test_package_export_and_import():
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
@@ -276,6 +360,17 @@ def test_api_export_and_import_endpoints():
     assert html_en_resp.status_code == 200
     assert '<html lang="en">' in html_en_resp.text
     assert "Coordinates:" in html_en_resp.text
+
+    # 1b. Test snippet export endpoint
+    snip_resp = client.get("/api/export/snippet/888123?lang=ja")
+    assert snip_resp.status_code == 200
+    assert snip_resp.json()["status"] == "ok"
+    assert "Test API System" in snip_resp.json()["snippet"]
+    assert "主星:" in snip_resp.json()["snippet"]
+
+    snip_en_resp = client.get("/api/export/snippet/888123?lang=en")
+    assert snip_en_resp.status_code == 200
+    assert "Main Star:" in snip_en_resp.json()["snippet"]
 
     # 2. Test package export without consent (should fail with 400)
     fail_resp = client.post("/api/export/package", json={

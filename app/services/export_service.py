@@ -1369,3 +1369,142 @@ footer {{ text-align: center; font-size: 0.75rem; color: var(--text-secondary); 
 </html>
 """
     return html_doc
+
+
+def has_special_orbits(bodies: List[Dict[str, Any]]) -> bool:
+    """
+    Detects if a system has unusual / special orbital characteristics:
+    - High orbital eccentricity (e >= 0.35)
+    - Extreme axial tilt (near-perpendicular |tilt| > 80° or retrograde)
+    - Sub-moons (nested moon orbiting another moon)
+    - Gas giant in very close orbit ("Hot Jupiter" orbital period < 3 days)
+    - Circumbinary bodies orbiting barycentre
+    """
+    for b in bodies:
+        # Check eccentricity
+        ecc = b.get("eccentricity")
+        if ecc is not None and ecc >= 0.35:
+            return True
+
+        # Check extreme axial tilt
+        tilt = b.get("axial_tilt")
+        if tilt is not None:
+            import math
+            deg = abs(math.degrees(tilt))
+            if deg > 80.0:
+                return True
+
+        # Check Hot Jupiter / very short orbital period gas giants
+        p_class = (b.get("planet_class") or "").lower()
+        orb_sec = b.get("orbital_period")
+        if "gas giant" in p_class and orb_sec is not None and 0 < orb_sec < (3 * 86400):
+            return True
+
+        # Check parents hierarchy for sub-moons or barycentre
+        parents_raw = b.get("parents")
+        if parents_raw:
+            try:
+                parents = json.loads(parents_raw) if isinstance(parents_raw, str) else parents_raw
+                if isinstance(parents, list) and len(parents) >= 1:
+                    planet_parents = [p for p in parents if isinstance(p, dict) and ("Planet" in p or "Moon" in p)]
+                    if len(planet_parents) >= 2:
+                        return True
+                    if any(isinstance(p, dict) and "Null" in p for p in parents):
+                        return True
+            except Exception:
+                pass
+
+        # Check body name for sub-moons via tokens (e.g. 1 a a)
+        b_name = b.get("body_name", "")
+        tokens = b_name.strip().split()
+        if len(tokens) >= 3 and len(tokens[-1]) == 1 and len(tokens[-2]) == 1 and tokens[-1].isalpha() and tokens[-2].isalpha():
+            return True
+
+    return False
+
+
+def extract_system_ring_summary(bodies: List[Dict[str, Any]], lang: str = "ja") -> Optional[str]:
+    """
+    Checks if any body in the system has rings, and summarizes it.
+    """
+    ringed_count = 0
+    ring_types = set()
+    for b in bodies:
+        r_raw = b.get("rings")
+        if r_raw:
+            try:
+                rings = json.loads(r_raw) if isinstance(r_raw, str) else r_raw
+                if isinstance(rings, list) and len(rings) > 0:
+                    ringed_count += 1
+                    for r in rings:
+                        if isinstance(r, dict) and r.get("RingClass"):
+                            rc = r["RingClass"].replace("eRingClass_", "").replace("RingClass_", "")
+                            ring_types.add(rc)
+            except Exception:
+                pass
+    if ringed_count > 0:
+        type_desc = f" ({', '.join(sorted(ring_types))})" if ring_types else ""
+        return f"あり{type_desc}" if lang == "ja" else f"Yes{type_desc}"
+    return None
+
+
+def generate_share_snippet(system_data: Dict[str, Any], bodies: List[Dict[str, Any]], lang: str = "ja") -> str:
+    """
+    Generates a compact, informative text snippet tailored for Twitch comments, Discord, and SNS.
+    Includes system name, coordinates, main star, ELW/WW/AW, bio/geo, rings, and special orbit tags.
+    Does NOT reveal Orrery or total credits, inviting viewers to explore.
+    """
+    is_ja = (lang == "ja")
+    sys_name = system_data.get("star_system") or "Unknown System"
+    sys_addr = system_data.get("system_address")
+    main_star = system_data.get("main_star_type") or "Unknown"
+    pos_x = system_data.get("star_pos_x", 0.0)
+    pos_y = system_data.get("star_pos_y", 0.0)
+    pos_z = system_data.get("star_pos_z", 0.0)
+
+    # 1. Header line
+    if is_ja:
+        header = f"🌌 [{sys_name}] (主星: {main_star}型 | 座標: [{pos_x:.1f}, {pos_y:.1f}, {pos_z:.1f}])"
+    else:
+        header = f"🌌 [{sys_name}] (Main Star: Class {main_star} | Coords: [{pos_x:.1f}, {pos_y:.1f}, {pos_z:.1f}])"
+
+    # 2. Highlights
+    parts = []
+
+    # Rare worlds
+    elw = sum(1 for b in bodies if "earth" in (b.get("planet_class") or "").lower())
+    ww = sum(1 for b in bodies if "water world" in (b.get("planet_class") or "").lower())
+    ammonia = sum(1 for b in bodies if "ammonia" in (b.get("planet_class") or "").lower())
+    if elw > 0:
+        parts.append(f"🌍 ELW: {elw}")
+    if ww > 0:
+        parts.append(f"💧 水の世界: {ww}" if is_ja else f"💧 Water World: {ww}")
+    if ammonia > 0:
+        parts.append(f"🧪 AW: {ammonia}")
+
+    # Bio & Geo
+    bio = system_data.get("total_bio_signals", 0) or sum(b.get("bio_signals", 0) or 0 for b in bodies)
+    geo = sum(b.get("geo_signals", 0) or 0 for b in bodies)
+    if bio > 0:
+        parts.append(f"🌱 生体: {bio}箇所" if is_ja else f"🌱 Bio: {bio}")
+    if geo > 0:
+        parts.append(f"🌋 地質: {geo}箇所" if is_ja else f"🌋 Geo: {geo}")
+
+    # Rings
+    ring_summary = extract_system_ring_summary(bodies, lang=lang)
+    if ring_summary:
+        parts.append(f"🪐 環: {ring_summary}" if is_ja else f"🪐 Rings: {ring_summary}")
+
+    # Special Orbits
+    if has_special_orbits(bodies):
+        parts.append("⚡ 特殊な天体軌道あり" if is_ja else "⚡ Special Orbits Detected")
+
+    highlights_line = " | ".join(parts) if parts else ("探査データ記録済" if is_ja else "Surveyed System")
+
+    # 3. External Links
+    link_line = ""
+    if sys_addr:
+        link_line = f"\n🔗 Spansh: https://spansh.co.uk/system/{sys_addr}"
+
+    return f"{header}\n{highlights_line}{link_line}"
+
