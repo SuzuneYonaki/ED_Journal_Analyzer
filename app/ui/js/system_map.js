@@ -775,13 +775,18 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   const hasPlanetaryRings = ringItems.length > 0;
   const hasAsteroidBelts = beltItems.length > 0;
 
+  const lang = (typeof getAppLang === 'function') ? getAppLang() : 'ja';
   const ringParser = window.parseRingClass || ((cls) => {
     const l = (cls || '').toLowerCase();
-    if (l.includes('icy')) return { key: 'icy', nameJa: '氷', icon: '❄️', color: '#38bdf8', bg: 'rgba(56,189,248,0.18)', border: 'rgba(56,189,248,0.45)' };
-    if (l.includes('metallic') || l.includes('metalic')) return { key: 'metallic', nameJa: '金属質', icon: '🪙', color: '#facc15', bg: 'rgba(250,204,21,0.18)', border: 'rgba(250,204,21,0.5)' };
-    if (l.includes('metal')) return { key: 'metal_rich', nameJa: '金属豊富', icon: '🪐', color: '#fb923c', bg: 'rgba(251,146,60,0.18)', border: 'rgba(251,146,60,0.5)' };
-    if (l.includes('rocky')) return { key: 'rocky', nameJa: '岩石', icon: '🪨', color: '#cbd5e1', bg: 'rgba(203,213,225,0.18)', border: 'rgba(203,213,225,0.45)' };
-    return { key: 'other', nameJa: cls || '環', icon: '💍', color: '#a78bfa', bg: 'rgba(167,139,250,0.18)', border: 'rgba(167,139,250,0.45)' };
+    if (l.includes('icy')) return { key: 'icy', nameEn: 'Icy', nameJa: '氷', name: lang === 'en' ? 'Icy' : '氷', icon: '❄️', color: '#38bdf8', bg: 'rgba(56,189,248,0.18)', border: 'rgba(56,189,248,0.45)' };
+    if (l.includes('metallic') || l.includes('metalic')) return { key: 'metallic', nameEn: 'Metallic', nameJa: '金属質', name: lang === 'en' ? 'Metallic' : '金属質', icon: '🪙', color: '#facc15', bg: 'rgba(250,204,21,0.18)', border: 'rgba(250,204,21,0.5)' };
+    if (l.includes('metal')) return { key: 'metal_rich', nameEn: 'Metal Rich', nameJa: '金属豊富', name: lang === 'en' ? 'Metal Rich' : '金属豊富', icon: '🪐', color: '#fb923c', bg: 'rgba(251,146,60,0.18)', border: 'rgba(251,146,60,0.5)' };
+    if (l.includes('rocky')) return { key: 'rocky', nameEn: 'Rocky', nameJa: '岩石', name: lang === 'en' ? 'Rocky' : '岩石', icon: '🪨', color: '#cbd5e1', bg: 'rgba(203,213,225,0.18)', border: 'rgba(203,213,225,0.45)' };
+    const clean = (cls || '').replace('eRingClass_', '');
+    const isUnk = !clean || clean === '不明' || clean.toLowerCase() === 'unknown';
+    const nameEn = isUnk ? 'Unknown' : clean;
+    const nameJa = isUnk ? '不明' : clean;
+    return { key: isUnk ? 'unknown' : 'other', nameEn, nameJa, name: lang === 'en' ? nameEn : nameJa, icon: '💍', color: isUnk ? '#94a3b8' : '#a78bfa', bg: isUnk ? 'rgba(148,163,184,0.15)' : 'rgba(167,139,250,0.18)', border: isUnk ? 'rgba(148,163,184,0.4)' : 'rgba(167,139,250,0.45)' };
   });
 
   // Check Landable (Blue crescent arc in ED)
@@ -791,7 +796,10 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   const badgeList = [];
   if (isBary) {
     const isMulti = body.starGroup && body.starGroup.length > 2;
-    badgeList.push(`<span class="sysmap-mini-badge" style="background: rgba(147, 51, 234, 0.25); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.6); font-weight: bold;">♊ ${isMulti ? '多重連星共通軌道' : '連星共通周回軌道'}</span>`);
+    const baryLabel = isMulti
+      ? (typeof t === 'function' ? t('barycenter_multi') : '多重連星共通軌道')
+      : (typeof t === 'function' ? t('barycenter_binary') : '連星共通周回軌道');
+    badgeList.push(`<span class="sysmap-mini-badge" style="background: rgba(147, 51, 234, 0.25); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.6); font-weight: bold;">♊ ${baryLabel}</span>`);
   }
   const modSettings = (typeof window.getModuleSettings === 'function') ? window.getModuleSettings() : { exobiology: true, rhino: true };
   if (modSettings.exobiology !== false && body.bio_signals > 0) {
@@ -833,20 +841,25 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   if (!isAsteroidBelt && hasPlanetaryRings) {
     const primaryInfo = ringParser(ringItems[0].RingClass);
     primaryRingKey = primaryInfo.key;
-    const ringLabels = Array.from(new Set(ringItems.map(r => ringParser(r.RingClass).nameJa)));
+    const ringLabels = Array.from(new Set(ringItems.map(r => {
+      const p = ringParser(r.RingClass);
+      return lang === 'en' ? (p.nameEn || p.name) : (p.nameJa || p.name);
+    })));
     badgeList.push(`<span class="sysmap-mini-badge ring-${primaryRingKey}" style="background: ${primaryInfo.bg}; color: ${primaryInfo.color}; border: 1px solid ${primaryInfo.border};">💍 ${primaryInfo.icon} ${ringLabels.join('/')}</span>`);
   }
 
   if (isAsteroidBelt) {
     const primaryBeltInfo = ringParser(body.ring_class);
-    badgeList.push(`<span class="sysmap-mini-badge belt" style="background: ${primaryBeltInfo.bg}; color: ${primaryBeltInfo.color}; border: 1px solid ${primaryBeltInfo.border}; font-weight: bold;">🪐 ${primaryBeltInfo.icon} ${primaryBeltInfo.nameJa}ベルト</span>`);
+    const beltSuffix = lang === 'en' ? ' Belt' : 'ベルト';
+    const beltName = lang === 'en' ? (primaryBeltInfo.nameEn || primaryBeltInfo.name) : (primaryBeltInfo.nameJa || primaryBeltInfo.name);
+    badgeList.push(`<span class="sysmap-mini-badge belt" style="background: ${primaryBeltInfo.bg}; color: ${primaryBeltInfo.color}; border: 1px solid ${primaryBeltInfo.border}; font-weight: bold;">🪐 ${primaryBeltInfo.icon} ${beltName}${beltSuffix}</span>`);
     if (body.reserve_level) {
       const reserveParser = (typeof parseReserveLevel === 'function')
         ? parseReserveLevel
         : ((typeof window !== 'undefined' && typeof window.parseReserveLevel === 'function') ? window.parseReserveLevel : null);
       const resInfo = reserveParser ? reserveParser(body.reserve_level) : null;
-      const resJa = resInfo ? resInfo.ja : body.reserve_level;
-      badgeList.push(`<span class="sysmap-mini-badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); font-weight: bold;">${resJa}</span>`);
+      const resLabel = resInfo ? (lang === 'en' ? resInfo.en : resInfo.ja) : body.reserve_level;
+      badgeList.push(`<span class="sysmap-mini-badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); font-weight: bold;">${resLabel}</span>`);
     }
   }
 
@@ -887,7 +900,8 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     if (allHotspots['Alexandrite']) highlights.push(`Alex x${allHotspots['Alexandrite']}`);
 
     const badgeText = highlights.length > 0 ? `🎯 ${highlights.slice(0, 2).join(' ')}` : `🎯 HS: ${hotspotCount}`;
-    badgeList.push(`<span class="sysmap-mini-badge hotspot" style="background: rgba(250, 204, 21, 0.25); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.6); font-weight: bold;" title="環ホットスポット: ${hsSummary}">${badgeText}</span>`);
+    const hsTitle = (typeof t === 'function' ? t('ring_hotspot_title', { minerals: hsSummary }) : null) || ((lang === 'en' ? 'Ring Hotspots: ' : '環ホットスポット: ') + hsSummary);
+    badgeList.push(`<span class="sysmap-mini-badge hotspot" style="background: rgba(250, 204, 21, 0.25); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.6); font-weight: bold;" title="${hsTitle}">${badgeText}</span>`);
   }
 
   // Sphere HTML with optional ring, belt, and landable arc
@@ -925,19 +939,27 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   const info = document.createElement('div');
   info.className = 'sysmap-body-info';
 
+  const baryOrbitLabel = typeof t === 'function' ? t('barycenter_binary') : '連星共通軌道';
+  const beltBodyInfo = isAsteroidBelt ? ringParser(body.ring_class) : null;
+  const beltBodyName = beltBodyInfo ? (lang === 'en' ? (beltBodyInfo.nameEn || beltBodyInfo.name) : (beltBodyInfo.nameJa || beltBodyInfo.name)) : '';
+
   const typeDesc = isBary
-    ? (body.planet_class || `連星共通軌道 [${body.starGroup}]`)
+    ? (body.planet_class || `${baryOrbitLabel} [${body.starGroup}]`)
     : (isAsteroidBelt
-        ? `Asteroid Belt (${ringParser(body.ring_class).nameJa})`
+        ? `Asteroid Belt (${beltBodyName})`
         : (body.star_type 
             ? `Star (${body.star_type})` 
             : (body.planet_class || 'Planet')));
 
   let ringDesc = '';
   if (!isAsteroidBelt && hasPlanetaryRings) {
-    ringDesc = ` [Ring: ${ringItems.map(r => ringParser(r.RingClass).nameJa).join('/')}]`;
+    const ringNames = ringItems.map(r => {
+      const p = ringParser(r.RingClass);
+      return lang === 'en' ? (p.nameEn || p.name) : (p.nameJa || p.name);
+    });
+    ringDesc = ` [Ring: ${ringNames.join('/')}]`;
   } else if (isAsteroidBelt) {
-    ringDesc = ` [Belt: ${ringParser(body.ring_class).nameJa}]`;
+    ringDesc = ` [Belt: ${beltBodyName}]`;
   }
 
   card.title = `${body.body_name} - ${typeDesc}${ringDesc}`;
@@ -946,8 +968,11 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     ? formatDistance(body.distance_from_arrival_ls) 
     : (role === 'root-star' ? '0 Ls' : '--');
 
+  const aliasTitle = (typeof t === 'function' && body.bookmark && body.bookmark.alias_name)
+    ? t('bookmark_alias_title', { alias: body.bookmark.alias_name })
+    : ((lang === 'en' ? 'Alias: ' : 'エイリアス: ') + ((body.bookmark && body.bookmark.alias_name) || ''));
   const aliasHtml = (body.bookmark && body.bookmark.alias_name)
-    ? `<div class="sysmap-body-alias" title="エイリアス: ${body.bookmark.alias_name}">🏷️ ${body.bookmark.alias_name}</div>`
+    ? `<div class="sysmap-body-alias" title="${aliasTitle}">🏷️ ${body.bookmark.alias_name}</div>`
     : '';
 
   info.innerHTML = `

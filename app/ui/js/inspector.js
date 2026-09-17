@@ -55,7 +55,8 @@ function renderBodyInspector() {
   let typeSubtitle = '';
   if (b.isAsteroidBelt) {
     const beltRingInfo = typeof parseRingClass === 'function' ? parseRingClass(b.ring_class) : null;
-    const ringName = beltRingInfo ? (beltRingInfo.name || beltRingInfo.nameJa) : '';
+    const lang = (typeof getAppLang === 'function') ? getAppLang() : 'ja';
+    const ringName = beltRingInfo ? (lang === 'en' ? (beltRingInfo.nameEn || beltRingInfo.name) : (beltRingInfo.nameJa || beltRingInfo.name)) : '';
     typeSubtitle = `🪐 Asteroid Belt${ringName ? ' (' + ringName + ')' : ''}`;
   } else if (b.star_type) {
     typeSubtitle = `${t('star_type_label')}: ${b.star_type}`;

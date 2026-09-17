@@ -1344,14 +1344,14 @@ function renderFlatBodiesList(container, bodies) {
     }
     bRings = Array.isArray(bRings) ? bRings : [];
     if (bRings.length > 0) {
+      const appLang = (typeof getAppLang === 'function') ? getAppLang() : 'ja';
       bRings.forEach(r => {
         const isB = (r.Name || '').toLowerCase().includes('belt');
         const info = parseRingClass(r.RingClass);
-        if (isB) {
-          badges.push(`<span class="tag-badge" style="background: ${info.bg}; color: ${info.color}; border: 1px solid ${info.border}; font-weight: bold;" title="${r.Name || ''} - ${info.description}">🪐 ${info.icon} ${info.nameJa}ベルト</span>`);
-        } else {
-          badges.push(`<span class="tag-badge" style="background: ${info.bg}; color: ${info.color}; border: 1px solid ${info.border}; font-weight: bold;" title="${r.Name || ''} - ${info.description}">💍 ${info.icon} ${info.nameJa}環</span>`);
-        }
+        const ringTypeLabel = isB ? (appLang === 'en' ? 'Belt' : 'ベルト') : (appLang === 'en' ? 'Ring' : '環');
+        const badgeName = appLang === 'en' ? `${info.nameEn || info.name} ${ringTypeLabel}` : `${info.nameJa || info.name}${ringTypeLabel}`;
+        const icon = isB ? '🪐' : '💍';
+        badges.push(`<span class="tag-badge" style="background: ${info.bg}; color: ${info.color}; border: 1px solid ${info.border}; font-weight: bold;" title="${r.Name || ''} - ${info.description}">${icon} ${info.icon} ${badgeName}</span>`);
       });
     }
     if (state.showMiningGravity && body.landable && body.surface_gravity_g) {

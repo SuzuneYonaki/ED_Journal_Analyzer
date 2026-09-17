@@ -129,4 +129,37 @@ def test_luminosity_english_and_left_pane_tooltips():
         assert f"{tk}:" in i18n_content, f"Tooltip key '{tk}' must exist in i18n.js"
 
 
+def test_ring_and_barycenter_i18n_keys():
+    """Verify that ring, belt, and barycenter keys exist in both ja and en dictionaries."""
+    i18n_path = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "js", "i18n.js")
+    with open(i18n_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    ja_match = re.search(r"ja:\s*\{(.*?)\n\s*\},", content, re.DOTALL)
+    en_match = re.search(r"en:\s*\{(.*?)\n\s*\}\n\};", content, re.DOTALL)
+    assert ja_match and en_match
+
+    keys = [
+        "barycenter_multi",
+        "barycenter_binary",
+        "ring_belt_label",
+        "ring_ring_label",
+        "ring_or_belt_label",
+        "ring_hotspot_title",
+        "bookmark_alias_title",
+        "no_bodies"
+    ]
+    for k in keys:
+        assert f"{k}:" in ja_match.group(1), f"Key '{k}' must exist in ja"
+        assert f"{k}:" in en_match.group(1), f"Key '{k}' must exist in en"
+
+    # Verify that app.js does not hardcode Japanese nameJa in ring badge template
+    app_js_path = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "js", "app.js")
+    with open(app_js_path, "r", encoding="utf-8") as f:
+        app_js = f.read()
+    assert "${info.nameJa}ベルト" not in app_js, "app.js must not hardcode '${info.nameJa}ベルト'"
+    assert "${info.nameJa}環" not in app_js, "app.js must not hardcode '${info.nameJa}環'"
+
+
+
 

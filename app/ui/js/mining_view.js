@@ -60,8 +60,10 @@ function renderMiningView(container, bodies) {
     const ringItemsHtml = hotspotsList.map(item => {
       const rInfo = parseRingClass(item.ring_class);
       const isBelt = (item.ring_name || '').toLowerCase().includes('belt');
+      const lang = (typeof getAppLang === 'function') ? getAppLang() : 'ja';
+      const ringLabel = lang === 'en' ? `${rInfo.nameEn} ${isBelt ? 'Belt' : 'Ring'}` : `${rInfo.nameJa} (${rInfo.nameEn} ${isBelt ? 'Belt' : 'Ring'})`;
       const rBadge = `<span class="tag-badge" style="background: ${rInfo.bg}; color: ${rInfo.color}; border: 1px solid ${rInfo.border}; font-weight: bold; font-size: 0.72rem;">
-        ${rInfo.icon} ${rInfo.nameJa} (${rInfo.nameEn} ${isBelt ? 'Belt' : 'Ring'})
+        ${rInfo.icon} ${ringLabel}
       </span>`;
 
       const reserveInfo = parseReserveLevel(item.reserve_level);

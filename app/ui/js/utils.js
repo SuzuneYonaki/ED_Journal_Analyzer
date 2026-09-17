@@ -86,7 +86,7 @@ function parseMarkdown(md) {
 // Ring Classification Parser
 function parseRingClass(rawClass) {
   const lang = getAppLang();
-  if (!rawClass) {
+  if (!rawClass || rawClass === '不明' || String(rawClass).toLowerCase() === 'unknown' || String(rawClass).toLowerCase() === 'eringclass_unknown') {
     return {
       key: 'unknown',
       nameEn: 'Unknown',
@@ -153,14 +153,17 @@ function parseRingClass(rawClass) {
     };
   } else {
     const cleanName = rawClass.replace('eRingClass_', '');
+    const isUnk = !cleanName || cleanName === '不明' || cleanName.toLowerCase() === 'unknown';
+    const nameEn = isUnk ? 'Unknown' : cleanName;
+    const nameJa = isUnk ? '不明' : cleanName;
     res = {
-      key: 'other',
-      nameEn: cleanName,
-      nameJa: cleanName,
+      key: isUnk ? 'unknown' : 'other',
+      nameEn: nameEn,
+      nameJa: nameJa,
       icon: '💍',
-      color: '#a78bfa',
-      bg: 'rgba(167, 139, 250, 0.18)',
-      border: 'rgba(167, 139, 250, 0.45)',
+      color: isUnk ? '#94a3b8' : '#a78bfa',
+      bg: isUnk ? 'rgba(148,163,184,0.15)' : 'rgba(167, 139, 250, 0.18)',
+      border: isUnk ? 'rgba(148,163,184,0.4)' : 'rgba(167, 139, 250, 0.45)',
       descriptionEn: '',
       descriptionJa: ''
     };

@@ -702,7 +702,15 @@ const i18n = {
     star_tip_h: "Black Hole (ブラックホール: H, 超大質量)",
     filter_date_from_tip: "開始日",
     filter_date_to_tip: "終了日",
-    sort_composite_mode_tip: "1次〜3次の各項目を総合スコアリング（加重ブレンド）して並び替えます"
+    sort_composite_mode_tip: "1次〜3次の各項目を総合スコアリング（加重ブレンド）して並び替えます",
+    barycenter_multi: "多重連星共通軌道",
+    barycenter_binary: "連星共通周回軌道",
+    ring_belt_label: "ベルト",
+    ring_ring_label: "環",
+    ring_or_belt_label: "💍 環:",
+    ring_hotspot_title: "環ホットスポット: {minerals}",
+    bookmark_alias_title: "別名: {alias}",
+    no_bodies: "天体データがありません"
   },
   en: {
     // Header
@@ -1405,7 +1413,15 @@ const i18n = {
     star_tip_h: "Black Hole (H, Supermassive)",
     filter_date_from_tip: "Start Date",
     filter_date_to_tip: "End Date",
-    sort_composite_mode_tip: "Sort by composite score combining 1st to 3rd priority criteria (weighted blend)"
+    sort_composite_mode_tip: "Sort by composite score combining 1st to 3rd priority criteria (weighted blend)",
+    barycenter_multi: "Multiple Barycentric Orbit",
+    barycenter_binary: "Binary Barycentric Orbit",
+    ring_belt_label: "Belt",
+    ring_ring_label: "Ring",
+    ring_or_belt_label: "💍 Ring:",
+    ring_hotspot_title: "Ring Hotspots: {minerals}",
+    bookmark_alias_title: "Alias: {alias}",
+    no_bodies: "No celestial body data available"
   }
 };
 

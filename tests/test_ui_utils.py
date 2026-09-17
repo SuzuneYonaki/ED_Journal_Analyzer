@@ -41,6 +41,9 @@ def test_parse_ring_class():
     icy = run_js_utils_eval('parseRingClass("eRingClass_Icy")')
     assert icy['key'] == 'icy'
     assert icy['icon'] == '❄️'
+    assert icy['nameJa'] == '氷'
+    assert icy['nameEn'] == 'Icy'
+    assert icy['name'] == '氷'
 
     metallic = run_js_utils_eval('parseRingClass("eRingClass_Metallic")')
     assert metallic['key'] == 'metallic'
@@ -51,6 +54,30 @@ def test_parse_ring_class():
 
     rocky = run_js_utils_eval('parseRingClass("eRingClass_Rocky")')
     assert rocky['key'] == 'rocky'
+
+    # Unknown / null / '不明' handling in Japanese (default)
+    unk_null = run_js_utils_eval('parseRingClass(null)')
+    assert unk_null['key'] == 'unknown'
+    assert unk_null['name'] == '不明'
+    assert unk_null['nameEn'] == 'Unknown'
+
+    unk_jp = run_js_utils_eval('parseRingClass("不明")')
+    assert unk_jp['key'] == 'unknown'
+    assert unk_jp['name'] == '不明'
+    assert unk_jp['nameEn'] == 'Unknown'
+
+    # Multilingual handling in English
+    en_icy = run_js_utils_eval('(() => { global.currentLang = "en"; const r = parseRingClass("eRingClass_Icy"); global.currentLang = "ja"; return r; })()')
+    assert en_icy['name'] == 'Icy'
+    assert en_icy['nameEn'] == 'Icy'
+
+    en_unk = run_js_utils_eval('(() => { global.currentLang = "en"; const r = parseRingClass(null); global.currentLang = "ja"; return r; })()')
+    assert en_unk['name'] == 'Unknown'
+    assert en_unk['nameEn'] == 'Unknown'
+
+    en_unk_jp = run_js_utils_eval('(() => { global.currentLang = "en"; const r = parseRingClass("不明"); global.currentLang = "ja"; return r; })()')
+    assert en_unk_jp['name'] == 'Unknown'
+    assert en_unk_jp['nameEn'] == 'Unknown'
 
 
 def test_parse_reserve_level():
