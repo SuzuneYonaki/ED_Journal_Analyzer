@@ -288,6 +288,12 @@ const i18n = {
     btn_export_pkg: "パッケージ書出",
     modal_export_warn_desc: "<li>ゲーム内の宇宙ステーション（Universal Cartographics）で探査データを売却する前にこの星系データを他者に渡すと、相手が現地へ先に飛んで売却した場合、あなたの初発見ボーナス（First Discovery）や発見者名義が失われるリスクがあります。</li><li>あらかじめゲーム内で探査データを売却済みであること、または信頼できる相手との間でのみやり取りすることを推奨します。</li>",
     modal_export_safe_desc: "Frontierの生ログ（RAW Journal）は一切含めず、本アプリ閲覧用の一部データのみを抽出します。所持金・艦船装備・全航路履歴などの機密情報は100%除外されます。また、EDDiscoveryやEDMC等の外部ツールがジャーナルとして誤送信することも原理的に不可能です。",
+    share_warn_title: "⚠️ CMDR Data Share 注意事項 (重要)",
+    share_warn_headline: "【重要】Universal Cartographics (UC) 未売却データの共有リスク",
+    share_warn_desc: "<li>ゲーム内の宇宙ステーション（Universal Cartographics）で探査データを売却する前にこの星系データを他者に渡すと、相手が現地へ先に飛んで売却した場合、あなたの初発見ボーナス（First Discovery）や発見者名義が失われるリスクがあります。</li><li>あらかじめゲーム内で探査データを売却済みであること、または信頼できる相手との間でのみやり取りすることを推奨します。</li>",
+    share_warn_features_note: "※ 対象機能：Web共有HTML生成、共有用画像生成（PNG）、星系短評投稿文のコピー",
+    share_warn_checkbox: "次回以降はこの警告を表示しない",
+    share_warn_btn_continue: "理解して共有メニューを開く",
     btn_cancel: "キャンセル",
 
     // UI Layout & Accordion
@@ -1126,6 +1132,12 @@ const i18n = {
     btn_export_pkg: "Export Package",
     modal_export_warn_desc: "<li>Sharing system data before selling exploration data at a Universal Cartographics contact in-game carries the risk of losing First Discovery bonuses and credit if another player visits and sells first.</li><li>It is strongly recommended to sell your data in-game first or only share with trusted CMDRs.</li>",
     modal_export_safe_desc: "No Frontier RAW journal logs are included. Only extracted data necessary for viewing in this application is exported. Private info such as credits, ship loadout, and full travel history is 100% excluded. External tools like EDDiscovery or EDMC cannot mistakenly broadcast this file.",
+    share_warn_title: "⚠️ CMDR Data Share Notice (Important)",
+    share_warn_headline: "[Important] Risks of Sharing Unsold Universal Cartographics (UC) Data",
+    share_warn_desc: "<li>Sharing system data before selling exploration data at a Universal Cartographics contact in-game carries the risk of losing First Discovery bonuses and credit if another player visits and sells first.</li><li>It is strongly recommended to sell your data in-game first or only share with trusted CMDRs.</li>",
+    share_warn_features_note: "* Affected features: Web Share HTML, Share PNG Card, and System Summary Snippet Copy",
+    share_warn_checkbox: "Do not show this warning again",
+    share_warn_btn_continue: "Understand & Open Menu",
     btn_cancel: "Cancel",
 
     // UI Layout & Accordion

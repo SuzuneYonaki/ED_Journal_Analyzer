@@ -632,3 +632,43 @@
     </div>
   </div>
 
+  <!-- CMDR Data Share Warning Modal (Universal Cartographics Preemption Risk) -->
+  <div id="modal-share-warning" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="background: #0b1120; border: 1px solid rgba(239, 68, 68, 0.6); border-radius: 8px; width: 520px; max-width: 92vw; box-shadow: 0 10px 30px rgba(0,0,0,0.8); overflow: hidden; display: flex; flex-direction: column;">
+      <div class="modal-header" style="padding: 12px 16px; background: rgba(239, 68, 68, 0.15); border-bottom: 1px solid rgba(239, 68, 68, 0.3); display: flex; align-items: center; justify-content: space-between;">
+        <h3 style="margin: 0; font-size: 0.95rem; color: #fca5a5; display: flex; align-items: center; gap: 8px;" data-i18n="share_warn_title">
+          <span>⚠️</span> CMDR Data Share 注意事項 (重要)
+        </h3>
+        <button id="btn-close-share-warning" class="btn-icon" style="background: transparent; border: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 16px; font-size: 0.82rem; line-height: 1.6; color: #e2e8f0;">
+        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 6px; padding: 12px; margin-bottom: 14px;">
+          <div style="color: #f87171; font-weight: bold; font-size: 0.85rem; margin-bottom: 6px;" data-i18n="share_warn_headline">
+            【重要】Universal Cartographics (UC) 未売却データの共有リスク
+          </div>
+          <ul style="color: #fca5a5; font-size: 0.8rem; padding-left: 18px; margin: 0; line-height: 1.55;" data-i18n-html="share_warn_desc">
+            <li>ゲーム内の宇宙ステーション（Universal Cartographics）で探査データを売却する前にこの星系データを他者に渡すと、相手が現地へ先に飛んで売却した場合、あなたの初発見ボーナス（First Discovery）や発見者名義が失われるリスクがあります。</li>
+            <li>あらかじめゲーム内で探査データを売却済みであること、または信頼できる相手との間でのみやり取りすることを推奨します。</li>
+          </ul>
+        </div>
+        <div style="font-size: 0.78rem; color: #94a3b8; line-height: 1.5; margin-bottom: 14px;" data-i18n="share_warn_features_note">
+          ※ 対象機能：Web共有HTML生成、共有用画像生成（PNG）、星系短評投稿文のコピー
+        </div>
+        <div style="padding-top: 12px; border-top: 1px dashed rgba(255, 255, 255, 0.12);">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="cb-share-warning-dismiss" style="accent-color: var(--ed-orange); cursor: pointer; width: 16px; height: 16px;">
+            <span style="font-size: 0.82rem; color: #fed7aa; font-weight: bold;" data-i18n="share_warn_checkbox">
+              次回以降はこの警告を表示しない
+            </span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px; background: rgba(0,0,0,0.2);">
+        <button id="btn-cancel-share-warning" class="btn-page" style="padding: 6px 14px;" data-i18n="btn_cancel">キャンセル</button>
+        <button id="btn-confirm-share-warning" class="btn-primary" style="padding: 6px 16px; background: rgba(0, 210, 255, 0.2); border-color: var(--ed-cyan); color: var(--ed-cyan); font-weight: bold;" data-i18n="share_warn_btn_continue">
+          理解して共有メニューを開く
+        </button>
+      </div>
+    </div>
+  </div>
+
