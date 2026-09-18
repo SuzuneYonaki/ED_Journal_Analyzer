@@ -3625,6 +3625,31 @@ function initExportImportModals() {
     }, 12000);
   }
 
+  // CMDR Data Share Dropdown Toggle & Auto-Close
+  const btnShareToggle = document.getElementById('btn-share-dropdown-toggle');
+  const shareMenu = document.getElementById('share-dropdown-menu');
+  if (btnShareToggle && shareMenu) {
+    btnShareToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = shareMenu.style.display === 'flex';
+      shareMenu.style.display = isOpen ? 'none' : 'flex';
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#share-dropdown-container')) {
+        shareMenu.style.display = 'none';
+      }
+    });
+
+    // Close dropdown when any share item is clicked
+    shareMenu.querySelectorAll('.share-dropdown-item').forEach(item => {
+      item.addEventListener('click', () => {
+        shareMenu.style.display = 'none';
+      });
+    });
+  }
+
   const btnExportHtml = document.getElementById('btn-export-html');
   if (btnExportHtml) {
     btnExportHtml.addEventListener('click', async () => {
@@ -3909,30 +3934,6 @@ function initExportImportModals() {
   if (btnOkExportSuccess) {
     btnOkExportSuccess.addEventListener('click', () => {
       if (modalExportSuccess) modalExportSuccess.style.display = 'none';
-    });
-  }
-
-  // Toggle Shared Bookmark Button
-  const btnToggleShared = document.getElementById('btn-toggle-shared');
-  if (btnToggleShared) {
-    btnToggleShared.addEventListener('click', async () => {
-      if (!state.selectedSystem || !state.selectedSystem.system_address) return;
-      const sysAddr = state.selectedSystem.system_address;
-      try {
-        const res = await fetch(`/api/systems/${sysAddr}/toggle-shared`, { method: 'POST' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        state.selectedSystem.is_shared = data.is_shared;
-        if (state.currentSystemData && state.currentSystemData.system) {
-          state.currentSystemData.system.is_shared = data.is_shared;
-        }
-        const listSys = state.systems.find(s => s.system_address === sysAddr);
-        if (listSys) listSys.is_shared = data.is_shared;
-        renderSystemHeader();
-        renderSystemList();
-      } catch (err) {
-        console.error('Failed to toggle shared status:', err);
-      }
     });
   }
 

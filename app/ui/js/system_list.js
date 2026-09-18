@@ -576,16 +576,12 @@ function renderSystemHeader() {
   const totalB = sys.total_bodies || sys.scanned_bodies || 0;
   document.getElementById('body-count-badge').innerText = `${t('scanned_badge')}: ${sys.scanned_bodies} / ${totalB}`;
 
-  // Export buttons & Shared / External Badge in Header
-  const btnExportHtml = document.getElementById('btn-export-html');
+  // CMDR Data Share Dropdown & Shared / External Badge in Header
+  const shareDropdownContainer = document.getElementById('share-dropdown-container');
   const btnExportPng = document.getElementById('btn-export-png');
-  const btnCopySnsSnippet = document.getElementById('btn-copy-sns-snippet');
-  const btnExportPkg = document.getElementById('btn-export-pkg');
-  const btnToggleShared = document.getElementById('btn-toggle-shared');
+  const btnExportHtml = document.getElementById('btn-export-html');
   const sharedBadge = document.getElementById('current-system-shared-badge');
   const extBadge = document.getElementById('current-system-external-badge');
-  const sharedIcon = document.getElementById('shared-toggle-icon');
-  const sharedLabel = document.getElementById('shared-toggle-label');
 
   const isUnvisitedExternal = Boolean(sys.is_external || (sys.visit_count === 0));
 
@@ -600,21 +596,14 @@ function renderSystemHeader() {
   }
 
   if (isUnvisitedExternal) {
-    // 外部参照・未訪問星系は、Web共有・パッケージ書出・共有マーク付与を禁止（非表示化）
-    if (btnExportHtml) btnExportHtml.style.display = 'none';
-    if (btnExportPng) btnExportPng.style.display = 'none';
-    if (btnCopySnsSnippet) btnCopySnsSnippet.style.display = 'none';
-    if (btnExportPkg) btnExportPkg.style.display = 'none';
-    if (btnToggleShared) btnToggleShared.style.display = 'none';
+    // 外部参照・未訪問星系は、共有・出力を禁止（非表示化）
+    if (shareDropdownContainer) shareDropdownContainer.style.display = 'none';
     if (sharedBadge) {
       sharedBadge.innerHTML = '';
       sharedBadge.style.display = 'none';
     }
   } else {
-    if (btnExportHtml) btnExportHtml.style.display = 'inline-flex';
-    if (btnExportPng) btnExportPng.style.display = 'inline-flex';
-    if (btnCopySnsSnippet) btnCopySnsSnippet.style.display = 'inline-flex';
-    if (btnExportPkg) btnExportPkg.style.display = 'none'; // edsys feature disabled and hidden
+    if (shareDropdownContainer) shareDropdownContainer.style.display = 'inline-flex';
 
     if (sharedBadge) {
       if (sys.is_shared) {
@@ -624,19 +613,6 @@ function renderSystemHeader() {
       } else {
         sharedBadge.innerHTML = '';
         sharedBadge.style.display = 'none';
-      }
-    }
-
-    if (btnToggleShared) {
-      if (sys.is_shared) {
-        // Once shared, "共有解除" is not needed because it doesn't notify counterparty.
-        btnToggleShared.style.display = 'none';
-      } else {
-        btnToggleShared.style.display = 'inline-flex';
-        if (sharedIcon) sharedIcon.innerText = '🤝';
-        if (sharedLabel) sharedLabel.innerText = t('share_label') || '共有マーク';
-        btnToggleShared.style.background = 'rgba(167, 139, 250, 0.1)';
-        btnToggleShared.style.borderColor = 'rgba(167, 139, 250, 0.4)';
       }
     }
   }

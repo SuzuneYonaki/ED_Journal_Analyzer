@@ -8,31 +8,30 @@
             <span id="copy-label" data-i18n="copy_name">コピー</span>
           </button>
           
-          <!-- Method 2: Main Standalone Web Share HTML Export -->
-          <button id="btn-export-html" class="btn-icon" style="background: rgba(0, 210, 255, 0.12); border: 1px solid var(--ed-cyan); color: var(--ed-cyan); border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: bold;" data-i18n-title="tip_export_html" title="🌐 単体HTMLファイルを生成（ブラウザだけで星系図・採掘地点・天体を閲覧可能。SNSやDiscord共有向け）">
-            <span data-i18n="btn_export_html">🌐 Web共有HTML</span>
-          </button>
+          <!-- CMDR Data Share Dropdown Menu -->
+          <div class="share-dropdown-container" id="share-dropdown-container" style="position: relative; display: none;">
+            <button id="btn-share-dropdown-toggle" class="btn-icon" style="background: rgba(0, 210, 255, 0.12); border: 1px solid var(--ed-cyan); color: var(--ed-cyan); border-radius: 4px; padding: 3px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: bold;" data-i18n-title="tip_share_dropdown" title="CMDR Data Share: Web共有HTML・共有用画像・星系短評の出力メニュー">
+              <span data-i18n="btn_cmdr_data_share">🤝 CMDR Data Share</span>
+              <span style="font-size: 0.65rem; opacity: 0.8; margin-left: 2px;">▼</span>
+            </button>
+            <div id="share-dropdown-menu" class="share-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; background: #0f172a; border: 1px solid var(--border-color); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); z-index: 1000; min-width: 190px; padding: 4px 0; flex-direction: column;">
+              <!-- Method 2: Main Standalone Web Share HTML Export -->
+              <button id="btn-export-html" class="share-dropdown-item" style="background: transparent; border: none; color: var(--ed-cyan); padding: 7px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 500; text-align: left; width: 100%; transition: background 0.15s;" data-i18n-title="tip_export_html" title="単体HTMLファイルを生成（ブラウザだけで星系図・採掘地点・天体を閲覧可能。SNSやDiscord共有向け）">
+                <span data-i18n="btn_export_html">🌐 Web共有HTML生成</span>
+              </button>
 
-          <!-- Method 4: ComfyUI-style Summary PNG Card Export -->
-          <button id="btn-export-png" class="btn-icon" style="background: rgba(16, 185, 129, 0.12); border: 1px solid #10b981; color: #34d399; border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: bold;" data-i18n-title="tip_export_png" title="🖼️ サマリー画像を出力（観測データを内包したComfyUI方式PNG。本アプリにドラッグ＆ドロップで展開可能）">
-            <span data-i18n="btn_export_png">🖼️ サマリー画像</span>
-          </button>
+              <!-- Method 4: ComfyUI-style Summary PNG Card Export -->
+              <button id="btn-export-png" class="share-dropdown-item" style="background: transparent; border: none; color: #34d399; padding: 7px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 500; text-align: left; width: 100%; transition: background 0.15s;" data-i18n-title="tip_export_png" title="サマリー画像を出力（観測データを内包したComfyUI方式PNG。本アプリにドラッグ＆ドロップで展開可能）">
+                <span data-i18n="btn_export_png">🖼️ 共有用画像生成</span>
+              </button>
 
-          <!-- Method 3: Compact SNS / Twitch Stream Snippet Copy -->
-          <button id="btn-copy-sns-snippet" class="btn-icon" style="background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: bold;" data-i18n-title="tip_copy_sns_snippet" title="Twitch配信コメントやSNS向けの短評テキスト（特殊軌道、地質、生体、環情報）をクリップボードにコピー">
-            <span id="copy-sns-snippet-label" data-i18n="btn_copy_sns_snippet">📋 配信/SNS短評</span>
-          </button>
+              <!-- Method 3: Compact SNS / Twitch Stream Snippet Copy -->
+              <button id="btn-copy-sns-snippet" class="share-dropdown-item" style="background: transparent; border: none; color: #c084fc; padding: 7px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 500; text-align: left; width: 100%; transition: background 0.15s;" data-i18n-title="tip_copy_sns_snippet" title="Twitch配信コメントやSNS向けの短評テキスト（特殊軌道、地質、生体、環情報）をクリップボードにコピー">
+                <span id="copy-sns-snippet-label" data-i18n="btn_copy_sns_snippet">📋 星系短評投稿文</span>
+              </button>
+            </div>
+          </div>
 
-          <!-- Method 1: Locked Multi-System .edsys Package Export (Disabled & Hidden) -->
-          <button id="btn-export-pkg" class="btn-icon" style="display: none !important;" disabled data-i18n-title="tip_export_pkg" title="🔒 .edsys パッケージ書き出し">
-            <span data-i18n="btn_export_pkg">📦 パッケージ書出</span>
-          </button>
-
-          <!-- Shared Bookmark Toggle Button -->
-          <button id="btn-toggle-shared" class="btn-icon" style="background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.4); color: #c4b5fd; border-radius: 4px; padding: 3px 8px; cursor: pointer; display: none; align-items: center; gap: 4px; font-size: 0.75rem;" data-i18n-title="tip_toggle_shared" title="🤝 共有星系マークの切り替え">
-            <span id="shared-toggle-icon">🤝</span>
-            <span id="shared-toggle-label" data-i18n="btn_toggle_shared">共有マーク</span>
-          </button>
 
           <div id="current-system-coords" class="system-coords"></div>
           <div id="current-system-edsm-badge" style="margin-left: 4px; display: inline-flex; align-items: center; gap: 4px;"></div>
