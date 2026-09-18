@@ -102,11 +102,12 @@
   - ツール内で生成したPNG画像（`exports/{星系名}_summary.png`）には探査データがメタデータチャンク（`ed_journal_data`）として完全記録されています。
   - SNS等で配布・交換した画像を本ツールにドラッグ＆ドロップするだけで、他のCMDRが訪れた星系のデータを手軽に閲覧・復元できます。
   > [!WARNING]
-  > **⚠️ 注意：探査データの取り扱いについて**  
+  > **⚠️ 注意：探査データの取り扱いおよび再共有の制限について**  
   > Universal Cartographics（UC）への売却が完了していない星系のPNG画像、HTML、星系短評は、**絶対に第三者へ公開・共有しないでください**。  
   > 
   > 売却前にこれらを共有した場合、あなたが価値化する前に星系データを奪い取る「ロールプレイ」が成立してしまい、自らの手で大切な探査資産を失う危険があります。  
-  > データの共有は、必ずご自身の手でゲーム内UCにて売却を済ませ、資産を確定させてから行ってください。
+  > データの共有は、必ずご自身の手でゲーム内UCにて売却を済ませ、資産を確定させてから行ってください。  
+  > また、**EDSMやSpansh、ほかの人の共有物を再共有することはできません**（ご自身のフライトログで実際に探査・記録した星系データのみが共有可能です）。
 - **📋 星系短評投稿文**:
   - 特殊軌道、地質、生体、環情報などの見どころをまとめたテキストをワンクリックでクリップボードへコピーします。Twitch配信コメントやDiscord、X（旧Twitter）への投稿に最適です。
 
@@ -272,11 +273,12 @@ From the **🤝 CMDR Data Share** dropdown menu in the system header, export and
   - Generates a summary PNG image card (`exports/{System}_summary.png`) embedding complete observation data inside a metadata chunk (`ed_journal_data`).
   - Simply drag and drop any shared PNG card into the application window to decode and restore the system survey instantly.
   > [!WARNING]
-  > **⚠️ Caution: Handling Exploration Data Before UC Turn-in**  
+  > **⚠️ Caution: Handling Exploration Data and Re-sharing Restrictions**  
   > Never publish or share PNG summary cards, Web Share HTML, or system summary snippets of star systems that have not yet been sold to **Universal Cartographics (UC)**.  
   > 
   > If you share these prior to sale, other commanders could roleplay by preemptively claiming that system data and turning it in before you can monetize it, causing you to lose your precious exploration assets by your own hand.  
-  > Always ensure you have personally sold the data at UC in-game to secure your assets before sharing any data!
+  > Always ensure you have personally sold the data at UC in-game to secure your assets before sharing any data!  
+  > Furthermore, **you cannot re-share data from EDSM, Spansh, or data originally shared by other commanders** (only star system data personally explored and recorded in your own flight logs can be shared).
 - **📋 System Summary Post Text**:
   - Copies a concise summary of orbital wonders, geology, biology, and ring features to your clipboard with a single click—ideal for Twitch chat, Discord, or X (Twitter).
 
