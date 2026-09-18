@@ -3004,6 +3004,84 @@ function populateWebVoices() {
   appendVoiceGroup('その他の言語 (Other Languages)', otherVoices);
 }
 
+let voicevoxSpeakersMap = {};
+
+async function updateTtsPolicyView() {
+  const policyStatusEl = document.getElementById('tts-policy-status');
+  const policyActionArea = document.getElementById('tts-policy-action-area');
+  const policyContentEl = document.getElementById('tts-policy-content');
+  const btnViewPolicy = document.getElementById('btn-view-tts-policy');
+  if (!policyStatusEl) return;
+
+  const engineSelect = document.getElementById('tts-engine-select');
+  const engine = engineSelect ? engineSelect.value : (ttsState.engine || 'web_speech');
+
+  if (policyContentEl) {
+    policyContentEl.style.display = 'none';
+    policyContentEl.innerText = '';
+  }
+
+  if (engine === 'web_speech') {
+    if (policyActionArea) policyActionArea.style.display = 'none';
+    policyStatusEl.innerHTML = `
+      <div style="color: #94a3b8; margin-bottom: 3px;">${t('tts_terms_web_speech_note')}</div>
+      <div style="color: #f59e0b;">${t('tts_terms_unverified_notice')}</div>
+    `;
+    return;
+  }
+
+  // VOICEVOX engine: attempt to check speaker policy
+  const speakerSelect = document.getElementById('tts-voicevox-speaker-select');
+  const speakerId = speakerSelect ? speakerSelect.value : ttsState.voicevoxSpeakerId;
+  const spInfo = voicevoxSpeakersMap[String(speakerId)];
+
+  if (!spInfo || !spInfo.speaker_uuid) {
+    if (policyActionArea) policyActionArea.style.display = 'none';
+    policyStatusEl.innerHTML = `<span style="color: #f59e0b;">${t('tts_terms_unverified_notice')}</span>`;
+    return;
+  }
+
+  try {
+    const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 2500) : null;
+    const fetchOpts = { method: 'GET' };
+    if (controller) fetchOpts.signal = controller.signal;
+
+    const res = await fetch(`${ttsState.voicevoxUrl}/speaker_info?speaker_uuid=${encodeURIComponent(spInfo.speaker_uuid)}`, fetchOpts);
+    if (timeoutId) clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.policy && typeof data.policy === 'string' && data.policy.trim().length > 0) {
+        const detectedMsg = t('tts_terms_policy_detected', { speaker: spInfo.name });
+        policyStatusEl.innerHTML = `
+          <div style="color: #6ee7b7; font-weight: 500;">${escapeHtml(detectedMsg)}</div>
+          <div style="color: #94a3b8; font-size: 0.7rem; margin-top: 2px;">${t('tts_terms_unverified_notice')}</div>
+        `;
+        if (policyActionArea) policyActionArea.style.display = 'block';
+        if (policyContentEl) policyContentEl.innerText = data.policy;
+        if (btnViewPolicy) {
+          btnViewPolicy.onclick = () => {
+            if (policyContentEl.style.display === 'none') {
+              policyContentEl.style.display = 'block';
+              btnViewPolicy.innerText = `▲ ${t('btn_hide_speaker_policy')}`;
+            } else {
+              policyContentEl.style.display = 'none';
+              btnViewPolicy.innerText = `📜 ${t('btn_view_speaker_policy')}`;
+            }
+          };
+          btnViewPolicy.innerText = `📜 ${t('btn_view_speaker_policy')}`;
+        }
+        return;
+      }
+    }
+    throw new Error('Policy not available');
+  } catch (err) {
+    if (policyActionArea) policyActionArea.style.display = 'none';
+    policyStatusEl.innerHTML = `<span style="color: #f59e0b;">${t('tts_terms_unverified_notice')}</span>`;
+  }
+}
+
 async function checkVoicevoxConnection() {
   const statusEl = document.getElementById('tts-voicevox-status');
   const speakerSelect = document.getElementById('tts-voicevox-speaker-select');
@@ -3021,6 +3099,11 @@ async function checkVoicevoxConnection() {
         group.label = sp.name;
         if (sp.styles && Array.isArray(sp.styles)) {
           sp.styles.forEach(st => {
+            voicevoxSpeakersMap[String(st.id)] = {
+              name: sp.name,
+              speaker_uuid: sp.speaker_uuid,
+              style_name: st.name
+            };
             const opt = document.createElement('option');
             opt.value = String(st.id);
             opt.innerText = `${sp.name} (${st.name})`;
@@ -3037,6 +3120,8 @@ async function checkVoicevoxConnection() {
     statusEl.innerHTML = `<span style="color: #6ee7b7;">${(typeof t === 'function' ? t('voicevox_connected') : null) || '🟢 VOICEVOX 接続成功 (127.0.0.1:50021)'}</span>`;
   } catch (err) {
     statusEl.innerHTML = `<span style="color: #94a3b8;">${(typeof t === 'function' ? t('voicevox_not_found') : null) || '🔴 VOICEVOX 未検出 (起動すると自動連携されます。未起動時はWeb Speech APIが使われます)'}</span>`;
+  } finally {
+    updateTtsPolicyView();
   }
 }
 
@@ -3454,6 +3539,7 @@ async function initSettingsModal() {
       if (webVoiceSelect) webVoiceSelect.style.display = 'block';
       if (voicevoxGroup) voicevoxGroup.style.display = 'none';
       populateWebVoices();
+      updateTtsPolicyView();
     }
   }
 
@@ -3547,6 +3633,13 @@ async function initSettingsModal() {
         if (voicevoxGroup) voicevoxGroup.style.display = 'none';
         populateWebVoices();
       }
+      updateTtsPolicyView();
+    });
+  }
+
+  if (voicevoxSpeakerSelect) {
+    voicevoxSpeakerSelect.addEventListener('change', () => {
+      updateTtsPolicyView();
     });
   }
 
@@ -4194,6 +4287,7 @@ if (typeof window !== 'undefined') {
   window.renderPhysicsReport = renderPhysicsReport;
   window.handleLiveJournalEvent = handleLiveJournalEvent;
   window.updateModuleVisibilityUI = updateModuleVisibilityUI;
+  window.updateTtsPolicyView = updateTtsPolicyView;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -4210,7 +4304,8 @@ if (typeof module !== 'undefined' && module.exports) {
     renderVisitsTimeline,
     renderPhysicsReport,
     handleLiveJournalEvent,
-    updateModuleVisibilityUI
+    updateModuleVisibilityUI,
+    updateTtsPolicyView
   };
 }
 

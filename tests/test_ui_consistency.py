@@ -266,3 +266,27 @@ def test_cmdr_location_integrated_in_header_logged_group():
     cmdr_container = stats_content.find(id="stat-cmdr-container")
     assert cmdr_container is not None, "stat-cmdr-container must be integrated inside header-stats-content"
     assert cmdr_container.find(id="stat-cmdr-loc") is not None, "stat-cmdr-loc must be inside stat-cmdr-container"
+
+
+def test_tts_terms_and_disclaimer_ui():
+    """Verify that tts-terms-container exists and contains the required unverified disclaimer."""
+    from bs4 import BeautifulSoup
+    modals_path = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "components", "modals.html")
+    with open(modals_path, "r", encoding="utf-8") as f:
+        soup = BeautifulSoup(f.read(), "html.parser")
+
+    terms_container = soup.find(id="tts-terms-container")
+    assert terms_container is not None, "tts-terms-container must exist in modals.html"
+
+    policy_status = terms_container.find(id="tts-policy-status")
+    assert policy_status is not None, "tts-policy-status element must exist inside tts-terms-container"
+    assert policy_status.get("data-i18n") == "tts_terms_unverified_notice"
+
+    # Verify i18n text content in i18n.js
+    i18n_path = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "js", "i18n.js")
+    with open(i18n_path, "r", encoding="utf-8") as f:
+        i18n_content = f.read()
+
+    assert "確認できないものについては各TTSおよびキャラクター提供元の利用規約をご覧ください" in i18n_content
+    assert "Please refer to the terms of use of each TTS and character provider for any unverified voices" in i18n_content
+
