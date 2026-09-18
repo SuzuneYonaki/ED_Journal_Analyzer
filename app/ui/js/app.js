@@ -3724,12 +3724,101 @@ function initExportImportModals() {
     }, 12000);
   }
 
-  // CMDR Data Share Dropdown Toggle & Auto-Close
+  // CMDR Data Share Warning Modal & Dropdown Toggle
   const btnShareToggle = document.getElementById('btn-share-dropdown-toggle');
   const shareMenu = document.getElementById('share-dropdown-menu');
+  const modalShareWarning = document.getElementById('modal-share-warning');
+  const btnCloseShareWarn = document.getElementById('btn-close-share-warning');
+  const btnCancelShareWarn = document.getElementById('btn-cancel-share-warning');
+  const btnConfirmShareWarn = document.getElementById('btn-confirm-share-warning');
+  const cbShareWarnDismiss = document.getElementById('cb-share-warning-dismiss');
+  const btnResetShareWarn = document.getElementById('btn-reset-share-warning');
+  const statusResetShareWarn = document.getElementById('status-reset-share-warning');
+
+  function isShareWarningDismissed() {
+    try {
+      return localStorage.getItem('ed_share_warning_dismissed') === 'true';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function openShareWarningModal() {
+    if (!modalShareWarning) return;
+    if (cbShareWarnDismiss) {
+      cbShareWarnDismiss.checked = false;
+    }
+    modalShareWarning.style.display = 'flex';
+  }
+
+  function closeShareWarningModal() {
+    if (modalShareWarning) {
+      modalShareWarning.style.display = 'none';
+    }
+  }
+
+  if (btnCloseShareWarn) {
+    btnCloseShareWarn.addEventListener('click', closeShareWarningModal);
+  }
+  if (btnCancelShareWarn) {
+    btnCancelShareWarn.addEventListener('click', closeShareWarningModal);
+  }
+
+  if (btnConfirmShareWarn) {
+    btnConfirmShareWarn.addEventListener('click', () => {
+      if (cbShareWarnDismiss && cbShareWarnDismiss.checked) {
+        try {
+          localStorage.setItem('ed_share_warning_dismissed', 'true');
+        } catch (e) {}
+      }
+      closeShareWarningModal();
+      if (shareMenu) {
+        shareMenu.style.display = 'flex';
+      }
+    });
+  }
+
+  if (modalShareWarning) {
+    modalShareWarning.addEventListener('click', (e) => {
+      if (e.target === modalShareWarning) {
+        closeShareWarningModal();
+      }
+    });
+  }
+
+  // Re-enable warning button in settings
+  if (btnResetShareWarn) {
+    btnResetShareWarn.addEventListener('click', () => {
+      try {
+        localStorage.removeItem('ed_share_warning_dismissed');
+      } catch (e) {}
+      if (statusResetShareWarn) {
+        statusResetShareWarn.textContent = t('settings_reset_share_warn_done') || '警告表示を再有効化しました';
+        statusResetShareWarn.style.display = 'block';
+        setTimeout(() => {
+          if (statusResetShareWarn) statusResetShareWarn.style.display = 'none';
+        }, 3000);
+      }
+    });
+  }
+
+  if (typeof window !== 'undefined') {
+    window.isShareWarningDismissed = isShareWarningDismissed;
+    window.openShareWarningModal = openShareWarningModal;
+    window.closeShareWarningModal = closeShareWarningModal;
+  }
+
   if (btnShareToggle && shareMenu) {
     btnShareToggle.addEventListener('click', (e) => {
       e.stopPropagation();
+
+      // If warning has not been dismissed with the checkbox, intercept and show warning modal
+      if (!isShareWarningDismissed()) {
+        shareMenu.style.display = 'none';
+        openShareWarningModal();
+        return;
+      }
+
       const isOpen = shareMenu.style.display === 'flex';
       shareMenu.style.display = isOpen ? 'none' : 'flex';
     });

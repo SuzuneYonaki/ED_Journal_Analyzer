@@ -294,6 +294,10 @@ const i18n = {
     share_warn_features_note: "※ 対象機能：Web共有HTML生成、共有用画像生成（PNG）、星系短評投稿文のコピー",
     share_warn_checkbox: "次回以降はこの警告を表示しない",
     share_warn_btn_continue: "理解して共有メニューを開く",
+    settings_reset_share_warn_title: "🤝 CMDR Data Share 警告リセット",
+    settings_reset_share_warn_desc: "データ共有時のUC未売却リスク警告ウィンドウを再度表示するように戻します",
+    settings_reset_share_warn_btn: "🔄 警告を再有効化",
+    settings_reset_share_warn_done: "警告表示を再有効化しました",
     btn_cancel: "キャンセル",
 
     // UI Layout & Accordion
@@ -1138,6 +1142,10 @@ const i18n = {
     share_warn_features_note: "* Affected features: Web Share HTML, Share PNG Card, and System Summary Snippet Copy",
     share_warn_checkbox: "Do not show this warning again",
     share_warn_btn_continue: "Understand & Open Menu",
+    settings_reset_share_warn_title: "🤝 Reset CMDR Data Share Warning",
+    settings_reset_share_warn_desc: "Re-enable the warning popup dialog regarding Universal Cartographics preemption risks",
+    settings_reset_share_warn_btn: "🔄 Re-enable Warning",
+    settings_reset_share_warn_done: "Warning dialog re-enabled",
     btn_cancel: "Cancel",
 
     // UI Layout & Accordion

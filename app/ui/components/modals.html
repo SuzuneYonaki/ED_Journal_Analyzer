@@ -53,6 +53,19 @@
             </div>
             <div id="modal-scan-status-text" style="font-size: 0.75rem; color: var(--ed-cyan); font-family: monospace;"></div>
           </div>
+
+          <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: bold; color: #fff;" data-i18n="settings_reset_share_warn_title">🤝 CMDR Data Share 警告リセット</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="settings_reset_share_warn_desc">データ共有時のUC未売却リスク警告ウィンドウを再度表示するように戻します</div>
+              </div>
+              <button id="btn-reset-share-warning" class="view-btn" style="padding: 6px 14px; font-size: 0.8rem; white-space: nowrap;" data-i18n="settings_reset_share_warn_btn">
+                🔄 警告を再有効化
+              </button>
+            </div>
+            <div id="status-reset-share-warning" style="font-size: 0.75rem; color: var(--ed-cyan); margin-top: 4px; display: none;"></div>
+          </div>
         </div>
 
         <!-- Tab: UI Scaling & Font Size & Language -->
