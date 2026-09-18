@@ -551,6 +551,71 @@ header {
   transform: rotate(180deg);
 }
 
+/* Header Update Notification */
+@keyframes header-update-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 3px rgba(0, 210, 255, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    box-shadow: 0 0 8px rgba(0, 210, 255, 1);
+    transform: scale(1.04);
+  }
+}
+
+@keyframes header-btn-pulse {
+  0%, 100% {
+    box-shadow: 0 0 2px rgba(0, 210, 255, 0.4);
+    border-color: rgba(0, 210, 255, 0.5) !important;
+  }
+  50% {
+    box-shadow: 0 0 8px rgba(0, 210, 255, 0.9);
+    border-color: #00d2ff !important;
+  }
+}
+
+.header-update-indicator {
+  padding: 1px 4px;
+  font-size: 0.58rem;
+  font-weight: bold;
+  color: #00d2ff;
+  background: rgba(0, 210, 255, 0.18);
+  border: 1px solid #00d2ff;
+  border-radius: 3px;
+  animation: header-update-pulse 1.6s infinite ease-in-out;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+
+/* When expanded and has update: blink indicator and pulse toggle button */
+.header-logged-group.has-new-version:not(.collapsed) .header-update-indicator {
+  display: inline-flex !important;
+}
+
+.header-logged-group.has-new-version:not(.collapsed) #btn-toggle-header-stats {
+  animation: header-btn-pulse 2s infinite ease-in-out;
+}
+
+/* When collapsed and has update: show banner and hide indicator */
+.header-logged-group.collapsed.has-new-version #header-update-banner {
+  display: flex !important;
+}
+
+.header-logged-group.collapsed .header-update-indicator {
+  display: none !important;
+}
+
+.header-update-banner {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .search-section {
   padding: 10px;
   border-bottom: 1px solid var(--border-color);

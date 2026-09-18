@@ -23,7 +23,7 @@ CACHE_TTL_SECONDS = 3600  # 1 hour
 ERROR_COOLDOWN_SECONDS = 300  # 5 minutes on failure
 
 
-def extract_release_summary(body: Optional[str], max_len: int = 140) -> str:
+def extract_release_summary(body: Optional[str], max_len: int = 300) -> str:
     """
     Extracts a concise, clean summary string from markdown release notes.
     Strips markdown heading lines, bullet symbols, links, and collapses whitespace.

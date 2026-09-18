@@ -806,6 +806,7 @@ function initHeaderStatsCollapse() {
     try {
       localStorage.setItem('ed_header_stats_collapsed', collapsed ? 'true' : 'false');
     } catch (e) {}
+    renderHeaderUpdateState();
   }
 
   applyCollapse(state.headerStatsCollapsed);
@@ -813,6 +814,61 @@ function initHeaderStatsCollapse() {
   btnToggle.addEventListener('click', () => {
     applyCollapse(!headerGroup.classList.contains('collapsed'));
   });
+}
+
+// Header Update Notification Management
+async function checkForAppUpdate() {
+  try {
+    const res = await fetch('/api/check_update');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (typeof state !== 'undefined') {
+      state.updateInfo = data;
+    }
+    renderHeaderUpdateState();
+  } catch (err) {
+    console.warn('[UpdateChecker] Failed to check for app updates:', err);
+  }
+}
+
+function renderHeaderUpdateState() {
+  const headerGroup = document.getElementById('header-logged-group');
+  const banner = document.getElementById('header-update-banner');
+  const indicator = document.getElementById('header-update-indicator');
+  const versionEl = document.getElementById('header-update-version');
+  const summaryEl = document.getElementById('header-update-summary');
+  const linkEl = document.getElementById('header-update-link');
+
+  const updateInfo = (typeof state !== 'undefined' && state.updateInfo) ? state.updateInfo : null;
+  if (!headerGroup || !updateInfo) return;
+
+  if (updateInfo.has_update) {
+    headerGroup.classList.add('has-new-version');
+    const isCollapsed = headerGroup.classList.contains('collapsed');
+
+    if (indicator) {
+      indicator.style.display = isCollapsed ? 'none' : 'inline-flex';
+    }
+    if (banner) {
+      banner.style.display = isCollapsed ? 'flex' : 'none';
+    }
+
+    if (versionEl) {
+      versionEl.textContent = updateInfo.latest_version || '';
+    }
+    if (summaryEl) {
+      const summaryText = updateInfo.summary || updateInfo.release_name || '';
+      summaryEl.textContent = summaryText;
+      summaryEl.title = summaryText;
+    }
+    if (linkEl && updateInfo.release_url) {
+      linkEl.href = updateInfo.release_url;
+    }
+  } else {
+    headerGroup.classList.remove('has-new-version');
+    if (indicator) indicator.style.display = 'none';
+    if (banner) banner.style.display = 'none';
+  }
 }
 
 function clearSystemBioSummary() {
@@ -846,6 +902,8 @@ if (typeof window !== 'undefined') {
   window.initLayoutSwitcher = initLayoutSwitcher;
   window.initHeaderStatsCollapse = initHeaderStatsCollapse;
   window.clearSystemBioSummary = clearSystemBioSummary;
+  window.checkForAppUpdate = checkForAppUpdate;
+  window.renderHeaderUpdateState = renderHeaderUpdateState;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -865,6 +923,8 @@ if (typeof module !== 'undefined' && module.exports) {
     initStellarFilters,
     initLayoutSwitcher,
     initHeaderStatsCollapse,
-    clearSystemBioSummary
+    clearSystemBioSummary,
+    checkForAppUpdate,
+    renderHeaderUpdateState
   };
 }

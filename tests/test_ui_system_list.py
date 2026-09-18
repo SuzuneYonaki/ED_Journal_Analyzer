@@ -51,7 +51,13 @@ def run_js_system_list_test(script_body):
         appendChild(child) {{ this.children.push(child); }},
         querySelectorAll() {{ return []; }},
         querySelector() {{ return null; }},
-        addEventListener() {{}},
+        _listeners: {{}},
+        addEventListener(evt, cb) {{
+          (this._listeners[evt] = this._listeners[evt] || []).push(cb);
+        }},
+        click() {{
+          (this._listeners['click'] || []).forEach(cb => cb());
+        }},
         scrollTo() {{}},
         scrollIntoView() {{}}
       }};
@@ -347,4 +353,93 @@ def test_system_list_bilingual_switching():
     assert res["en_has_boom_state"] is True
     assert res["en_has_controlling_faction"] is True
     assert res["en_has_primary_economy"] is True
+
+
+def test_header_update_notification_ui_state():
+    out = run_js_system_list_test("""
+    const headerGroup = document.getElementById('header-logged-group');
+    const btnToggle = document.getElementById('btn-toggle-header-stats');
+    const banner = document.getElementById('header-update-banner');
+    const indicator = document.getElementById('header-update-indicator');
+    const versionEl = document.getElementById('header-update-version');
+    const summaryEl = document.getElementById('header-update-summary');
+    const linkEl = document.getElementById('header-update-link');
+
+    initHeaderStatsCollapse();
+
+    // 1. Initial state without update
+    state.updateInfo = { has_update: false };
+    renderHeaderUpdateState();
+    const initial_has_class = headerGroup.classList.contains('has-new-version');
+    const initial_ind_disp = indicator.style.display;
+    const initial_ban_disp = banner.style.display;
+
+    // 2. Update exists and header is expanded
+    state.updateInfo = {
+      has_update: true,
+      latest_version: 'v0.9.0',
+      summary: 'New features and long descriptive summary line',
+      release_url: 'https://github.com/test/release'
+    };
+    renderHeaderUpdateState();
+    const exp_has_class = headerGroup.classList.contains('has-new-version');
+    const exp_ind_disp = indicator.style.display;
+    const exp_ban_disp = banner.style.display;
+
+    // 3. Toggle to collapsed state
+    btnToggle.click();
+    const col_is_collapsed = headerGroup.classList.contains('collapsed');
+    const col_ind_disp = indicator.style.display;
+    const col_ban_disp = banner.style.display;
+    const col_version = versionEl.textContent;
+    const col_summary = summaryEl.textContent;
+    const col_title = summaryEl.title;
+    const col_link = linkEl.href;
+
+    // 4. Toggle back to expanded
+    btnToggle.click();
+    const exp2_ind_disp = indicator.style.display;
+    const exp2_ban_disp = banner.style.display;
+
+    console.log(JSON.stringify({
+      initial_has_class,
+      initial_ind_disp,
+      initial_ban_disp,
+      exp_has_class,
+      exp_ind_disp,
+      exp_ban_disp,
+      col_is_collapsed,
+      col_ind_disp,
+      col_ban_disp,
+      col_version,
+      col_summary,
+      col_title,
+      col_link,
+      exp2_ind_disp,
+      exp2_ban_disp
+    }));
+    """)
+    res = json.loads(out)
+    assert res["initial_has_class"] is False
+    assert res["initial_ind_disp"] == "none"
+    assert res["initial_ban_disp"] == "none"
+
+    # Expanded with update: indicator visible, banner hidden
+    assert res["exp_has_class"] is True
+    assert res["exp_ind_disp"] == "inline-flex"
+    assert res["exp_ban_disp"] == "none"
+
+    # Collapsed with update: indicator hidden, banner visible with summary
+    assert res["col_is_collapsed"] is True
+    assert res["col_ind_disp"] == "none"
+    assert res["col_ban_disp"] == "flex"
+    assert res["col_version"] == "v0.9.0"
+    assert "New features" in res["col_summary"]
+    assert "New features" in res["col_title"]
+    assert res["col_link"] == "https://github.com/test/release"
+
+    # Toggled back: indicator visible, banner hidden
+    assert res["exp2_ind_disp"] == "inline-flex"
+    assert res["exp2_ban_disp"] == "none"
+
 

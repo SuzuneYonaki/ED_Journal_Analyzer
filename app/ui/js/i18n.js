@@ -20,6 +20,10 @@ const i18n = {
     scanning_banner: "ジャーナルログを解析中...",
     scan_complete: "ジャーナル解析完了",
     scan_success_tip: "件のジャーナルログを正常に同期しました",
+    header_update_badge: "新Ver",
+    header_update_link: "詳細 / リリースノート ↗",
+    header_update_tip: "クリックしてGitHubリリースノートを開く",
+    header_update_available_tip: "新バージョンが利用可能です（クリックで展開/折り畳み）",
 
     // Concept Switcher Tabs
     concept_tab_explorer: "ジャーナル探査",
@@ -854,6 +858,10 @@ const i18n = {
     scanning_banner: "Scanning Journal Logs...",
     scan_complete: "Journal Scan Complete",
     scan_success_tip: "journal files successfully synced",
+    header_update_badge: "New Ver",
+    header_update_link: "Details / Release Notes ↗",
+    header_update_tip: "Click to open GitHub release notes",
+    header_update_available_tip: "A new version is available (Click to expand/collapse)",
 
     // Concept Switcher Tabs
     concept_tab_explorer: "Journal Explorer",

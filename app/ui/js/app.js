@@ -1541,6 +1541,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initStellarFilters();
   initLayoutSwitcher();
   initHeaderStatsCollapse();
+  if (typeof checkForAppUpdate === 'function') {
+    checkForAppUpdate();
+  }
   fetchGlobalStats();
   fetchSystems();
   checkScanOnStartup();
