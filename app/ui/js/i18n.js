@@ -386,6 +386,8 @@ const i18n = {
     settings_modules_desc: "表示する拡張機能モジュールを選択できます。チェックを外すことで、画面を天体物理のみのシンプルな表示に切り替えられます。",
     mod_exobiology: "🌿 Exobiology（生物予測・BIOバッジ・探査ビュー）",
     mod_rhino: "🦏 Rhino採掘（採掘拠点バッジ・座標マップ・履歴・採掘ビュー）",
+    mod_faction: "🏛️ 人口・勢力/BGS（星系人口・支配勢力・経済・BGS状態）",
+    population_label: "星系人口",
 
     // UI Theme Settings
     settings_theme_label: "🎨 UIカラーテーマ / 配色プリセット",
@@ -734,6 +736,7 @@ const i18n = {
     settings_safety_notice: "🛡️ <b>セーフティ機構</b>: 極端な数値の入力により画面が崩れた場合でも、ヘッダー右上の「⚙️ 設定」ボタンは常に最前面に表示されます。また、キーボードの <kbd style=\"background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 3px; border: 1px solid #fbbf24; font-family: monospace;\">Ctrl + 0</kbd> を押すことでいつでも即座に標準 (18px) にリセットできます。",
     mod_exobiology_desc: "星系一覧・天体ツリーのBIOバッジ、生物候補予測セクション、生物探査ビューを表示",
     mod_rhino_desc: "星系一覧の採掘拠点バッジ、惑星表面のRhino採掘座標マップや履歴カード、採掘適格ビューを表示",
+    mod_faction_desc: "星系ヘッダーの星系人口、支配勢力、主要経済、BGS状態バッジを表示（EDSM等の外部参照情報）",
     tts_separation_notice: "💡 <b>旅のしるし（画面表示）と音声通知の完全分離</b><br>Exobiologyの予測やバッジ、Rhino採掘拠点などの画面表示（旅のしるし）は常に維持されます。<br>この画面では、自動で喋る音声読み上げ（TTS）や通知音のみを項目別に自由に外す（OFFにする）ことができます。",
     tts_enable_label: "未発見（1st Discover）読み上げ通知",
     tts_enable_desc: "新星系到着時に未発見天体/星系だった場合、音声で読み上げます",
@@ -1205,6 +1208,8 @@ const i18n = {
     settings_modules_desc: "Choose which expansion modules to display. Unchecking allows you to simplify the view to pure astrophysics.",
     mod_exobiology: "🌿 Exobiology (Bio Predictions, Badges & View)",
     mod_rhino: "🦏 Rhino Mining (Mining Badges, Coords Map, History & View)",
+    mod_faction: "🏛️ Population & Faction / BGS (Population, Controlling Faction, Economy, BGS State)",
+    population_label: "System Population",
 
     // UI Theme Settings
     settings_theme_label: "🎨 UI Color Theme Presets",
@@ -1553,6 +1558,7 @@ const i18n = {
     settings_safety_notice: "🛡️ <b>Safety Guard</b>: Even if display layout breaks due to extreme sizes, the '⚙️ Settings' button in the header remains accessible. You can also press <kbd style=\"background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 3px; border: 1px solid #fbbf24; font-family: monospace;\">Ctrl + 0</kbd> at any time to instantly reset to standard 18px.",
     mod_exobiology_desc: "Displays BIO badges in system list & celestial tree, candidate prediction sections, and exobiology view",
     mod_rhino_desc: "Displays mining badges in system list, planetary surface Rhino coordinate map, history cards, and mining scout view",
+    mod_faction_desc: "Displays system population, controlling faction, primary economy, and BGS state badges in header (EDSM external data)",
     tts_separation_notice: "💡 <b>Complete Separation of Visual Markers and Audio Alerts</b><br>Visual markers (Exobiology badges, Rhino mining sites, etc.) are always preserved on screen.<br>This screen allows you to selectively enable or disable voice synthesis (TTS) and notification chimes independently.",
     tts_enable_label: "1st Discover Voice Notification",
     tts_enable_desc: "Speaks an alert when arriving at an undiscovered system or celestial body",

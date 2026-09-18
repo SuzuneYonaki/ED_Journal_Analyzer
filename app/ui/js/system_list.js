@@ -432,48 +432,53 @@ function renderSystemHeader() {
     };
   }
 
-  // System State Badge & Economy Info
+  // System State Badge & Economy Info (Modularized: Faction / Population / BGS)
+  const modSettings = (typeof getModuleSettings === 'function') ? getModuleSettings() : { faction: false, rhino: false };
+  const isFactionEnabled = Boolean(modSettings.faction);
+
   const stateBadgeEl = document.getElementById('current-system-state-badge');
   const econInfoEl = document.getElementById('current-system-economy-info');
   if (stateBadgeEl) {
-    const sState = (sys.system_state || '').trim();
-    if (sState && sState.toLowerCase() !== 'none') {
-      let badgeStyle = 'background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.35);';
-      let icon = '🏛️';
-      let label = sState;
-      const lower = sState.toLowerCase();
-      if (lower.includes('boom')) {
-        badgeStyle = 'background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; font-weight: bold; box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);';
-        icon = '📈';
-        label = t('bgs_boom_label') || 'Boom (好況)';
-      } else if (lower.includes('investment')) {
-        badgeStyle = 'background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;';
-        icon = '💼';
-        label = t('bgs_investment_label') || 'Investment (投資)';
-      } else if (lower.includes('expansion')) {
-        badgeStyle = 'background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #c084fc; font-weight: bold;';
-        icon = '🚀';
-        label = t('bgs_expansion_label') || 'Expansion (拡張)';
-      } else if (lower.includes('war') || lower.includes('unrest') || lower.includes('lockdown')) {
-        badgeStyle = 'background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #f87171; font-weight: bold;';
-        icon = '⚠️';
-      } else if (lower.includes('bust')) {
-        badgeStyle = 'background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #facc15; font-weight: bold;';
-        icon = '📉';
-        label = t('bgs_bust_label') || 'Bust (不況)';
+    stateBadgeEl.innerHTML = '';
+    stateBadgeEl.style.display = 'none';
+
+    if (isFactionEnabled) {
+      const sState = (sys.system_state || '').trim();
+      if (sState && sState.toLowerCase() !== 'none') {
+        let badgeStyle = 'background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.35);';
+        let icon = '🏛️';
+        let label = sState;
+        const lower = sState.toLowerCase();
+        if (lower.includes('boom')) {
+          badgeStyle = 'background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; font-weight: bold; box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);';
+          icon = '📈';
+          label = t('bgs_boom_label') || 'Boom (好況)';
+        } else if (lower.includes('investment')) {
+          badgeStyle = 'background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;';
+          icon = '💼';
+          label = t('bgs_investment_label') || 'Investment (投資)';
+        } else if (lower.includes('expansion')) {
+          badgeStyle = 'background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #c084fc; font-weight: bold;';
+          icon = '🚀';
+          label = t('bgs_expansion_label') || 'Expansion (拡張)';
+        } else if (lower.includes('war') || lower.includes('unrest') || lower.includes('lockdown')) {
+          badgeStyle = 'background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #f87171; font-weight: bold;';
+          icon = '⚠️';
+        } else if (lower.includes('bust')) {
+          badgeStyle = 'background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #facc15; font-weight: bold;';
+          icon = '📉';
+          label = t('bgs_bust_label') || 'Bust (不況)';
+        }
+        const bgsTip = (t('bgs_state_tip') || 'EDSM星系経済・BGS状態: {state}').replace('{state}', escapeHtml(sState));
+        stateBadgeEl.innerHTML = `<span class="tag-badge" style="${badgeStyle} font-size: 0.72rem; padding: 2px 7px;" title="${bgsTip}">${icon} ${escapeHtml(label)}</span>`;
+        stateBadgeEl.style.display = 'inline-flex';
+      } else if (sState && sState.toLowerCase() === 'none') {
+        stateBadgeEl.innerHTML = `<span class="tag-badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.7rem; padding: 2px 6px;" title="${t('bgs_none_tip') || 'EDSM星系状態: 平常 (None)'}">${t('bgs_none_label') || '⚪ 平常 (None)'}</span>`;
+        stateBadgeEl.style.display = 'inline-flex';
+      } else if (sys.population === 0) {
+        stateBadgeEl.innerHTML = `<span class="tag-badge" style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); font-size: 0.7rem; padding: 2px 6px;" title="${t('bgs_uninhabited_tip') || '無人星系 (深宇宙)'}">${t('bgs_uninhabited_label') || '🌌 無人星系'}</span>`;
+        stateBadgeEl.style.display = 'inline-flex';
       }
-      const bgsTip = (t('bgs_state_tip') || 'EDSM星系経済・BGS状態: {state}').replace('{state}', escapeHtml(sState));
-      stateBadgeEl.innerHTML = `<span class="tag-badge" style="${badgeStyle} font-size: 0.72rem; padding: 2px 7px;" title="${bgsTip}">${icon} ${escapeHtml(label)}</span>`;
-      stateBadgeEl.style.display = 'inline-flex';
-    } else if (sState && sState.toLowerCase() === 'none') {
-      stateBadgeEl.innerHTML = `<span class="tag-badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.7rem; padding: 2px 6px;" title="${t('bgs_none_tip') || 'EDSM星系状態: 平常 (None)'}">${t('bgs_none_label') || '⚪ 平常 (None)'}</span>`;
-      stateBadgeEl.style.display = 'inline-flex';
-    } else if (sys.population === 0) {
-      stateBadgeEl.innerHTML = `<span class="tag-badge" style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); font-size: 0.7rem; padding: 2px 6px;" title="${t('bgs_uninhabited_tip') || '無人星系 (深宇宙)'}">${t('bgs_uninhabited_label') || '🌌 無人星系'}</span>`;
-      stateBadgeEl.style.display = 'inline-flex';
-    } else {
-      stateBadgeEl.innerHTML = '';
-      stateBadgeEl.style.display = 'none';
     }
 
     if (sys.mining_scout_grade === 'High') {
@@ -486,22 +491,31 @@ function renderSystemHeader() {
   }
 
   if (econInfoEl) {
-    const parts = [];
-    if (sys.controlling_faction) {
-      parts.push(`<span style="color: #cbd5e1;" title="${t('faction_controlling_tip') || '支配勢力'}">🎯 ${escapeHtml(sys.controlling_faction)}</span>`);
-    }
-    if (sys.system_reserve) {
-      const isPristine = sys.system_reserve.toLowerCase().includes('pristine');
-      const rColor = isPristine ? '#38bdf8; font-weight: bold;' : '#cbd5e1;';
-      parts.push(`<span style="color: ${rColor}" title="${t('reserve_level_tip') || '資源埋蔵量'}">💎 ${escapeHtml(sys.system_reserve)} Reserves</span>`);
-    }
-    if (sys.system_economy) {
-      const econStr = sys.system_economy + (sys.system_second_economy ? ` / ${sys.system_second_economy}` : '');
-      parts.push(`<span style="color: #94a3b8;" title="${t('economy_primary_tip') || '主要経済'}">🏭 ${escapeHtml(econStr)}</span>`);
-    }
-    if (parts.length > 0) {
-      econInfoEl.innerHTML = `<div style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.7rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 6px;">${parts.join('<span style="color: var(--text-dim);">|</span>')}</div>`;
-      econInfoEl.style.display = 'inline-flex';
+    if (isFactionEnabled) {
+      const parts = [];
+      if (sys.population && sys.population > 0) {
+        const popFormatted = (typeof formatNumber === 'function') ? formatNumber(sys.population) : Number(sys.population).toLocaleString();
+        parts.push(`<span style="color: #e2e8f0;" title="${t('population_label') || '星系人口'}: ${popFormatted}">👥 ${popFormatted}</span>`);
+      }
+      if (sys.controlling_faction) {
+        parts.push(`<span style="color: #cbd5e1;" title="${t('faction_controlling_tip') || '支配勢力'}">🎯 ${escapeHtml(sys.controlling_faction)}</span>`);
+      }
+      if (sys.system_reserve) {
+        const isPristine = sys.system_reserve.toLowerCase().includes('pristine');
+        const rColor = isPristine ? '#38bdf8; font-weight: bold;' : '#cbd5e1;';
+        parts.push(`<span style="color: ${rColor}" title="${t('reserve_level_tip') || '資源埋蔵量'}">💎 ${escapeHtml(sys.system_reserve)} Reserves</span>`);
+      }
+      if (sys.system_economy) {
+        const econStr = sys.system_economy + (sys.system_second_economy ? ` / ${sys.system_second_economy}` : '');
+        parts.push(`<span style="color: #94a3b8;" title="${t('economy_primary_tip') || '主要経済'}">🏭 ${escapeHtml(econStr)}</span>`);
+      }
+      if (parts.length > 0) {
+        econInfoEl.innerHTML = `<div style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.7rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 6px;">${parts.join('<span style="color: var(--text-dim);">|</span>')}</div>`;
+        econInfoEl.style.display = 'inline-flex';
+      } else {
+        econInfoEl.innerHTML = '';
+        econInfoEl.style.display = 'none';
+      }
     } else {
       econInfoEl.innerHTML = '';
       econInfoEl.style.display = 'none';
@@ -553,7 +567,6 @@ function renderSystemHeader() {
   const bioBaseEl = document.getElementById('current-system-bio-base');
   const bioFirstEl = document.getElementById('current-system-bio-first');
 
-  const modSettings = getModuleSettings();
   if (modSettings.exobiology !== false && (sys.bio_total_base_value > 0 || sys.bio_signals_count > 0 || (state.currentSystemData && state.currentSystemData.system_bio_summary && (state.currentSystemData.system_bio_summary.total_base_value > 0 || state.currentSystemData.system_bio_summary.scanned_base_value > 0)))) {
     const summary = (state.currentSystemData && state.currentSystemData.system_bio_summary) || {};
     const scannedBaseVal = sys.bio_scanned_base_value !== undefined ? sys.bio_scanned_base_value : (summary.scanned_base_value || 0);

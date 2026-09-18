@@ -3305,6 +3305,9 @@ async function initSettingsModal() {
         updated[modKey] = cb.checked;
         saveModuleSettings(updated);
         updateModuleVisibilityUI();
+        if (state.selectedSystem && typeof renderSystemHeader === 'function') {
+          renderSystemHeader();
+        }
         renderSystemList();
         renderCurrentView();
         if (state.selectedBody) {

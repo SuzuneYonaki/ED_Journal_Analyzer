@@ -298,10 +298,11 @@ function getBodyIconLabel(body) {
   return 'P';
 }
 
-// Module Settings (Exobiology & Rhino Mining)
+// Module Settings (Exobiology, Rhino Mining, Population/Faction)
 const defaultModuleSettings = {
   exobiology: true,
-  rhino: false
+  rhino: false,
+  faction: false
 };
 
 function getModuleSettings() {

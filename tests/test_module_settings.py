@@ -8,15 +8,16 @@ def test_module_settings_api(tmp_path, monkeypatch):
     test_file = tmp_path / "module_settings.json"
     monkeypatch.setattr("app.server.api.MODULE_SETTINGS_FILE", test_file)
 
-    # Initial get should return defaults (exobiology: True, rhino: False)
+    # Initial get should return defaults (exobiology: True, rhino: False, faction: False)
     res = client.get("/api/module_settings")
     assert res.status_code == 200
     data = res.json()
     assert data["exobiology"] is True
     assert data["rhino"] is False
+    assert data["faction"] is False
 
-    # Post new settings (turn off exobiology, turn on rhino)
-    post_res = client.post("/api/module_settings", json={"exobiology": False, "rhino": True})
+    # Post new settings (turn off exobiology, turn on rhino and faction)
+    post_res = client.post("/api/module_settings", json={"exobiology": False, "rhino": True, "faction": True})
     assert post_res.status_code == 200
 
     # Get again should return updated
@@ -25,6 +26,7 @@ def test_module_settings_api(tmp_path, monkeypatch):
     data2 = res2.json()
     assert data2["exobiology"] is False
     assert data2["rhino"] is True
+    assert data2["faction"] is True
 
 def test_tts_settings_high_bio_default(tmp_path, monkeypatch):
     test_file = tmp_path / "tts_settings.json"

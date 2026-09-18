@@ -300,6 +300,9 @@ def test_system_list_bilingual_switching():
       star_pos_z: 100
     }};
 
+    // Enable faction module for testing state and economy info
+    localStorage.setItem('ed_module_settings', JSON.stringify({{ faction: true }}));
+
     // Japanese mode
     setLanguage('ja');
     state.systems = [testSys];
