@@ -60,6 +60,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def add_no_cache_headers(request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static/") or path.startswith("/css/") or path.startswith("/js/") or path == "/":
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 # Global scan status
 scan_state = {
     "is_scanning": False,
@@ -2326,6 +2337,7 @@ def index():
     index_file = ui_dir / "index.html"
     if index_file.exists():
         template = _jinja_env.get_template("index.html")
-        return HTMLResponse(template.render())
+        return HTMLResponse(template.render(cache_bust=int(time.time())))
     return HTMLResponse("UI not initialized", status_code=404)
+
 

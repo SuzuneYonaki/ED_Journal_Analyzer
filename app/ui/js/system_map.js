@@ -615,15 +615,12 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
   let currentZoom = (state.sysmapZoom !== undefined && state.sysmapZoom !== null) ? state.sysmapZoom : 1.0;
 
   function applySysmapZoom(zoom) {
-    if (stage.style.zoom !== undefined) {
-      stage.style.zoom = zoom;
-    } else {
-      stage.style.transform = `scale(${zoom})`;
-      stage.style.transformOrigin = '0 0';
-    }
+    stage.style.zoom = zoom;
+    stage.style.transformOrigin = '0 0';
   }
 
   applySysmapZoom(currentZoom);
+
 
   // Build accurate hierarchy tree
   const starSections = buildSystemMapTree(flatBodies, systemName);
@@ -783,8 +780,10 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
   });
 
   // Wheel zoom centered on mouse cursor
-  mapWrapper.addEventListener('wheel', (e) => {
-    e.preventDefault();
+  const onSysmapWheel = (e) => {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+
 
     const rect = mapWrapper.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
@@ -808,7 +807,33 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
 
     mapWrapper.scrollLeft = contentX * currentZoom - mouseX;
     mapWrapper.scrollTop = contentY * currentZoom - mouseY;
-  }, { passive: false });
+  };
+
+  mapWrapper.addEventListener('wheel', onSysmapWheel, { passive: false });
+  controls.addEventListener('wheel', onSysmapWheel, { passive: false });
+
+  // Keyboard zoom shortcuts (+ / - / 0) when hovering System Map
+  const onKeyDown = (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) {
+      return;
+    }
+    if (e.key === '+' || e.key === '=') {
+      e.preventDefault();
+      stepZoom(1);
+    } else if (e.key === '-' || e.key === '_') {
+      e.preventDefault();
+      stepZoom(-1);
+    } else if (e.key === '0') {
+      e.preventDefault();
+      resetZoom();
+    }
+  };
+  mapWrapper.addEventListener('mouseenter', () => {
+    window.addEventListener('keydown', onKeyDown);
+  });
+  mapWrapper.addEventListener('mouseleave', () => {
+    window.removeEventListener('keydown', onKeyDown);
+  });
 
   // Middle mouse click (button 1) to reset zoom
   mapWrapper.addEventListener('auxclick', (e) => {

@@ -1,4 +1,4 @@
-﻿import json
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -301,3 +301,133 @@ def test_css_system_map_pan_and_zoom_rules():
     assert ".sysmap-zoom-controls" in content, "Missing .sysmap-zoom-controls in style.css"
     assert "cursor: grab" in content, "Missing cursor: grab in style.css"
     assert "cursor: grabbing" in content, "Missing cursor: grabbing in style.css"
+
+
+def test_sysmap_keyboard_zoom_and_controls_wheel():
+    """Verify that system_map.js supports keyboard zoom shortcuts (+/- /0) and wheel on controls."""
+    node_exe = shutil.which("node")
+    if not node_exe:
+        pytest.skip("Node.js is not installed or not in PATH")
+
+    js_path = (Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "system_map.js").as_posix()
+    utils_path = (Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "utils.js").as_posix()
+
+    test_script = f"""
+    const fs = require('fs');
+    global.window = global;
+    global.document = {{
+        createElement: function(tag) {{
+            const listeners = {{}};
+            return {{
+                tagName: tag,
+                className: '',
+                classList: {{ add: function(){{}}, remove: function(){{}}, toggle: function(){{}} }},
+                style: {{}},
+                dataset: {{}},
+                children: [],
+                parentElement: null,
+                scrollLeft: 0,
+                scrollTop: 0,
+                clientWidth: 800,
+                clientHeight: 600,
+                getBoundingClientRect: function() {{ return {{ left: 0, top: 0, width: 800, height: 600 }}; }},
+                appendChild: function(c) {{ c.parentElement = this; this.children.push(c); return c; }},
+                setAttribute: function(k, v) {{ this[k] = v; }},
+                addEventListener: function(evt, handler) {{
+                    listeners[evt] = listeners[evt] || [];
+                    listeners[evt].push(handler);
+                }},
+                removeEventListener: function(evt, handler) {{
+                    if (listeners[evt]) listeners[evt] = listeners[evt].filter(h => h !== handler);
+                }},
+                dispatchEvent: function(evt) {{
+                    if (listeners[evt.type]) listeners[evt.type].forEach(h => h(evt));
+                }},
+                closest: function(sel) {{ return null; }}
+            }};
+        }}
+    }};
+    global.window.addEventListener = function(evt, handler) {{
+        global.window._listeners = global.window._listeners || {{}};
+        global.window._listeners[evt] = global.window._listeners[evt] || [];
+        global.window._listeners[evt].push(handler);
+    }};
+    global.window.removeEventListener = function(evt, handler) {{
+        if (global.window._listeners && global.window._listeners[evt]) {{
+            global.window._listeners[evt] = global.window._listeners[evt].filter(h => h !== handler);
+        }}
+    }};
+    global.state = {{
+        selectedSystem: {{ star_system: "Sol" }},
+        selectedBody: null,
+        targetBodyId: null,
+        sysmapZoom: 1.0
+    }};
+    global.t = function(k) {{ return k; }};
+
+    eval(fs.readFileSync('{utils_path}', 'utf8'));
+    eval(fs.readFileSync('{js_path}', 'utf8'));
+
+    const container = document.createElement('div');
+    renderSystemMapView(container, [], [{{ body_id: 0, body_name: "Sol", body_type: "Star", is_star: 1 }}]);
+
+    const mapWrapper = container.children[0];
+    const controls = container.children[1];
+
+    // Trigger mouseenter to bind keydown
+    mapWrapper.dispatchEvent({{ type: 'mouseenter' }});
+
+    // Test '+' key
+    const kdListeners = global.window._listeners['keydown'] || [];
+    kdListeners.forEach(h => h({{ key: '+', preventDefault: function(){{}} }}));
+    const zoomPlus = global.state.sysmapZoom;
+
+    // Test '-' key
+    kdListeners.forEach(h => h({{ key: '-', preventDefault: function(){{}} }}));
+    const zoomMinus = global.state.sysmapZoom;
+
+    // Test '0' key (reset)
+    kdListeners.forEach(h => h({{ key: '0', preventDefault: function(){{}} }}));
+    const zoomReset = global.state.sysmapZoom;
+
+    // Test wheel on controls element
+    controls.dispatchEvent({{
+        type: 'wheel',
+        deltaY: -100,
+        clientX: 400,
+        clientY: 300,
+        preventDefault: function(){{}},
+        stopPropagation: function(){{}}
+    }});
+    const zoomFromControlsWheel = global.state.sysmapZoom;
+
+    console.log(JSON.stringify({{
+        zoomPlus,
+        zoomMinus,
+        zoomReset,
+        zoomFromControlsWheel
+    }}));
+    """
+
+    proc = subprocess.run([node_exe, "-e", test_script], capture_output=True, text=True, encoding="utf-8", check=True)
+    res = json.loads(proc.stdout)
+
+    assert res["zoomPlus"] > 1.0
+    assert res["zoomMinus"] < res["zoomPlus"]
+    assert res["zoomReset"] == 1.0
+    assert res["zoomFromControlsWheel"] > 1.0
+
+
+def test_api_static_cache_control_and_bust():
+    """Verify that index.html uses cache-busting query strings and api.py has no-cache middleware."""
+    index_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "index.html"
+    index_content = index_path.read_text(encoding="utf-8")
+    assert "system_map.js?v={{ cache_bust }}" in index_content
+    assert "style.css?v={{ cache_bust }}" in index_content
+
+    api_path = Path(__file__).resolve().parent.parent / "app" / "server" / "api.py"
+    api_content = api_path.read_text(encoding="utf-8")
+    assert "add_no_cache_headers" in api_content
+    assert "no-cache, no-store, must-revalidate" in api_content
+    assert "cache_bust=int(time.time())" in api_content
+

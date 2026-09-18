@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Elite Dangerous Journal Analyzer</title>
   <link rel="icon" type="image/png" href="/static/icon.png">
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v={{ cache_bust }}">
   <script>
     (function() {
       var savedTheme = localStorage.getItem('ed_theme');
@@ -42,12 +42,13 @@
 
   {% include "components/modals.html" %}
 
-  <script src="/static/js/i18n.js"></script>
-  <script src="/static/js/utils.js"></script>
-  <script src="/static/js/inspector.js"></script>
-  <script src="/static/js/mining_view.js"></script>
-  <script src="/static/js/system_list.js"></script>
-  <script src="/static/js/system_map.js"></script>
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/i18n.js?v={{ cache_bust }}"></script>
+  <script src="/static/js/utils.js?v={{ cache_bust }}"></script>
+  <script src="/static/js/inspector.js?v={{ cache_bust }}"></script>
+  <script src="/static/js/mining_view.js?v={{ cache_bust }}"></script>
+  <script src="/static/js/system_list.js?v={{ cache_bust }}"></script>
+  <script src="/static/js/system_map.js?v={{ cache_bust }}"></script>
+  <script src="/static/js/app.js?v={{ cache_bust }}"></script>
+
 </body>
 </html>
