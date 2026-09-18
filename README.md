@@ -1,6 +1,6 @@
 # Elite Dangerous Journal Analyzer & Exploration Orrery
 
-[![Version](https://img.shields.io/badge/version-v0.8.1-orange.svg)](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases)
+[![Version](https://img.shields.io/badge/version-v0.8.2-orange.svg)](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 
@@ -77,7 +77,7 @@
 
 #### 1. インストールと起動
 - **配布パッケージ（推奨）**:
-  [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases) より最新の `ED_Journal_Analyzer_v0.8.1.zip`（または `ED_Journal_Analyzer.exe`）をダウンロードし、任意のフォルダに展開して実行します。
+  [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases) より最新の `ED_Journal_Analyzer_v0.8.2.zip`（または `ED_Journal_Analyzer.exe`）をダウンロードし、任意のフォルダに展開して実行します。
 - **Pythonソースから実行**:
   ```powershell
   git clone https://github.com/SuzuneYonaki/ED_Journal_Analyzer.git
@@ -247,7 +247,7 @@
 
 #### 1. Installation & Launch
 - **Pre-built Executable (Recommended)**:
-  Download the latest `ED_Journal_Analyzer_v0.8.1.zip` (or `ED_Journal_Analyzer.exe`) from [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases), extract to any folder, and double-click to run.
+  Download the latest `ED_Journal_Analyzer_v0.8.2.zip` (or `ED_Journal_Analyzer.exe`) from [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases), extract to any folder, and double-click to run.
 - **Run from Source**:
   ```powershell
   git clone https://github.com/SuzuneYonaki/ED_Journal_Analyzer.git
