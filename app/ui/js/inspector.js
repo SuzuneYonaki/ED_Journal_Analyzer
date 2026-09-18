@@ -29,6 +29,109 @@ function clearBodyInspector() {
   if (ringsSection) ringsSection.style.display = 'none';
 }
 
+function translateAnomalyDescToEn(descJa, tag) {
+  if (!descJa || typeof descJa !== 'string') return tag || '';
+  if (descJa.includes('超高質量ボックス') || descJa.includes('通常より高質量ボックス')) {
+    const isSuper = descJa.includes('超高質量ボックス');
+    const m = descJa.match(/(?:超高質量ボックス|通常より高質量ボックス):\s*([A-Za-z0-9]+)型星が\s*([A-Za-z])クラス星系コードに存在\s*\(通常\s*([A-Za-z])\s*以下\)/);
+    if (m) {
+      return `${isSuper ? 'Supermassive Boxel' : 'Unusually Heavy Boxel'}: Class ${m[1]} star in ${m[2]}-box system (normally <= ${m[3]})`;
+    }
+  }
+  if (descJa.includes('ブラックホール')) return 'Black Hole';
+  if (descJa.includes('中性子星')) return 'Neutron Star (FSD Supercharge)';
+  if (descJa.includes('白色矮星')) return 'White Dwarf';
+  if (descJa.includes('ウォルフ・ライエ星')) return 'Ultra-hot Massive Wolf-Rayet Star';
+  if (descJa.includes('炭素星/S型星')) return 'Carbon / S-Type Star';
+  if (descJa.includes('大質量・巨星')) {
+    const m = descJa.match(/大質量・巨星\s*\(([^)]+)\)/);
+    return m ? `Massive Giant Star (${m[1]})` : 'Massive Giant Star';
+  }
+  if (descJa.includes('地球型惑星')) return 'Earth-like World (Highest Payout)';
+  if (descJa.includes('アンモニアワールド')) return 'Ammonia World (High Value Rare)';
+  if (descJa.includes('テラフォーミング可能海洋惑星')) return 'Terraformable Water World (3M+ Cr)';
+  if (descJa.includes('海洋惑星')) return 'Water World (1M+ Cr)';
+  if (descJa.includes('テラフォーミング候補')) {
+    const m = descJa.match(/テラフォーミング候補\s*\(([^)]+)\)/);
+    return m ? `Terraformable Candidate (${m[1]})` : 'Terraformable Candidate';
+  }
+  if (descJa.includes('極端な高離心率軌道')) {
+    const m = descJa.match(/極端な高離心率軌道\s*\(e\s*=\s*([^)]+)\)/);
+    return m ? `Extreme Orbital Eccentricity (e = ${m[1]})` : 'Extreme Orbital Eccentricity';
+  }
+  if (descJa.includes('超短公転周期')) {
+    const m = descJa.match(/超短公転周期\s*\(([^)]+)\)/);
+    return m ? `Ultra-Fast Orbital Period (${m[1].replace('時間', 'hrs')})` : 'Ultra-Fast Orbital Period';
+  }
+  if (descJa.includes('超高速自転')) {
+    const m = descJa.match(/超高速自転\s*\(([^)]+)\)/);
+    return m ? `Rapid Rotational Period (${m[1].replace('時間', 'hrs')})` : 'Rapid Rotational Period';
+  }
+  if (descJa.includes('逆行軌道')) {
+    const m = descJa.match(/逆行軌道\s*\(傾斜角\s*([^)]+)\)/);
+    return m ? `Retrograde Orbit (Inclination ${m[1]})` : 'Retrograde Orbit';
+  }
+  if (descJa.includes('超高重力・着陸危険')) return 'Extreme High-G Hazard (Dangerous Landing)';
+  if (descJa.includes('高重力環境')) return 'High Gravity Environment (High-G Landing)';
+  if (descJa.includes('主星から至近距離')) {
+    const m = descJa.match(/主星から至近距離\s*\(([^)]+)\s*≦\s*20\s*Ls\)\s*に存在する伴星/);
+    return m ? `Close binary companion within 20 Ls of primary (${m[1]})` : 'Close binary companion within 20 Ls of primary';
+  }
+  if (descJa.includes('主星から近距離')) {
+    const m = descJa.match(/主星から近距離\s*\(([^)]+)\s*≦\s*50\s*Ls\)\s*に存在する伴星/);
+    return m ? `Close companion star within 50 Ls of primary (${m[1]})` : 'Close companion star within 50 Ls of primary';
+  }
+  if (descJa.includes('連星重心を 20 Ls 以内の至近距離で周回')) {
+    const m = descJa.match(/連星重心を 20 Ls 以内の至近距離で周回\s*\(軌道半径:\s*([^)]+)\)/);
+    return m ? `Tight orbit around barycentre within 20 Ls (radius: ${m[1]})` : 'Tight orbit around barycentre within 20 Ls';
+  }
+  if (descJa.includes('近接した多重連星')) {
+    const m = descJa.match(/近接した多重連星（バイナリのバイナリ）の構成星\s*\(近接距離:\s*([^)]+)\)/);
+    return m ? `Close hierarchical binary (binary of binary) companion (${m[1]})` : 'Close hierarchical binary (binary of binary) companion';
+  }
+  if (descJa.includes('リングを持つ恒星')) return 'Ringed Star';
+  if (descJa.includes('巨大リング')) {
+    const m = descJa.match(/巨大リング\s*\(外径\s*([^)]+)\)/);
+    return m ? `Giant Ring System (Outer radius ${m[1]})` : 'Giant Ring System';
+  }
+  if (descJa.includes('火山活動')) {
+    const m = descJa.match(/火山活動\s*\(([^)]+)\)/);
+    return m ? `Active Volcanism (${m[1]})` : 'Active Volcanism';
+  }
+
+  return tag || descJa;
+}
+
+function getLocalizedAnomalyTexts(a, lang) {
+  if (!a) return { label: '', tooltip: '' };
+  const tag = a.tag || '';
+  const descJa = a.desc || tag;
+
+  if (lang === 'en') {
+    const descEn = a.desc_en || translateAnomalyDescToEn(descJa, tag);
+    let label = tag;
+    if (descEn) {
+      if (descEn.toLowerCase() === tag.toLowerCase()) {
+        label = tag;
+      } else if (descEn.toLowerCase().startsWith(tag.toLowerCase())) {
+        label = descEn;
+      } else {
+        label = `${tag}: ${descEn}`;
+      }
+    }
+    return {
+      label: label,
+      tooltip: descEn || tag
+    };
+  }
+
+  // Default Japanese
+  const label = descJa ? `${tag}: ${descJa}` : tag;
+  return {
+    label: label,
+    tooltip: descJa
+  };
+}
 
 function renderBodyInspector() {
   const inspectorContent = document.getElementById('inspector-content');
@@ -291,11 +394,15 @@ function renderBodyInspector() {
     `;
   } else if (b.anomalies && b.anomalies.length > 0) {
     anomSection.style.display = 'block';
-    anomTags.innerHTML = b.anomalies.map(a => `
-      <div class="tag-badge tag-anomaly" title="${a.desc}" style="padding: 4px 8px; font-size: 0.75rem;">
-        ★ ${a.tag}: ${a.desc}
-      </div>
-    `).join('');
+    const lang = (typeof getAppLang === 'function') ? getAppLang() : (typeof currentLang !== 'undefined' ? currentLang : 'ja');
+    anomTags.innerHTML = b.anomalies.map(a => {
+      const texts = getLocalizedAnomalyTexts(a, lang);
+      return `
+        <div class="tag-badge tag-anomaly" title="${escapeHtml(texts.tooltip)}" style="padding: 4px 8px; font-size: 0.75rem;">
+          ★ ${escapeHtml(texts.label)}
+        </div>
+      `;
+    }).join('');
   } else {
     anomSection.style.display = 'none';
   }
@@ -1319,4 +1426,14 @@ function renderBodyInspector() {
 if (typeof window !== 'undefined') {
   window.clearBodyInspector = clearBodyInspector;
   window.renderBodyInspector = renderBodyInspector;
+  window.getLocalizedAnomalyTexts = getLocalizedAnomalyTexts;
+  window.translateAnomalyDescToEn = translateAnomalyDescToEn;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    clearBodyInspector,
+    renderBodyInspector,
+    getLocalizedAnomalyTexts,
+    translateAnomalyDescToEn
+  };
 }

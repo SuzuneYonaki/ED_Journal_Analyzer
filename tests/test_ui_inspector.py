@@ -13,7 +13,10 @@ def run_js_inspector_test(script_body):
     utils_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "utils.js"
     inspector_path = Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "inspector.js"
 
-    runner_script = f"""
+    import tempfile
+    with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8", delete=False) as tf:
+        out_file = tf.name.replace("\\", "/") + ".out.json"
+        runner_script = f"""
     const fs = require('fs');
 
     // DOM mock environment
@@ -63,10 +66,23 @@ def run_js_inspector_test(script_body):
     const inspectorCode = fs.readFileSync({json.dumps(str(inspector_path))}, 'utf8');
     eval(inspectorCode);
 
+    console.log = function(data) {{{{
+      fs.writeFileSync("{out_file}", typeof data === 'string' ? data : JSON.stringify(data), 'utf8');
+    }}}};
+
     {script_body}
     """
-    proc = subprocess.run([node_exe, "-e", runner_script], capture_output=True, text=True, encoding="utf-8", check=True)
-    return json.loads(proc.stdout)
+        tf.write(runner_script)
+        tf_name = tf.name
+    try:
+        proc = subprocess.run([node_exe, tf_name], capture_output=True, text=True, encoding="utf-8", check=True)
+        out_p = Path(out_file)
+        if out_p.exists():
+            return json.loads(out_p.read_text(encoding="utf-8"))
+        return json.loads(proc.stdout)
+    finally:
+        Path(tf_name).unlink(missing_ok=True)
+        Path(out_file).unlink(missing_ok=True)
 
 
 def test_inspector_clears_gracefully():
@@ -205,3 +221,73 @@ def test_inspector_bilingual_switching():
     assert "Known in EDSM" in res['en_sub']
     assert "Discovered by" in res['en_sub']
     assert "Yes (Locked)" in res['en_tidal']
+
+
+def test_inspector_anomaly_and_barycentre_localization():
+    i18n_path = (Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "i18n.js").as_posix()
+    script = f"""
+    const i18nMod = require('{i18n_path}');
+    Object.assign(global, i18nMod);
+
+    // 1. Barycentre body
+    state.selectedBody = {{
+      body_id: 101,
+      body_name: "Test Barycentre AB",
+      isBarycentre: true,
+      barycentreStars: ["A", "B"],
+      starGroup: "AB"
+    }};
+
+    setLanguage('ja');
+    renderBodyInspector();
+    const ja_barycentre_html = document.getElementById('inspect-anomaly-tags').innerHTML;
+
+    setLanguage('en');
+    renderBodyInspector();
+    const en_barycentre_html = document.getElementById('inspect-anomaly-tags').innerHTML;
+
+    // 2. Anomaly with desc_en and legacy anomaly without desc_en
+    state.selectedBody = {{
+      body_id: 102,
+      body_name: "Extreme Planet",
+      anomalies: [
+        {{
+          type: "extreme_orbit",
+          tag: "Extreme Eccentricity",
+          desc: "極端な高離心率軌道 (e = 0.850)",
+          desc_en: "Extreme Orbital Eccentricity (e = 0.850)"
+        }},
+        {{
+          type: "extreme_spin",
+          tag: "Rapid Spinner",
+          desc: "超高速自転 (1.2 時間)"
+        }}
+      ]
+    }};
+
+    setLanguage('ja');
+    renderBodyInspector();
+    const ja_anom_html = document.getElementById('inspect-anomaly-tags').innerHTML;
+
+    setLanguage('en');
+    renderBodyInspector();
+    const en_anom_html = document.getElementById('inspect-anomaly-tags').innerHTML;
+
+    const result = {{
+      ja_barycentre_html,
+      en_barycentre_html,
+      ja_anom_html,
+      en_anom_html
+    }};
+    console.log(JSON.stringify(result));
+    """
+    res = run_js_inspector_test(script)
+    assert "共通重心" in res['ja_barycentre_html']
+    assert "Barycentre" in res['en_barycentre_html']
+
+    assert "極端な高離心率軌道" in res['ja_anom_html']
+    assert "超高速自転" in res['ja_anom_html']
+
+    assert "Extreme Orbital Eccentricity (e = 0.850)" in res['en_anom_html']
+    assert "Rapid Rotational Period (1.2 hrs)" in res['en_anom_html']
+
