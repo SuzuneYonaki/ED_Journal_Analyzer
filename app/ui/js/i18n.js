@@ -278,9 +278,13 @@ const i18n = {
 
     // Credits
     credits_title: "謝辞 & クレジット",
-    credits_fdev: "Frontier Developments: Elite Dangerous の世界とジャーナルAPI",
-    credits_canonn: "Canonn Research Group: Exobiology 生体予測モデル・データリファレンス",
-    credits_google: "Google & Gemini Flash (Antigravity): アプリケーション開発・ペアプログラミング支援",
+    credits_fdev: "Elite Dangerous の広大な宇宙とジャーナルログAPI仕様を提供",
+    credits_edsm: "星系座標・天体物理データ・BGS勢力状態を照会する公開APIおよび銀河探査コミュニティデータベースの提供に深く感謝いたします",
+    credits_spansh: "環のホットスポット（Hotspots）および惑星採掘地点（PML）の深層検索APIおよびコミュニティデータの提供に深く感謝いたします",
+    credits_canonn: "Exobiology（生体シグナル）の厳密な環境出現条件マトリクス（惑星種別、大気組成、温度帯分布、重力、気圧、火山活動、恒星種別カラーバリアント）およびコロニー距離研究データのリファレンス",
+    credits_mattg_title: "📊 MattG & コミュニティ探査研究",
+    credits_mattg: "探査・DSSマッピング報酬計算式のコミュニティ解析およびリファレンス",
+    credits_google: "リアルタイム解析アーキテクチャの設計、自動化パイプラインおよびUIコードの実装支援・ペアプログラミング",
 
     // Sharing & Export
     filter_shared: "🤝 Shared (共有)",
@@ -1126,9 +1130,13 @@ const i18n = {
 
     // Credits
     credits_title: "Credits & Acknowledgements",
-    credits_fdev: "Frontier Developments: Elite Dangerous universe & Journal API",
-    credits_canonn: "Canonn Research Group: Exobiology prediction models & research database",
-    credits_google: "Google & Gemini Flash (Antigravity): Application development & pair programming",
+    credits_fdev: "Boundless Milky Way galaxy and Player Journal API specifications",
+    credits_edsm: "Public APIs and community exploration database for system coordinates, planetary astrophysics telemetry, and faction BGS states",
+    credits_spansh: "High-performance deep search APIs and community data for planetary ring hotspots and planetary mining locations (PML)",
+    credits_canonn: "Exobiology prediction models, environmental criteria matrices, and colony distance research",
+    credits_mattg_title: "📊 MattG & Exploration Research",
+    credits_mattg: "Community reverse engineering and documentation of exploration & DSS mapping payout formulas",
+    credits_google: "Real-time architecture design, pipeline automation, and UI implementation assistance",
 
     // Sharing & Export
     filter_shared: "🤝 Shared",

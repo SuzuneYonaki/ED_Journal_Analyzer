@@ -348,11 +348,46 @@ Note: Please avoid boilerplate pleasantries and maintain an objective, academic 
 
 ---
 
-## Credits & Acknowledgements
+## Credits & Acknowledgements / 謝辞 & クレジット
 
-- **AI Assisted Development**: Developed with the assistance of AI (Google DeepMind / Antigravity / Gemini).
-- **Game Data & Assets**: *Elite Dangerous* is a registered trademark of Frontier Developments plc.
-- **Formulas & Science**: Exploration payouts, planetary physics models, and Exobiology condition matrices are based on Frontier Developments specifications and ED community research (EDSM, Canonn Research, MattG).
+### 🌐 オンラインサービス & コミュニティデータベースへの謝辞 (Online Community Services & APIs)
+
+本アプリケーションは、*Elite Dangerous* コミュニティの有志によって長年維持・提供されている素晴らしい公開APIおよび探査データベースを活用しています。これらの支援なしには本ツールの実現は不可能でした。開発者ならびに全コマンダーより心より感謝申し上げます。
+
+- **[EDSM (Elite Dangerous Star Map)](https://www.edsm.net/)**:
+  - **提供内容**: 星系座標、天体物理観測データ（Bodies）、星系勢力・BGS状態の照会API。
+  - **謝辞**: AnthorNet氏およびEDSMコミュニティの長年にわたる銀河マッピングへの多大なる貢献、ならびに開発者向け公開APIの無償提供に深く感謝いたします。
+- **[Spansh (Elite Dangerous Galaxy Search Engine)](https://spansh.co.uk/)**:
+  - **提供内容**: 惑星・衛星詳細、環ホットスポット（Hotspots）、惑星採掘地点（PML: Planetary Mining Locations）の深層検索API。
+  - **謝辞**: Spansh氏および開発コミュニティによる超高速かつ高機能な銀河検索エンジンAPI、採掘・探査支援データの提供に深く感謝いたします。
+
+### 🚀 ゲーム開発元 & コミュニティ科学研究 (Game Developer & Scientific Research)
+- **Frontier Developments plc**:
+  - *Elite Dangerous* の広大で美しい銀河、およびリアルタイムフライトログ（Player Journal API）の継続的な仕様公開と提供。
+- **[Canonn Research Group](https://canonn.science/)**:
+  - Exobiology（生体シグナル）の厳密な環境出現条件マトリクス（惑星種別、大気組成、表面温度、重力、気圧、火山活動、恒星種別カラーバリアント）およびコロニー離隔距離研究リファレンス。
+- **MattG & Exploration Pioneers**:
+  - ゲーム内の探査・FSS・DSSマッピング売却額算出計算式のリバースエンジニアリングとコミュニティ共有。
+
+### 💻 開発支援 & 音声基盤 (Development & Voice Platforms)
+- **AI Assisted Development**: Google DeepMind / Antigravity / Gemini によるリアルタイム解析アーキテクチャの設計、自動化パイプラインおよびUIコードの実装支援・ペアプログラミング。
+- **[VOICEVOX](https://voicevox.hiroshiba.jp/)**: ヒロシバ氏および各キャラクター音声ライブラリ提供者による、完全ローカルで安全・高品質な日本語音声合成エンジン。
+
+#### English: Credits & Online Services Acknowledgement
+This application relies on the invaluable APIs and databases created and maintained by the *Elite Dangerous* player community. We extend our deepest gratitude to the creators and maintainers of these essential services:
+
+- **[EDSM (Elite Dangerous Star Map)](https://www.edsm.net/)**:
+  - *Contribution*: Public REST APIs for star system coordinates, celestial astrophysics telemetry, and faction BGS states.
+  - *Acknowledgement*: Immense thanks to AnthorNet and the EDSM community for their decade-long galactic mapping initiative and open developer APIs.
+- **[Spansh (Elite Dangerous Galaxy Search Engine)](https://spansh.co.uk/)**:
+  - *Contribution*: High-performance deep search APIs for planetary bodies, planetary ring hotspots, and planetary mining locations (PML).
+  - *Acknowledgement*: Sincere thanks to Spansh and community contributors for their state-of-the-art galaxy search engine and mining data.
+- **Frontier Developments plc**:
+  - For the boundless 1:1 scale Milky Way galaxy of *Elite Dangerous* and the official Player Journal API.
+- **Canonn Research Group**:
+  - For exhaustive scientific documentation on Exobiology environmental matrices and biological colony distance rules.
+- **MattG & Exploration Researchers**:
+  - For reverse-engineering and publishing the exploration payout formulas for FSS and DSS scans.
 
 ### 🎙️ 音声合成（TTS）・音声ライブラリの利用規約と取り扱いについて (TTS Terms of Service)
 
