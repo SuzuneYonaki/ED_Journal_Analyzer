@@ -1,5 +1,9 @@
 # Elite Dangerous Journal Analyzer & Exploration Orrery
 
+[![Version](https://img.shields.io/badge/version-v0.8.1-orange.svg)](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+
 [日本語](#日本語) | [English](#english)
 
 ---
@@ -7,7 +11,26 @@
 <a name="日本語"></a>
 ## 概要 (日本語)
 
-**Elite Dangerous Journal Analyzer** は、宇宙シミュレーションゲーム『Elite Dangerous』のフライトジャーナルログ（`Journal.*.log`）をリアルタイムに自動解析・監視し、星系構造の可視化、探査価値の精密算出、Exobiology（生体スキャン）予測、採掘支援、天体ブックマーク・メモ機能を提供する**完全ローカル完結型デスクトップGUIアプリケーション**です。
+> 「FSSだけして過ぎ去ったあの星系は、どんな星系だっただろう？ いつ訪れただろう？」
+> 
+> FSSの奥に置き忘れてきた星々を、もう一度手のひらに。
+> 
+> かつて駆け抜けた宙域の記録を呼び覚ます、あなたの航路日誌です。
+> 
+> ジャーナルの奥底に眠っていた旅のログを掘り起こし、過去の探査履歴や観測データを鮮明に可視化します。
+
+**Elite Dangerous Journal Analyzer** は、宇宙シミュレーションゲーム『Elite Dangerous』のフライトジャーナルログ（`Journal.*.log`）をリアルタイムに自動解析・監視し、星系構造の可視化、探査価値の精密算出、Exobiology（生体スキャン）予測、採掘支援、天体ブックマーク・メモ機能を提供する**ローカルファースト型デスクトップGUIアプリケーション**です。
+
+---
+
+### 🛡️ 設計思想：ローカルファースト & コミュニティ連携
+
+- **完全ローカル完結・プライバシー保護**:
+  フライトジャーナルログ、CMDRの航跡、所持金・搭乗船データ、天体メモ、ブックマーク等は、すべて**あなたのPC上のローカルSQLiteデータベースのみ**に保存されます。常時通信や強制アップロード、アカウント登録等は一切不要です。
+- **コミュニティ知見のオンデマンド照会**:
+  必要に応じて、EDSMやSpanshから天体物理データや環ホットスポット（Hotspots）、惑星採掘地点（PML）をオンデマンド照会・補完できます。未スキャン天体の公転軌道や価値を事前に把握可能です（未訪問星系にはエクスポート遮断等の安全ロック機構を完備）。
+- **多彩な探査データ共有 (CMDR Data Share)**:
+  自力で探査・観測した成果は、スタンドアロンHTML、観測データを内包したComfyUI方式PNGカード、Twitch/SNS向けテキスト短評として自由に外部へ共有・復元できます。
 
 ---
 
@@ -20,25 +43,31 @@
    - 恒星・惑星・衛星の階層親子ツリー構造、多重連星系共通重心（Barycentre）、周連星惑星（`AB 1` 等）、周回恒星（`A 1`, `B 1` 等）、特殊命名天体（`Sagittarius A*`, `Founders World`, `Earth` 等）を正確な軌道順で描画。
    - 自由な拡大縮小（0.12x〜40x）・ドラッグ操作に対応したインタラクティブ星系儀（Orrery）。
 3. **Exobiology（植物・菌類）解析 & 報酬予測**:
-   - 大気組成・表面温度・重力・天体種別から生息可能性のある植物/菌類候補と通常報酬＋初回採取5倍ボーナス額を自動算出。コロニー間隔も常時表示。
+   - 大気組成・表面温度・重力・天体種別から生息可能性のある植物/菌類候補と通常報酬＋初回採取5倍ボーナス額を自動算出。必要コロニー間隔も常時表示。
 4. **地表・着陸・重力 & 採掘支援 (Rhino Mining Support)**:
-   - 着陸可能天体（Landable）限定の高重力警告、地質・火山活動シグナル。
+   - 着陸可能天体（Landable）限定の高重力警告（3G+危険）、地質・火山活動シグナル。
    - EDSM天体データに基づく採掘有望度スコア判定（**⛏️ Scout: High / Med**）。
+   - Spansh連携によるリングホットスポットおよび惑星採掘地点（PML）の自動照会。
    - 大型着艦パッド（Large Pad）装備ステーション保有星系・到達距離フィルター。
    - リング天体のDSSスキャン結果（ホットスポット）のMarkdownメモ自動記録、CMDR現在地座標のワンクリック挿入。
 5. **天体ブックマーク・エイリアス（別名）・Markdownメモ帳**:
    - 天体単位でのブックマーク登録、ユーザー定義通称（エイリアス）、リアルタイムプレビュー対応のMarkdownメモ。
    - 星系名・天体名・エイリアス名・メモ本文を対象とした高速グローバル検索。
-6. **スタンドアロン Web共有HTML生成**:
-   - ワンクリックで単一の美しい星系図HTML（`exports/{星系名}_share.html`）を出力。外部通信なしでブラウザ閲覧可能。
-   - **完全な天体物理観測JSONデータを内包**しており、LLMへの直接投入データコンテナとしても機能。
-7. **EDSM連携 & 未訪問星系オンデマンド参照（安全ロック付き）**:
-   - 既知星系へのジャンプインやHonk時に未スキャン天体の公転軌道・物理データ・探査価値を優先キューで自動補完。
-   - 未訪問星系でも外部参照として星系マップをオンデマンド閲覧可能（エクスポート遮断・統計除外の安全ロック機構を完備）。
-8. **UIカスタマイズ & 日英バイリンガル対応**:
-   - コックピット計器盤を再現した **Elite Classic Amber HUD**、**Modern Deep Space**、**Cyan Explorer HUD** のテーマ切り替え。
-   - UIフォントサイズの自由変更および緊急リセット（<kbd>Ctrl + 0</kbd>）。
-   - 画面右上の **`[JP] / [EN]`** ボタンからいつでもワンクリックで言語切替。
+6. **🤝 CMDR Data Share（3系統の共有・出力）**:
+   - **🌐 Web共有HTML生成**: ワンクリックで単一の美しい星系図HTML（`exports/{星系名}_share.html`）を出力。外部通信なし・オフラインでブラウザ閲覧可能。天体観測JSONを完全内包。
+   - **🖼️ 共有用画像生成**: 観測メタデータをPNGチャンクに埋め込んだ **ComfyUI方式サマリー画像カード** を出力。本アプリにドラッグ＆ドロップするだけで星系データを瞬時にインポート・復元可能。
+   - **📋 星系短評投稿文**: 特殊軌道、地質、生体、環情報などの見どころをまとめたテキストをワンクリックでクリップボードへコピー。Twitch配信コメントやDiscord、X（旧Twitter）への投稿に最適。
+7. **天体物理レア度スコア & 2014年天文学モデル査読**:
+   - 軌道力学（ヒル球・ロッシュ限界・古在共鳴）やハビタブルゾーン（Kopparapu 2013）、質量分類（Weiss & Marcy 2014）に基づく天体物理レア度スコア（100点満点）の自動算出とサマリーレポート生成。
+8. **モジュール表示の自由カスタマイズ**:
+   - **Exobiology**、**Rhino採掘**、**星系人口・支配勢力/BGS** を設定画面から個別にON/OFF切り替え可能（デフォルトでは探査に特化し、採掘や勢力情報はOFF）。
+9. **音声読み上げ通知 (TTS)**:
+   - 新星系到着時の未発見（1st Discover）や高額生物天体（40M+ Cr）の発見を、音声合成（Web Speech API または ローカルVOICEVOX）で自動アナウンス。画面表示と音声通知は独立してON/OFF可能。
+10. **UIカスタマイズ & 日英バイリンガル対応**:
+    - **Modern Deep Space**、**Elite Classic Amber HUD**、**Cyan Explorer HUD** のテーマ切り替え。
+    - 画面レイアウトの1列（標準）/ 2列（Orrery＋天体ツリー常時並列表示）切り替え。
+    - UIフォントサイズの自由変更および緊急リセット（<kbd>Ctrl + 0</kbd>）。
+    - 画面右上の **`[JP] / [EN]`** ボタンからいつでもワンクリックで全画面言語切替。
 
 ---
 
@@ -46,7 +75,7 @@
 
 #### 1. インストールと起動
 - **配布パッケージ（推奨）**:
-  [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases) より `ED_Journal_Analyzer.exe` をダウンロードし、任意のフォルダに配置して実行します。
+  [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases) より最新の `ED_Journal_Analyzer_v0.8.1.zip`（または `ED_Journal_Analyzer.exe`）をダウンロードし、任意のフォルダに展開して実行します。
 - **Pythonソースから実行**:
   ```powershell
   git clone https://github.com/SuzuneYonaki/ED_Journal_Analyzer.git
@@ -57,13 +86,15 @@
   ```
 
 #### 2. 基本ワークフロー
-1. **初回ログスキャン**: 起動後、画面右上の「**Rescan Logs**」をクリックして過去のフライトログをインデックスします。
+1. **初回ログスキャン**: 起動後、画面右上の「**ログスキャン (Rescan Logs)**」をクリックして過去のフライトログをインデックスします。
 2. **ゲームプレイ中の自動追跡**: *Elite Dangerous* を起動してプレイするだけで、ジャンプ・スキャン・着陸などの最新イベントがリアルタイムに画面へ反映されます。
-3. **星系の閲覧 & Web共有HTML出力**:
+3. **星系の閲覧 & CMDR Data Share**:
    - 画面左側の星系リストから星系を選択してツリーやOrreryを表示します。
-   - 星系ヘッダーの「**Web共有HTML出力**」をクリックすると、`exports/` フォルダに自己完結型のHTML星系図が出力され、エクスプローラーでハイライトされます。
+   - 星系ヘッダーの「**🤝 CMDR Data Share**」メニューから、Web共有HTML生成、共有用画像生成、星系短評コピーをワンクリックで実行できます。
 
 #### 3. 応用的な使い方
+- **共有画像のドラッグ＆ドロップ復元**:
+  他のCMDRから受け取ったサマリーPNG画像（または過去に出力した画像）を、本アプリのウィンドウ上に直接ドラッグ＆ドロップするだけで、観測データが解析・復元され、即座に星系図を閲覧できます。
 - **ブックマーク & メモ**: 天体詳細パネルから「★ ブックマーク」やエイリアス名（例: `採掘拠点 Alpha`）、Markdown形式のメモを保存できます。
 - **採掘スポット・地表座標の記録**:
   - リング天体をDSSスキャンすると、ホットスポット一覧が自動で天体メモに追記されます。
@@ -78,7 +109,10 @@
 
 ---
 
-### 🌌 天体物理学的実在妥当性チェック・プロンプト (for LLMs)
+<details>
+<summary><b>🌌 天体物理学的実在妥当性チェック・プロンプト (for LLMs) を展開</b></summary>
+
+<br>
 
 本アプリケーションが出力する **Web共有HTML（`{星系名}_share.html`）** には、`<script id="ed-system-astrophysics-data" type="application/json">` として、星系内の全天体の完全な天体物理・軌道パラメータがJSON形式で埋め込まれています。
 
@@ -121,12 +155,35 @@
 ※お世辞や定型的な前置きは不要です。学術論文の査読コメントや専門的な探査フィールドノートのような、冷徹かつ論理的なトーンで記述してください。
 ```
 
+</details>
+
+---
+
 ---
 
 <a name="english"></a>
 ## Overview (English)
 
+> *"What was that star system really like—the one I just honked with FSS and flew right past? When did I visit?"*
+> 
+> Bringing the stars you left behind in the depth of FSS back into your hands.
+> 
+> This is your flight logbook, awakening the forgotten records of sectors you once traversed.
+> 
+> Unearthing journey logs sleeping deep within your flight journals, vividly visualizing your past exploration history and astronomical observations.
+
 **Elite Dangerous Journal Analyzer** is a standalone, local-first desktop GUI application designed to parse and monitor *Elite Dangerous* flight journal logs (`Journal.*.log`) in real time. It offers orbital hierarchy visualization, precise exploration payout calculations, Exobiology predictions, mining reconnaissance, and celestial bookmarking/notes.
+
+---
+
+### 🛡️ Core Philosophy: Local-First & Community Connectivity
+
+- **Strict Local-First & Privacy Protection**:
+  Flight journal logs, CMDR travel histories, credit balances, current ship data, planetary notes, and bookmarks are stored **exclusively in a local SQLite database on your machine**. No persistent cloud communication, forced telemetry uploads, or account registrations are required.
+- **On-Demand Community Intelligence**:
+  When needed, you can query EDSM and Spansh on-demand to supplement astrophysical data, ring hotspots, and planetary mining locations (PML), enabling you to preview orbital elements and estimated values of unscanned bodies (with built-in export lockout and stat isolation for unvisited systems).
+- **Rich CMDR Data Sharing (CMDR Data Share)**:
+  Easily share and restore your exploration and observational discoveries via standalone Web HTML, ComfyUI-style PNG cards with embedded observation metadata, or short text summaries formatted for Twitch, Discord, and SNS.
 
 ---
 
@@ -141,23 +198,29 @@
 3. **Exobiology Predictions & Reward Modeling**:
    - Predicts bio-genus candidates (Stratum, Bacterium, etc.) and calculates standard payouts plus 5x First Sampler bonuses based on atmosphere, surface temperature, gravity, and planet type. Displays required colony distance.
 4. **Surface Landing, Gravity & Rhino Mining Support**:
-   - Extreme gravity danger warnings exclusively on landable worlds; surface volcanism and geological signals.
+   - Extreme gravity danger warnings exclusively on landable worlds (3G+ hazard); surface volcanism and geological signals.
    - High-value mining reconnaissance rating (**⛏️ Scout: High / Med**) powered by EDSM telemetry.
-   - Filtering for systems hosting stations with Large Landing Pads within configurable arrival distance thresholds (< 2,000 Ls, < 10,000 Ls, < 50,000 Ls).
+   - Automatic query of ring hotspots and planetary mining locations (PML) via Spansh integration.
+   - Filtering for systems hosting stations with Large Landing Pads within configurable arrival distance thresholds.
    - Automated DSS ring hotspot markdown logging and one-click CMDR surface coordinate insertion.
 5. **Celestial Bookmarks, Aliases & Markdown Notes**:
    - Bookmark celestial bodies, assign user aliases (e.g. `Mining Base Alpha`), and edit rich Markdown notes with live preview.
    - Lightning-fast global search across star systems, body names, custom aliases, and note contents.
-6. **Standalone Web Share HTML Export**:
-   - Exports a single, self-contained HTML file (`exports/{System}_share.html`) that opens offline in any browser without external CDNs.
-   - **Embeds complete astrophysical observation JSON data**, serving as a ready-to-use container for Generative AI analysis.
-7. **EDSM Integration & Unvisited Reference Systems**:
-   - Auto-backfills orbital mechanics and exploration values for known systems via background priority queue upon jump-in or Honk.
-   - On-demand inspection of unvisited systems with strict export lockout and expedition stat exclusion.
-8. **UI Customization & Instant Bilingual Support**:
-   - Switchable themes: **Elite Classic Amber HUD**, **Modern Deep Space**, and **Cyan Explorer HUD**.
-   - Adjustable font size (numeric px input) with instant reset (<kbd>Ctrl + 0</kbd>).
-   - Instant language switching via the **`[JP] / [EN]`** button.
+6. **🤝 CMDR Data Share (3-Way Sharing & Export)**:
+   - **🌐 Generate Web Share HTML**: Exports a single, self-contained HTML file (`exports/{System}_share.html`) with embedded astrophysical JSON that opens offline in any browser without external CDNs.
+   - **🖼️ Generate Share PNG Image**: Exports a **ComfyUI-style summary image card** with observation metadata embedded into PNG chunks. Simply drag-and-drop the image back into the application window to instantly import and inspect the system.
+   - **📋 System Summary Post Text**: Generates and copies a concise textual summary highlighting orbital wonders, geology, biology, and rings to your clipboard—perfect for Twitch chat, Discord, or X (Twitter).
+7. **Astrophysical Rarity Score & 2014 Astronomical Peer-Review**:
+   - Automatic calculation of an astrophysical rarity score (0-100) and summary report based on orbital dynamics (Hill spheres, Roche limits, Kozai resonances), habitable zone models (Kopparapu 2013), and mass classification (Weiss & Marcy 2014).
+8. **Customizable Module Toggles**:
+   - Individually toggle **Exobiology**, **Rhino Mining**, and **Faction & Population (BGS)** modules in the settings modal (focused on pure exploration by default with mining and faction modules turned off).
+9. **Text-to-Speech Audio Alerts (TTS)**:
+   - Voice announcements for First Discoveries upon system arrival and high-value exobiology bodies (40M+ Cr) using Web Speech API or local VOICEVOX. Visual alerts and audio announcements can be toggled independently.
+10. **UI Customization & Instant Bilingual Support**:
+    - Switchable themes: **Modern Deep Space**, **Elite Classic Amber HUD**, and **Cyan Explorer HUD**.
+    - Flexible layout switching between 1-column (standard) and 2-column (parallel Orrery + hierarchy tree).
+    - Adjustable font size (numeric px input) with instant reset (<kbd>Ctrl + 0</kbd>).
+    - Instant language switching via the **`[JP] / [EN]`** button.
 
 ---
 
@@ -165,7 +228,7 @@
 
 #### 1. Installation & Launch
 - **Pre-built Executable (Recommended)**:
-  Download `ED_Journal_Analyzer.exe` from [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases), place it in any folder, and double-click to run.
+  Download the latest `ED_Journal_Analyzer_v0.8.1.zip` (or `ED_Journal_Analyzer.exe`) from [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases), extract to any folder, and double-click to run.
 - **Run from Source**:
   ```powershell
   git clone https://github.com/SuzuneYonaki/ED_Journal_Analyzer.git
@@ -178,15 +241,17 @@
 #### 2. Basic Workflow
 1. **Initial Indexing**: Click **Rescan Logs** in the top-right corner to index your flight history.
 2. **Live Tracking**: Launch and play *Elite Dangerous*; the app automatically reflects new events in real time.
-3. **System Browsing & Web Share Export**:
+3. **System Browsing & CMDR Data Share**:
    - Select a star system from the left panel to inspect its tree and Orrery.
-   - Click "**Web共有HTML出力**" on any system header to export a standalone orrery HTML file into `exports/`.
+   - Click the **🤝 CMDR Data Share** dropdown menu in the system header to generate Web Share HTML, export a shareable PNG image, or copy a system summary snippet with a single click.
 
 #### 3. Advanced Features
-- **Bookmarks & Notes**: Open body details to bookmark, set custom aliases, or write Markdown notes.
-- **Mining & Surface Navigation**:
-  - Scanning rings with DSS automatically documents detected hotspots into the body note.
-  - While landed, click "📍 現在地座標挿入" in the note editor to insert your exact planetary coordinates.
+- **Drag-and-Drop PNG Restore**:
+  Drag and drop any summary PNG card shared by fellow CMDRs (or exported previously) directly onto the application window to decode and restore the system data instantly.
+- **Bookmarks & Notes**: Open body details to bookmark, set custom aliases (e.g. `Mining Base Alpha`), or write Markdown notes.
+- **Mining Hotspots & Surface Coordinates**:
+  - Scanning rings with DSS automatically appends detected hotspots into the body note.
+  - While landed, click "📍 現在地座標挿入" (Insert Coordinates) in the note editor to stamp your exact planetary coordinates.
 - **AI-Powered System Audit**:
   - Drag and drop your exported Web Share HTML into ChatGPT, Claude, or Gemini alongside the **Astrophysical Reality Check Prompt** below to generate an in-depth astrophysical plausibility review.
 
@@ -197,7 +262,10 @@
 
 ---
 
-### 🌌 Astrophysical Reality Check Prompt (for LLMs)
+<details>
+<summary><b>🌌 Expand Astrophysical Reality Check Prompt (for LLMs)</b></summary>
+
+<br>
 
 Each exported **Web Share HTML (`{System}_share.html`)** embeds complete astrophysical and orbital telemetry inside a `<script id="ed-system-astrophysics-data" type="application/json">` block.
 
@@ -239,6 +307,8 @@ Critically evaluate the physical quantities (stellar/planetary mass, radius, den
 
 Note: Please avoid boilerplate pleasantries and maintain an objective, academic tone consistent with a scientific peer-review critique or planetary exploration field report.
 ```
+
+</details>
 
 ---
 
