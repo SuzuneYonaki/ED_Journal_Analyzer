@@ -608,6 +608,23 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
   const mapWrapper = document.createElement('div');
   mapWrapper.className = 'ed-system-map-container';
 
+  // Inner stage for zoom scaling
+  const stage = document.createElement('div');
+  stage.className = 'sysmap-zoom-stage';
+
+  let currentZoom = (state.sysmapZoom !== undefined && state.sysmapZoom !== null) ? state.sysmapZoom : 1.0;
+
+  function applySysmapZoom(zoom) {
+    if (stage.style.zoom !== undefined) {
+      stage.style.zoom = zoom;
+    } else {
+      stage.style.transform = `scale(${zoom})`;
+      stage.style.transformOrigin = '0 0';
+    }
+  }
+
+  applySysmapZoom(currentZoom);
+
   // Build accurate hierarchy tree
   const starSections = buildSystemMapTree(flatBodies, systemName);
 
@@ -667,7 +684,146 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
       starSectionEl.appendChild(planetsRail);
     }
 
-    mapWrapper.appendChild(starSectionEl);
+    stage.appendChild(starSectionEl);
+  });
+
+  mapWrapper.appendChild(stage);
+
+  // Floating HUD zoom controls
+  const controls = document.createElement('div');
+  controls.className = 'sysmap-zoom-controls';
+
+  const btnOut = document.createElement('button');
+  btnOut.type = 'button';
+  btnOut.className = 'sysmap-zoom-btn';
+  btnOut.id = 'btn-sysmap-zoom-out';
+  btnOut.title = typeof t === 'function' ? t('sysmap_zoom_out_tip') : 'ズームアウト (ホイール下 / 最小40%)';
+  btnOut.textContent = '−';
+
+  const label = document.createElement('span');
+  label.className = 'sysmap-zoom-label';
+  label.id = 'sysmap-zoom-label';
+  label.title = typeof t === 'function' ? t('sysmap_zoom_reset_tip') : '100%にリセット (中クリック)';
+  label.textContent = `${Math.round(currentZoom * 100)}%`;
+
+  const btnIn = document.createElement('button');
+  btnIn.type = 'button';
+  btnIn.className = 'sysmap-zoom-btn';
+  btnIn.id = 'btn-sysmap-zoom-in';
+  btnIn.title = typeof t === 'function' ? t('sysmap_zoom_in_tip') : 'ズームイン (ホイール上 / 最大200%)';
+  btnIn.textContent = '+';
+
+  const btnReset = document.createElement('button');
+  btnReset.type = 'button';
+  btnReset.className = 'sysmap-zoom-btn';
+  btnReset.id = 'btn-sysmap-zoom-reset';
+  btnReset.title = typeof t === 'function' ? t('sysmap_zoom_reset_tip') : '100%にリセット (中クリック)';
+  btnReset.textContent = '⟲';
+
+  controls.appendChild(btnOut);
+  controls.appendChild(label);
+  controls.appendChild(btnIn);
+  controls.appendChild(btnReset);
+
+  function updateZoomLabel() {
+    label.textContent = `${Math.round(currentZoom * 100)}%`;
+  }
+
+  function resetZoom() {
+    if (Math.abs(currentZoom - 1.0) < 0.01) return;
+    const centerX = mapWrapper.clientWidth / 2;
+    const centerY = mapWrapper.clientHeight / 2;
+    const contentX = (mapWrapper.scrollLeft + centerX) / currentZoom;
+    const contentY = (mapWrapper.scrollTop + centerY) / currentZoom;
+
+    currentZoom = 1.0;
+    state.sysmapZoom = 1.0;
+    applySysmapZoom(1.0);
+    updateZoomLabel();
+
+    mapWrapper.scrollLeft = contentX * 1.0 - centerX;
+    mapWrapper.scrollTop = contentY * 1.0 - centerY;
+  }
+
+  function stepZoom(direction) {
+    const centerX = mapWrapper.clientWidth / 2;
+    const centerY = mapWrapper.clientHeight / 2;
+    const contentX = (mapWrapper.scrollLeft + centerX) / currentZoom;
+    const contentY = (mapWrapper.scrollTop + centerY) / currentZoom;
+
+    const factor = direction > 0 ? 1.15 : (1 / 1.15);
+    let nextZoom = Math.min(2.0, Math.max(0.4, currentZoom * factor));
+    nextZoom = Math.round(nextZoom * 100) / 100;
+    if (nextZoom === currentZoom) return;
+
+    currentZoom = nextZoom;
+    state.sysmapZoom = currentZoom;
+    applySysmapZoom(currentZoom);
+    updateZoomLabel();
+
+    mapWrapper.scrollLeft = contentX * currentZoom - centerX;
+    mapWrapper.scrollTop = contentY * currentZoom - centerY;
+  }
+
+  btnIn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    stepZoom(1);
+  });
+  btnOut.addEventListener('click', (e) => {
+    e.stopPropagation();
+    stepZoom(-1);
+  });
+  btnReset.addEventListener('click', (e) => {
+    e.stopPropagation();
+    resetZoom();
+  });
+  label.addEventListener('click', (e) => {
+    e.stopPropagation();
+    resetZoom();
+  });
+
+  // Wheel zoom centered on mouse cursor
+  mapWrapper.addEventListener('wheel', (e) => {
+    e.preventDefault();
+
+    const rect = mapWrapper.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const prevZoom = currentZoom;
+    const contentX = (mapWrapper.scrollLeft + mouseX) / prevZoom;
+    const contentY = (mapWrapper.scrollTop + mouseY) / prevZoom;
+
+    // Smooth geometric zoom
+    const factor = e.deltaY < 0 ? 1.12 : (1 / 1.12);
+    let nextZoom = Math.min(2.0, Math.max(0.4, prevZoom * factor));
+    nextZoom = Math.round(nextZoom * 100) / 100;
+
+    if (nextZoom === prevZoom) return;
+
+    currentZoom = nextZoom;
+    state.sysmapZoom = currentZoom;
+    applySysmapZoom(currentZoom);
+    updateZoomLabel();
+
+    mapWrapper.scrollLeft = contentX * currentZoom - mouseX;
+    mapWrapper.scrollTop = contentY * currentZoom - mouseY;
+  }, { passive: false });
+
+  // Middle mouse click (button 1) to reset zoom
+  mapWrapper.addEventListener('auxclick', (e) => {
+    if (e.button === 1) {
+      e.preventDefault();
+      resetZoom();
+    }
+  });
+
+  // Double click on empty background to reset zoom
+  mapWrapper.addEventListener('dblclick', (e) => {
+    if (e.target.closest('.sysmap-body-node') || e.target.closest('.sysmap-zoom-controls')) {
+      return;
+    }
+    resetZoom();
   });
 
   // Enable mouse left-click drag panning (Horizontal, Vertical, and Diagonal)
@@ -726,6 +882,7 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
   mapWrapper._hasDragged = () => hasDragged;
 
   container.appendChild(mapWrapper);
+  container.appendChild(controls);
 }
 
 function createSysMapBodyElement(body, role = 'planet', systemName = '') {

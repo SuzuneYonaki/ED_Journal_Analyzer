@@ -327,6 +327,9 @@ async function selectSystem(systemAddress, preserveSelectedBody = false, resetJu
     const data = await res.json();
     state.currentSystemData = data;
     state.selectedSystem = data.system;
+    if (!preserveSelectedBody) {
+      state.sysmapZoom = 1.0;
+    }
 
     if (data.system && data.system.last_targeted_body_id !== undefined && data.system.last_targeted_body_id !== null) {
       state.targetBodyId = data.system.last_targeted_body_id;

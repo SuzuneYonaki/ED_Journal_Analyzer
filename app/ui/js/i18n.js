@@ -852,6 +852,9 @@ const i18n = {
     tip_delete_bm: "ブックマークを解除",
     inspect_hotspots_found: "⛏️ 採掘拠点シグナル (Hotspots) 検出:",
     unit_locations: "箇所",
+    sysmap_zoom_in_tip: "ズームイン (ホイール上 / 最大200%)",
+    sysmap_zoom_out_tip: "ズームアウト (ホイール下 / 最小40%)",
+    sysmap_zoom_reset_tip: "100%にリセット (ホイール中クリック)",
   },
   en: {
     // Header
@@ -1704,6 +1707,9 @@ const i18n = {
     tip_delete_bm: "Remove bookmark",
     inspect_hotspots_found: "⛏️ Mining Site Signals (Hotspots) Detected:",
     unit_locations: "locations",
+    sysmap_zoom_in_tip: "Zoom In (Wheel Up / Max 200%)",
+    sysmap_zoom_out_tip: "Zoom Out (Wheel Down / Min 40%)",
+    sysmap_zoom_reset_tip: "Reset to 100% (Middle Click)",
   }
 };
 
