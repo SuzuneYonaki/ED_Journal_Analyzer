@@ -250,7 +250,19 @@ def test_all_components_unlocalized_audit():
     assert unlocalized == [], f"Found unlocalized items: {unlocalized}"
 
 
+def test_cmdr_location_integrated_in_header_logged_group():
+    """Verify that stat-cmdr-container is nested inside header-logged-group and header-stats-content."""
+    from bs4 import BeautifulSoup
+    header_path = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "components", "header.html")
+    with open(header_path, "r", encoding="utf-8") as f:
+        soup = BeautifulSoup(f.read(), "html.parser")
 
+    header_logged_group = soup.find(id="header-logged-group")
+    assert header_logged_group is not None, "header-logged-group must exist"
 
+    stats_content = header_logged_group.find(id="header-stats-content")
+    assert stats_content is not None, "header-stats-content must exist inside header-logged-group"
 
-
+    cmdr_container = stats_content.find(id="stat-cmdr-container")
+    assert cmdr_container is not None, "stat-cmdr-container must be integrated inside header-stats-content"
+    assert cmdr_container.find(id="stat-cmdr-loc") is not None, "stat-cmdr-loc must be inside stat-cmdr-container"
