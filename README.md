@@ -64,6 +64,7 @@
    - **Exobiology**、**Rhino採掘**、**星系人口・支配勢力/BGS** を設定画面から個別にON/OFF切り替え可能（デフォルトでは探査に特化し、採掘や勢力情報はOFF）。
 9. **音声読み上げ通知 (TTS)**:
    - 新星系到着時の未発見（1st Discover）や高額生物天体（40M+ Cr）の発見を、音声合成（Web Speech API または ローカルVOICEVOX）で自動アナウンス。画面表示と音声通知は独立してON/OFF可能。
+   - ※各TTS・音声ライブラリ（キャラクター）の利用規約（クレジット表記等）に準拠してご利用ください。確認できないものについては各TTSの利用規約をご覧ください。
 10. **UIカスタマイズ & 日英バイリンガル対応**:
     - **Modern Deep Space**、**Elite Classic Amber HUD**、**Cyan Explorer HUD** のテーマ切り替え。
     - 画面レイアウトの1列（標準）/ 2列（Orrery＋天体ツリー常時並列表示）切り替え。
@@ -114,8 +115,8 @@
 - **採掘スポット・地表座標の記録（Rhinoモジュール有効時）**:
   - リング天体をDSSスキャンすると、ホットスポット一覧が自動で天体メモに追記されます。
   - 着陸中にメモ欄右下の「📍 現在地座標挿入」を押すと、現在CMDRがいる緯度・経度が瞬時に挿入されます。
-- **AI による星系の深層査読**:
-  - 出力した Web 共有 HTML または 共有用PNG画像（内部に天体・軌道JSONを完全保持）を ChatGPT、Claude、Gemini 等にドラッグ＆ドロップし、下記の**天体物理リアリティチェック・プロンプト**を併用することで、星系の物理的実在性やハビタビリティの学術的検証レポートを生成できます。
+- **AI による星系の深層査読（制作者の遊び）**:
+  - 出力した Web 共有 HTML または 共有用PNG画像（内部に天体・軌道JSONを完全保持）を ChatGPT、Claude、Gemini 等にドラッグ＆ドロップし、下記の**天体物理リアリティチェック・プロンプト（制作者の遊び）**を併用することで、星系の物理的実在性やハビタビリティの学術的検証レポートを生成して楽しむことができます。
 
 #### 💾 ポータブル設計 & `data` フォルダの管理
 - **レジストリ完全非依存**: すべての設定・インデックスデータ・メモ・ブックマークは、実行ファイルと同じ階層の `data/` フォルダ内に保存されます。
@@ -125,13 +126,14 @@
 ---
 
 <details>
-<summary><b>🌌 天体物理学的実在妥当性チェック・プロンプト (for LLMs) を展開</b></summary>
+<summary><b>🌌 天体物理学的実在妥当性チェック・プロンプト (for LLMs) 【制作者の遊び】を展開</b></summary>
 
 <br>
 
 本アプリケーションが出力する **Web共有HTML（`{星系名}_share.html`）** および **共有用PNG画像（`{星系名}_summary.png`）** には、星系内の全天体の完全な天体物理・軌道パラメータがJSON形式で埋め込まれています（HTML内 `<script id="ed-system-astrophysics-data" type="application/json">` または PNG内 `ed_journal_data` チャンク）。
 
-このHTMLファイルまたはPNG画像（あるいは展開したJSON）を **ChatGPT、Claude、Gemini 等の生成AIにドラッグ＆ドロップで添付** し、以下のプロンプトを入力することで、現代の天体物理学・惑星科学の観点から厳密な実在妥当性チェックを行うことができます。
+このHTMLファイルまたはPNG画像（あるいは展開したJSON）を **ChatGPT、Claude、Gemini 等の生成AIにドラッグ＆ドロップで添付** し、以下のプロンプトを入力することで、現代の天体物理学・惑星科学の観点から厳密な実在妥当性チェックを行うことができます。  
+*（※本プロンプトは、ゲーム内の観測データを現代天文学の学術的視点でAIに検証させ、SF的な読み物・探査レポートとして楽しむための「制作者の遊び心による実験的機能」です）*
 
 ```text
 添付したファイルは、宇宙シミュレーション『Elite Dangerous』で実際に観測・記録された星系の天体物理観測データです。
@@ -232,6 +234,7 @@
    - Individually toggle **Exobiology**, **Rhino Mining**, and **Faction & Population (BGS)** modules in the settings modal (focused on pure exploration by default with mining and faction modules turned off).
 9. **Text-to-Speech Audio Alerts (TTS)**:
    - Voice announcements for First Discoveries upon system arrival and high-value exobiology bodies (40M+ Cr) using Web Speech API or local VOICEVOX. Visual alerts and audio announcements can be toggled independently.
+   - *Please adhere to the terms of service and attribution requirements for each TTS engine and character library. Please refer to each provider's official terms of service for any unverified voices.*
 10. **UI Customization & Instant Bilingual Support**:
     - Switchable themes: **Modern Deep Space**, **Elite Classic Amber HUD**, and **Cyan Explorer HUD**.
     - Flexible layout switching between 1-column (standard) and 2-column (parallel Orrery + hierarchy tree).
@@ -282,8 +285,8 @@ From the **🤝 CMDR Data Share** dropdown menu in the system header, export and
 - **Mining Hotspots & Surface Coordinates (When Rhino module enabled)**:
   - Scanning rings with DSS automatically appends detected hotspots into the body note.
   - While landed, click "📍 現在地座標挿入" (Insert Coordinates) in the note editor to stamp your exact planetary coordinates.
-- **AI-Powered System Audit**:
-  - Drag and drop your exported Web Share HTML or Share PNG Image (both embed complete astrophysical & orbital JSON) into ChatGPT, Claude, or Gemini alongside the **Astrophysical Reality Check Prompt** below to generate an in-depth scientific peer review.
+- **AI-Powered System Audit (Developer's Playful Experiment)**:
+  - Drag and drop your exported Web Share HTML or Share PNG Image (both embed complete astrophysical & orbital JSON) into ChatGPT, Claude, or Gemini alongside the **Astrophysical Reality Check Prompt (Developer's Playful Experiment)** below to generate an in-depth scientific peer review and exploratory reading.
 
 #### 💾 Portable Architecture & `data` Directory
 - **Zero Registry Footprint**: All database indexes, notes, and preferences reside locally inside the `data/` directory next to the executable.
@@ -293,13 +296,14 @@ From the **🤝 CMDR Data Share** dropdown menu in the system header, export and
 ---
 
 <details>
-<summary><b>🌌 Expand Astrophysical Reality Check Prompt (for LLMs)</b></summary>
+<summary><b>🌌 Expand Astrophysical Reality Check Prompt (for LLMs) [Developer's Playful Experiment]</b></summary>
 
 <br>
 
 Both the **Web Share HTML (`{System}_share.html`)** and the **Share PNG Image (`{System}_summary.png`)** exported by this application embed complete astrophysical and orbital parameters in JSON format (inside the `<script id="ed-system-astrophysics-data" type="application/json">` block in HTML, or the `ed_journal_data` chunk in PNG).
 
-Pass either the HTML file or the PNG image (or the raw JSON) to **ChatGPT, Claude, or Gemini** using the prompt below:
+Pass either the HTML file or the PNG image (or the raw JSON) to **ChatGPT, Claude, or Gemini** using the prompt below:  
+*(Note: This prompt is an experimental feature created for fun, allowing commanders to turn in-game telemetry into academic-style astrophysics reports and immersive science-fiction critiques using modern LLMs.)*
 
 ```text
 The attached file contains observational and orbital telemetry from a star system recorded in the space simulator Elite Dangerous.
@@ -347,6 +351,33 @@ Note: Please avoid boilerplate pleasantries and maintain an objective, academic 
 - **AI Assisted Development**: Developed with the assistance of AI (Google DeepMind / Antigravity / Gemini).
 - **Game Data & Assets**: *Elite Dangerous* is a registered trademark of Frontier Developments plc.
 - **Formulas & Science**: Exploration payouts, planetary physics models, and Exobiology condition matrices are based on Frontier Developments specifications and ED community research (EDSM, Canonn Research, MattG).
+
+### 🎙️ 音声合成（TTS）・音声ライブラリの利用規約と取り扱いについて (TTS Terms of Service)
+
+本アプリケーションは、フライトログの音声読み上げ通知のために **Web Speech API** および **VOICEVOX（ローカル連携）** をサポートしています。音声を利用・公開する際は、各エンジンの利用条件および各音声ライブラリ（キャラクター）の利用規約を必ず遵守してください。
+
+- **Web Speech API**:
+  - ご利用のOS（Windows等）またはブラウザ（Edge / Chrome等）に標準搭載された合成音声エンジンを使用します。
+  - 音声の利用条件は、各OS・ブラウザ提供元（Microsoft社等のソフトウェア利用許諾契約）に準拠します。
+- **VOICEVOX**:
+  - ユーザーのローカルPC上で動作する VOICEVOX エンジン（`http://127.0.0.1:50021`）とREST APIを通じて連携します。
+  - VOICEVOXソフトウェア自体の利用規約に加え、**各音声ライブラリ（ずんだもん、四国めたん、春日部つむぎ、冥鳴ひまり 等）ごとに個別の利用規約・ガイドライン（商用利用の可否、クレジット表記義務、配信時の禁止事項等）が定められています**。動画投稿やライブ配信等で音声を利用される場合は、各キャラクター所定のクレジット表記（例: `VOICEVOX:ずんだもん`）を行ってください。
+- **⚠️ 利用規約の確認と注意事項**:
+  - アプリ内の設定ウィンドウ（音声読み上げ設定）において、接続中のVOICEVOXから選択中話者の利用規約（Policy）の直接取得・確認を試行する機能を備えていますが、**「確認できないものについては各TTSの利用規約をご覧ください」**。
+  - 各キャラクターの最新規約については、[VOICEVOX 公式規約一覧](https://voicevox.hiroshiba.jp/) を必ずご参照ください。
+
+#### English: TTS Terms of Service & Voice Library Guidelines
+This application supports **Web Speech API** and **VOICEVOX (local integration)** for real-time auditory notifications. When broadcasting or publishing content using synthesized audio, commanders must adhere to the licensing terms and attribution guidelines of each respective engine and voice library.
+
+- **Web Speech API**:
+  - Utilizes native speech synthesizers bundled with your operating system (e.g. Windows) or web browser (e.g. Edge, Chrome).
+  - Subject to the software license terms of your OS and browser platform vendors (such as Microsoft Corporation).
+- **VOICEVOX**:
+  - Integrates locally with a running VOICEVOX engine (`http://127.0.0.1:50021`) via REST API.
+  - In addition to the VOICEVOX software terms, **each voice library and character (Zundamon, Shikoku Metan, Kasukabe Tsumugi, Meimei Himari, etc.) has its own specific license terms, commercial use restrictions, and mandatory credit attribution guidelines (e.g. `VOICEVOX:ずんだもん`)**.
+- **⚠️ Terms Verification & Disclaimer**:
+  - The application's settings window automatically attempts to fetch and display the active character's policy from the connected engine. However, **"Please refer to the terms of use of each respective TTS provider for any unverified voices."**
+  - For the official and most up-to-date character guidelines, please visit the [VOICEVOX Official Terms List](https://voicevox.hiroshiba.jp/).
 
 ---
 
