@@ -596,6 +596,7 @@ function buildSystemMapTree(flatBodies, systemName) {
 }
 
 function renderSystemMapView(container, hierarchyNodes, flatBodies) {
+  container.classList.add('is-sysmap');
   container.innerHTML = '';
 
   if (!flatBodies || flatBodies.length === 0) {
@@ -669,13 +670,42 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
     mapWrapper.appendChild(starSectionEl);
   });
 
-  // Enable mouse left-click drag panning
+  // Enable mouse left-click drag panning (Horizontal, Vertical, and Diagonal)
   let isDown = false;
   let startX = 0;
   let startY = 0;
   let scrollLeft = 0;
   let scrollTop = 0;
+  let parentScrollTop = 0;
   let hasDragged = false;
+
+  const onMouseMove = (e) => {
+    if (!isDown) return;
+    const walkX = e.pageX - startX;
+    const walkY = e.pageY - startY;
+    if (Math.hypot(walkX, walkY) > 5) {
+      hasDragged = true;
+    }
+    // Update both axes simultaneously for seamless horizontal, vertical, and diagonal panning
+    mapWrapper.scrollLeft = scrollLeft - walkX;
+    mapWrapper.scrollTop = scrollTop - walkY;
+    if (mapWrapper.parentElement && mapWrapper.parentElement.scrollTop !== undefined) {
+      mapWrapper.parentElement.scrollTop = parentScrollTop - walkY;
+    }
+  };
+
+  const onMouseUp = () => {
+    if (isDown) {
+      isDown = false;
+      mapWrapper.classList.remove('is-dragging');
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      // Reset hasDragged shortly after current event loop cycle so click handler can read it once
+      setTimeout(() => {
+        hasDragged = false;
+      }, 50);
+    }
+  };
 
   mapWrapper.addEventListener('mousedown', (e) => {
     // Only primary (left) button
@@ -683,41 +713,14 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
     isDown = true;
     hasDragged = false;
     mapWrapper.classList.add('is-dragging');
-    startX = e.pageX - mapWrapper.offsetLeft;
-    startY = e.pageY - mapWrapper.offsetTop;
+    startX = e.pageX;
+    startY = e.pageY;
     scrollLeft = mapWrapper.scrollLeft;
     scrollTop = mapWrapper.scrollTop;
-  });
+    parentScrollTop = mapWrapper.parentElement ? mapWrapper.parentElement.scrollTop : 0;
 
-  mapWrapper.addEventListener('mouseleave', () => {
-    if (isDown) {
-      isDown = false;
-      mapWrapper.classList.remove('is-dragging');
-    }
-  });
-
-  window.addEventListener('mouseup', () => {
-    if (isDown) {
-      isDown = false;
-      mapWrapper.classList.remove('is-dragging');
-      // Reset hasDragged shortly after current event loop cycle so click handler can read it once
-      setTimeout(() => {
-        hasDragged = false;
-      }, 50);
-    }
-  });
-
-  mapWrapper.addEventListener('mousemove', (e) => {
-    if (!isDown) return;
-    const x = e.pageX - mapWrapper.offsetLeft;
-    const y = e.pageY - mapWrapper.offsetTop;
-    const walkX = x - startX;
-    const walkY = y - startY;
-    if (Math.hypot(walkX, walkY) > 8) {
-      hasDragged = true;
-    }
-    mapWrapper.scrollLeft = scrollLeft - walkX;
-    mapWrapper.scrollTop = scrollTop - walkY;
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
   });
 
   mapWrapper._hasDragged = () => hasDragged;

@@ -814,6 +814,8 @@ function renderCurrentView() {
 
   if (!state.currentSystemData) return;
 
+  container.classList.toggle('is-sysmap', state.currentView === 'sysmap');
+
   if (state.currentView === 'sysmap') {
     if (typeof renderSystemMapView === 'function') {
       renderSystemMapView(container, state.currentSystemData.hierarchy, state.currentSystemData.bodies);

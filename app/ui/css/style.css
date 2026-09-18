@@ -1254,6 +1254,11 @@ header {
   position: relative;
 }
 
+.map-content-area.is-sysmap {
+  padding: 0;
+  overflow: hidden;
+}
+
 /* Hierarchy Tree View */
 .tree-node {
   margin-bottom: 12px;
@@ -1868,9 +1873,10 @@ header {
   flex-direction: column;
   gap: 30px;
   padding: 30px 20px 60px 20px;
-  overflow-x: auto;
-  overflow-y: auto;
-  min-height: 100%;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
   cursor: grab;
   user-select: none;
   background-image: 
