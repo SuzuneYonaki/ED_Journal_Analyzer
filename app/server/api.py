@@ -26,6 +26,7 @@ from app.services.edsm_service import edsm_service
 from app.services.spansh_service import spansh_service
 from app.services.landmark_service import load_landmarks, calculate_landmark_distances
 from app.services.footprint_service import footprint_service
+from app.services.version_service import version_service
 from app.live.rhino.note_integrator import update_body_note_in_db
 from app.live.rhino.tracker import sync_body_mining_to_note, extract_all_mining_materials_for_body
 from app.services.export_service import (
@@ -2279,6 +2280,13 @@ def get_external_footprint(system_name: str = Query(..., min_length=1)):
     """
     result = footprint_service.check_system_footprint(system_name)
     return result
+
+@app.get("/api/check_update")
+def check_update(force: bool = False):
+    """
+    Checks GitHub Releases for a newer version of the application.
+    """
+    return version_service.check_update(force=force)
 
 import jinja2
 
