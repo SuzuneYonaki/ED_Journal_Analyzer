@@ -1,6 +1,6 @@
 # Elite Dangerous Journal Analyzer & Exploration Orrery
 
-[![Version](https://img.shields.io/badge/version-v0.8.2-orange.svg)](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases)
+[![Version](https://img.shields.io/badge/version-v0.8.4-orange.svg)](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 
