@@ -186,7 +186,7 @@ function renderSystemList() {
       const sharedTip = sys.shared_by ? `${t('shared_by_label')}: ${sys.shared_by}` : t('shared_system');
       tags.push(`<span class="tag-badge tag-shared" style="background: rgba(167, 139, 250, 0.2); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.6); font-weight: bold;" title="${sharedTip}">🤝 Shared</span>`);
     }
-    if (sys.is_external || sys.visit_count === 0) {
+    if (!sys.visit_count) {
       tags.push(`<span class="tag-badge tag-external" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-weight: bold;" title="${t('badge_external_unvisited_tip') || '未訪問・EDSM外部参照星系（Web共有/パッケージ書出は不可）'}">${t('badge_external_unvisited') || '🌐 外部参照 (未訪問)'}</span>`);
     }
     if (sys.composite_score !== null && sys.composite_score !== undefined) {
@@ -596,7 +596,7 @@ function renderSystemHeader() {
   const sharedBadge = document.getElementById('current-system-shared-badge');
   const extBadge = document.getElementById('current-system-external-badge');
 
-  const isUnvisitedExternal = Boolean(sys.is_external || (sys.visit_count === 0));
+  const isUnvisitedExternal = !sys.visit_count;
 
   if (extBadge) {
     if (isUnvisitedExternal) {

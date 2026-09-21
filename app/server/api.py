@@ -1913,7 +1913,7 @@ def export_standalone_html_endpoint(
         return JSONResponse({"error": "System not found"}, status_code=404)
 
     # Restriction: Unvisited external systems cannot be exported
-    if sys_row["is_external"] == 1 or (sys_row["visit_count"] or 0) == 0:
+    if (sys_row["visit_count"] or 0) == 0:
         conn.close()
         return JSONResponse({"error": "外部参照（未訪問）星系のため、Web共有HTMLのエクスポートは行えません。"}, status_code=403)
 
@@ -1994,7 +1994,7 @@ def export_summary_image_endpoint(system_address: int, lang: str = "ja"):
         return JSONResponse({"error": "System not found"}, status_code=404)
 
     # Restriction: Unvisited external systems cannot be exported
-    if sys_row["is_external"] == 1 or (sys_row["visit_count"] or 0) == 0:
+    if (sys_row["visit_count"] or 0) == 0:
         conn.close()
         return JSONResponse({"error": "外部参照（未訪問）星系のため、サマリー画像のエクスポートは行えません。"}, status_code=403)
 
@@ -2080,7 +2080,7 @@ def export_package_endpoint(payload: ExportPackageRequest):
         # Restriction: Check for unvisited external systems
         placeholders = ",".join("?" * len(payload.system_addresses))
         c = conn.cursor()
-        c.execute(f"SELECT star_system FROM systems WHERE system_address IN ({placeholders}) AND (is_external = 1 OR visit_count = 0)", payload.system_addresses)
+        c.execute(f"SELECT star_system FROM systems WHERE system_address IN ({placeholders}) AND (visit_count IS NULL OR visit_count = 0)", payload.system_addresses)
         ext_rows = c.fetchall()
         if ext_rows:
             ext_names = [r["star_system"] for r in ext_rows]
@@ -2108,7 +2108,7 @@ def export_package_save_local(payload: SavePackageLocalRequest):
         # Restriction: Check for unvisited external systems
         placeholders = ",".join("?" * len(payload.system_addresses))
         c = conn.cursor()
-        c.execute(f"SELECT star_system FROM systems WHERE system_address IN ({placeholders}) AND (is_external = 1 OR visit_count = 0)", payload.system_addresses)
+        c.execute(f"SELECT star_system FROM systems WHERE system_address IN ({placeholders}) AND (visit_count IS NULL OR visit_count = 0)", payload.system_addresses)
         ext_rows = c.fetchall()
         if ext_rows:
             ext_names = [r["star_system"] for r in ext_rows]

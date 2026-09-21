@@ -57,9 +57,10 @@ def import_unvisited_system_by_name(
         return {"success": False, "error": f"System '{clean_name}' not found on EDSM"}
 
     star_sys_name = sys_data.get("name")
+    # id64 matches the in-game SystemAddress; EDSM's internal "id" does not and must
+    # never be used as a fallback, or the imported row will never reconcile with the
+    # real row created once the CMDR actually visits the system.
     system_address = sys_data.get("id64")
-    if not system_address:
-        system_address = sys_data.get("id")
 
     if not system_address:
         return {"success": False, "error": "System address (id64) not found in EDSM response"}
