@@ -1903,6 +1903,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const btnClearStars = document.getElementById('btn-clear-stars-filters');
+  if (btnClearStars) {
+    btnClearStars.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.star-filter-cb').forEach(cb => { cb.checked = false; });
+      state.starTypes = [];
+      const rStarAny = document.querySelector('input[name="star-match-mode"][value="any"]');
+      if (rStarAny) rStarAny.checked = true;
+      state.starMatchMode = 'any';
+
+      document.querySelectorAll('.lum-filter-cb').forEach(cb => { cb.checked = false; });
+      state.luminosityClasses = [];
+      const rLumAny = document.querySelector('input[name="lum-match-mode"][value="any"]');
+      if (rLumAny) rLumAny.checked = true;
+      state.luminosityMatchMode = 'any';
+
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  }
+
   // Mining Scout Filter Chips
   document.querySelectorAll('.scout-chip').forEach(chip => {
     chip.addEventListener('click', () => {
