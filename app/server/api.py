@@ -50,6 +50,8 @@ from app.services.physics_translator import (
     translate_narrative_report_to_ja
 )
 
+from app.services.tts_service import tts_service
+
 app = FastAPI(title="Elite Dangerous Journal Analyzer")
 
 app.add_middleware(
@@ -157,8 +159,13 @@ async def on_startup():
     manager.loop = asyncio.get_running_loop()
     init_db()
     start_watcher()
+    await tts_service.start()
     # Trigger background parse automatically on startup in separate thread
     threading.Thread(target=run_background_parse, daemon=True).start()
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    await tts_service.stop()
 
 def on_journal_file_updated(file_path: Optional[str] = None):
     manager.notify_update_from_thread(file_path)
@@ -1855,6 +1862,66 @@ def save_tts_settings_endpoint(settings: dict):
         return {"status": "saved", "settings": settings}
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+# --- Backend TTS (VOICEVOX) Endpoints ---
+
+class TTSSpeakRequest(BaseModel):
+    text: str
+    priority: Optional[bool] = False
+
+class TTSConfigRequest(BaseModel):
+    enabled: Optional[bool] = None
+    voicevox_url: Optional[str] = None
+    speaker_id: Optional[int] = None
+    speed_scale: Optional[float] = None
+    volume_scale: Optional[float] = None
+
+@app.post("/api/tts/speak")
+def tts_speak_endpoint(req: TTSSpeakRequest):
+    enqueued = tts_service.enqueue_speak(req.text, priority=bool(req.priority))
+    return {
+        "status": "success",
+        "data": {
+            "enqueued": enqueued,
+            "text": req.text
+        }
+    }
+
+@app.post("/api/tts/test")
+def tts_test_endpoint():
+    enqueued = tts_service.test_speak()
+    return {
+        "status": "success",
+        "data": {
+            "enqueued": enqueued,
+            "text": "音声キャプチャの接続テストです"
+        }
+    }
+
+@app.get("/api/tts/config")
+def tts_get_config_endpoint():
+    return {
+        "status": "success",
+        "data": tts_service.get_config()
+    }
+
+@app.post("/api/tts/config")
+def tts_update_config_endpoint(req: TTSConfigRequest):
+    dump_fn = getattr(req, "model_dump", getattr(req, "dict", None))
+    raw_data = dump_fn() if dump_fn else req.__dict__
+    update_data = {k: v for k, v in raw_data.items() if v is not None}
+    tts_service.update_config(update_data)
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        current_cfg = tts_service.get_config()
+        with open(TTS_SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(current_cfg, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+    return {
+        "status": "success",
+        "data": tts_service.get_config()
+    }
 
 # --- Safe System Export & Sharing Endpoints ---
 
