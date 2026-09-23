@@ -9,6 +9,17 @@ function formatCredits(num) {
   return Number(num).toLocaleString() + ' Cr';
 }
 
+function formatKiloCredits(num) {
+  if (num === null || num === undefined || isNaN(num) || Number(num) <= 0) return null;
+  const val = Number(num);
+  const kVal = val / 1000;
+  if (kVal >= 100) {
+    return `${Math.round(kVal)}k`;
+  }
+  const fixed = kVal.toFixed(1);
+  return `${parseFloat(fixed)}k`;
+}
+
 function formatNumber(num, digits = 2) {
   if (num === null || num === undefined) return '--';
   return Number(num).toLocaleString(undefined, { maximumFractionDigits: digits });
