@@ -1744,8 +1744,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('system-search');
   const btnSearchClear = document.getElementById('btn-search-clear');
   if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      const val = e.target.value;
+    // 検索入力時のリアルタイム同期とクリアボタン表示制御
+    const handleSearchInput = (val) => {
       if (btnSearchClear) {
         btnSearchClear.style.display = (val && val.trim().length > 0) ? 'block' : 'none';
       }
@@ -1756,8 +1756,35 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchSystems({ autoSelectTop: true });
         triggerExternalFootprintCheck(state.searchQuery);
       }, 300);
+    };
+
+    searchInput.addEventListener('input', (e) => {
+      handleSearchInput(e.target.value);
     });
 
+    // 右クリックでクリップボードから文字列を挿入
+    // 検索ボックスに文字がある場合は挿入不可（空の場合のみ挿入）
+    searchInput.addEventListener('contextmenu', async (e) => {
+      if (searchInput.value && searchInput.value.trim().length > 0) {
+        return;
+      }
+      e.preventDefault();
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          const cleanText = (text || '').trim();
+          if (cleanText.length > 0) {
+            searchInput.value = cleanText;
+            handleSearchInput(cleanText);
+            searchInput.focus();
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to read clipboard on right-click:', err);
+      }
+    });
+
+    // 3. クリア（×）ボタンのクリック処理
     if (btnSearchClear) {
       btnSearchClear.addEventListener('click', () => {
         searchInput.value = '';
