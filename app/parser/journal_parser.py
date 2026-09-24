@@ -5,7 +5,7 @@ import glob
 from pathlib import Path
 from datetime import datetime
 
-from app.db.database import get_db_connection, save_or_merge_mining_site
+from app.db.database import get_db_connection, save_or_merge_mining_site, invalidate_celestial_stats_cache
 from app.parser.value_calculator import calculate_body_value
 from app.parser.exobiology import predict_exobiology_candidates, get_species_value
 from app.analyzer.anomaly_finder import detect_anomalies
@@ -97,6 +97,7 @@ class JournalParser:
             self._update_system_stats(sys_addr)
         self.dirty_systems.clear()
         self.conn.commit()
+        invalidate_celestial_stats_cache()
 
     def process_journal_line(self, line: str):
         if not line or not line.strip():

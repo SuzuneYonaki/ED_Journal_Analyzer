@@ -1,9 +1,20 @@
 import sqlite3
 import json
+import time
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from app.config import DB_PATH
+
+_DB_INITIALIZED: bool = False
+_CELESTIAL_STATS_CACHE: Optional[Dict[str, Any]] = None
+_CELESTIAL_STATS_TIMESTAMP: float = 0.0
+CELESTIAL_STATS_TTL_SECONDS: float = 15.0
+
+def invalidate_celestial_stats_cache():
+    global _CELESTIAL_STATS_CACHE, _CELESTIAL_STATS_TIMESTAMP
+    _CELESTIAL_STATS_CACHE = None
+    _CELESTIAL_STATS_TIMESTAMP = 0.0
 
 def get_db_connection():
     conn = sqlite3.connect(str(DB_PATH), timeout=30.0, check_same_thread=False)
@@ -52,13 +63,33 @@ def verify_db_integrity(conn=None) -> bool:
             except Exception:
                 pass
 
-def init_db(conn=None):
+def init_db(conn=None, force: bool = False):
+    global _DB_INITIALIZED
+    if _DB_INITIALIZED and not force and conn is None:
+        return
+
     close_after = False
     if conn is None:
         conn = get_db_connection()
         close_after = True
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
+
+    # Meta table for tracking one-time migrations and heavy backfill tasks
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS db_meta (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TEXT
+    );
+    """)
+
+    def is_meta_applied(k: str) -> bool:
+        cursor.execute("SELECT 1 FROM db_meta WHERE key = ?", (k,))
+        return cursor.fetchone() is not None
+
+    def mark_meta_applied(k: str):
+        cursor.execute("INSERT OR REPLACE INTO db_meta (key, value, updated_at) VALUES (?, '1', ?)", (k, datetime.now().isoformat()))
 
     # Systems table
     cursor.execute("""
@@ -533,121 +564,136 @@ def init_db(conn=None):
         );
     """)
 
-    # Ensure system flags, scanned bodies count, sol distance, and first discovery consistency
-    cursor.execute("""
-        UPDATE systems SET
-            scanned_bodies = (
-                SELECT COUNT(*) FROM bodies b
-                WHERE b.system_address = systems.system_address
-                  AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
-            ),
-            sol_distance_ly = CASE 
-                WHEN star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
-                THEN ROUND(SQRT(star_pos_x * star_pos_x + star_pos_y * star_pos_y + star_pos_z * star_pos_z), 1)
-                ELSE 0 
-            END,
-            main_star_type = COALESCE(main_star_type, (
-                SELECT b.star_type FROM bodies b
-                WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL
-                ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1
-            )),
-            has_water_world = COALESCE((
-                SELECT MAX(CASE WHEN LOWER(b.planet_class) LIKE '%water world%' THEN 1 ELSE 0 END)
-                FROM bodies b WHERE b.system_address = systems.system_address
-            ), 0),
-            total_bio_signals = COALESCE((
-                SELECT SUM(b.bio_signals)
-                FROM bodies b WHERE b.system_address = systems.system_address
-            ), 0),
-            has_bio = COALESCE((
-                SELECT MAX(CASE WHEN b.bio_signals > 0 THEN 1 ELSE 0 END)
-                FROM bodies b WHERE b.system_address = systems.system_address
-            ), 0),
-            has_high_g = COALESCE((
-                SELECT MAX(CASE WHEN b.landable = 1 AND b.surface_gravity_g >= 3.0 THEN 1 ELSE 0 END)
-                FROM bodies b WHERE b.system_address = systems.system_address
-            ), 0),
-            first_discovered_bodies = CASE 
-                WHEN systems.population > 0 THEN 0
-                ELSE COALESCE((
-                    SELECT COUNT(*) FROM bodies b
-                    WHERE b.system_address = systems.system_address 
-                      AND b.was_discovered = 0
-                      AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
-                ), 0)
-            END,
-            has_first_discover = CASE 
-                WHEN systems.population > 0 THEN 0
-                ELSE COALESCE((
-                    SELECT MAX(CASE WHEN b.was_discovered = 0 THEN 1 ELSE 0 END)
-                    FROM bodies b WHERE b.system_address = systems.system_address
-                      AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
-                ), 0)
-            END,
-            avg_landable_radius = COALESCE((
-                SELECT ROUND(AVG(b.radius), 1)
-                FROM bodies b WHERE b.system_address = systems.system_address
-                  AND b.landable = 1
-                  AND b.radius IS NOT NULL
-                  AND b.radius > 0
-            ), 0);
-    """)
+    # Ensure system flags, scanned bodies count, sol distance, and first discovery consistency (one-time on DB setup)
+    if not is_meta_applied("system_flags_consistency_v1"):
+        try:
+            cursor.execute("""
+                UPDATE systems SET
+                    scanned_bodies = (
+                        SELECT COUNT(*) FROM bodies b
+                        WHERE b.system_address = systems.system_address
+                          AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
+                    ),
+                    sol_distance_ly = CASE 
+                        WHEN star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
+                        THEN ROUND(SQRT(star_pos_x * star_pos_x + star_pos_y * star_pos_y + star_pos_z * star_pos_z), 1)
+                        ELSE 0 
+                    END,
+                    main_star_type = COALESCE(main_star_type, (
+                        SELECT b.star_type FROM bodies b
+                        WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL
+                        ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1
+                    )),
+                    has_water_world = COALESCE((
+                        SELECT MAX(CASE WHEN LOWER(b.planet_class) LIKE '%water world%' THEN 1 ELSE 0 END)
+                        FROM bodies b WHERE b.system_address = systems.system_address
+                    ), 0),
+                    total_bio_signals = COALESCE((
+                        SELECT SUM(b.bio_signals)
+                        FROM bodies b WHERE b.system_address = systems.system_address
+                    ), 0),
+                    has_bio = COALESCE((
+                        SELECT MAX(CASE WHEN b.bio_signals > 0 THEN 1 ELSE 0 END)
+                        FROM bodies b WHERE b.system_address = systems.system_address
+                    ), 0),
+                    has_high_g = COALESCE((
+                        SELECT MAX(CASE WHEN b.landable = 1 AND b.surface_gravity_g >= 3.0 THEN 1 ELSE 0 END)
+                        FROM bodies b WHERE b.system_address = systems.system_address
+                    ), 0),
+                    first_discovered_bodies = CASE 
+                        WHEN systems.population > 0 THEN 0
+                        ELSE COALESCE((
+                            SELECT COUNT(*) FROM bodies b
+                            WHERE b.system_address = systems.system_address 
+                              AND b.was_discovered = 0
+                              AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
+                        ), 0)
+                    END,
+                    has_first_discover = CASE 
+                        WHEN systems.population > 0 THEN 0
+                        ELSE COALESCE((
+                            SELECT MAX(CASE WHEN b.was_discovered = 0 THEN 1 ELSE 0 END)
+                            FROM bodies b WHERE b.system_address = systems.system_address
+                              AND (b.star_type IS NOT NULL OR b.planet_class IS NOT NULL)
+                        ), 0)
+                    END,
+                    avg_landable_radius = COALESCE((
+                        SELECT ROUND(AVG(b.radius), 1)
+                        FROM bodies b WHERE b.system_address = systems.system_address
+                          AND b.landable = 1
+                          AND b.radius IS NOT NULL
+                          AND b.radius > 0
+                    ), 0);
+            """)
+            mark_meta_applied("system_flags_consistency_v1")
+        except Exception as e:
+            print(f"[DB Migration Warning] system_flags_consistency_v1: {e}")
 
-    # Backfill heavy mass code and close binary anomalies on star bodies
-    from app.analyzer.anomaly_finder import detect_anomalies
-    import json
+    # Backfill heavy mass code and close binary anomalies on star bodies (one-time on DB setup)
+    if not is_meta_applied("star_anomalies_backfill_v1"):
+        try:
+            from app.analyzer.anomaly_finder import detect_anomalies
+            cursor.execute("SELECT id, body_name, star_system, star_type, distance_from_arrival_ls, semi_major_axis, parents, eccentricity, orbital_period, rotation_period, orbital_inclination, landable, surface_gravity_g, rings, volcanism, planet_class, terraforming_state, anomalies_json FROM bodies WHERE star_type IS NOT NULL")
+            star_rows = cursor.fetchall()
+            for row in star_rows:
+                body_dict = dict(row)
+                anomalies = detect_anomalies(body_dict)
+                new_json = json.dumps(anomalies)
+                if new_json != (row["anomalies_json"] or "[]"):
+                    cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (new_json, row["id"]))
+            mark_meta_applied("star_anomalies_backfill_v1")
+        except Exception as e:
+            print(f"[DB Migration Warning] star_anomalies_backfill_v1: {e}")
 
-    cursor.execute("SELECT id, body_name, star_system, star_type, distance_from_arrival_ls, semi_major_axis, parents, eccentricity, orbital_period, rotation_period, orbital_inclination, landable, surface_gravity_g, rings, volcanism, planet_class, terraforming_state, anomalies_json FROM bodies WHERE star_type IS NOT NULL")
-    star_rows = cursor.fetchall()
-    for row in star_rows:
-        body_dict = dict(row)
-        anomalies = detect_anomalies(body_dict)
-        new_json = json.dumps(anomalies)
-        if new_json != (row["anomalies_json"] or "[]"):
-            cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (new_json, row["id"]))
-
-    # Update systems has_anomalies flag
-    cursor.execute("""
-        UPDATE systems SET
-            has_anomalies = COALESCE((
-                SELECT MAX(CASE WHEN b.anomalies_json != '[]' AND b.anomalies_json IS NOT NULL THEN 1 ELSE 0 END)
-                FROM bodies b WHERE b.system_address = systems.system_address
-            ), 0);
-    """)
+    # Update systems has_anomalies flag (one-time on DB setup)
+    if not is_meta_applied("systems_anomalies_flag_v1"):
+        try:
+            cursor.execute("""
+                UPDATE systems SET
+                    has_anomalies = COALESCE((
+                        SELECT MAX(CASE WHEN b.anomalies_json != '[]' AND b.anomalies_json IS NOT NULL THEN 1 ELSE 0 END)
+                        FROM bodies b WHERE b.system_address = systems.system_address
+                    ), 0);
+            """)
+            mark_meta_applied("systems_anomalies_flag_v1")
+        except Exception as e:
+            print(f"[DB Migration Warning] systems_anomalies_flag_v1: {e}")
 
     # Correct is_external flag for systems that have been visited
     cursor.execute("UPDATE systems SET is_external = 0 WHERE visit_count > 0 AND is_external = 1;")
 
-    # Backfill star luminosity from journal logs if existing database records lack luminosity
-    try:
-        cursor.execute("SELECT COUNT(*) FROM bodies WHERE star_type IS NOT NULL AND (luminosity IS NULL OR luminosity = '')")
-        missing_lum_count = cursor.fetchone()[0]
-        if missing_lum_count > 0:
-            import glob
-            from app.config import DEFAULT_JOURNAL_DIR
-            if DEFAULT_JOURNAL_DIR.exists():
-                files = sorted(glob.glob(str(DEFAULT_JOURNAL_DIR / "Journal.*.log")))
-                updates = []
-                for fpath in files:
-                    try:
-                        with open(fpath, "r", encoding="utf-8", errors="replace") as jf:
-                            for line in jf:
-                                if '"Scan"' in line and '"StarType"' in line and '"Luminosity"' in line:
-                                    data = json.loads(line)
-                                    lum = data.get("Luminosity")
-                                    sys_addr = data.get("SystemAddress")
-                                    body_id = data.get("BodyID")
-                                    if lum and sys_addr and body_id is not None:
-                                        updates.append((lum, sys_addr, body_id))
-                    except Exception:
-                        pass
-                if updates:
-                    cursor.executemany("""
-                        UPDATE bodies SET luminosity = ?
-                        WHERE system_address = ? AND body_id = ? AND (luminosity IS NULL OR luminosity = '')
-                    """, updates)
-    except Exception as e:
-        print(f"Luminosity migration notice: {e}")
+    # Backfill star luminosity from journal logs if existing database records lack luminosity (one-time)
+    if not is_meta_applied("star_luminosity_migration_v1"):
+        try:
+            cursor.execute("SELECT COUNT(*) FROM bodies WHERE star_type IS NOT NULL AND (luminosity IS NULL OR luminosity = '')")
+            missing_lum_count = cursor.fetchone()[0]
+            if missing_lum_count > 0:
+                from app.config import DEFAULT_JOURNAL_DIR
+                if DEFAULT_JOURNAL_DIR.exists():
+                    import glob
+                    files = sorted(glob.glob(str(DEFAULT_JOURNAL_DIR / "Journal.*.log")))
+                    updates = []
+                    for fpath in files:
+                        try:
+                            with open(fpath, "r", encoding="utf-8", errors="replace") as jf:
+                                for line in jf:
+                                    if '"Scan"' in line and '"StarType"' in line and '"Luminosity"' in line:
+                                        data = json.loads(line)
+                                        lum = data.get("Luminosity")
+                                        sys_addr = data.get("SystemAddress")
+                                        body_id = data.get("BodyID")
+                                        if lum and sys_addr and body_id is not None:
+                                            updates.append((lum, sys_addr, body_id))
+                        except Exception:
+                            pass
+                    if updates:
+                        cursor.executemany("""
+                            UPDATE bodies SET luminosity = ?
+                            WHERE system_address = ? AND body_id = ? AND (luminosity IS NULL OR luminosity = '')
+                        """, updates)
+            mark_meta_applied("star_luminosity_migration_v1")
+        except Exception as e:
+            print(f"[DB Migration Warning] star_luminosity_migration_v1: {e}")
 
     # Migration: add hotspot column to surface_mining_sites if missing
     try:
@@ -686,21 +732,24 @@ def init_db(conn=None):
         pass
 
     # Migration: clean up legacy "Green Gas Giant Candidate" in anomalies_json to "GGG Candidate"
-    try:
-        cursor.execute("""
-            UPDATE bodies
-            SET anomalies_json = REPLACE(anomalies_json, 'Green Gas Giant Candidate', 'GGG Candidate')
-            WHERE anomalies_json LIKE '%Green Gas Giant Candidate%';
-        """)
-        cursor.execute("""
-            UPDATE system_physics_evaluations
-            SET anomalies_json = REPLACE(anomalies_json, 'Green Gas Giant Candidate', 'GGG Candidate')
-            WHERE anomalies_json LIKE '%Green Gas Giant Candidate%';
-        """)
-    except Exception:
-        pass
+    if not is_meta_applied("legacy_ggg_cleanup_v1"):
+        try:
+            cursor.execute("""
+                UPDATE bodies
+                SET anomalies_json = REPLACE(anomalies_json, 'Green Gas Giant Candidate', 'GGG Candidate')
+                WHERE anomalies_json LIKE '%Green Gas Giant Candidate%';
+            """)
+            cursor.execute("""
+                UPDATE system_physics_evaluations
+                SET anomalies_json = REPLACE(anomalies_json, 'Green Gas Giant Candidate', 'GGG Candidate')
+                WHERE anomalies_json LIKE '%Green Gas Giant Candidate%';
+            """)
+            mark_meta_applied("legacy_ggg_cleanup_v1")
+        except Exception:
+            pass
 
     conn.commit()
+    _DB_INITIALIZED = True
     if close_after:
         conn.close()
 
@@ -875,12 +924,18 @@ def delete_mining_site(conn: sqlite3.Connection, site_id: int) -> bool:
     return cursor.rowcount > 0
 
 
-def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None) -> Dict[str, Any]:
+def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None, bypass_cache: bool = False) -> Dict[str, Any]:
     """
     Aggregates celestial statistics across all scanned bodies in the database.
     Calculates cumulative star spectral types, planetary classes, ringed variants,
     and overall scanned counts without modifying schema or executing migrations.
+    Uses in-memory TTL caching to keep API responses ultra-fast (< 1ms).
     """
+    global _CELESTIAL_STATS_CACHE, _CELESTIAL_STATS_TIMESTAMP
+    now = time.time()
+    if not bypass_cache and _CELESTIAL_STATS_CACHE is not None and (now - _CELESTIAL_STATS_TIMESTAMP < CELESTIAL_STATS_TTL_SECONDS):
+        return _CELESTIAL_STATS_CACHE
+
     should_close = False
     if conn is None:
         conn = get_db_connection()
@@ -1006,13 +1061,16 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None) -> Dict[
             "total_ringed_bodies": total_ringed
         }
 
-        return {
+        result = {
             "summary": summary,
             "star_counts": star_counts,
             "stars": star_counts,
             "planet_counts": planet_counts,
             "planets": planet_counts
         }
+        _CELESTIAL_STATS_CACHE = result
+        _CELESTIAL_STATS_TIMESTAMP = time.time()
+        return result
     except Exception as e:
         print(f"[DB] Error aggregating celestial statistics: {e}")
         return {
