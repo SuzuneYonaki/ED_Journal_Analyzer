@@ -167,11 +167,11 @@ def calculate_ggg_probability(
     if score >= 80:
         alert_level = "URGENT"
         is_candidate = True
-        tts_message = f"注意。{body_name} は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。"
+        tts_message = f"{body_name}はグリーンガスジャイアント候補です。"
     elif score >= 60:
         alert_level = "NOTICE"
         is_candidate = True
-        tts_message = f"情報。{body_name} はグリーンガスジャイアントの可能性があります。目視観測を推奨します。"
+        tts_message = f"{body_name}はグリーンガスジャイアント候補です。"
     else:
         alert_level = None
         is_candidate = False

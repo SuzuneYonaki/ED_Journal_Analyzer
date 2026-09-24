@@ -161,7 +161,7 @@ LLMを用いず、EDジャーナルの確定値（`Scan` イベント）から�
 3. **密度・構造極限（Density & Radius）**:
    - 平均密度 $\rho = \text{Mass} / (\frac{4}{3}\pi \text{Radius}^3)$ を算出（地球質量 $5.9722 \times 10^{24}\text{ kg}$、半径 $m$ から $\text{g/cm}^3$ へ換算）。
    - クトニア惑星候補（異常高密度）: 岩石/金属天体で $\rho > 15.0 \text{ g/cm}^3$ (+30pt, タグ: `"Super-Dense Core"`)
-   - パフ・プラネット（超低密度ガス天体）: ガス巨人/巨大ガス天体で $\rho < 0.1 \text{ g/cm}^3$ (+25pt, タグ: `"Super-Puff Planet"`)
+   - パフ・プラネット（超低密度ガス天体）: ガスジャイアント/巨大ガス天体で $\rho < 0.1 \text{ g/cm}^3$ (+25pt, タグ: `"Super-Puff Planet"`)
 4. **特殊環（Ring Systems）**:
    - 巨大リング: 環の幅 $(OuterRad - InnerRad) > 10 \times Radius$ (+20pt, タグ: `"Massive Ring System"`)
    - 恒星・希少惑星の環: 恒星、または地球型(ELW)/アンモニア(AW)に環が存在 (+35pt, タグ: `"Exotic Ring Host"`)

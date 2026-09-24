@@ -2879,8 +2879,8 @@ const ttsState = {
   highBioText: '{body}、高額生物反応です。見込額{value}クレジット。',
   gggEnabled: true, // GGGは極めて希少なためデフォルト有効
   gggMode: 'both', // 'both' | 'tts' | 'buzzer'
-  gggConfirmedText: '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。',
-  gggCandidateText: '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。',
+  gggConfirmedText: '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。',
+  gggCandidateText: '{body}はグリーンガスジャイアント候補です。',
   engine: 'web_speech', // 'web_speech' | 'voicevox'
   webVoiceURI: '',
   voicevoxSpeakerId: '3', // ずんだもん (ノーマル)
@@ -3675,8 +3675,8 @@ async function initSettingsModal() {
     if (highBioTextInput) highBioTextInput.value = ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。';
     if (gggToggle) gggToggle.checked = (ttsState.gggEnabled !== false);
     if (gggModeSelect) gggModeSelect.value = ttsState.gggMode || 'both';
-    if (gggConfirmedTextInput) gggConfirmedTextInput.value = ttsState.gggConfirmedText || '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。';
-    if (gggCandidateTextInput) gggCandidateTextInput.value = ttsState.gggCandidateText || '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。';
+    if (gggConfirmedTextInput) gggConfirmedTextInput.value = ttsState.gggConfirmedText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
+    if (gggCandidateTextInput) gggCandidateTextInput.value = ttsState.gggCandidateText || '{body}はグリーンガスジャイアント候補です。';
     if (engineSelect) engineSelect.value = ttsState.engine;
     if (customTextInput) customTextInput.value = ttsState.customText;
     if (volumeRange) {
@@ -3743,8 +3743,8 @@ async function initSettingsModal() {
       if (highBioTextInput) ttsState.highBioText = highBioTextInput.value || '{body}、高額生物反応です。見込額{value}クレジット。';
       if (gggToggle) ttsState.gggEnabled = gggToggle.checked;
       if (gggModeSelect) ttsState.gggMode = gggModeSelect.value;
-      if (gggConfirmedTextInput) ttsState.gggConfirmedText = gggConfirmedTextInput.value || '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。';
-      if (gggCandidateTextInput) ttsState.gggCandidateText = gggCandidateTextInput.value || '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。';
+      if (gggConfirmedTextInput) ttsState.gggConfirmedText = gggConfirmedTextInput.value || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
+      if (gggCandidateTextInput) ttsState.gggCandidateText = gggCandidateTextInput.value || '{body}はグリーンガスジャイアント候補です。';
       if (engineSelect) ttsState.engine = engineSelect.value;
       if (webVoiceSelect) ttsState.webVoiceURI = webVoiceSelect.value;
       if (voicevoxSpeakerSelect) ttsState.voicevoxSpeakerId = voicevoxSpeakerSelect.value;
@@ -3799,8 +3799,8 @@ async function initSettingsModal() {
       }
       if (mode === 'both' || mode === 'tts') {
         const rawText = gggConfirmedTextInput ? gggConfirmedTextInput.value : ttsState.gggConfirmedText;
-        const msg = (rawText || '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。')
-          .replace(/\{variant\}/gi, 'スダルスキー・クラス1 ガス巨人')
+        const msg = (rawText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。')
+          .replace(/\{variant\}/gi, 'スダルスキー・クラス1 ガスジャイアント')
           .replace(/\{body\}/gi, 'Planet A 1');
         setTimeout(() => {
           if (engineSelect && engineSelect.value === 'voicevox') {
@@ -3821,7 +3821,7 @@ async function initSettingsModal() {
       }
       if (mode === 'both' || mode === 'tts') {
         const rawText = gggCandidateTextInput ? gggCandidateTextInput.value : ttsState.gggCandidateText;
-        const msg = (rawText || '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。')
+        const msg = (rawText || '{body}はグリーンガスジャイアント候補です。')
           .replace(/\{body\}/gi, 'Planet B 2');
         setTimeout(() => {
           if (engineSelect && engineSelect.value === 'voicevox') {
