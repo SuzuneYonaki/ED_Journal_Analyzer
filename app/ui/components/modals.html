@@ -278,6 +278,46 @@
             </div>
           </div>
 
+          <!-- Green Gas Giant (GGG) Alert Section -->
+          <div style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); background: rgba(0, 255, 136, 0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(0, 255, 136, 0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: bold; color: var(--ed-green);" data-i18n="tts_ggg_label">🟢 グリーンガスジャイアント (GGG) 検知通知</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="tts_ggg_desc">確定GGG発見時およびFSSスキャン時の高確率候補検知時に音声・チャイムで警告します</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="tts-ggg-toggle" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+              <div>
+                <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="tts_alert_type_label">通知音タイプ:</label>
+                <select id="tts-ggg-mode" class="sort-select" style="width: 100%; padding: 4px 8px; font-size: 0.78rem;">
+                  <option value="both" data-i18n="tts_opt_both">TTS音声 + ブザーチャイム</option>
+                  <option value="tts" data-i18n="tts_opt_tts">TTS音声のみ</option>
+                  <option value="buzzer" data-i18n="tts_opt_buzzer">ブザーチャイムのみ</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="tts_ggg_confirmed_text_label">確定GGG読み上げテキスト:</label>
+                <input type="text" id="tts-ggg-confirmed-text" class="search-input" value="警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。" style="width: 100%; padding: 4px 8px; font-size: 0.75rem;">
+              </div>
+            </div>
+            <div>
+              <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="tts_ggg_candidate_text_label">GGG候補読み上げテキスト:</label>
+              <input type="text" id="tts-ggg-candidate-text" class="search-input" value="注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。" style="width: 100%; padding: 4px 8px; font-size: 0.75rem;">
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 4px;">
+              <button type="button" id="btn-tts-ggg-test" class="btn-primary" style="background: rgba(0, 255, 136, 0.2); border: 1px solid var(--ed-green); color: var(--ed-green); font-size: 0.75rem; padding: 4px 10px;" data-i18n="btn_tts_ggg_test">
+                🔊 GGGテスト発声 (確定)
+              </button>
+              <button type="button" id="btn-tts-ggg-cand-test" class="view-btn" style="border: 1px solid #eab308; color: #eab308; font-size: 0.75rem; padding: 4px 10px;" data-i18n="btn_tts_ggg_cand_test">
+                🔊 GGG候補テスト
+              </button>
+            </div>
+          </div>
+
           <!-- Engine Selector -->
           <div>
             <label style="font-size: 0.78rem; font-weight: bold; color: var(--ed-orange); margin-bottom: 4px; display: block;" data-i18n="tts_engine_label">
@@ -451,8 +491,11 @@
       </div>
 
       <div class="modal-footer" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
-        <button id="btn-settings-save" class="btn-primary" data-i18n="btn_save_and_close">
-          設定を保存して閉じる
+        <button id="btn-settings-save" class="btn-primary" data-i18n="btn_apply_settings" style="background: var(--ed-orange); color: #000; font-weight: bold; border: none; padding: 8px 18px; border-radius: 4px; cursor: pointer;">
+          設定を適用する
+        </button>
+        <button id="btn-settings-close-footer" class="view-btn" data-i18n="btn_close_settings" style="padding: 8px 18px; border-radius: 4px; cursor: pointer;">
+          閉じる
         </button>
       </div>
     </div>

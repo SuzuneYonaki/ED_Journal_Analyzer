@@ -397,11 +397,21 @@ function renderBodyInspector() {
     const lang = (typeof getAppLang === 'function') ? getAppLang() : (typeof currentLang !== 'undefined' ? currentLang : 'ja');
     anomTags.innerHTML = b.anomalies.map(a => {
       const texts = getLocalizedAnomalyTexts(a, lang);
-      const isGgg = a.type === 'confirmed_ggg' || (a.tag && (a.tag.includes('Confirmed GGG') || a.tag.includes('Green Gas Giant'))) || a.color === 'green';
-      const badgeClass = isGgg ? 'tag-badge tag-ggg' : 'tag-badge tag-anomaly';
-      const icon = isGgg ? '🟢' : '★';
+      const isConfirmedGgg = a.type === 'confirmed_ggg' || (a.tag && a.tag.includes('Confirmed GGG'));
+      const isGggCand = a.type === 'ggg_candidate' || (a.tag && a.tag.includes('GGG Candidate'));
+      let badgeClass = 'tag-badge tag-anomaly';
+      let icon = '★';
+      let extraStyle = '';
+      if (isConfirmedGgg) {
+        badgeClass = 'tag-badge tag-ggg';
+        icon = '🟢';
+      } else if (isGggCand) {
+        badgeClass = 'tag-badge';
+        icon = '🟡';
+        extraStyle = 'background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4);';
+      }
       return `
-        <div class="${badgeClass}" title="${escapeHtml(texts.tooltip)}" style="padding: 4px 8px; font-size: 0.75rem;">
+        <div class="${badgeClass}" title="${escapeHtml(texts.tooltip)}" style="padding: 4px 8px; font-size: 0.75rem; ${extraStyle}">
           ${icon} ${escapeHtml(texts.label)}
         </div>
       `;

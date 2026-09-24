@@ -5,7 +5,7 @@ import glob
 from pathlib import Path
 from datetime import datetime
 
-from app.db.database import get_db_connection, save_or_merge_mining_site
+from app.db.database import get_db_connection, save_or_merge_mining_site, invalidate_celestial_stats_cache
 from app.parser.value_calculator import calculate_body_value
 from app.parser.exobiology import predict_exobiology_candidates, get_species_value
 from app.analyzer.anomaly_finder import detect_anomalies
@@ -56,6 +56,20 @@ def resolve_ggg_variant(entry_name: str) -> tuple[str, str, str] | None:
     return raw_variant, tts_speech_name, en_name
 
 
+def is_ggg_tts_enabled() -> bool:
+    """Checks tts_settings.json to see if GGG audio alerts are enabled."""
+    try:
+        from app.config import DATA_DIR
+        settings_file = DATA_DIR / "tts_settings.json"
+        if settings_file.exists():
+            with open(settings_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return bool(data.get("gggEnabled", True))
+    except Exception:
+        pass
+    return True
+
+
 class JournalParser:
     def __init__(self, db_conn=None, event_callback=None, is_live: bool = False):
         self.conn = db_conn or get_db_connection()
@@ -83,6 +97,7 @@ class JournalParser:
             self._update_system_stats(sys_addr)
         self.dirty_systems.clear()
         self.conn.commit()
+        invalidate_celestial_stats_cache()
 
     def process_journal_line(self, line: str):
         if not line or not line.strip():
@@ -586,18 +601,30 @@ class JournalParser:
             confirmed_ggg_variant=confirmed_ggg_variant
         )
         ggg = rarity_res.get("ggg_evaluation") or {}
-        if self.is_live and ggg.get("alert_level") == "URGENT" and ggg.get("tts_message"):
-            tts_service.enqueue_speak(ggg["tts_message"], priority=True)
+        if self.is_live and is_ggg_tts_enabled() and ggg.get("is_candidate") and ggg.get("tts_message"):
+            tts_service.enqueue_speak(ggg["tts_message"], priority=(ggg.get("alert_level") == "URGENT"))
 
         anomalies = detect_anomalies(body_dict)
         rarity_tags = rarity_res.get("tags") or []
         for r_tag in rarity_tags:
             if not any((a.get("tag") == r_tag if isinstance(a, dict) else a == r_tag) for a in anomalies):
                 is_conf_ggg = "Confirmed GGG" in r_tag
-                color = "green" if ("Green Gas Giant" in r_tag or is_conf_ggg) else "orange"
-                desc = f"確定GGG: {confirmed_ggg_variant or 'Codex'}" if is_conf_ggg else r_tag
+                is_ggg_cand = "GGG Candidate" in r_tag
+                if is_conf_ggg:
+                    color = "green"
+                    a_type = "confirmed_ggg"
+                    desc = f"確定GGG: {confirmed_ggg_variant or 'Codex'}"
+                elif is_ggg_cand:
+                    color = "cyan"
+                    a_type = "ggg_candidate"
+                    desc = "GGG候補 (要目視確認)"
+                else:
+                    color = "orange"
+                    a_type = "rarity"
+                    desc = r_tag
+
                 anomalies.append({
-                    "type": "confirmed_ggg" if is_conf_ggg else "rarity",
+                    "type": a_type,
                     "tag": r_tag,
                     "color": color,
                     "desc": desc,
@@ -1018,8 +1045,8 @@ class JournalParser:
         if ggg_info is not None:
             raw_variant, tts_speech_name, en_name = ggg_info
 
-            # Trigger priority TTS announcement only when live
-            if self.is_live:
+            # Trigger priority TTS announcement only when live and enabled
+            if self.is_live and is_ggg_tts_enabled():
                 tts_msg = f"警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{tts_speech_name} です。おめでとうございます、CMDR。"
                 tts_service.enqueue_speak(tts_msg, priority=True)
 
