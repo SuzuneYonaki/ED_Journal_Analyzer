@@ -568,3 +568,77 @@ def get_species_value(species_name: str, genus_name: Optional[str] = None) -> Di
 
 # Backwards compatibility condition table mapping
 EXOBIOLOGY_SPECIES_CONDITIONS = EXOBIOLOGY_RULES
+
+
+def evaluate_high_value_bio(
+    candidates: List[Dict[str, Any]],
+    bio_signals: Optional[int] = None,
+    threshold: int = 40_000_000,
+    threshold_type: str = "bonus"
+) -> Dict[str, Any]:
+    """
+    Evaluates whether predicted or scanned exobiology candidates qualify as high-value bio.
+
+    Domain Rules:
+    - Base value max is Stratum Tectonicas (19,010,800 Cr). No single species has base_value >= 40M Cr.
+    - First discovery multiplier is 5x (first_discovery_value = base_value * 5). Stratum Tectonicas gives 95,054,000 Cr (~95M).
+    - If threshold_type == 'bonus' (or threshold >= 20,000,000):
+        The threshold compares against total estimated first discovery payout (5x bonus).
+        A 40M threshold represents ~8M base value, capturing high-tier organics like Stratum Tectonicas.
+    - If threshold_type == 'base':
+        The threshold compares directly against total estimated base value (1x).
+    """
+    is_bonus_metric = (threshold_type == "bonus") or (threshold >= 20_000_000)
+    if not candidates:
+        return {
+            "is_high_value": False,
+            "total_estimated_base": 0,
+            "total_estimated_bonus": 0,
+            "comparison_value": 0,
+            "is_bonus_metric": is_bonus_metric,
+            "qualifying_species": [],
+            "top_species": None
+        }
+
+    # Slice by bio_signals budget if known
+    budget = int(bio_signals) if (bio_signals is not None and int(bio_signals) > 0) else len(candidates)
+    definite_candidates = candidates[:budget]
+
+    total_base = 0
+    total_bonus = 0
+
+    for cand in definite_candidates:
+        base_v = cand.get("base_value") or 1_000_000
+        bonus_v = cand.get("first_discovery_value") or (base_v * 5)
+        total_base += base_v
+        total_bonus += bonus_v
+
+    comparison_val = total_bonus if is_bonus_metric else total_base
+    is_high_value = comparison_val >= threshold
+
+    qualifying_species = []
+    if is_high_value:
+        for cand in definite_candidates:
+            val_to_check = cand.get("first_discovery_value", 0) if is_bonus_metric else cand.get("base_value", 0)
+            if not val_to_check:
+                base_v = cand.get("base_value") or 1_000_000
+                val_to_check = (base_v * 5) if is_bonus_metric else base_v
+
+            per_species_thresh = 40_000_000 if is_bonus_metric else 8_000_000
+            if val_to_check >= per_species_thresh or val_to_check >= (threshold / max(1, budget)):
+                sp = cand.get("species")
+                if sp and sp not in qualifying_species:
+                    qualifying_species.append(sp)
+
+    top_sp = definite_candidates[0].get("species") if definite_candidates else None
+
+    return {
+        "is_high_value": is_high_value,
+        "total_estimated_base": total_base,
+        "total_estimated_bonus": total_bonus,
+        "comparison_value": comparison_val,
+        "is_bonus_metric": is_bonus_metric,
+        "qualifying_species": qualifying_species,
+        "top_species": top_sp
+    }
+

@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR, DATA_DIR, EXPORTS_DIR
+from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR, DATA_DIR, EXPORTS_DIR, APP_VERSION
 from app.db.database import (
     get_db_connection, init_db, get_mining_sites,
     add_manual_mining_site, update_mining_site, delete_mining_site, save_or_merge_mining_site,
@@ -522,6 +522,7 @@ def get_global_stats(
         stats["current_location"] = get_current_cmdr_location(conn)
     except Exception:
         stats["current_location"] = None
+    stats["app_version"] = APP_VERSION
     conn.close()
     return stats
 
@@ -1891,6 +1892,8 @@ def get_tts_settings():
         "enabled": False,
         "highBioEnabled": False,
         "highBioMode": "both",
+        "highBioThreshold": 40000000,
+        "highBioThresholdType": "bonus",
         "highBioText": "{body}、高額生物反応です。見込額{value}クレジット。",
         "gggEnabled": True,
         "gggMode": "both",

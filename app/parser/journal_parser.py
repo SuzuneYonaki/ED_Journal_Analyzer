@@ -7,7 +7,7 @@ from datetime import datetime
 
 from app.db.database import get_db_connection, save_or_merge_mining_site, invalidate_celestial_stats_cache
 from app.parser.value_calculator import calculate_body_value
-from app.parser.exobiology import predict_exobiology_candidates, get_species_value
+from app.parser.exobiology import predict_exobiology_candidates, get_species_value, evaluate_high_value_bio
 from app.analyzer.anomaly_finder import detect_anomalies
 from app.parser.rarity_scorer import calculate_celestial_rarity
 from app.services.tts_service import tts_service
@@ -70,6 +70,38 @@ def is_ggg_tts_enabled() -> bool:
     return True
 
 
+def get_high_bio_tts_config() -> dict:
+    """Checks tts_settings.json for high-value exobiology alert settings."""
+    cfg = {
+        "enabled": False,
+        "mode": "both",
+        "threshold": 40_000_000,
+        "threshold_type": "bonus",
+        "text": "{body}、高額生物反応です。見込額{value}クレジット。"
+    }
+    try:
+        from app.config import DATA_DIR
+        settings_file = DATA_DIR / "tts_settings.json"
+        if settings_file.exists():
+            with open(settings_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if not data.get("enabled", True):
+                    cfg["enabled"] = False
+                    return cfg
+                cfg["enabled"] = bool(data.get("highBioEnabled", False))
+                cfg["mode"] = data.get("highBioMode", "both")
+                cfg["text"] = data.get("highBioText") or cfg["text"]
+                if "highBioThreshold" in data and data["highBioThreshold"] is not None:
+                    try:
+                        cfg["threshold"] = int(data["highBioThreshold"])
+                    except (ValueError, TypeError):
+                        pass
+                cfg["threshold_type"] = data.get("highBioThresholdType", "bonus")
+    except Exception:
+        pass
+    return cfg
+
+
 class JournalParser:
     def __init__(self, db_conn=None, event_callback=None, is_live: bool = False):
         self.conn = db_conn or get_db_connection()
@@ -77,6 +109,7 @@ class JournalParser:
         self.dirty_systems = set()
         self.event_callback = event_callback
         self.is_live = is_live
+        self._announced_high_bio_bodies = set()
         
         # State tracking for SRV and surface activities
         self.current_system_address = None
@@ -88,6 +121,61 @@ class JournalParser:
         self.srv_type = None
         self.current_latitude = None
         self.current_longitude = None
+
+    def _check_and_trigger_high_bio_alert(
+        self,
+        sys_addr: int | None,
+        body_id: int | None,
+        body_name: str,
+        bio_predictions: list,
+        bio_signals: int | None = None
+    ) -> bool:
+        """
+        Triggers high-value exobiology TTS alert via backend TTSService if enabled,
+        evaluating predictions using evaluate_high_value_bio.
+        """
+        if not self.is_live:
+            return False
+
+        cfg = get_high_bio_tts_config()
+        if not cfg.get("enabled"):
+            return False
+
+        if not bio_predictions:
+            return False
+
+        alert_key = (sys_addr or 0, body_id or 0, body_name)
+        if alert_key in self._announced_high_bio_bodies:
+            return False
+
+        eval_res = evaluate_high_value_bio(
+            bio_predictions,
+            bio_signals=bio_signals,
+            threshold=cfg.get("threshold", 40_000_000),
+            threshold_type=cfg.get("threshold_type", "bonus")
+        )
+
+        if eval_res.get("is_high_value"):
+            self._announced_high_bio_bodies.add(alert_key)
+            formatted_payout = f"{(eval_res.get('total_estimated_bonus', 0) / 1_000_000):.1f}M"
+
+            sys_name = self.current_star_system or ""
+            if not sys_name and sys_addr:
+                self.cursor.execute("SELECT star_system FROM systems WHERE system_address = ?", (sys_addr,))
+                row = self.cursor.fetchone()
+                if row and row["star_system"]:
+                    sys_name = row["star_system"]
+
+            msg = cfg.get("text", "{body}、高額生物反応です。見込額{value}クレジット。")
+            msg = msg.replace("{body}", body_name)
+            msg = msg.replace("{value}", formatted_payout)
+            msg = msg.replace("{payout}", formatted_payout)
+            msg = msg.replace("{system}", sys_name)
+
+            tts_service.enqueue_speak(msg, priority=False)
+            return True
+
+        return False
 
     def flush_dirty_systems(self):
         """Update system-level stats for all modified systems during parsing."""
@@ -526,7 +614,7 @@ class JournalParser:
         existing_mapped = existing_b["is_mapped_by_user"] if existing_b else (1 if was_mapped == 1 else 0)
         existing_genuses = existing_b["confirmed_genuses"] if existing_b else None
         existing_anomalies_raw = existing_b["anomalies_json"] if (existing_b and "anomalies_json" in existing_b.keys()) else None
-        body_dict["bio_signals"] = existing_bio
+        body_dict["bio_signals"] = existing_bio if existing_bio is not None else (data.get("BioSignals") or data.get("bio_signals") or 0)
         body_dict["is_mapped_by_user"] = existing_mapped
         body_dict["was_mapped"] = was_mapped
         body_dict["mining_signals"] = existing_mining
@@ -569,6 +657,11 @@ class JournalParser:
         bio_predictions = predict_exobiology_candidates(body_dict)
         self._lock_confirmed_organics_into_predictions(sys_addr, body_id, bio_predictions)
         bio_pred_json = json.dumps(bio_predictions)
+        if self.is_live and body_dict.get("bio_signals"):
+            self._check_and_trigger_high_bio_alert(
+                sys_addr, body_id, body_dict.get("body_name", ""),
+                bio_predictions, bio_signals=body_dict.get("bio_signals")
+            )
 
         # Check if this body has a confirmed GGG in codex_entries table or existing record
         self.cursor.execute(
@@ -822,6 +915,10 @@ class JournalParser:
             else:
                 bio_predictions = predict_exobiology_candidates(b_dict)
                 self._lock_confirmed_organics_into_predictions(sys_addr, body_id or existing["body_id"], bio_predictions)
+                self._check_and_trigger_high_bio_alert(
+                    sys_addr, body_id or existing["body_id"], b_dict.get("body_name", ""),
+                    bio_predictions, bio_signals=bio_count
+                )
             bio_pred_json = json.dumps(bio_predictions)
             anomalies = detect_anomalies(b_dict)
             anomalies_json = json.dumps(anomalies)
@@ -861,6 +958,10 @@ class JournalParser:
             else:
                 bio_predictions = predict_exobiology_candidates(b_dict)
                 self._lock_confirmed_organics_into_predictions(sys_addr, body_id or 0, bio_predictions)
+                self._check_and_trigger_high_bio_alert(
+                    sys_addr, body_id or 0, b_dict.get("body_name", ""),
+                    bio_predictions, bio_signals=bio_count
+                )
             bio_pred_json = json.dumps(bio_predictions)
             anomalies = detect_anomalies(b_dict)
             anomalies_json = json.dumps(anomalies)

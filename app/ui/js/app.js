@@ -161,6 +161,10 @@ async function fetchGlobalStats() {
     const bioSigCount = Number(data.total_bio_signals || 0).toLocaleString();
     document.getElementById('stat-bio').innerText = `${bioSysCount} (${bioSigCount} Sig)`;
     document.getElementById('stat-total-payout').innerText = formatCredits(data.total_potential_value);
+    if (data.app_version) {
+      const versionEl = document.getElementById('settings-app-version');
+      if (versionEl) versionEl.innerText = `v${data.app_version}`;
+    }
 
     // Update Header Period Label
     const periodLabelEl = document.getElementById('header-logged-period');
@@ -2870,6 +2874,8 @@ const ttsState = {
   enabled: false,
   highBioEnabled: false,
   highBioMode: 'both', // 'both' | 'tts' | 'buzzer'
+  highBioThreshold: 40000000,
+  highBioThresholdType: 'bonus',
   highBioText: '{body}、高額生物反応です。見込額{value}クレジット。',
   gggEnabled: true, // GGGは極めて希少なためデフォルト有効
   gggMode: 'both', // 'both' | 'tts' | 'buzzer'
@@ -2975,7 +2981,11 @@ function checkAndAnnounceHighBioBody(sysData, bodyData) {
 
   // Calculate estimated Exobiology total payout with 1st Discover bonus (5x multiplier)
   let predictedCandidates = [];
-  if (bodyData.predicted_bio_candidates && Array.isArray(bodyData.predicted_bio_candidates)) {
+  if (bodyData.exobiology && Array.isArray(bodyData.exobiology)) {
+    predictedCandidates = bodyData.exobiology;
+  } else if (bodyData.potential_exobiology && Array.isArray(bodyData.potential_exobiology)) {
+    predictedCandidates = bodyData.potential_exobiology;
+  } else if (bodyData.predicted_bio_candidates && Array.isArray(bodyData.predicted_bio_candidates)) {
     predictedCandidates = bodyData.predicted_bio_candidates;
   }
 
@@ -2983,16 +2993,23 @@ function checkAndAnnounceHighBioBody(sysData, bodyData) {
 
   // Sum top definite candidates' first_discovery_value (or base_value * 5)
   let totalEstimatedBio = 0;
+  let totalBaseBio = 0;
   const bioBudget = bodyData.bio_signals || predictedCandidates.length;
   const definiteCandidates = predictedCandidates.slice(0, bioBudget);
 
   definiteCandidates.forEach(cand => {
-    const bonusVal = cand.first_discovery_value || ((cand.base_value || 1000000) * 5);
+    const baseVal = cand.base_value ?? 1000000;
+    const bonusVal = cand.first_discovery_value ?? (baseVal * 5);
     totalEstimatedBio += bonusVal;
+    totalBaseBio += baseVal;
   });
 
-  // Threshold: 40,000,000 Cr (40M)
-  if (totalEstimatedBio >= 40000000) {
+  // Threshold: default 40,000,000 Cr (40M) with 1st Discover bonus, or custom threshold
+  const threshold = ttsState.highBioThreshold ?? 40000000;
+  const isBaseMetric = (ttsState.highBioThresholdType === 'base') || (threshold < 20000000);
+  const compareVal = isBaseMetric ? totalBaseBio : totalEstimatedBio;
+
+  if (compareVal >= threshold) {
     announcedHighBioBodies.add(alertKey);
 
     const formattedPayout = (totalEstimatedBio / 1000000).toFixed(1) + 'M';
@@ -3629,7 +3646,9 @@ async function initSettingsModal() {
   const enabledToggle = document.getElementById('tts-enabled-toggle');
   const highBioToggle = document.getElementById('tts-high-bio-toggle');
   const highBioModeSelect = document.getElementById('tts-high-bio-mode');
+  const highBioThresholdSelect = document.getElementById('tts-high-bio-threshold');
   const highBioTextInput = document.getElementById('tts-high-bio-text');
+  const btnHighBioTest = document.getElementById('btn-tts-high-bio-test');
   const gggToggle = document.getElementById('tts-ggg-toggle');
   const gggModeSelect = document.getElementById('tts-ggg-mode');
   const gggConfirmedTextInput = document.getElementById('tts-ggg-confirmed-text');
@@ -3652,6 +3671,7 @@ async function initSettingsModal() {
     if (enabledToggle) enabledToggle.checked = Boolean(ttsState.enabled);
     if (highBioToggle) highBioToggle.checked = Boolean(ttsState.highBioEnabled);
     if (highBioModeSelect) highBioModeSelect.value = ttsState.highBioMode || 'both';
+    if (highBioThresholdSelect) highBioThresholdSelect.value = String(ttsState.highBioThreshold ?? 40000000);
     if (highBioTextInput) highBioTextInput.value = ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。';
     if (gggToggle) gggToggle.checked = (ttsState.gggEnabled !== false);
     if (gggModeSelect) gggModeSelect.value = ttsState.gggMode || 'both';
@@ -3716,6 +3736,10 @@ async function initSettingsModal() {
       if (enabledToggle) ttsState.enabled = enabledToggle.checked;
       if (highBioToggle) ttsState.highBioEnabled = highBioToggle.checked;
       if (highBioModeSelect) ttsState.highBioMode = highBioModeSelect.value;
+      if (highBioThresholdSelect) {
+        ttsState.highBioThreshold = parseInt(highBioThresholdSelect.value, 10) || 40000000;
+        ttsState.highBioThresholdType = (ttsState.highBioThreshold < 20000000) ? 'base' : 'bonus';
+      }
       if (highBioTextInput) ttsState.highBioText = highBioTextInput.value || '{body}、高額生物反応です。見込額{value}クレジット。';
       if (gggToggle) ttsState.gggEnabled = gggToggle.checked;
       if (gggModeSelect) ttsState.gggMode = gggModeSelect.value;
@@ -3739,6 +3763,31 @@ async function initSettingsModal() {
         btnSave.innerText = origText;
         btnSave.style.background = 'var(--ed-orange)';
       }, 1500);
+    });
+  }
+
+  if (btnHighBioTest) {
+    btnHighBioTest.addEventListener('click', () => {
+      const mode = (highBioModeSelect ? highBioModeSelect.value : ttsState.highBioMode) || 'both';
+      const sampleText = (highBioTextInput ? highBioTextInput.value : ttsState.highBioText) || '{body}、高額生物反応です。見込額{value}クレジット。';
+      const testMsg = sampleText
+        .replace(/\{body\}/gi, 'Planet A 1')
+        .replace(/\{value\}/gi, '95.1M')
+        .replace(/\{payout\}/gi, '95.1M')
+        .replace(/\{system\}/gi, (state.selectedSystem ? state.selectedSystem.star_system : null) || 'Praea Euq YZ-Y d100');
+
+      if (mode === 'both' || mode === 'buzzer') {
+        playHighBioBuzzer();
+      }
+      if (mode === 'both' || mode === 'tts') {
+        setTimeout(() => {
+          if (engineSelect && engineSelect.value === 'voicevox') {
+            playVoicevoxSpeech(testMsg);
+          } else {
+            playWebSpeech(testMsg);
+          }
+        }, mode === 'both' ? 500 : 0);
+      }
     });
   }
 
