@@ -199,7 +199,7 @@ def test_ggg_notice_candidate():
     assert ggg["score"] == 60
     assert ggg["is_candidate"] is True
     assert ggg["alert_level"] == "NOTICE"
-    assert ggg["tts_message"] is None
+    assert "グリーンガスジャイアント" in ggg["tts_message"]
 
 
 def test_ggg_urgent_candidate():
@@ -221,7 +221,7 @@ def test_ggg_urgent_candidate():
 
     # When evaluated through calculate_celestial_rarity
     res = calculate_celestial_rarity(body)
-    assert "Green Gas Giant Candidate" in res["tags"]
+    assert "GGG Candidate" in res["tags"]
     assert res["ggg_evaluation"]["alert_level"] == "URGENT"
 
 
