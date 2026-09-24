@@ -52,7 +52,7 @@ const i18n = {
     filter_landable: "着陸可能",
     filter_high_g: "高重力 (3G+着陸)",
     filter_anomalies: "特殊・レア",
-    filter_ggg: "🟢 GGG (緑色巨人)",
+    filter_ggg: "🟢 GGG (グリーンガスジャイアント)",
     filter_clear: "クリア",
     filter_mining_group: "⛏️ 採掘・Landable天体で絞込 (他天体除外):",
     filter_toggle_gravity: "重力 (G)",
