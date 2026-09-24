@@ -93,7 +93,7 @@ def test_parser(tmp_path):
     conn.row_factory = sqlite3.Row
     init_db(conn)
 
-    parser = JournalParser(db_conn=conn)
+    parser = JournalParser(db_conn=conn, is_live=True)
     yield parser, conn
     conn.close()
 

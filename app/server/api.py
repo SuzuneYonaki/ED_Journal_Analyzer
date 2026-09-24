@@ -1814,6 +1814,28 @@ def trigger_scan(background_tasks: BackgroundTasks):
 def get_scan_status():
     return scan_state
 
+@app.post("/api/scan_codex_history")
+def scan_codex_history_endpoint():
+    target_dir = get_saved_journal_dir()
+    parser = JournalParser()
+    res = parser.scan_historical_codex_entries(str(target_dir))
+    return {"status": "ok", "result": res}
+
+@app.get("/api/codex_ggg_entries")
+def get_codex_ggg_entries():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT system_address, body_id, body_name, entry_id, name, name_localised,
+               category, sub_category, region_name, ggg_variant, timestamp
+        FROM codex_entries
+        WHERE is_ggg = 1
+        ORDER BY timestamp DESC
+    """)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return {"total": len(rows), "entries": rows}
+
 # TTS Settings Persistence Endpoints
 TTS_SETTINGS_FILE = DATA_DIR / "tts_settings.json"
 

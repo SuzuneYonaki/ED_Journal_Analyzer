@@ -254,6 +254,29 @@ def init_db(conn=None):
     );
     """)
 
+    # Codex Entries table for persistent discovery tracking (including GGGs)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS codex_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        system_address INTEGER NOT NULL,
+        body_id INTEGER,
+        body_name TEXT,
+        entry_id INTEGER,
+        name TEXT NOT NULL,
+        name_localised TEXT,
+        category TEXT,
+        sub_category TEXT,
+        region_name TEXT,
+        is_ggg INTEGER DEFAULT 0,
+        ggg_variant TEXT,
+        timestamp TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(system_address, body_id, name)
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_codex_sys_body ON codex_entries(system_address, body_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_codex_is_ggg ON codex_entries(is_ggg);")
+
     # Dedicated surface mining sites (editable by user, grouped by coordinates)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS surface_mining_sites (
