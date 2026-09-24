@@ -1340,7 +1340,12 @@ def get_system_detail(system_address: int):
         b = dict(r)
         b["main_star_type"] = main_star
         b["system_main_star_type"] = main_star
-        b["star_system"] = system_data.get("system_name", "")
+        b["star_system"] = system_data.get("system_name", "") or system_data.get("star_system", "")
+        if system_data.get("star_pos_x") is not None:
+            b["star_pos_x"] = system_data.get("star_pos_x")
+            b["star_pos_y"] = system_data.get("star_pos_y")
+            b["star_pos_z"] = system_data.get("star_pos_z")
+            b["star_pos"] = (system_data.get("star_pos_x"), system_data.get("star_pos_y"), system_data.get("star_pos_z"))
 
         if b.get("anomalies_json"):
             try:
