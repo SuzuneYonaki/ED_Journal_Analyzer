@@ -56,6 +56,20 @@ def resolve_ggg_variant(entry_name: str) -> tuple[str, str, str] | None:
     return raw_variant, tts_speech_name, en_name
 
 
+def is_ggg_tts_enabled() -> bool:
+    """Checks tts_settings.json to see if GGG audio alerts are enabled."""
+    try:
+        from app.config import DATA_DIR
+        settings_file = DATA_DIR / "tts_settings.json"
+        if settings_file.exists():
+            with open(settings_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return bool(data.get("gggEnabled", True))
+    except Exception:
+        pass
+    return True
+
+
 class JournalParser:
     def __init__(self, db_conn=None, event_callback=None, is_live: bool = False):
         self.conn = db_conn or get_db_connection()
@@ -586,7 +600,7 @@ class JournalParser:
             confirmed_ggg_variant=confirmed_ggg_variant
         )
         ggg = rarity_res.get("ggg_evaluation") or {}
-        if self.is_live and ggg.get("is_candidate") and ggg.get("tts_message"):
+        if self.is_live and is_ggg_tts_enabled() and ggg.get("is_candidate") and ggg.get("tts_message"):
             tts_service.enqueue_speak(ggg["tts_message"], priority=(ggg.get("alert_level") == "URGENT"))
 
         anomalies = detect_anomalies(body_dict)
@@ -1030,8 +1044,8 @@ class JournalParser:
         if ggg_info is not None:
             raw_variant, tts_speech_name, en_name = ggg_info
 
-            # Trigger priority TTS announcement only when live
-            if self.is_live:
+            # Trigger priority TTS announcement only when live and enabled
+            if self.is_live and is_ggg_tts_enabled():
                 tts_msg = f"警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{tts_speech_name} です。おめでとうございます、CMDR。"
                 tts_service.enqueue_speak(tts_msg, priority=True)
 

@@ -2871,6 +2871,10 @@ const ttsState = {
   highBioEnabled: false,
   highBioMode: 'both', // 'both' | 'tts' | 'buzzer'
   highBioText: '{body}、高額生物反応です。見込額{value}クレジット。',
+  gggEnabled: true, // GGGは極めて希少なためデフォルト有効
+  gggMode: 'both', // 'both' | 'tts' | 'buzzer'
+  gggConfirmedText: '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。',
+  gggCandidateText: '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。',
   engine: 'web_speech', // 'web_speech' | 'voicevox'
   webVoiceURI: '',
   voicevoxSpeakerId: '3', // ずんだもん (ノーマル)
@@ -2881,6 +2885,37 @@ const ttsState = {
 };
 
 const announcedHighBioBodies = new Set();
+
+function playGggChime() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const now = ctx.currentTime;
+    // Sci-fi high mystery alert: 523.25Hz (C5) -> 659.25Hz (E5) -> 783.99Hz (G5) -> 1046.50Hz (C6)
+    const notes = [
+      { freq: 523.25, start: 0, dur: 0.1 },
+      { freq: 659.25, start: 0.1, dur: 0.1 },
+      { freq: 783.99, start: 0.2, dur: 0.12 },
+      { freq: 1046.50, start: 0.32, dur: 0.4 }
+    ];
+    notes.forEach(n => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(n.freq, now + n.start);
+      gain.gain.setValueAtTime(0, now + n.start);
+      gain.gain.linearRampToValueAtTime(0.35 * (ttsState.volume || 1.0), now + n.start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + n.start);
+      osc.stop(now + n.start + n.dur);
+    });
+  } catch (e) {
+    console.warn('GGG chime audio failed:', e);
+  }
+}
 
 function playHighBioBuzzer() {
   try {
@@ -3595,6 +3630,10 @@ async function initSettingsModal() {
   const highBioToggle = document.getElementById('tts-high-bio-toggle');
   const highBioModeSelect = document.getElementById('tts-high-bio-mode');
   const highBioTextInput = document.getElementById('tts-high-bio-text');
+  const gggToggle = document.getElementById('tts-ggg-toggle');
+  const gggModeSelect = document.getElementById('tts-ggg-mode');
+  const gggConfirmedTextInput = document.getElementById('tts-ggg-confirmed-text');
+  const gggCandidateTextInput = document.getElementById('tts-ggg-candidate-text');
   const engineSelect = document.getElementById('tts-engine-select');
   const webVoiceSelect = document.getElementById('tts-web-voice-select');
   const voicevoxSpeakerSelect = document.getElementById('tts-voicevox-speaker-select');
@@ -3605,12 +3644,19 @@ async function initSettingsModal() {
   const volVal = document.getElementById('tts-vol-val');
   const rateVal = document.getElementById('tts-rate-val');
   const btnTest = document.getElementById('btn-tts-test');
+  const btnGggTest = document.getElementById('btn-tts-ggg-test');
+  const btnGggCandTest = document.getElementById('btn-tts-ggg-cand-test');
+  const btnCloseFooter = document.getElementById('btn-settings-close-footer');
 
   function updateTTSModalFields() {
     if (enabledToggle) enabledToggle.checked = Boolean(ttsState.enabled);
     if (highBioToggle) highBioToggle.checked = Boolean(ttsState.highBioEnabled);
     if (highBioModeSelect) highBioModeSelect.value = ttsState.highBioMode || 'both';
     if (highBioTextInput) highBioTextInput.value = ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。';
+    if (gggToggle) gggToggle.checked = (ttsState.gggEnabled !== false);
+    if (gggModeSelect) gggModeSelect.value = ttsState.gggMode || 'both';
+    if (gggConfirmedTextInput) gggConfirmedTextInput.value = ttsState.gggConfirmedText || '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。';
+    if (gggCandidateTextInput) gggCandidateTextInput.value = ttsState.gggCandidateText || '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。';
     if (engineSelect) engineSelect.value = ttsState.engine;
     if (customTextInput) customTextInput.value = ttsState.customText;
     if (volumeRange) {
@@ -3647,6 +3693,12 @@ async function initSettingsModal() {
     });
   }
 
+  if (btnCloseFooter && modal) {
+    btnCloseFooter.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+  }
+
   if (btnSave && modal) {
     btnSave.addEventListener('click', async () => {
       // Save Journal Path
@@ -3665,6 +3717,10 @@ async function initSettingsModal() {
       if (highBioToggle) ttsState.highBioEnabled = highBioToggle.checked;
       if (highBioModeSelect) ttsState.highBioMode = highBioModeSelect.value;
       if (highBioTextInput) ttsState.highBioText = highBioTextInput.value || '{body}、高額生物反応です。見込額{value}クレジット。';
+      if (gggToggle) ttsState.gggEnabled = gggToggle.checked;
+      if (gggModeSelect) ttsState.gggMode = gggModeSelect.value;
+      if (gggConfirmedTextInput) ttsState.gggConfirmedText = gggConfirmedTextInput.value || '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。';
+      if (gggCandidateTextInput) ttsState.gggCandidateText = gggCandidateTextInput.value || '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。';
       if (engineSelect) ttsState.engine = engineSelect.value;
       if (webVoiceSelect) ttsState.webVoiceURI = webVoiceSelect.value;
       if (voicevoxSpeakerSelect) ttsState.voicevoxSpeakerId = voicevoxSpeakerSelect.value;
@@ -3674,7 +3730,58 @@ async function initSettingsModal() {
 
       saveTTSSettings();
       updateTTSHeaderIcon();
-      modal.style.display = 'none';
+
+      // Feedback on Apply button without closing the modal
+      const origText = btnSave.innerText;
+      btnSave.innerText = (typeof t === 'function' && t('settings_applied_toast')) || '✅ 設定を適用しました';
+      btnSave.style.background = '#22c55e';
+      setTimeout(() => {
+        btnSave.innerText = origText;
+        btnSave.style.background = 'var(--ed-orange)';
+      }, 1500);
+    });
+  }
+
+  if (btnGggTest) {
+    btnGggTest.addEventListener('click', () => {
+      const mode = gggModeSelect ? gggModeSelect.value : (ttsState.gggMode || 'both');
+      if (mode === 'both' || mode === 'buzzer') {
+        playGggChime();
+      }
+      if (mode === 'both' || mode === 'tts') {
+        const rawText = gggConfirmedTextInput ? gggConfirmedTextInput.value : ttsState.gggConfirmedText;
+        const msg = (rawText || '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。')
+          .replace(/\{variant\}/gi, 'スダルスキー・クラス1 ガス巨人')
+          .replace(/\{body\}/gi, 'Planet A 1');
+        setTimeout(() => {
+          if (engineSelect && engineSelect.value === 'voicevox') {
+            playVoicevoxSpeech(msg);
+          } else {
+            playWebSpeech(msg);
+          }
+        }, mode === 'both' ? 500 : 0);
+      }
+    });
+  }
+
+  if (btnGggCandTest) {
+    btnGggCandTest.addEventListener('click', () => {
+      const mode = gggModeSelect ? gggModeSelect.value : (ttsState.gggMode || 'both');
+      if (mode === 'both' || mode === 'buzzer') {
+        playGggChime();
+      }
+      if (mode === 'both' || mode === 'tts') {
+        const rawText = gggCandidateTextInput ? gggCandidateTextInput.value : ttsState.gggCandidateText;
+        const msg = (rawText || '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。')
+          .replace(/\{body\}/gi, 'Planet B 2');
+        setTimeout(() => {
+          if (engineSelect && engineSelect.value === 'voicevox') {
+            playVoicevoxSpeech(msg);
+          } else {
+            playWebSpeech(msg);
+          }
+        }, mode === 'both' ? 500 : 0);
+      }
     });
   }
 
