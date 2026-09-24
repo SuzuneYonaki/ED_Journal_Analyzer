@@ -397,9 +397,12 @@ function renderBodyInspector() {
     const lang = (typeof getAppLang === 'function') ? getAppLang() : (typeof currentLang !== 'undefined' ? currentLang : 'ja');
     anomTags.innerHTML = b.anomalies.map(a => {
       const texts = getLocalizedAnomalyTexts(a, lang);
+      const isGgg = a.type === 'confirmed_ggg' || (a.tag && (a.tag.includes('Confirmed GGG') || a.tag.includes('Green Gas Giant'))) || a.color === 'green';
+      const badgeClass = isGgg ? 'tag-badge tag-ggg' : 'tag-badge tag-anomaly';
+      const icon = isGgg ? '🟢' : '★';
       return `
-        <div class="tag-badge tag-anomaly" title="${escapeHtml(texts.tooltip)}" style="padding: 4px 8px; font-size: 0.75rem;">
-          ★ ${escapeHtml(texts.label)}
+        <div class="${badgeClass}" title="${escapeHtml(texts.tooltip)}" style="padding: 4px 8px; font-size: 0.75rem;">
+          ${icon} ${escapeHtml(texts.label)}
         </div>
       `;
     }).join('');

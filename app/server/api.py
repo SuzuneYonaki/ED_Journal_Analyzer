@@ -511,6 +511,9 @@ def get_global_stats(
     c.execute("SELECT COUNT(*) as count FROM scanned_organics")
     stats["total_scanned_organics"] = c.fetchone()["count"]
 
+    celestial_stats = get_celestial_statistics(conn)
+    stats["celestial_counts"] = celestial_stats.get("planets", {})
+
     stats["current_location"] = get_current_cmdr_location(conn)
     conn.close()
     return stats
@@ -541,6 +544,7 @@ def get_systems(
     has_landable: Optional[bool] = False,
     has_high_g: Optional[bool] = False,
     has_anomalies: Optional[bool] = False,
+    has_ggg: Optional[bool] = False,
     has_first_discover: Optional[bool] = False,
     has_landable_hmc: Optional[bool] = False,
     has_landable_metal_rich: Optional[bool] = False,
@@ -624,6 +628,20 @@ def get_systems(
         conditions.append("systems.has_high_g = 1")
     if has_anomalies:
         conditions.append("systems.has_anomalies = 1")
+    if has_ggg:
+        conditions.append("""EXISTS (
+            SELECT 1 FROM bodies b
+            WHERE b.system_address = systems.system_address
+            AND (
+                b.anomalies_json LIKE '%Confirmed GGG%'
+                OR b.anomalies_json LIKE '%Green Gas Giant%'
+                OR EXISTS (
+                    SELECT 1 FROM codex_entries ce
+                    WHERE ce.system_address = systems.system_address
+                    AND ce.is_ggg = 1
+                )
+            )
+        )""")
     if has_first_discover:
         conditions.append("systems.has_first_discover = 1")
 
@@ -930,7 +948,20 @@ def get_systems(
                 SELECT 
                     systems.*,
                     pe.rarity_score,
-                    {cmdr_dist_expr} AS cmdr_distance_ly
+                    {cmdr_dist_expr} AS cmdr_distance_ly,
+                    EXISTS (
+                        SELECT 1 FROM bodies b
+                        WHERE b.system_address = systems.system_address
+                        AND (
+                            b.anomalies_json LIKE '%Confirmed GGG%'
+                            OR b.anomalies_json LIKE '%Green Gas Giant%'
+                            OR EXISTS (
+                                SELECT 1 FROM codex_entries ce
+                                WHERE ce.system_address = systems.system_address
+                                AND ce.is_ggg = 1
+                            )
+                        )
+                    ) AS has_ggg
                 FROM systems
                 LEFT JOIN system_physics_evaluations pe ON systems.system_address = pe.system_address
                 {where_clause}
@@ -1008,7 +1039,20 @@ def get_systems(
                 systems.*,
                 pe.rarity_score,
                 {cmdr_dist_expr} AS cmdr_distance_ly,
-                NULL AS composite_score
+                NULL AS composite_score,
+                EXISTS (
+                    SELECT 1 FROM bodies b
+                    WHERE b.system_address = systems.system_address
+                    AND (
+                        b.anomalies_json LIKE '%Confirmed GGG%'
+                        OR b.anomalies_json LIKE '%Green Gas Giant%'
+                        OR EXISTS (
+                            SELECT 1 FROM codex_entries ce
+                            WHERE ce.system_address = systems.system_address
+                            AND ce.is_ggg = 1
+                        )
+                    )
+                ) AS has_ggg
             FROM systems
             LEFT JOIN system_physics_evaluations pe ON systems.system_address = pe.system_address
             {where_clause}
@@ -1813,6 +1857,28 @@ def trigger_scan(background_tasks: BackgroundTasks):
 @app.get("/api/scan_status")
 def get_scan_status():
     return scan_state
+
+@app.post("/api/scan_codex_history")
+def scan_codex_history_endpoint():
+    target_dir = get_saved_journal_dir()
+    parser = JournalParser()
+    res = parser.scan_historical_codex_entries(str(target_dir))
+    return {"status": "ok", "result": res}
+
+@app.get("/api/codex_ggg_entries")
+def get_codex_ggg_entries():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT system_address, body_id, body_name, entry_id, name, name_localised,
+               category, sub_category, region_name, ggg_variant, timestamp
+        FROM codex_entries
+        WHERE is_ggg = 1
+        ORDER BY timestamp DESC
+    """)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return {"total": len(rows), "entries": rows}
 
 # TTS Settings Persistence Endpoints
 TTS_SETTINGS_FILE = DATA_DIR / "tts_settings.json"

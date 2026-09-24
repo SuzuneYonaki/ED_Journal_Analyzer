@@ -189,7 +189,9 @@ def calculate_ggg_probability(
 def calculate_celestial_rarity(
     body_data: dict,
     star_system_age: Optional[float] = None,
-    main_star_type: Optional[str] = None
+    main_star_type: Optional[str] = None,
+    is_confirmed_ggg: bool = False,
+    confirmed_ggg_variant: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Calculates deterministic rarity score, tags, and detailed anomaly metrics
@@ -439,10 +441,33 @@ def calculate_celestial_rarity(
             })
 
     # ---------------------------------------------------------
-    # 5. GGG (Green Gas Giant) Probability Evaluation
+    # 5. GGG (Green Gas Giant) Probability & Confirmation Evaluation
     # ---------------------------------------------------------
+    has_confirmed_ggg = bool(is_confirmed_ggg or _get_field(body_data, "is_confirmed_ggg", "is_confirmed"))
+    confirmed_variant = confirmed_ggg_variant or _get_field(body_data, "confirmed_ggg_variant", "ggg_variant")
+
     ggg_eval = calculate_ggg_probability(body_data, main_star_type=main_star_type)
-    if ggg_eval["is_candidate"]:
+    if has_confirmed_ggg:
+        # 100% Confirmed GGG via Codex Entry
+        score += 100
+        tag_base = "Confirmed GGG"
+        if tag_base not in tags:
+            tags.append(tag_base)
+        if confirmed_variant:
+            tag_variant = f"Confirmed GGG ({confirmed_variant})"
+            if tag_variant not in tags:
+                tags.append(tag_variant)
+        breakdown.append({
+            "tag": tag_base,
+            "points": 100,
+            "reason": f"Codex-verified Green Gas Giant ({confirmed_variant or 'Identified'})"
+        })
+        ggg_eval["is_candidate"] = True
+        ggg_eval["is_confirmed"] = True
+        ggg_eval["alert_level"] = "CONFIRMED"
+        ggg_eval["confirmed_variant"] = confirmed_variant
+        ggg_eval["score"] = max(ggg_eval.get("score", 0), 100)
+    elif ggg_eval["is_candidate"]:
         ggg_tag = "Green Gas Giant Candidate"
         if ggg_tag not in tags:
             tags.append(ggg_tag)
@@ -452,6 +477,7 @@ def calculate_celestial_rarity(
             "points": ggg_eval["score"],
             "reason": f"GGG evaluation alert_level={ggg_eval['alert_level']} (Score: {ggg_eval['score']})"
         })
+        ggg_eval["is_confirmed"] = False
 
     # ---------------------------------------------------------
     # 6. Result Assembly
@@ -470,9 +496,11 @@ def calculate_celestial_rarity(
             "breakdown": breakdown
         },
         "ggg_evaluation": {
-            "score": ggg_eval["score"],
-            "is_candidate": ggg_eval["is_candidate"],
-            "alert_level": ggg_eval["alert_level"],
-            "tts_message": ggg_eval["tts_message"]
+            "score": ggg_eval.get("score", 0),
+            "is_candidate": ggg_eval.get("is_candidate", False),
+            "is_confirmed": ggg_eval.get("is_confirmed", False),
+            "alert_level": ggg_eval.get("alert_level"),
+            "tts_message": ggg_eval.get("tts_message"),
+            "confirmed_variant": ggg_eval.get("confirmed_variant")
         }
     }

@@ -503,13 +503,14 @@ class JournalParser:
         }
 
         # Check if already had bio_signals / geo_signals / mining_signals / confirmed_genuses in existing body record
-        self.cursor.execute("SELECT bio_signals, geo_signals, mining_signals, is_mapped_by_user, confirmed_genuses FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
+        self.cursor.execute("SELECT bio_signals, geo_signals, mining_signals, is_mapped_by_user, confirmed_genuses, anomalies_json FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
         existing_b = self.cursor.fetchone()
         existing_bio = existing_b["bio_signals"] if (existing_b and existing_b["bio_signals"] is not None) else None
         existing_geo = existing_b["geo_signals"] if existing_b else 0
         existing_mining = existing_b["mining_signals"] if (existing_b and "mining_signals" in existing_b.keys()) else 0
         existing_mapped = existing_b["is_mapped_by_user"] if existing_b else (1 if was_mapped == 1 else 0)
         existing_genuses = existing_b["confirmed_genuses"] if existing_b else None
+        existing_anomalies_raw = existing_b["anomalies_json"] if (existing_b and "anomalies_json" in existing_b.keys()) else None
         body_dict["bio_signals"] = existing_bio
         body_dict["is_mapped_by_user"] = existing_mapped
         body_dict["was_mapped"] = was_mapped
@@ -554,28 +555,66 @@ class JournalParser:
         self._lock_confirmed_organics_into_predictions(sys_addr, body_id, bio_predictions)
         bio_pred_json = json.dumps(bio_predictions)
 
+        # Check if this body has a confirmed GGG in codex_entries table or existing record
+        self.cursor.execute(
+            "SELECT ggg_variant FROM codex_entries WHERE system_address = ? AND body_id = ? AND is_ggg = 1 LIMIT 1",
+            (sys_addr, body_id)
+        )
+        codex_ggg = self.cursor.fetchone()
+        is_confirmed_ggg = bool(codex_ggg)
+        confirmed_ggg_variant = codex_ggg["ggg_variant"] if codex_ggg else None
+
+        if not is_confirmed_ggg and existing_anomalies_raw:
+            try:
+                ex_anom = json.loads(existing_anomalies_raw)
+                for a in ex_anom:
+                    t = a.get("tag") if isinstance(a, dict) else str(a)
+                    if t and "Confirmed GGG" in t:
+                        is_confirmed_ggg = True
+                        if "(" in t and ")" in t:
+                            confirmed_ggg_variant = t.split("(")[1].split(")")[0]
+                        break
+            except Exception:
+                pass
+
         # Detect Celestial Rarity & Anomalies
         rarity_res = calculate_celestial_rarity(
             body_dict,
             star_system_age=body_dict.get("Age_MY"),
-            main_star_type=parent_star_type
+            main_star_type=parent_star_type,
+            is_confirmed_ggg=is_confirmed_ggg,
+            confirmed_ggg_variant=confirmed_ggg_variant
         )
         ggg = rarity_res.get("ggg_evaluation") or {}
-        if ggg.get("alert_level") == "URGENT" and ggg.get("tts_message"):
+        if self.is_live and ggg.get("alert_level") == "URGENT" and ggg.get("tts_message"):
             tts_service.enqueue_speak(ggg["tts_message"], priority=True)
 
         anomalies = detect_anomalies(body_dict)
         rarity_tags = rarity_res.get("tags") or []
         for r_tag in rarity_tags:
-            if not any(a.get("tag") == r_tag for a in anomalies if isinstance(a, dict)):
-                color = "green" if "Green Gas Giant" in r_tag else "orange"
+            if not any((a.get("tag") == r_tag if isinstance(a, dict) else a == r_tag) for a in anomalies):
+                is_conf_ggg = "Confirmed GGG" in r_tag
+                color = "green" if ("Green Gas Giant" in r_tag or is_conf_ggg) else "orange"
+                desc = f"確定GGG: {confirmed_ggg_variant or 'Codex'}" if is_conf_ggg else r_tag
                 anomalies.append({
-                    "type": "rarity",
+                    "type": "confirmed_ggg" if is_conf_ggg else "rarity",
                     "tag": r_tag,
                     "color": color,
-                    "desc": r_tag,
+                    "desc": desc,
                     "desc_en": r_tag
                 })
+
+        # Preserve any pre-existing anomalies attached to this body
+        if existing_anomalies_raw:
+            try:
+                ex_items = json.loads(existing_anomalies_raw)
+                for ex_item in ex_items:
+                    ex_tag = ex_item.get("tag") if isinstance(ex_item, dict) else str(ex_item)
+                    if ex_tag and not any((a.get("tag") == ex_tag if isinstance(a, dict) else a == ex_tag) for a in anomalies):
+                        anomalies.append(ex_item)
+            except Exception:
+                pass
+
         anomalies_json = json.dumps(anomalies)
 
         self.cursor.execute("""
@@ -932,51 +971,91 @@ class JournalParser:
         if not isinstance(data, dict):
             return
 
+        sys_addr = data.get("SystemAddress")
+        body_id = data.get("BodyID") if data.get("BodyID") is not None else (data.get("Body") if isinstance(data.get("Body"), int) else None)
+        body_name = data.get("BodyName") or (data.get("Body") if isinstance(data.get("Body"), str) else None)
         entry_name = data.get("Name")
-        if entry_name and isinstance(entry_name, str):
-            ggg_info = resolve_ggg_variant(entry_name)
-            if ggg_info is not None:
-                raw_variant, tts_speech_name, en_name = ggg_info
 
-                # Trigger priority TTS announcement
+        if not body_name and sys_addr is not None and body_id is not None:
+            self.cursor.execute("SELECT body_name FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
+            brow = self.cursor.fetchone()
+            if brow:
+                body_name = brow["body_name"]
+
+        if body_id is None and sys_addr is not None and body_name:
+            self.cursor.execute("SELECT body_id FROM bodies WHERE system_address = ? AND body_name = ?", (sys_addr, body_name))
+            brow = self.cursor.fetchone()
+            if brow:
+                body_id = brow["body_id"]
+
+        ggg_info = resolve_ggg_variant(entry_name) if entry_name and isinstance(entry_name, str) else None
+        is_ggg = 1 if ggg_info is not None else 0
+        ggg_variant_name = ggg_info[2] if ggg_info is not None else None
+
+        if sys_addr is not None and entry_name:
+            now_iso = datetime.now().isoformat()
+            self.cursor.execute("""
+                INSERT INTO codex_entries (
+                    system_address, body_id, body_name, entry_id, name, name_localised,
+                    category, sub_category, region_name, is_ggg, ggg_variant, timestamp, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(system_address, body_id, name) DO UPDATE SET
+                    body_name = COALESCE(excluded.body_name, codex_entries.body_name),
+                    name_localised = COALESCE(excluded.name_localised, codex_entries.name_localised),
+                    category = COALESCE(excluded.category, codex_entries.category),
+                    sub_category = COALESCE(excluded.sub_category, codex_entries.sub_category),
+                    region_name = COALESCE(excluded.region_name, codex_entries.region_name),
+                    is_ggg = excluded.is_ggg,
+                    ggg_variant = excluded.ggg_variant,
+                    timestamp = excluded.timestamp
+            """, (
+                sys_addr, body_id, body_name, data.get("EntryID"), entry_name,
+                data.get("Name_Localised"), data.get("Category"), data.get("SubCategory"),
+                data.get("Region_Name") or data.get("Region"),
+                is_ggg, ggg_variant_name, timestamp, now_iso
+            ))
+
+        if ggg_info is not None:
+            raw_variant, tts_speech_name, en_name = ggg_info
+
+            # Trigger priority TTS announcement only when live
+            if self.is_live:
                 tts_msg = f"警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{tts_speech_name} です。おめでとうございます、CMDR。"
                 tts_service.enqueue_speak(tts_msg, priority=True)
 
-                # Persist confirmed GGG anomaly tags to bodies table
-                sys_addr = data.get("SystemAddress")
-                body_id = data.get("BodyID") if data.get("BodyID") is not None else data.get("Body")
-                if sys_addr is not None and body_id is not None:
-                    self.cursor.execute(
-                        "SELECT id, anomalies_json FROM bodies WHERE system_address = ? AND body_id = ?",
-                        (sys_addr, body_id)
-                    )
-                    b_row = self.cursor.fetchone()
-                    if b_row:
-                        raw_anom = b_row["anomalies_json"]
-                        anomalies = []
-                        if raw_anom:
-                            try:
-                                anomalies = json.loads(raw_anom)
-                            except Exception:
-                                anomalies = []
-                        if not isinstance(anomalies, list):
+            # Persist confirmed GGG anomaly tags to bodies table
+            if sys_addr is not None and body_id is not None:
+                self.cursor.execute(
+                    "SELECT id, anomalies_json FROM bodies WHERE system_address = ? AND body_id = ?",
+                    (sys_addr, body_id)
+                )
+                b_row = self.cursor.fetchone()
+                if b_row:
+                    raw_anom = b_row["anomalies_json"]
+                    anomalies = []
+                    if raw_anom:
+                        try:
+                            anomalies = json.loads(raw_anom)
+                        except Exception:
                             anomalies = []
+                    if not isinstance(anomalies, list):
+                        anomalies = []
 
-                        confirmed_tags = ["Confirmed GGG", f"Confirmed GGG ({en_name})"]
-                        for tag_name in confirmed_tags:
-                            if not any((a.get("tag") == tag_name if isinstance(a, dict) else a == tag_name) for a in anomalies):
-                                anomalies.append({
-                                    "type": "confirmed_ggg",
-                                    "tag": tag_name,
-                                    "color": "green",
-                                    "desc": f"確定GGG: {tts_speech_name}",
-                                    "desc_en": tag_name
-                                })
+                    confirmed_tags = ["Confirmed GGG", f"Confirmed GGG ({en_name})"]
+                    for tag_name in confirmed_tags:
+                        if not any((a.get("tag") == tag_name if isinstance(a, dict) else a == tag_name) for a in anomalies):
+                            anomalies.append({
+                                "type": "confirmed_ggg",
+                                "tag": tag_name,
+                                "color": "green",
+                                "desc": f"確定GGG: {tts_speech_name}",
+                                "desc_en": tag_name
+                            })
 
-                        new_anom_json = json.dumps(anomalies)
-                        self.cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (new_anom_json, b_row["id"]))
-                        self.dirty_systems.add(sys_addr)
-                return
+                    new_anom_json = json.dumps(anomalies)
+                    self.cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (new_anom_json, b_row["id"]))
+                    self.dirty_systems.add(sys_addr)
+            return
 
         cat = data.get("Category", "")
         cat_loc = (data.get("Category_Localised") or "").lower()
@@ -1353,3 +1432,66 @@ class JournalParser:
         self.flush_dirty_systems()
         self.conn.commit()
         return count
+
+    def scan_historical_codex_entries(self, journal_dir: str | Path, progress_callback=None) -> dict:
+        """
+        Fast scanner across all Journal.*.log files in journal_dir specifically looking for
+        CodexEntry events to discover historical GGGs and record them into codex_entries
+        and bodies without re-parsing entire log files.
+        Audio TTS is suppressed during historical scanning.
+        """
+        j_path = Path(journal_dir)
+        if not j_path.exists():
+            return {"scanned_files": 0, "codex_entries_found": 0, "ggg_entries_found": 0, "details": []}
+
+        files = sorted(glob.glob(os.path.join(str(j_path), "Journal.*.log")))
+        total_files = len(files)
+        total_codex = 0
+        total_ggg = 0
+        ggg_details = []
+
+        prev_live = self.is_live
+        self.is_live = False
+
+        try:
+            for idx, fpath in enumerate(files, start=1):
+                try:
+                    with open(fpath, "rb") as f:
+                        for line_bytes in f:
+                            if b'"event":"CodexEntry"' in line_bytes or b'"event": "CodexEntry"' in line_bytes:
+                                try:
+                                    line_str = line_bytes.decode("utf-8", errors="replace").strip()
+                                    if line_str:
+                                        data = json.loads(line_str)
+                                        ts = data.get("timestamp") or datetime.now().isoformat()
+                                        self._handle_codex_entry(data, ts)
+                                        total_codex += 1
+                                        if resolve_ggg_variant(data.get("Name", "")) is not None:
+                                            total_ggg += 1
+                                            ggg_details.append({
+                                                "system_address": data.get("SystemAddress"),
+                                                "body_id": data.get("BodyID") if data.get("BodyID") is not None else data.get("Body"),
+                                                "name": data.get("Name"),
+                                                "name_localised": data.get("Name_Localised"),
+                                                "timestamp": ts
+                                            })
+                                except Exception:
+                                    continue
+                except (PermissionError, OSError) as e:
+                    print(f"[Historical Codex Scan Warning] Could not read {fpath}: {e}")
+                    continue
+
+                if progress_callback:
+                    progress_callback(idx, total_files, Path(fpath).name)
+
+            self.flush_dirty_systems()
+            self.conn.commit()
+        finally:
+            self.is_live = prev_live
+
+        return {
+            "scanned_files": total_files,
+            "codex_entries_found": total_codex,
+            "ggg_entries_found": total_ggg,
+            "details": ggg_details
+        }

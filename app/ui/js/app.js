@@ -16,6 +16,7 @@ let state = {
     has_first_discover: false,
     has_high_g: false,
     has_anomalies: false,
+    has_ggg: false,
     has_landable_hmc: false,
     has_landable_metal_rich: false,
     has_landable_rocky: false,
@@ -143,14 +144,19 @@ async function fetchGlobalStats() {
     const url = `/api/stats${params.toString() ? '?' + params.toString() : ''}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const pc = data.celestial_counts || {};
     document.getElementById('stat-systems').innerText = Number(data.total_systems).toLocaleString();
     document.getElementById('stat-bodies').innerText = Number(data.total_bodies).toLocaleString();
-    document.getElementById('stat-elw').innerText = Number(data.elw_systems).toLocaleString();
-    if (document.getElementById('stat-ww')) {
-      document.getElementById('stat-ww').innerText = Number(data.ww_systems || 0).toLocaleString();
-    }
-    document.getElementById('stat-ammonia').innerText = Number(data.ammonia_systems).toLocaleString();
+    if (document.getElementById('stat-elw')) document.getElementById('stat-elw').innerText = Number(pc.earth_like !== undefined ? pc.earth_like : (data.elw_systems || 0)).toLocaleString();
+    if (document.getElementById('stat-ww')) document.getElementById('stat-ww').innerText = Number(pc.water_world !== undefined ? pc.water_world : (data.ww_systems || 0)).toLocaleString();
+    if (document.getElementById('stat-ammonia')) document.getElementById('stat-ammonia').innerText = Number(pc.ammonia_world !== undefined ? pc.ammonia_world : (data.ammonia_systems || 0)).toLocaleString();
+    if (document.getElementById('stat-hmc')) document.getElementById('stat-hmc').innerText = Number(pc.high_metal_content || 0).toLocaleString();
+    if (document.getElementById('stat-mr')) document.getElementById('stat-mr').innerText = Number(pc.metal_rich || 0).toLocaleString();
+    if (document.getElementById('stat-icy')) document.getElementById('stat-icy').innerText = Number(pc.icy_body || 0).toLocaleString();
+    if (document.getElementById('stat-rocky')) document.getElementById('stat-rocky').innerText = Number(pc.rocky_body || 0).toLocaleString();
+    if (document.getElementById('stat-rocky-ice')) document.getElementById('stat-rocky-ice').innerText = Number(pc.rocky_ice || 0).toLocaleString();
+    if (document.getElementById('stat-gg')) document.getElementById('stat-gg').innerText = Number(pc.gas_giants_total || 0).toLocaleString();
+    if (document.getElementById('stat-ggg')) document.getElementById('stat-ggg').innerText = Number(pc.green_gas_giant || 0).toLocaleString();
     const bioSysCount = Number(data.bio_systems || 0).toLocaleString();
     const bioSigCount = Number(data.total_bio_signals || 0).toLocaleString();
     document.getElementById('stat-bio').innerText = `${bioSysCount} (${bioSigCount} Sig)`;
@@ -1265,7 +1271,14 @@ function renderHierarchyTree(container, nodes) {
     const modSettings = getModuleSettings();
     if (modSettings.rhino !== false && node.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${node.mining_signals}</span>`);
     if (node.anomalies && node.anomalies.length > 0) {
-      node.anomalies.forEach(a => badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`));
+      node.anomalies.forEach(a => {
+        const isGgg = a.type === 'confirmed_ggg' || (a.tag && (a.tag.includes('Confirmed GGG') || a.tag.includes('Green Gas Giant'))) || a.color === 'green';
+        if (isGgg) {
+          badges.push(`<span class="tag-badge tag-ggg" title="${a.desc || a.tag}">🟢 ${a.tag}</span>`);
+        } else {
+          badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`);
+        }
+      });
     }
 
     const typeDesc = node.star_type ? `${t('star_type_label')} (${node.star_type})` : (node.planet_class || 'Planet');
@@ -1370,7 +1383,14 @@ function renderFlatBodiesList(container, bodies) {
     const modSettings = getModuleSettings();
     if (modSettings.rhino !== false && body.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${body.mining_signals}</span>`);
     if (body.anomalies && body.anomalies.length > 0) {
-      body.anomalies.forEach(a => badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`));
+      body.anomalies.forEach(a => {
+        const isGgg = a.type === 'confirmed_ggg' || (a.tag && (a.tag.includes('Confirmed GGG') || a.tag.includes('Green Gas Giant'))) || a.color === 'green';
+        if (isGgg) {
+          badges.push(`<span class="tag-badge tag-ggg" title="${a.desc || a.tag}">🟢 ${a.tag}</span>`);
+        } else {
+          badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`);
+        }
+      });
     }
     const aliasTag = (body.bookmark && body.bookmark.alias_name)
       ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-size: 0.7rem; margin-left: 6px;">🏷️ ${body.bookmark.alias_name}</span>`

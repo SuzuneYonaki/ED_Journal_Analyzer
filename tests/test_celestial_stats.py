@@ -7,29 +7,18 @@ import sqlite3
 import pytest
 from fastapi.testclient import TestClient
 
-from app.db.database import get_celestial_statistics
+from app.db.database import get_celestial_statistics, init_db
 from app.server.api import app
 
 
 @pytest.fixture
 def temp_db(tmp_path):
-    """Sets up a temporary SQLite database mimicking the bodies table schema."""
+    """Sets up a temporary SQLite database using official schema."""
     db_file = str(tmp_path / "test_celestial.db")
     conn = sqlite3.connect(db_file)
     conn.row_factory = sqlite3.Row
+    init_db(conn)
     cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE bodies (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            system_address INTEGER,
-            body_id INTEGER,
-            body_name TEXT,
-            star_system TEXT,
-            star_type TEXT,
-            planet_class TEXT,
-            rings TEXT
-        );
-    """)
 
     # Populate with diverse test records
     test_bodies = [
@@ -135,6 +124,8 @@ def test_get_celestial_statistics_counts(temp_db):
     assert planets["rocky_body"] == 1
     assert planets["icy_body"] == 2
     assert planets["rocky_ice"] == 1
+    assert planets["gas_giants_total"] == 12
+    assert planets["green_gas_giant"] == 0
 
 
 def test_api_celestial_counts_endpoint(monkeypatch, temp_db):
@@ -171,3 +162,25 @@ def test_api_celestial_counts_endpoint(monkeypatch, temp_db):
     assert res_data["planets"]["gas_giant_water_life"] == 3
     assert res_data["planets"]["gas_giant_water_life_ringed"] == 1
     assert res_data["planets"]["gas_giant_water_life_unringed"] == 2
+    assert res_data["planets"]["gas_giants_total"] == 12
+
+
+def test_api_global_stats_includes_celestial_counts(monkeypatch, temp_db):
+    def _get_test_conn():
+        conn = sqlite3.connect(temp_db)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    monkeypatch.setattr("app.db.database.get_db_connection", _get_test_conn)
+    monkeypatch.setattr("app.server.api.get_db_connection", _get_test_conn)
+
+    client = TestClient(app)
+    response = client.get("/api/stats")
+    assert response.status_code == 200
+    data = response.json()
+    assert "celestial_counts" in data
+    counts = data["celestial_counts"]
+    assert counts["earth_like"] == 1
+    assert counts["water_world"] == 1
+    assert counts["high_metal_content"] == 1
+    assert counts["gas_giants_total"] == 12
