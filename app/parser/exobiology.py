@@ -12,14 +12,31 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Set
 
 from app.parser.exobiology_rules import EXOBIOLOGY_RULES, GENUS_DEFAULTS
+from app.utils.galactic_regions import get_region_from_coords
 
 # Load external Canonn Research JSON rules dynamically (SSOT)
 CANONN_RULES_FILE = Path(__file__).resolve().parents[1] / "data" / "canonn_rules.json"
+
+# Galactic Region constraints (SSOT extension):
+# Maps genus or specific species to allowed region IDs (Frontier 42 Galactic Regions).
+# If a species or genus has an entry, it only spawns in the listed regions.
+# Species not listed here (allowed_regions is None) can spawn anywhere across the galaxy.
+DEFAULT_REGION_CONSTRAINTS: Dict[str, List[int]] = {
+    # Electricae: outer galaxy / deep space regions only (strictly excluded from Inner Orion Spur (19) / Bubble)
+    "Electricae": [17, 18, 20, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 33, 35, 36, 37, 38, 39, 40, 41, 42],
+    # Brain Tree: Guardian ruins sectors and specific nebulae regions
+    "Brain Tree": [8, 9, 10, 11, 12, 13, 16, 17, 20, 21, 32, 34],
+    # Specific Bacterium species with regional constraints
+    "Bacterium Cerbrus": [1, 2, 3, 4, 5, 6, 7, 8, 17, 20, 22, 31, 40],
+    "Bacterium Alcyoneum": [1, 4, 5, 6, 17, 18, 20, 22, 28, 31, 40, 42],
+}
+
 
 def get_effective_exobiology_rules() -> Dict[str, Any]:
     """
     Dynamically loads and returns the effective Exobiology rules.
     Prioritizes external canonn_rules.json if present, merged over static fallback rules.
+    Injects allowed_regions constraints for regional species.
     """
     rules = dict(EXOBIOLOGY_RULES)
     if CANONN_RULES_FILE.is_file():
@@ -30,6 +47,18 @@ def get_effective_exobiology_rules() -> Dict[str, Any]:
                     rules.update(external_rules)
         except Exception as e:
             print(f"[Exobiology] Error reading {CANONN_RULES_FILE}: {e}")
+
+    # Inject region constraints into rule objects
+    for sp_name, r in rules.items():
+        if "allowed_regions" not in r:
+            genus = r.get("genus", sp_name.split()[0] if sp_name else "")
+            if sp_name in DEFAULT_REGION_CONSTRAINTS:
+                r["allowed_regions"] = DEFAULT_REGION_CONSTRAINTS[sp_name]
+            elif genus in DEFAULT_REGION_CONSTRAINTS:
+                r["allowed_regions"] = DEFAULT_REGION_CONSTRAINTS[genus]
+            else:
+                r["allowed_regions"] = None
+
     return rules
 
 
@@ -278,15 +307,67 @@ def match_parent_star(rule: Dict[str, Any], star_type: str, luminosity: Optional
 
 
 def predict_exobiology_candidates(
-    body: Dict[str, Any],
+    planet_class: Any = None,
+    atmosphere_type: Optional[str] = None,
+    surface_temp: Optional[float] = None,
+    gravity: Optional[float] = None,
+    star_type: Optional[str] = None,
+    star_pos: Optional[Any] = None,
+    region_id: Optional[int] = None,
     system_context_species: Optional[Set[str]] = None,
-    confirmed_genuses: Optional[Any] = None
+    confirmed_genuses: Optional[Any] = None,
+    **kwargs: Any
 ) -> List[Dict[str, Any]]:
     """
     Predict possible Exobiology candidate species for a body using
     strict physical parameter matrix filtering, distinct Species signal budgeting (Z signals -> Z species),
-    confirmed genus pruning from DSS, and system-level co-occurrence weighting under the same stellar spectrum.
+    confirmed genus pruning from DSS, regional habitat constraints, and system-level co-occurrence weighting.
+
+    Supports both dictionary passing (body: dict) and discrete parameter passing:
+    (planet_class, atmosphere_type, surface_temp, gravity, star_type, star_pos=..., region_id=...).
     """
+    if isinstance(planet_class, dict):
+        body = dict(planet_class)
+        if star_pos is None:
+            star_pos = body.get("star_pos")
+            if star_pos is None and ("star_pos_x" in body or "star_x" in body):
+                sx = body.get("star_pos_x") if body.get("star_pos_x") is not None else body.get("star_x")
+                sy = body.get("star_pos_y") if body.get("star_pos_y") is not None else body.get("star_y")
+                sz = body.get("star_pos_z") if body.get("star_pos_z") is not None else body.get("star_z")
+                if sx is not None and sy is not None and sz is not None:
+                    star_pos = (sx, sy, sz)
+        if region_id is None:
+            region_id = body.get("region_id")
+    else:
+        p_cls = planet_class or kwargs.get("planet_class") or ""
+        atm = atmosphere_type or kwargs.get("atmosphere") or kwargs.get("atmosphere_type") or ""
+        press = kwargs.get("surface_pressure") or kwargs.get("pressure")
+        if press is None and atm and str(atm).strip().lower() not in ["none", "no atmosphere", ""]:
+            press = 0.02 * 101325  # default thin atmosphere pressure (~0.02 atm) for discrete calls
+        grav = gravity if gravity is not None else kwargs.get("gravity")
+        temp = surface_temp if surface_temp is not None else kwargs.get("surface_temp") or kwargs.get("surface_temperature")
+        st_type = star_type or kwargs.get("star_type") or ""
+
+        body = {
+            "planet_class": p_cls,
+            "atmosphere": atm,
+            "surface_temperature": temp,
+            "surface_gravity_g": grav,
+            "surface_pressure": press,
+            "star_type": st_type,
+            "landable": True,
+            "star_pos": star_pos,
+            "region_id": region_id,
+        }
+
+    # Resolve region_id from star_pos if star_pos was provided
+    if region_id is None and star_pos is not None:
+        if isinstance(star_pos, (list, tuple)) and len(star_pos) >= 3:
+            resolved_region = get_region_from_coords(star_pos[0], star_pos[1], star_pos[2])
+            region_id = resolved_region[0]
+        else:
+            region_id = 19  # Safe fallback if star_pos was explicitly passed but invalid
+
     is_landable = body.get("landable") or body.get("Landable")
     if is_landable is False:
         return []
@@ -343,6 +424,12 @@ def predict_exobiology_candidates(
         # If DSS confirmed specific genuses, prune any candidate not in that set
         if confirmed_genus_set and genus_name.lower() not in confirmed_genus_set:
             continue
+
+        # 0. Galactic Region constraint check
+        allowed_regs = rule.get("allowed_regions")
+        if allowed_regs is not None and region_id is not None:
+            if region_id not in allowed_regs:
+                continue
 
         # 1. Planet class check
         if not match_planet_class(rule.get("body_types", []), p_class):
@@ -495,6 +582,25 @@ def predict_system_exobiology_candidates(
     """
     if not bodies:
         return []
+
+    # Extract system star_pos or region_id if available
+    system_star_pos = None
+    system_region_id = None
+    if system_info:
+        system_star_pos = system_info.get("star_pos")
+        if system_star_pos is None and ("star_pos_x" in system_info or "star_x" in system_info):
+            sx = system_info.get("star_pos_x") if system_info.get("star_pos_x") is not None else system_info.get("star_x")
+            sy = system_info.get("star_pos_y") if system_info.get("star_pos_y") is not None else system_info.get("star_y")
+            sz = system_info.get("star_pos_z") if system_info.get("star_pos_z") is not None else system_info.get("star_z")
+            if sx is not None and sy is not None and sz is not None:
+                system_star_pos = (sx, sy, sz)
+        system_region_id = system_info.get("region_id")
+
+    for b in bodies:
+        if system_star_pos and not b.get("star_pos") and not b.get("star_pos_x"):
+            b["star_pos"] = system_star_pos
+        if system_region_id and not b.get("region_id"):
+            b["region_id"] = system_region_id
 
     # Step 1: Preliminary pass to gather prominent / scanned species across the system
     system_known_species: Set[str] = set()

@@ -330,6 +330,7 @@ class JournalParser:
 
         star_pos = data.get("StarPos", [0, 0, 0])
         pos_x, pos_y, pos_z = (star_pos[0], star_pos[1], star_pos[2]) if len(star_pos) >= 3 else (0, 0, 0)
+        self.current_star_pos = (pos_x, pos_y, pos_z)
         sol_dist = round((pos_x**2 + pos_y**2 + pos_z**2)**0.5, 1) if (pos_x is not None and pos_y is not None and pos_z is not None) else 0
 
         star_class = data.get("StarClass") or data.get("StarType")
@@ -656,12 +657,22 @@ class JournalParser:
                                 break
                 except Exception:
                     pass
-            if not parent_star_type:
+            if not parent_star_type and sys_addr:
                 self.cursor.execute("SELECT main_star_type FROM systems WHERE system_address = ?", (sys_addr,))
                 s_row = self.cursor.fetchone()
                 if s_row and s_row["main_star_type"]:
                     parent_star_type = s_row["main_star_type"]
         body_dict["parent_star_type"] = parent_star_type
+
+        # Resolve system star coordinates for regional exobiology resolution
+        system_star_pos = getattr(self, "current_star_pos", None)
+        if sys_addr:
+            self.cursor.execute("SELECT star_pos_x, star_pos_y, star_pos_z FROM systems WHERE system_address = ?", (sys_addr,))
+            pos_row = self.cursor.fetchone()
+            if pos_row and pos_row["star_pos_x"] is not None:
+                system_star_pos = (pos_row["star_pos_x"], pos_row["star_pos_y"], pos_row["star_pos_z"])
+        if system_star_pos:
+            body_dict["star_pos"] = system_star_pos
 
         values = calculate_body_value(body_dict)
         fss_val = values.get("fss_value", 0)
@@ -924,11 +935,16 @@ class JournalParser:
             elif existing["confirmed_genuses"]:
                 b_dict["confirmed_genuses"] = existing["confirmed_genuses"]
 
-            if not b_dict.get("parent_star_type") and not b_dict.get("star_type"):
-                self.cursor.execute("SELECT main_star_type FROM systems WHERE system_address = ?", (sys_addr,))
-                s_row = self.cursor.fetchone()
-                if s_row and s_row["main_star_type"]:
+            system_star_pos = getattr(self, "current_star_pos", None)
+            self.cursor.execute("SELECT main_star_type, star_pos_x, star_pos_y, star_pos_z FROM systems WHERE system_address = ?", (sys_addr,))
+            s_row = self.cursor.fetchone()
+            if s_row:
+                if not b_dict.get("parent_star_type") and not b_dict.get("star_type") and s_row["main_star_type"]:
                     b_dict["parent_star_type"] = s_row["main_star_type"]
+                if not system_star_pos and s_row["star_pos_x"] is not None:
+                    system_star_pos = (s_row["star_pos_x"], s_row["star_pos_y"], s_row["star_pos_z"])
+            if system_star_pos:
+                b_dict["star_pos"] = system_star_pos
             
             if bio_count == 0:
                 bio_predictions = []
@@ -967,11 +983,16 @@ class JournalParser:
                 "is_mapped_by_user": 1 if is_saa_signals else 0,
                 "confirmed_genuses": confirmed_genuses_list if confirmed_genuses_list else None
             }
-            if not b_dict.get("parent_star_type") and not b_dict.get("star_type"):
-                self.cursor.execute("SELECT main_star_type FROM systems WHERE system_address = ?", (sys_addr,))
-                s_row = self.cursor.fetchone()
-                if s_row and s_row["main_star_type"]:
+            system_star_pos = getattr(self, "current_star_pos", None)
+            self.cursor.execute("SELECT main_star_type, star_pos_x, star_pos_y, star_pos_z FROM systems WHERE system_address = ?", (sys_addr,))
+            s_row = self.cursor.fetchone()
+            if s_row:
+                if not b_dict.get("parent_star_type") and not b_dict.get("star_type") and s_row["main_star_type"]:
                     b_dict["parent_star_type"] = s_row["main_star_type"]
+                if not system_star_pos and s_row["star_pos_x"] is not None:
+                    system_star_pos = (s_row["star_pos_x"], s_row["star_pos_y"], s_row["star_pos_z"])
+            if system_star_pos:
+                b_dict["star_pos"] = system_star_pos
 
             if bio_count == 0:
                 bio_predictions = []
