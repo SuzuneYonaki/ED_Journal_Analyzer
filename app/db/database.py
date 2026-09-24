@@ -836,6 +836,118 @@ def delete_mining_site(conn: sqlite3.Connection, site_id: int) -> bool:
     conn.commit()
     return cursor.rowcount > 0
 
+
+def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None) -> Dict[str, Any]:
+    """
+    Aggregates celestial statistics across all scanned bodies in the database.
+    Calculates cumulative star spectral types, planetary classes, ringed variants,
+    and overall scanned counts without modifying schema or executing migrations.
+    """
+    should_close = False
+    if conn is None:
+        conn = get_db_connection()
+        should_close = True
+
+    try:
+        cursor = conn.cursor()
+
+        # 1. Summary Counts
+        cursor.execute("""
+            SELECT
+                COUNT(*) AS total_bodies,
+                COUNT(CASE WHEN star_type IS NOT NULL AND TRIM(star_type) != '' THEN 1 END) AS total_stars,
+                COUNT(CASE WHEN planet_class IS NOT NULL AND TRIM(planet_class) != '' THEN 1 END) AS total_planets,
+                COUNT(CASE WHEN rings IS NOT NULL AND TRIM(rings) != '' AND rings != '[]' THEN 1 END) AS total_ringed
+            FROM bodies
+        """)
+        sum_row = cursor.fetchone()
+        total_bodies = int(sum_row["total_bodies"] or 0) if sum_row else 0
+        total_stars = int(sum_row["total_stars"] or 0) if sum_row else 0
+        total_planets = int(sum_row["total_planets"] or 0) if sum_row else 0
+        total_ringed = int(sum_row["total_ringed"] or 0) if sum_row else 0
+
+        # 2. Star Spectral Types
+        cursor.execute("""
+            SELECT star_type, COUNT(*) AS cnt
+            FROM bodies
+            WHERE star_type IS NOT NULL AND TRIM(star_type) != ''
+            GROUP BY star_type
+            ORDER BY cnt DESC, star_type ASC
+        """)
+        star_counts: Dict[str, int] = {}
+        for r in cursor.fetchall():
+            st = r["star_type"]
+            if st:
+                star_counts[st] = int(r["cnt"] or 0)
+
+        # 3. Planet Classes & Special Variants
+        cursor.execute("""
+            SELECT
+                COUNT(CASE WHEN LOWER(planet_class) IN ('earthlike body', 'earth-like world') THEN 1 END) AS earth_like,
+                COUNT(CASE WHEN LOWER(planet_class) = 'water world' THEN 1 END) AS water_world,
+                COUNT(CASE WHEN LOWER(planet_class) = 'ammonia world' THEN 1 END) AS ammonia_world,
+                COUNT(CASE WHEN LOWER(planet_class) = 'water giant' THEN 1 END) AS water_giant,
+
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%water%life%' THEN 1 END) AS gas_giant_water_life,
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%water%life%' AND rings IS NOT NULL AND TRIM(rings) != '' AND rings != '[]' THEN 1 END) AS gas_giant_water_life_ringed,
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%water%life%' AND (rings IS NULL OR TRIM(rings) = '' OR rings = '[]') THEN 1 END) AS gas_giant_water_life_unringed,
+
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%ammonia%life%' THEN 1 END) AS gas_giant_ammonia_life,
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%ammonia%life%' AND rings IS NOT NULL AND TRIM(rings) != '' AND rings != '[]' THEN 1 END) AS gas_giant_ammonia_life_ringed,
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%ammonia%life%' AND (rings IS NULL OR TRIM(rings) = '' OR rings = '[]') THEN 1 END) AS gas_giant_ammonia_life_unringed,
+
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%class i gas giant%' AND LOWER(planet_class) NOT LIKE '%class ii%' THEN 1 END) AS sudarsky_class_1,
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%class ii gas giant%' AND LOWER(planet_class) NOT LIKE '%class iii%' THEN 1 END) AS sudarsky_class_2,
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%class iii gas giant%' THEN 1 END) AS sudarsky_class_3,
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%class iv gas giant%' THEN 1 END) AS sudarsky_class_4,
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%class v gas giant%' THEN 1 END) AS sudarsky_class_5,
+
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%helium%' THEN 1 END) AS helium_gas_giant,
+                COUNT(CASE WHEN LOWER(planet_class) IN ('high metal content body', 'high metal content world') THEN 1 END) AS high_metal_content,
+                COUNT(CASE WHEN LOWER(planet_class) = 'metal rich body' THEN 1 END) AS metal_rich,
+                COUNT(CASE WHEN LOWER(planet_class) = 'rocky body' THEN 1 END) AS rocky_body,
+                COUNT(CASE WHEN LOWER(planet_class) = 'icy body' THEN 1 END) AS icy_body,
+                COUNT(CASE WHEN LOWER(planet_class) IN ('rocky ice body', 'rocky ice world') THEN 1 END) AS rocky_ice
+            FROM bodies
+            WHERE planet_class IS NOT NULL AND TRIM(planet_class) != ''
+        """)
+        p_row = cursor.fetchone()
+        planet_counts: Dict[str, int] = {}
+        if p_row:
+            for k in p_row.keys():
+                planet_counts[k] = int(p_row[k] or 0)
+        else:
+            planet_counts = {
+                "earth_like": 0, "water_world": 0, "ammonia_world": 0, "water_giant": 0,
+                "gas_giant_water_life": 0, "gas_giant_water_life_ringed": 0, "gas_giant_water_life_unringed": 0,
+                "gas_giant_ammonia_life": 0, "gas_giant_ammonia_life_ringed": 0, "gas_giant_ammonia_life_unringed": 0,
+                "sudarsky_class_1": 0, "sudarsky_class_2": 0, "sudarsky_class_3": 0, "sudarsky_class_4": 0, "sudarsky_class_5": 0,
+                "helium_gas_giant": 0, "high_metal_content": 0, "metal_rich": 0, "rocky_body": 0, "icy_body": 0, "rocky_ice": 0
+            }
+
+        summary = {
+            "total_bodies": total_bodies,
+            "total_stars": total_stars,
+            "total_planets": total_planets,
+            "total_ringed": total_ringed,
+            "total_bodies_scanned": total_bodies,
+            "total_stars_scanned": total_stars,
+            "total_planets_scanned": total_planets,
+            "total_ringed_bodies": total_ringed
+        }
+
+        return {
+            "summary": summary,
+            "star_counts": star_counts,
+            "stars": star_counts,
+            "planet_counts": planet_counts,
+            "planets": planet_counts
+        }
+    finally:
+        if should_close:
+            conn.close()
+
+
 if __name__ == "__main__":
     init_db()
     print("Database initialized successfully at", DB_PATH)

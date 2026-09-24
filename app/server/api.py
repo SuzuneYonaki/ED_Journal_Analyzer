@@ -16,7 +16,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR, DATA_DIR, EXPORTS_DIR
 from app.db.database import (
     get_db_connection, init_db, get_mining_sites,
-    add_manual_mining_site, update_mining_site, delete_mining_site, save_or_merge_mining_site
+    add_manual_mining_site, update_mining_site, delete_mining_site, save_or_merge_mining_site,
+    get_celestial_statistics
 )
 from app.parser.journal_parser import JournalParser
 from app.parser.watcher import JournalWatcher
@@ -506,6 +507,21 @@ def get_global_stats(
     stats["current_location"] = get_current_cmdr_location(conn)
     conn.close()
     return stats
+
+@app.get("/api/stats/celestial_counts")
+def get_celestial_counts():
+    """
+    Returns cumulative celestial body, special variant, and stellar spectral scan statistics across all systems.
+    """
+    stats = get_celestial_statistics()
+    return {
+        "status": "success",
+        "data": {
+            "summary": stats["summary"],
+            "stars": stats["stars"],
+            "planets": stats["planets"]
+        }
+    }
 
 @app.get("/api/systems")
 def get_systems(
