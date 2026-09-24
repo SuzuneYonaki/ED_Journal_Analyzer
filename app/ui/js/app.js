@@ -2975,7 +2975,11 @@ function checkAndAnnounceHighBioBody(sysData, bodyData) {
 
   // Calculate estimated Exobiology total payout with 1st Discover bonus (5x multiplier)
   let predictedCandidates = [];
-  if (bodyData.predicted_bio_candidates && Array.isArray(bodyData.predicted_bio_candidates)) {
+  if (bodyData.exobiology && Array.isArray(bodyData.exobiology)) {
+    predictedCandidates = bodyData.exobiology;
+  } else if (bodyData.potential_exobiology && Array.isArray(bodyData.potential_exobiology)) {
+    predictedCandidates = bodyData.potential_exobiology;
+  } else if (bodyData.predicted_bio_candidates && Array.isArray(bodyData.predicted_bio_candidates)) {
     predictedCandidates = bodyData.predicted_bio_candidates;
   }
 
@@ -2983,16 +2987,23 @@ function checkAndAnnounceHighBioBody(sysData, bodyData) {
 
   // Sum top definite candidates' first_discovery_value (or base_value * 5)
   let totalEstimatedBio = 0;
+  let totalBaseBio = 0;
   const bioBudget = bodyData.bio_signals || predictedCandidates.length;
   const definiteCandidates = predictedCandidates.slice(0, bioBudget);
 
   definiteCandidates.forEach(cand => {
-    const bonusVal = cand.first_discovery_value || ((cand.base_value || 1000000) * 5);
+    const baseVal = cand.base_value ?? 1000000;
+    const bonusVal = cand.first_discovery_value ?? (baseVal * 5);
     totalEstimatedBio += bonusVal;
+    totalBaseBio += baseVal;
   });
 
-  // Threshold: 40,000,000 Cr (40M)
-  if (totalEstimatedBio >= 40000000) {
+  // Threshold: default 40,000,000 Cr (40M) with 1st Discover bonus, or custom threshold
+  const threshold = ttsState.highBioThreshold ?? 40000000;
+  const isBaseMetric = (ttsState.highBioThresholdType === 'base') || (threshold < 20000000);
+  const compareVal = isBaseMetric ? totalBaseBio : totalEstimatedBio;
+
+  if (compareVal >= threshold) {
     announcedHighBioBodies.add(alertKey);
 
     const formattedPayout = (totalEstimatedBio / 1000000).toFixed(1) + 'M';
