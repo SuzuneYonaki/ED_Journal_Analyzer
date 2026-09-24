@@ -161,6 +161,10 @@ async function fetchGlobalStats() {
     const bioSigCount = Number(data.total_bio_signals || 0).toLocaleString();
     document.getElementById('stat-bio').innerText = `${bioSysCount} (${bioSigCount} Sig)`;
     document.getElementById('stat-total-payout').innerText = formatCredits(data.total_potential_value);
+    if (data.app_version) {
+      const versionEl = document.getElementById('settings-app-version');
+      if (versionEl) versionEl.innerText = `v${data.app_version}`;
+    }
 
     // Update Header Period Label
     const periodLabelEl = document.getElementById('header-logged-period');
