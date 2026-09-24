@@ -1744,8 +1744,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('system-search');
   const btnSearchClear = document.getElementById('btn-search-clear');
   if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      const val = e.target.value;
+    // 検索入力時のリアルタイム同期とクリアボタン表示制御
+    const handleSearchInput = (val) => {
       if (btnSearchClear) {
         btnSearchClear.style.display = (val && val.trim().length > 0) ? 'block' : 'none';
       }
@@ -1756,8 +1756,35 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchSystems({ autoSelectTop: true });
         triggerExternalFootprintCheck(state.searchQuery);
       }, 300);
+    };
+
+    searchInput.addEventListener('input', (e) => {
+      handleSearchInput(e.target.value);
     });
 
+    // 右クリックでクリップボードから文字列を挿入
+    // 検索ボックスに文字がある場合は挿入不可（空の場合のみ挿入）
+    searchInput.addEventListener('contextmenu', async (e) => {
+      if (searchInput.value && searchInput.value.trim().length > 0) {
+        return;
+      }
+      e.preventDefault();
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          const cleanText = (text || '').trim();
+          if (cleanText.length > 0) {
+            searchInput.value = cleanText;
+            handleSearchInput(cleanText);
+            searchInput.focus();
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to read clipboard on right-click:', err);
+      }
+    });
+
+    // 3. クリア（×）ボタンのクリック処理
     if (btnSearchClear) {
       btnSearchClear.addEventListener('click', () => {
         searchInput.value = '';
@@ -1869,6 +1896,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const selDist = document.getElementById('sel-max-arrival-dist');
       if (selDist) selDist.value = '';
       state.maxArrivalDistLs = null;
+
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  }
+
+  const btnClearStars = document.getElementById('btn-clear-stars-filters');
+  if (btnClearStars) {
+    btnClearStars.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.star-filter-cb').forEach(cb => { cb.checked = false; });
+      state.starTypes = [];
+      const rStarAny = document.querySelector('input[name="star-match-mode"][value="any"]');
+      if (rStarAny) rStarAny.checked = true;
+      state.starMatchMode = 'any';
+
+      document.querySelectorAll('.lum-filter-cb').forEach(cb => { cb.checked = false; });
+      state.luminosityClasses = [];
+      const rLumAny = document.querySelector('input[name="lum-match-mode"][value="any"]');
+      if (rLumAny) rLumAny.checked = true;
+      state.luminosityMatchMode = 'any';
 
       state.page = 1;
       updateCollapsibleBadges();
@@ -3147,27 +3196,35 @@ function playWebSpeech(text) {
   window.speechSynthesis.speak(uttr);
 }
 
-async function playVoicevoxSpeech(text) {
+async function playVoicevoxSpeech(text, overrideConfig = null) {
   try {
-    const queryRes = await fetch(`${ttsState.voicevoxUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${ttsState.voicevoxSpeakerId}`, {
-      method: 'POST'
-    });
-    if (!queryRes.ok) throw new Error('Audio query failed');
-    const queryData = await queryRes.json();
-    queryData.speedScale = ttsState.rate;
-    queryData.volumeScale = ttsState.volume;
-
-    const synthRes = await fetch(`${ttsState.voicevoxUrl}/synthesis?speaker=${ttsState.voicevoxSpeakerId}`, {
+    const activeCfg = overrideConfig || ttsState;
+    // 1. Sync backend TTS service config with current UI/modal settings
+    await fetch('/api/tts/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(queryData)
+      body: JSON.stringify({
+        enabled: Boolean(activeCfg.enabled ?? true),
+        voicevox_url: activeCfg.voicevoxUrl || 'http://127.0.0.1:50021',
+        speaker_id: parseInt(activeCfg.voicevoxSpeakerId, 10) || 1,
+        speed_scale: parseFloat(activeCfg.rate) || 1.0,
+        volume_scale: parseFloat(activeCfg.volume) || 1.0
+      })
     });
-    if (!synthRes.ok) throw new Error('Synthesis failed');
-    const blob = await synthRes.blob();
-    const audio = new Audio(URL.createObjectURL(blob));
-    audio.play();
+
+    // 2. Play audio directly from the Python backend process (OBS Application Audio Capture hookable)
+    const speakRes = await fetch('/api/tts/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text })
+    });
+    if (!speakRes.ok) throw new Error('Backend TTS request failed');
+    const speakData = await speakRes.json();
+    if (speakData.status !== 'success' || !speakData.data?.enqueued) {
+      throw new Error('Backend TTS speak was not enqueued');
+    }
   } catch (err) {
-    console.warn('VOICEVOX play failed, falling back to Web Speech:', err);
+    console.warn('Backend VOICEVOX play failed, falling back to Web Speech:', err);
     playWebSpeech(text);
   }
 }
@@ -3613,7 +3670,7 @@ async function initSettingsModal() {
       });
 
       if (tempState.engine === 'voicevox') {
-        playVoicevoxSpeech(textToSpeak);
+        playVoicevoxSpeech(textToSpeak, tempState);
       } else {
         if (!('speechSynthesis' in window)) return;
         window.speechSynthesis.cancel();

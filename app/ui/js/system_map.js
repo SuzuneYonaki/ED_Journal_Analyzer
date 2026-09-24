@@ -1160,6 +1160,37 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     ? `<div class="sysmap-body-alias" title="${aliasTitle}">🏷️ ${body.bookmark.alias_name}</div>`
     : '';
 
+  // Price Badge (FSS or DSS Bonus) at the very bottom on a dedicated new line
+  const isMapped = Boolean(body.is_mapped_by_user || body.was_mapped);
+  let priceBadgeHtml = '';
+  const kiloFormatter = (typeof formatKiloCredits === 'function')
+    ? formatKiloCredits
+    : ((typeof window !== 'undefined' && typeof window.formatKiloCredits === 'function') ? window.formatKiloCredits : null);
+
+  if (kiloFormatter) {
+    let targetPrice = null;
+    let priceLabel = 'FSS';
+    let badgeClass = 'fss';
+
+    if (isMapped && body.dss_value > 0) {
+      targetPrice = body.dss_value;
+      priceLabel = 'DSS Bonus';
+      badgeClass = 'dss';
+    } else if (body.fss_value > 0) {
+      targetPrice = body.fss_value;
+      priceLabel = 'FSS';
+      badgeClass = 'fss';
+    }
+
+    if (targetPrice !== null) {
+      const formattedPrice = kiloFormatter(targetPrice);
+      if (formattedPrice) {
+        const creditsStr = (typeof formatCredits === 'function') ? formatCredits(targetPrice) : `${targetPrice} Cr`;
+        priceBadgeHtml = `<div class="sysmap-price-row"><span class="sysmap-mini-badge price-badge ${badgeClass}" title="${priceLabel}: ${creditsStr}">${priceLabel} ${formattedPrice}</span></div>`;
+      }
+    }
+  }
+
   info.innerHTML = `
     <div class="sysmap-body-shortname" title="${body.body_name}">${shortName}</div>
     ${aliasHtml}
@@ -1168,6 +1199,7 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     </div>
     <div class="sysmap-body-dist">${distStr}</div>
     ${badgeList.length > 0 ? `<div class="sysmap-badges-row">${badgeList.join('')}</div>` : ''}
+    ${priceBadgeHtml}
   `;
 
   card.appendChild(sphere);

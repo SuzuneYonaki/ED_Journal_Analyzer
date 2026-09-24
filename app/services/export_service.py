@@ -15,7 +15,7 @@ def calculate_package_signature(systems_data: List[Dict[str, Any]], cmdr_name: s
     for sys_entry in sorted(systems_data, key=lambda s: s.get("system_address", 0)):
         canonical_tokens.append(str(sys_entry.get("system_address", 0)))
         canonical_tokens.append(sys_entry.get("star_system", ""))
-        for b in sorted(sys_entry.get("bodies", []), key=lambda x: x.get("body_id", 0)):
+        for b in sorted(sys_entry.get("bodies", []), key=lambda x: x.get("body_id") if x.get("body_id") is not None else 0):
             canonical_tokens.append(f"{b.get('body_id')}:{b.get('body_name')}:{b.get('planet_class') or b.get('star_type')}")
     
     raw_str = "|".join(canonical_tokens)
@@ -795,9 +795,9 @@ def generate_standalone_html(
     strings = HTML_I18N.get(lang if lang in HTML_I18N else "ja")
     sys_name = html.escape(system_data.get("star_system") or "Unknown System")
     main_star = html.escape(system_data.get("main_star_type") or "Unknown")
-    pos_x = system_data.get("star_pos_x", 0.0)
-    pos_y = system_data.get("star_pos_y", 0.0)
-    pos_z = system_data.get("star_pos_z", 0.0)
+    pos_x = system_data.get("star_pos_x") or 0.0
+    pos_y = system_data.get("star_pos_y") or 0.0
+    pos_z = system_data.get("star_pos_z") or 0.0
     sol_dist = round((pos_x**2 + pos_y**2 + pos_z**2)**0.5, 1) if (pos_x and pos_y and pos_z) else 0.0
     fss_val = system_data.get("total_fss_value", 0)
     max_pot = system_data.get("total_potential_value", 0)
@@ -828,7 +828,7 @@ def generate_standalone_html(
         grav = f"{b.get('surface_gravity_g', 0):.2f} G" if b.get("surface_gravity_g") is not None else "--"
         temp = f"{round(b.get('surface_temperature', 0))} K" if b.get("surface_temperature") is not None else "--"
         atmo = html.escape(b.get("atmosphere") or strings["atmo_none"])
-        bio = b.get("bio_signals", 0)
+        bio = b.get("bio_signals") or 0
         bio_badge = f'<span class="badge badge-bio">🌱 {bio}</span>' if bio > 0 else ""
         land_badge = '<span class="badge badge-land">Landable</span>' if b.get("landable") else ""
         
@@ -897,7 +897,7 @@ def generate_standalone_html(
             <td>{grav}</td>
             <td>{temp}</td>
             <td>{atmo}</td>
-            <td style="text-align: right; font-family: monospace; color: #4ade80;">{b.get('fss_value', 0):,} Cr</td>
+            <td style="text-align: right; font-family: monospace; color: #4ade80;">{b.get('fss_value') or 0:,} Cr</td>
         </tr>
         """)
 
@@ -1458,9 +1458,9 @@ def generate_share_snippet(system_data: Dict[str, Any], bodies: List[Dict[str, A
     sys_name = system_data.get("star_system") or "Unknown System"
     sys_addr = system_data.get("system_address")
     main_star = system_data.get("main_star_type") or "Unknown"
-    pos_x = system_data.get("star_pos_x", 0.0)
-    pos_y = system_data.get("star_pos_y", 0.0)
-    pos_z = system_data.get("star_pos_z", 0.0)
+    pos_x = system_data.get("star_pos_x") or 0.0
+    pos_y = system_data.get("star_pos_y") or 0.0
+    pos_z = system_data.get("star_pos_z") or 0.0
 
     # 1. Header line
     if is_ja:
@@ -1550,9 +1550,9 @@ def generate_summary_png_card(
     is_ja = (lang == "ja")
     sys_name = system_data.get("star_system") or "Unknown System"
     main_star = system_data.get("main_star_type") or "Unknown"
-    pos_x = system_data.get("star_pos_x", 0.0)
-    pos_y = system_data.get("star_pos_y", 0.0)
-    pos_z = system_data.get("star_pos_z", 0.0)
+    pos_x = system_data.get("star_pos_x") or 0.0
+    pos_y = system_data.get("star_pos_y") or 0.0
+    pos_z = system_data.get("star_pos_z") or 0.0
 
     # 1. Prepare statistics
     elw = sum(1 for b in bodies if "earth" in (b.get("planet_class") or "").lower())

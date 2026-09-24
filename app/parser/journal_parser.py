@@ -9,9 +9,52 @@ from app.db.database import get_db_connection, save_or_merge_mining_site
 from app.parser.value_calculator import calculate_body_value
 from app.parser.exobiology import predict_exobiology_candidates, get_species_value
 from app.analyzer.anomaly_finder import detect_anomalies
+from app.parser.rarity_scorer import calculate_celestial_rarity
+from app.services.tts_service import tts_service
 from app.services.edsm_service import edsm_service
 from app.live.rhino.note_integrator import update_body_note_in_db
 from app.live.telemetry import telemetry_tracker
+
+CODEX_GGG_PATTERN = re.compile(r"^\$Codex_Ent_Green_(?P<variant>.+?)_Name;?$", re.IGNORECASE)
+
+GGG_VARIANTS_MAP: dict[str, tuple[str, str]] = {
+    "sudarsky_class_i": ("スダルスキー・クラス1 ガス巨人", "Sudarsky Class I Gas Giant"),
+    "sudarsky_class_ii": ("スダルスキー・クラス2 ガス巨人", "Sudarsky Class II Gas Giant"),
+    "sudarsky_class_iii": ("スダルスキー・クラス3 ガス巨人", "Sudarsky Class III Gas Giant"),
+    "sudarsky_class_iv": ("スダルスキー・クラス4 ガス巨人", "Sudarsky Class IV Gas Giant"),
+    "sudarsky_class_v": ("スダルスキー・クラス5 ガス巨人", "Sudarsky Class V Gas Giant"),
+    "water_life": ("水生生命保有ガス巨人", "Gas Giant with Water-based Life"),
+    "gas_giant_water_life": ("水生生命保有ガス巨人", "Gas Giant with Water-based Life"),
+    "ammonia_life": ("アンモニア生命保有ガス巨人", "Gas Giant with Ammonia-based Life"),
+    "gas_giant_ammonia_life": ("アンモニア生命保有ガス巨人", "Gas Giant with Ammonia-based Life"),
+    "helium_rich": ("高ヘリウム含有ガス巨人", "Helium-rich Gas Giant"),
+    "helium_rich_gas_giant": ("高ヘリウム含有ガス巨人", "Helium-rich Gas Giant"),
+    "helium": ("ヘリウムガス巨人", "Helium Gas Giant"),
+    "helium_gas_giant": ("ヘリウムガス巨人", "Helium Gas Giant"),
+    "water_giant": ("ウォーター・ジャイアント", "Water Giant"),
+}
+
+
+def resolve_ggg_variant(entry_name: str) -> tuple[str, str, str] | None:
+    """
+    Parses a Codex entry name to determine if it is a Green Gas Giant (GGG).
+    Returns (raw_variant, tts_speech_name, en_name) or None if not a GGG.
+    """
+    if not entry_name or not isinstance(entry_name, str):
+        return None
+    match = CODEX_GGG_PATTERN.match(entry_name.strip())
+    if not match:
+        return None
+    raw_variant = match.group("variant")
+    v_key = raw_variant.lower().strip()
+    if v_key in GGG_VARIANTS_MAP:
+        tts_speech_name, en_name = GGG_VARIANTS_MAP[v_key]
+    else:
+        fallback_name = raw_variant.replace("_", " ").title()
+        tts_speech_name = fallback_name
+        en_name = fallback_name
+    return raw_variant, tts_speech_name, en_name
+
 
 class JournalParser:
     def __init__(self, db_conn=None, event_callback=None, is_live: bool = False):
@@ -453,6 +496,9 @@ class JournalParser:
             "orbital_inclination": inclination,
             "rings": rings,
             "reserve_level": reserve_level,
+            "radius": radius,
+            "axial_tilt": axial_tilt,
+            "Age_MY": data.get("Age_MY"),
             "bio_signals": 0
         }
 
@@ -508,8 +554,28 @@ class JournalParser:
         self._lock_confirmed_organics_into_predictions(sys_addr, body_id, bio_predictions)
         bio_pred_json = json.dumps(bio_predictions)
 
-        # Detect Anomalies
+        # Detect Celestial Rarity & Anomalies
+        rarity_res = calculate_celestial_rarity(
+            body_dict,
+            star_system_age=body_dict.get("Age_MY"),
+            main_star_type=parent_star_type
+        )
+        ggg = rarity_res.get("ggg_evaluation") or {}
+        if ggg.get("alert_level") == "URGENT" and ggg.get("tts_message"):
+            tts_service.enqueue_speak(ggg["tts_message"], priority=True)
+
         anomalies = detect_anomalies(body_dict)
+        rarity_tags = rarity_res.get("tags") or []
+        for r_tag in rarity_tags:
+            if not any(a.get("tag") == r_tag for a in anomalies if isinstance(a, dict)):
+                color = "green" if "Green Gas Giant" in r_tag else "orange"
+                anomalies.append({
+                    "type": "rarity",
+                    "tag": r_tag,
+                    "color": color,
+                    "desc": r_tag,
+                    "desc_en": r_tag
+                })
         anomalies_json = json.dumps(anomalies)
 
         self.cursor.execute("""
@@ -863,6 +929,55 @@ class JournalParser:
             self.dirty_systems.add(sys_addr)
 
     def _handle_codex_entry(self, data: dict, timestamp: str):
+        if not isinstance(data, dict):
+            return
+
+        entry_name = data.get("Name")
+        if entry_name and isinstance(entry_name, str):
+            ggg_info = resolve_ggg_variant(entry_name)
+            if ggg_info is not None:
+                raw_variant, tts_speech_name, en_name = ggg_info
+
+                # Trigger priority TTS announcement
+                tts_msg = f"警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{tts_speech_name} です。おめでとうございます、CMDR。"
+                tts_service.enqueue_speak(tts_msg, priority=True)
+
+                # Persist confirmed GGG anomaly tags to bodies table
+                sys_addr = data.get("SystemAddress")
+                body_id = data.get("BodyID") if data.get("BodyID") is not None else data.get("Body")
+                if sys_addr is not None and body_id is not None:
+                    self.cursor.execute(
+                        "SELECT id, anomalies_json FROM bodies WHERE system_address = ? AND body_id = ?",
+                        (sys_addr, body_id)
+                    )
+                    b_row = self.cursor.fetchone()
+                    if b_row:
+                        raw_anom = b_row["anomalies_json"]
+                        anomalies = []
+                        if raw_anom:
+                            try:
+                                anomalies = json.loads(raw_anom)
+                            except Exception:
+                                anomalies = []
+                        if not isinstance(anomalies, list):
+                            anomalies = []
+
+                        confirmed_tags = ["Confirmed GGG", f"Confirmed GGG ({en_name})"]
+                        for tag_name in confirmed_tags:
+                            if not any((a.get("tag") == tag_name if isinstance(a, dict) else a == tag_name) for a in anomalies):
+                                anomalies.append({
+                                    "type": "confirmed_ggg",
+                                    "tag": tag_name,
+                                    "color": "green",
+                                    "desc": f"確定GGG: {tts_speech_name}",
+                                    "desc_en": tag_name
+                                })
+
+                        new_anom_json = json.dumps(anomalies)
+                        self.cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (new_anom_json, b_row["id"]))
+                        self.dirty_systems.add(sys_addr)
+                return
+
         cat = data.get("Category", "")
         cat_loc = (data.get("Category_Localised") or "").lower()
         subcat = data.get("SubCategory", "")
