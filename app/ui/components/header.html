@@ -11,26 +11,54 @@
         <span id="header-logged-period" style="font-size: 0.62rem; color: #fed7aa; white-space: nowrap;" data-i18n="stat_period_all">全期間</span>
       </div>
 
-      <div class="header-stats" id="header-stats-content" style="margin: 0; padding: 0; border: none; display: flex; gap: 20px; align-items: center; transition: all 0.25s ease;">
-        <div class="stat-item">
+      <div class="header-stats" id="header-stats-content" style="margin: 0; padding: 0; border: none; display: flex; gap: 14px; align-items: center; transition: all 0.25s ease; flex-wrap: wrap;">
+        <div class="stat-item" data-i18n-title="stat_systems_tip" title="訪問した星系の累計数">
           <span class="stat-label" data-i18n="stat_systems">訪問星系</span>
           <span id="stat-systems" class="stat-value">0</span>
         </div>
-        <div class="stat-item">
+        <div class="stat-item" data-i18n-title="stat_bodies_tip" title="スキャンした全天体（恒星・惑星・衛星）の累計数">
           <span class="stat-label" data-i18n="stat_bodies">スキャン天体</span>
           <span id="stat-bodies" class="stat-value">0</span>
         </div>
-        <div class="stat-item">
-          <span class="stat-label" data-i18n="stat_elw">ELW (地球型)</span>
+        <div class="stat-item" data-i18n-title="stat_elw_tip" title="地球型惑星 (Earth-like World) の累計スキャン数">
+          <span class="stat-label" data-i18n="stat_elw">ELW</span>
           <span id="stat-elw" class="stat-value highlight">0</span>
         </div>
-        <div class="stat-item">
-          <span class="stat-label" data-i18n="stat_ww">WW (海洋惑星)</span>
+        <div class="stat-item" data-i18n-title="stat_ww_tip" title="海洋惑星 (Water World) の累計スキャン数">
+          <span class="stat-label" data-i18n="stat_ww">WW</span>
           <span id="stat-ww" class="stat-value" style="color: var(--ed-cyan);">0</span>
         </div>
-        <div class="stat-item">
-          <span class="stat-label" data-i18n="stat_ammonia">Ammonia</span>
+        <div class="stat-item" data-i18n-title="stat_ammonia_tip" title="アンモニア惑星 (Ammonia World) の累計スキャン数">
+          <span class="stat-label" data-i18n="stat_ammonia">AW</span>
           <span id="stat-ammonia" class="stat-value" style="color: var(--ed-cyan-dim);">0</span>
+        </div>
+        <div class="stat-item" data-i18n-title="stat_hmc_tip" title="高金属含有惑星・衛星 (High Metal Content) の累計スキャン数">
+          <span class="stat-label" data-i18n="stat_hmc">HMC</span>
+          <span id="stat-hmc" class="stat-value" style="color: #60a5fa;">0</span>
+        </div>
+        <div class="stat-item" data-i18n-title="stat_mr_tip" title="金属豊富惑星・衛星 (Metal Rich) の累計スキャン数">
+          <span class="stat-label" data-i18n="stat_mr">MR</span>
+          <span id="stat-mr" class="stat-value" style="color: #fb923c;">0</span>
+        </div>
+        <div class="stat-item" data-i18n-title="stat_icy_tip" title="氷惑星・衛星 (Icy Body) の累計スキャン数">
+          <span class="stat-label" data-i18n="stat_icy">Icy</span>
+          <span id="stat-icy" class="stat-value" style="color: #93c5fd;">0</span>
+        </div>
+        <div class="stat-item" data-i18n-title="stat_rocky_tip" title="岩石惑星・衛星 (Rocky Body) の累計スキャン数">
+          <span class="stat-label" data-i18n="stat_rocky">Rocky</span>
+          <span id="stat-rocky" class="stat-value" style="color: #d1d5db;">0</span>
+        </div>
+        <div class="stat-item" data-i18n-title="stat_rocky_ice_tip" title="岩石氷惑星・衛星 (Rocky Ice Body) の累計スキャン数">
+          <span class="stat-label" data-i18n="stat_rocky_ice">Rocky Icy</span>
+          <span id="stat-rocky-ice" class="stat-value" style="color: #a5f3fc;">0</span>
+        </div>
+        <div class="stat-item" data-i18n-title="stat_gg_tip" title="全ガス巨人（各種クラスI〜V・水生/アンモニア生命・ヘリウム等）の累計スキャン数">
+          <span class="stat-label" data-i18n="stat_gg">Gas Giants</span>
+          <span id="stat-gg" class="stat-value" style="color: #c084fc;">0</span>
+        </div>
+        <div class="stat-item" data-i18n-title="stat_ggg_tip" title="グリーンガスジャイアント (Green Gas Giant) の累計スキャン数">
+          <span class="stat-label" style="color: #34d399;" data-i18n="stat_ggg">🟢 GGG</span>
+          <span id="stat-ggg" class="stat-value" style="color: #34d399; text-shadow: 0 0 6px rgba(16, 185, 129, 0.5);">0</span>
         </div>
         <div class="stat-item">
           <span class="stat-label" data-i18n="stat_bio">生体 (Bio) 星系</span>

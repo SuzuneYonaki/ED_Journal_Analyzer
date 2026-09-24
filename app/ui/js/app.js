@@ -144,14 +144,19 @@ async function fetchGlobalStats() {
     const url = `/api/stats${params.toString() ? '?' + params.toString() : ''}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const pc = data.celestial_counts || {};
     document.getElementById('stat-systems').innerText = Number(data.total_systems).toLocaleString();
     document.getElementById('stat-bodies').innerText = Number(data.total_bodies).toLocaleString();
-    document.getElementById('stat-elw').innerText = Number(data.elw_systems).toLocaleString();
-    if (document.getElementById('stat-ww')) {
-      document.getElementById('stat-ww').innerText = Number(data.ww_systems || 0).toLocaleString();
-    }
-    document.getElementById('stat-ammonia').innerText = Number(data.ammonia_systems).toLocaleString();
+    if (document.getElementById('stat-elw')) document.getElementById('stat-elw').innerText = Number(pc.earth_like !== undefined ? pc.earth_like : (data.elw_systems || 0)).toLocaleString();
+    if (document.getElementById('stat-ww')) document.getElementById('stat-ww').innerText = Number(pc.water_world !== undefined ? pc.water_world : (data.ww_systems || 0)).toLocaleString();
+    if (document.getElementById('stat-ammonia')) document.getElementById('stat-ammonia').innerText = Number(pc.ammonia_world !== undefined ? pc.ammonia_world : (data.ammonia_systems || 0)).toLocaleString();
+    if (document.getElementById('stat-hmc')) document.getElementById('stat-hmc').innerText = Number(pc.high_metal_content || 0).toLocaleString();
+    if (document.getElementById('stat-mr')) document.getElementById('stat-mr').innerText = Number(pc.metal_rich || 0).toLocaleString();
+    if (document.getElementById('stat-icy')) document.getElementById('stat-icy').innerText = Number(pc.icy_body || 0).toLocaleString();
+    if (document.getElementById('stat-rocky')) document.getElementById('stat-rocky').innerText = Number(pc.rocky_body || 0).toLocaleString();
+    if (document.getElementById('stat-rocky-ice')) document.getElementById('stat-rocky-ice').innerText = Number(pc.rocky_ice || 0).toLocaleString();
+    if (document.getElementById('stat-gg')) document.getElementById('stat-gg').innerText = Number(pc.gas_giants_total || 0).toLocaleString();
+    if (document.getElementById('stat-ggg')) document.getElementById('stat-ggg').innerText = Number(pc.green_gas_giant || 0).toLocaleString();
     const bioSysCount = Number(data.bio_systems || 0).toLocaleString();
     const bioSigCount = Number(data.total_bio_signals || 0).toLocaleString();
     document.getElementById('stat-bio').innerText = `${bioSysCount} (${bioSigCount} Sig)`;

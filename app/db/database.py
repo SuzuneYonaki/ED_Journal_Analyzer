@@ -930,7 +930,17 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None) -> Dict[
                 COUNT(CASE WHEN LOWER(planet_class) = 'metal rich body' THEN 1 END) AS metal_rich,
                 COUNT(CASE WHEN LOWER(planet_class) = 'rocky body' THEN 1 END) AS rocky_body,
                 COUNT(CASE WHEN LOWER(planet_class) = 'icy body' THEN 1 END) AS icy_body,
-                COUNT(CASE WHEN LOWER(planet_class) IN ('rocky ice body', 'rocky ice world') THEN 1 END) AS rocky_ice
+                COUNT(CASE WHEN LOWER(planet_class) IN ('rocky ice body', 'rocky ice world') THEN 1 END) AS rocky_ice,
+                COUNT(CASE WHEN (
+                    anomalies_json LIKE '%Confirmed GGG%'
+                    OR anomalies_json LIKE '%Green Gas Giant%'
+                    OR EXISTS (
+                        SELECT 1 FROM codex_entries ce
+                        WHERE ce.system_address = bodies.system_address
+                        AND ce.body_id = bodies.body_id
+                        AND ce.is_ggg = 1
+                    )
+                ) THEN 1 END) AS green_gas_giant
             FROM bodies
             WHERE planet_class IS NOT NULL AND TRIM(planet_class) != ''
         """)
@@ -945,8 +955,23 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None) -> Dict[
                 "gas_giant_water_life": 0, "gas_giant_water_life_ringed": 0, "gas_giant_water_life_unringed": 0,
                 "gas_giant_ammonia_life": 0, "gas_giant_ammonia_life_ringed": 0, "gas_giant_ammonia_life_unringed": 0,
                 "sudarsky_class_1": 0, "sudarsky_class_2": 0, "sudarsky_class_3": 0, "sudarsky_class_4": 0, "sudarsky_class_5": 0,
-                "helium_gas_giant": 0, "high_metal_content": 0, "metal_rich": 0, "rocky_body": 0, "icy_body": 0, "rocky_ice": 0
+                "helium_gas_giant": 0, "high_metal_content": 0, "metal_rich": 0, "rocky_body": 0, "icy_body": 0, "rocky_ice": 0,
+                "green_gas_giant": 0
             }
+
+        # Calculate total gas giants
+        gas_giants_total = (
+            planet_counts.get("sudarsky_class_1", 0) +
+            planet_counts.get("sudarsky_class_2", 0) +
+            planet_counts.get("sudarsky_class_3", 0) +
+            planet_counts.get("sudarsky_class_4", 0) +
+            planet_counts.get("sudarsky_class_5", 0) +
+            planet_counts.get("gas_giant_water_life", 0) +
+            planet_counts.get("gas_giant_ammonia_life", 0) +
+            planet_counts.get("helium_gas_giant", 0) +
+            planet_counts.get("water_giant", 0)
+        )
+        planet_counts["gas_giants_total"] = gas_giants_total
 
         summary = {
             "total_bodies": total_bodies,

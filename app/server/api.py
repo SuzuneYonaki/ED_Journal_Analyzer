@@ -511,6 +511,9 @@ def get_global_stats(
     c.execute("SELECT COUNT(*) as count FROM scanned_organics")
     stats["total_scanned_organics"] = c.fetchone()["count"]
 
+    celestial_stats = get_celestial_statistics(conn)
+    stats["celestial_counts"] = celestial_stats.get("planets", {})
+
     stats["current_location"] = get_current_cmdr_location(conn)
     conn.close()
     return stats
