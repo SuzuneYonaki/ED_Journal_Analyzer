@@ -136,6 +136,7 @@ function renderSystemList() {
     if (sys.has_water_world) tags.push('<span class="tag-badge tag-ww">WW</span>');
     if (sys.has_ammonia) tags.push('<span class="tag-badge tag-ammonia">Ammonia</span>');
     if (sys.has_terraformable) tags.push('<span class="tag-badge tag-tf">TF</span>');
+    if (sys.has_ggg) tags.push('<span class="tag-badge tag-ggg" style="background: rgba(16, 185, 129, 0.25); color: #34d399; border: 1px solid #10b981; font-weight: bold;">🟢 GGG</span>');
     
     const modSettings = getModuleSettings();
     if (modSettings.exobiology !== false) {
@@ -633,7 +634,7 @@ function renderSystemHeader() {
 
 // Collapsible Groups & Badges
 function updateCollapsibleBadges() {
-  const generalKeys = ['has_elw', 'has_water_world', 'has_ammonia', 'has_terraformable', 'has_bio', 'has_first_discover', 'has_bookmarks', 'is_shared', 'has_high_g', 'has_anomalies'];
+  const generalKeys = ['has_elw', 'has_water_world', 'has_ammonia', 'has_terraformable', 'has_bio', 'has_first_discover', 'has_bookmarks', 'is_shared', 'has_high_g', 'has_anomalies', 'has_ggg'];
   const generalCount = generalKeys.filter(k => state.filters[k]).length;
   const badgeGen = document.getElementById('badge-general-filters');
   if (badgeGen) {

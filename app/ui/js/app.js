@@ -16,6 +16,7 @@ let state = {
     has_first_discover: false,
     has_high_g: false,
     has_anomalies: false,
+    has_ggg: false,
     has_landable_hmc: false,
     has_landable_metal_rich: false,
     has_landable_rocky: false,
@@ -1265,7 +1266,14 @@ function renderHierarchyTree(container, nodes) {
     const modSettings = getModuleSettings();
     if (modSettings.rhino !== false && node.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${node.mining_signals}</span>`);
     if (node.anomalies && node.anomalies.length > 0) {
-      node.anomalies.forEach(a => badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`));
+      node.anomalies.forEach(a => {
+        const isGgg = a.type === 'confirmed_ggg' || (a.tag && (a.tag.includes('Confirmed GGG') || a.tag.includes('Green Gas Giant'))) || a.color === 'green';
+        if (isGgg) {
+          badges.push(`<span class="tag-badge tag-ggg" title="${a.desc || a.tag}">🟢 ${a.tag}</span>`);
+        } else {
+          badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`);
+        }
+      });
     }
 
     const typeDesc = node.star_type ? `${t('star_type_label')} (${node.star_type})` : (node.planet_class || 'Planet');
@@ -1370,7 +1378,14 @@ function renderFlatBodiesList(container, bodies) {
     const modSettings = getModuleSettings();
     if (modSettings.rhino !== false && body.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${body.mining_signals}</span>`);
     if (body.anomalies && body.anomalies.length > 0) {
-      body.anomalies.forEach(a => badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`));
+      body.anomalies.forEach(a => {
+        const isGgg = a.type === 'confirmed_ggg' || (a.tag && (a.tag.includes('Confirmed GGG') || a.tag.includes('Green Gas Giant'))) || a.color === 'green';
+        if (isGgg) {
+          badges.push(`<span class="tag-badge tag-ggg" title="${a.desc || a.tag}">🟢 ${a.tag}</span>`);
+        } else {
+          badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`);
+        }
+      });
     }
     const aliasTag = (body.bookmark && body.bookmark.alias_name)
       ? `<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-size: 0.7rem; margin-left: 6px;">🏷️ ${body.bookmark.alias_name}</span>`

@@ -880,6 +880,14 @@ header {
   font-weight: bold;
 }
 
+.chip.active[data-filter="has_ggg"] {
+  background: rgba(16, 185, 129, 0.25) !important;
+  border-color: #10b981 !important;
+  color: #34d399 !important;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
 /* Mining / Landable Filter Chips Active States */
 .chip.active[data-filter="has_landable_hmc"] {
   background: #2563eb !important;
@@ -1110,6 +1118,7 @@ header {
 .tag-high-g { background: rgba(255, 51, 68, 0.2); color: var(--ed-red); border: 1px solid rgba(255, 51, 68, 0.5); font-weight: bold; }
 .tag-landable { background: rgba(255, 204, 0, 0.15); color: var(--ed-gold); border: 1px solid rgba(255, 204, 0, 0.4); }
 .tag-anomaly { background: rgba(255, 113, 0, 0.2); color: var(--ed-orange); border: 1px solid rgba(255, 113, 0, 0.4); }
+.tag-ggg { background: rgba(16, 185, 129, 0.25); color: #34d399; border: 1px solid #10b981; font-weight: bold; }
 .tag-edsm-found { background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-weight: bold; }
 .tag-edsm-unreg { background: rgba(234, 179, 8, 0.18); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.5); font-weight: bold; }
 .tag-edsm-checking { background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }

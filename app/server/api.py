@@ -541,6 +541,7 @@ def get_systems(
     has_landable: Optional[bool] = False,
     has_high_g: Optional[bool] = False,
     has_anomalies: Optional[bool] = False,
+    has_ggg: Optional[bool] = False,
     has_first_discover: Optional[bool] = False,
     has_landable_hmc: Optional[bool] = False,
     has_landable_metal_rich: Optional[bool] = False,
@@ -624,6 +625,20 @@ def get_systems(
         conditions.append("systems.has_high_g = 1")
     if has_anomalies:
         conditions.append("systems.has_anomalies = 1")
+    if has_ggg:
+        conditions.append("""EXISTS (
+            SELECT 1 FROM bodies b
+            WHERE b.system_address = systems.system_address
+            AND (
+                b.anomalies_json LIKE '%Confirmed GGG%'
+                OR b.anomalies_json LIKE '%Green Gas Giant%'
+                OR EXISTS (
+                    SELECT 1 FROM codex_entries ce
+                    WHERE ce.system_address = systems.system_address
+                    AND ce.is_ggg = 1
+                )
+            )
+        )""")
     if has_first_discover:
         conditions.append("systems.has_first_discover = 1")
 
@@ -930,7 +945,20 @@ def get_systems(
                 SELECT 
                     systems.*,
                     pe.rarity_score,
-                    {cmdr_dist_expr} AS cmdr_distance_ly
+                    {cmdr_dist_expr} AS cmdr_distance_ly,
+                    EXISTS (
+                        SELECT 1 FROM bodies b
+                        WHERE b.system_address = systems.system_address
+                        AND (
+                            b.anomalies_json LIKE '%Confirmed GGG%'
+                            OR b.anomalies_json LIKE '%Green Gas Giant%'
+                            OR EXISTS (
+                                SELECT 1 FROM codex_entries ce
+                                WHERE ce.system_address = systems.system_address
+                                AND ce.is_ggg = 1
+                            )
+                        )
+                    ) AS has_ggg
                 FROM systems
                 LEFT JOIN system_physics_evaluations pe ON systems.system_address = pe.system_address
                 {where_clause}
@@ -1008,7 +1036,20 @@ def get_systems(
                 systems.*,
                 pe.rarity_score,
                 {cmdr_dist_expr} AS cmdr_distance_ly,
-                NULL AS composite_score
+                NULL AS composite_score,
+                EXISTS (
+                    SELECT 1 FROM bodies b
+                    WHERE b.system_address = systems.system_address
+                    AND (
+                        b.anomalies_json LIKE '%Confirmed GGG%'
+                        OR b.anomalies_json LIKE '%Green Gas Giant%'
+                        OR EXISTS (
+                            SELECT 1 FROM codex_entries ce
+                            WHERE ce.system_address = systems.system_address
+                            AND ce.is_ggg = 1
+                        )
+                    )
+                ) AS has_ggg
             FROM systems
             LEFT JOIN system_physics_evaluations pe ON systems.system_address = pe.system_address
             {where_clause}
