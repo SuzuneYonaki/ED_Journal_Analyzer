@@ -1891,6 +1891,8 @@ def get_tts_settings():
         "enabled": False,
         "highBioEnabled": False,
         "highBioMode": "both",
+        "highBioThreshold": 40000000,
+        "highBioThresholdType": "bonus",
         "highBioText": "{body}、高額生物反応です。見込額{value}クレジット。",
         "gggEnabled": True,
         "gggMode": "both",

@@ -2870,6 +2870,8 @@ const ttsState = {
   enabled: false,
   highBioEnabled: false,
   highBioMode: 'both', // 'both' | 'tts' | 'buzzer'
+  highBioThreshold: 40000000,
+  highBioThresholdType: 'bonus',
   highBioText: '{body}、高額生物反応です。見込額{value}クレジット。',
   gggEnabled: true, // GGGは極めて希少なためデフォルト有効
   gggMode: 'both', // 'both' | 'tts' | 'buzzer'
@@ -3640,7 +3642,9 @@ async function initSettingsModal() {
   const enabledToggle = document.getElementById('tts-enabled-toggle');
   const highBioToggle = document.getElementById('tts-high-bio-toggle');
   const highBioModeSelect = document.getElementById('tts-high-bio-mode');
+  const highBioThresholdSelect = document.getElementById('tts-high-bio-threshold');
   const highBioTextInput = document.getElementById('tts-high-bio-text');
+  const btnHighBioTest = document.getElementById('btn-tts-high-bio-test');
   const gggToggle = document.getElementById('tts-ggg-toggle');
   const gggModeSelect = document.getElementById('tts-ggg-mode');
   const gggConfirmedTextInput = document.getElementById('tts-ggg-confirmed-text');
@@ -3663,6 +3667,7 @@ async function initSettingsModal() {
     if (enabledToggle) enabledToggle.checked = Boolean(ttsState.enabled);
     if (highBioToggle) highBioToggle.checked = Boolean(ttsState.highBioEnabled);
     if (highBioModeSelect) highBioModeSelect.value = ttsState.highBioMode || 'both';
+    if (highBioThresholdSelect) highBioThresholdSelect.value = String(ttsState.highBioThreshold ?? 40000000);
     if (highBioTextInput) highBioTextInput.value = ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。';
     if (gggToggle) gggToggle.checked = (ttsState.gggEnabled !== false);
     if (gggModeSelect) gggModeSelect.value = ttsState.gggMode || 'both';
@@ -3727,6 +3732,10 @@ async function initSettingsModal() {
       if (enabledToggle) ttsState.enabled = enabledToggle.checked;
       if (highBioToggle) ttsState.highBioEnabled = highBioToggle.checked;
       if (highBioModeSelect) ttsState.highBioMode = highBioModeSelect.value;
+      if (highBioThresholdSelect) {
+        ttsState.highBioThreshold = parseInt(highBioThresholdSelect.value, 10) || 40000000;
+        ttsState.highBioThresholdType = (ttsState.highBioThreshold < 20000000) ? 'base' : 'bonus';
+      }
       if (highBioTextInput) ttsState.highBioText = highBioTextInput.value || '{body}、高額生物反応です。見込額{value}クレジット。';
       if (gggToggle) ttsState.gggEnabled = gggToggle.checked;
       if (gggModeSelect) ttsState.gggMode = gggModeSelect.value;
@@ -3750,6 +3759,31 @@ async function initSettingsModal() {
         btnSave.innerText = origText;
         btnSave.style.background = 'var(--ed-orange)';
       }, 1500);
+    });
+  }
+
+  if (btnHighBioTest) {
+    btnHighBioTest.addEventListener('click', () => {
+      const mode = (highBioModeSelect ? highBioModeSelect.value : ttsState.highBioMode) || 'both';
+      const sampleText = (highBioTextInput ? highBioTextInput.value : ttsState.highBioText) || '{body}、高額生物反応です。見込額{value}クレジット。';
+      const testMsg = sampleText
+        .replace(/\{body\}/gi, 'Planet A 1')
+        .replace(/\{value\}/gi, '95.1M')
+        .replace(/\{payout\}/gi, '95.1M')
+        .replace(/\{system\}/gi, (state.selectedSystem ? state.selectedSystem.star_system : null) || 'Praea Euq YZ-Y d100');
+
+      if (mode === 'both' || mode === 'buzzer') {
+        playHighBioBuzzer();
+      }
+      if (mode === 'both' || mode === 'tts') {
+        setTimeout(() => {
+          if (engineSelect && engineSelect.value === 'voicevox') {
+            playVoicevoxSpeech(testMsg);
+          } else {
+            playWebSpeech(testMsg);
+          }
+        }, mode === 'both' ? 500 : 0);
+      }
     });
   }
 

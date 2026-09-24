@@ -250,19 +250,19 @@
             </label>
           </div>
 
-          <!-- High-Value Bio Planet Alert (40M+ Cr) -->
+          <!-- High-Value Bio Planet Alert (Bonus-inclusive 40M+ Cr) -->
           <div style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); background: rgba(0, 255, 136, 0.04); padding: 10px; border-radius: 6px; border: 1px solid rgba(0, 255, 136, 0.2);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <div>
-                <div style="font-weight: bold; color: var(--ed-green);" data-i18n="tts_high_bio_label">🌿 高額生物天体通知 (40M+ Cr)</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="tts_high_bio_desc">1st Discover星系で単一天体のBio予測総額が40M Crを超える場合にお知らせ</div>
+                <div style="font-weight: bold; color: var(--ed-green);" data-i18n="tts_high_bio_label">🌿 高額生物天体通知 (初回ボーナス込 40M+ Cr)</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="tts_high_bio_desc">1st Discover星系で単一天体のBio予測総額が設定閾値を超える場合にお知らせ (初回5倍ボーナス込)</div>
               </div>
               <label class="switch">
                 <input type="checkbox" id="tts-high-bio-toggle">
                 <span class="slider"></span>
               </label>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 8px; margin-top: 4px;">
               <div>
                 <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="tts_alert_type_label">通知音タイプ:</label>
                 <select id="tts-high-bio-mode" class="sort-select" style="width: 100%; padding: 4px 8px; font-size: 0.78rem;">
@@ -272,9 +272,24 @@
                 </select>
               </div>
               <div>
+                <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="tts_high_bio_threshold_label">通知閾値 (Cr):</label>
+                <select id="tts-high-bio-threshold" class="sort-select" style="width: 100%; padding: 4px 8px; font-size: 0.78rem;">
+                  <option value="40000000" data-i18n="tts_high_bio_thresh_40m">40M Cr (ボーナス込 / 基礎8M)</option>
+                  <option value="20000000" data-i18n="tts_high_bio_thresh_20m">20M Cr (ボーナス込 / 基礎4M)</option>
+                  <option value="60000000" data-i18n="tts_high_bio_thresh_60m">60M Cr (ボーナス込 / 基礎12M)</option>
+                  <option value="90000000" data-i18n="tts_high_bio_thresh_90m">90M Cr (Stratum確定級)</option>
+                  <option value="8000000" data-i18n="tts_high_bio_thresh_8m">8M Cr (基礎額基準)</option>
+                </select>
+              </div>
+              <div>
                 <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="tts_speech_text_label">読み上げテキスト:</label>
                 <input type="text" id="tts-high-bio-text" class="search-input" value="{body}、高額生物反応です。見込額{value}クレジット。" style="width: 100%; padding: 4px 8px; font-size: 0.75rem;">
               </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 4px;">
+              <button type="button" id="btn-tts-high-bio-test" class="btn-primary" style="background: rgba(0, 255, 136, 0.2); border: 1px solid var(--ed-green); color: var(--ed-green); font-size: 0.75rem; padding: 4px 10px;" data-i18n="btn_tts_high_bio_test">
+                🔊 高額生物テスト発声
+              </button>
             </div>
           </div>
 
