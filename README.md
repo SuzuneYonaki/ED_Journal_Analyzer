@@ -47,25 +47,30 @@
 4. **天体ブックマーク・エイリアス（別名）・Markdownメモ帳**:
    - 天体単位でのブックマーク登録、ユーザー定義通称（エイリアス）、リアルタイムプレビュー対応のMarkdownメモ。
    - 星系名・天体名・エイリアス名・メモ本文を対象とした高速グローバル検索。
-5. **🤝 CMDR Data Share（3系統の探査データ共有・出力）**:
-   - **🌐 Web共有HTML生成**: ワンクリックで単一の美しい星系図HTML（`exports/{星系名}_share.html`）を出力。外部通信なし・オフラインでブラウザ閲覧可能。天体観測JSONを完全内包。
-   - **🖼️ 共有用画像生成**: 観測メタデータをPNGチャンクに埋め込んだ **ComfyUI方式サマリー画像カード** を出力。本アプリにドラッグ＆ドロップするだけで星系データを瞬時にインポート・復元可能。
+5. **🤝 CMDR Data Share（3系統の探査データ共有・出力 & LLM天球儀連携）**:
+   - **🌐 Web共有HTML生成**: ワンクリックで単一の美しい星系図HTML（`exports/{星系名}_share.html`）を出力。外部通信なし・オフラインでブラウザ閲覧可能なインタラクティブ天球儀（Orrery）に加え、星系の完全な天体観測JSONを内包。**このHTML（または内部JSON）をLLM（ChatGPT, Claude, Gemini等）に直接読み込ませることで、天体物理の学術的妥当性推論や、星系探査シナリオ・SF的読み物の自動生成を行わせることができます。**
+   - **🖼️ 共有用画像生成**: 観測メタデータをPNGチャンクに埋め込んだ **ComfyUI方式サマリー画像カード** を出力。本アプリにドラッグ＆ドロップするだけで星系データを瞬時にインポート・復元可能（同様にLLMへの直接入力にも対応）。
    - **📋 星系短評投稿文**: 特殊軌道、地質、生体、環情報などの見どころをまとめたテキストをワンクリックでクリップボードへコピー。Twitch配信コメントやDiscord、X（旧Twitter）への投稿に最適。
-6. **天体物理レア度スコア & 2014年天文学モデル査読**:
+6. **天体物理妥当性チェック・レア度スコア & 2014年天文学モデル査読**:
    - 軌道力学（ヒル球・ロッシュ限界・古在共鳴）やハビタブルゾーン（Kopparapu 2013）、質量分類（Weiss & Marcy 2014）に基づく天体物理レア度スコア（100点満点）の自動算出とサマリーレポート生成。
-7. **地表・着陸・重力 & 採掘支援 (Rhino Mining Support)** ※デフォルトOFF:
+   - 各天体の質量、密度、温度、重力、軌道離心率などの物理的整合性を機械的ロジックにより多角的に妥当性チェック。
+7. **🟢 グリーンガスジャイアント (GGG) 候補検知 & Codex 確定通知**:
+   - 銀河全体で数十件しか確認されていない極めて希少な天体「グリーンガスジャイアント（GGG）」。
+   - 探査CMDR諸氏による観測データ（生命保有型ガス巨人、特定表面温度域、質量・大気条件）を元に、機械的な物理パラメータ照合を行い、FSSスキャン時に高確率の可能性を示唆する「GGG候補アラート（黄色バッジ・注意通知）」を発火。
+   - さらにDSSマッピングやCodex登録（`CodexEntry`）を検知した際には、確定天体として「`🟢 Confirmed GGG`」バッジを付与し、優先度の高いTTS音声警告を通知。過去ログスキャンによる遡及抽出と保護機構も完備。
+8. **地表・着陸・重力 & 採掘支援 (Rhino Mining Support)** ※デフォルトOFF:
    - 着陸可能天体（Landable）限定の高重力警告（3G+危険）、地質・火山活動シグナル。
    - EDSM天体データに基づく採掘有望度スコア判定（**⛏️ Scout: High / Med**）。
    - Spansh連携によるリングホットスポットおよび惑星採掘地点（PML）の自動照会。
    - 大型着艦パッド（Large Pad）装備ステーション保有星系・到達距離フィルター。
    - リング天体のDSSスキャン結果（ホットスポット）のMarkdownメモ自動記録、CMDR現在地座標のワンクリック挿入。
    - ※探査特化のため初期状態では非表示。設定モーダル（拡張機能モジュール表示設定）からいつでも有効化可能。
-8. **モジュール表示の自由カスタマイズ**:
+9. **モジュール表示の自由カスタマイズ**:
    - **Exobiology**、**Rhino採掘**、**星系人口・支配勢力/BGS** を設定画面から個別にON/OFF切り替え可能（デフォルトでは探査に特化し、採掘や勢力情報はOFF）。
-9. **音声読み上げ通知 (TTS)**:
-   - 新星系到着時の未発見（1st Discover）や高額生物天体（40M+ Cr）の発見を、音声合成（Web Speech API または ローカルVOICEVOX）で自動アナウンス。画面表示と音声通知は独立してON/OFF可能。
-   - ※各TTS・音声ライブラリ（キャラクター）の利用規約（クレジット表記等）に準拠してご利用ください。確認できないものについては各TTSの利用規約をご覧ください。
-10. **UIカスタマイズ & 日英バイリンガル対応**:
+10. **音声読み上げ通知 (TTS)**:
+    - 新星系到着時の未発見（1st Discover）、高額生物天体（初回5倍ボーナス込40M+ Cr / 基礎8M+ Cr相当）、および確定GGG・GGG候補の発見を、音声合成（Web Speech API または ローカルVOICEVOX）で自動アナウンス。画面表示と音声通知は独立してON/OFF可能。
+    - ※各TTS・音声ライブラリ（キャラクター）の利用規約（クレジット表記等）に準拠してご利用ください。確認できないものについては各TTSの利用規約をご覧ください。
+11. **UIカスタマイズ & 日英バイリンガル対応**:
     - **Modern Deep Space**、**Elite Classic Amber HUD**、**Cyan Explorer HUD** のテーマ切り替え。
     - 画面レイアウトの1列（標準）/ 2列（Orrery＋天体ツリー常時並列表示）切り替え。
     - UIフォントサイズの自由変更および緊急リセット（<kbd>Ctrl + 0</kbd>）。
@@ -116,8 +121,8 @@
 - **採掘スポット・地表座標の記録（Rhinoモジュール有効時）**:
   - リング天体をDSSスキャンすると、ホットスポット一覧が自動で天体メモに追記されます。
   - 着陸中にメモ欄右下の「📍 現在地座標挿入」を押すと、現在CMDRがいる緯度・経度が瞬時に挿入されます。
-- **AI による星系の深層査読（制作者の遊び）**:
-  - 出力した Web 共有 HTML または 共有用PNG画像（内部に天体・軌道JSONを完全保持）を ChatGPT、Claude、Gemini 等にドラッグ＆ドロップし、下記の**天体物理リアリティチェック・プロンプト（制作者の遊び）**を併用することで、星系の物理的実在性やハビタビリティの学術的検証レポートを生成して楽しむことができます。
+- **AI による星系の深層査読 & LLM天球儀連携（制作者の遊び）**:
+  - 出力した Web 共有 HTML（単一ファイルで完結するインタラクティブ天球儀Orrery）または 共有用PNG画像（内部に天体・軌道JSONを完全保持）を ChatGPT、Claude、Gemini 等にドラッグ＆ドロップし、下記の**天体物理リアリティチェック・プロンプト（制作者の遊び）**を併用することで、星系の物理的実在性やハビタビリティの学術的検証レポートや深層探査シナリオを生成して楽しむことができます。
 
 #### 💾 ポータブル設計 & `data` フォルダの管理
 - **レジストリ完全非依存**: すべての設定・インデックスデータ・メモ・ブックマークは、実行ファイルと同じ階層の `data/` フォルダ内に保存されます。
@@ -218,25 +223,30 @@
 4. **Celestial Bookmarks, Aliases & Markdown Notes**:
    - Bookmark celestial bodies, assign user aliases (e.g. `Mining Base Alpha`), and edit rich Markdown notes with live preview.
    - Lightning-fast global search across star systems, body names, custom aliases, and note contents.
-5. **🤝 CMDR Data Share (3-Way Exploration Data Sharing & Export)**:
-   - **🌐 Generate Web Share HTML**: Exports a single, self-contained HTML file (`exports/{System}_share.html`) with embedded astrophysical JSON that opens offline in any browser without external CDNs.
-   - **🖼️ Generate Share PNG Image**: Exports a **ComfyUI-style summary image card** with observation metadata embedded into PNG chunks. Simply drag-and-drop the image back into the application window to instantly import and inspect the system.
+5. **🤝 CMDR Data Share (3-Way Exploration Data Sharing & Export & LLM Orrery Integration)**:
+   - **🌐 Generate Web Share HTML**: Exports a single, self-contained HTML file (`exports/{System}_share.html`) featuring an interactive offline Orrery and embedded astrophysical JSON without external CDNs. **Feeding this HTML or embedded JSON directly into modern LLMs (ChatGPT, Claude, Gemini) enables deep astrophysical plausibility audits and automated science-fiction exploration scenarios.**
+   - **🖼️ Generate Share PNG Image**: Exports a **ComfyUI-style summary image card** with observation metadata embedded into PNG chunks. Simply drag-and-drop the image back into the application window to instantly import and inspect the system (or provide directly to multimodal LLMs).
    - **📋 System Summary Post Text**: Generates and copies a concise textual summary highlighting orbital wonders, geology, biology, and rings to your clipboard—perfect for Twitch chat, Discord, or X (Twitter).
-6. **Astrophysical Rarity Score & 2014 Astronomical Peer-Review**:
+6. **Astrophysical Reality Checks & 2014 Astronomical Peer-Review**:
    - Automatic calculation of an astrophysical rarity score (0-100) and summary report based on orbital dynamics (Hill spheres, Roche limits, Kozai resonances), habitable zone models (Kopparapu 2013), and mass classification (Weiss & Marcy 2014).
-7. **Surface Landing, Gravity & Rhino Mining Support** (Disabled by default):
+   - Rigorous rule-based mechanical sanity checks verifying physical consistency across stellar/planetary mass, density, temperature, gravity, and orbital eccentricity.
+7. **🟢 Green Gas Giant (GGG) Candidate Detection & Codex Confirmation**:
+   - Ultra-rare phenomena with only several dozen documented discoveries across the entire galaxy.
+   - Leverages discovery data shared by CMDR exploration communities to mechanically evaluate candidate physical criteria (life-bearing gas giants, specific surface temperatures, mass, and atmosphere profiles), firing a high-probability "GGG Candidate Alert" (yellow badge & advisory) during FSS scans.
+   - Detects DSS mapping and Codex registrations (`CodexEntry`) to promote bodies to "🟢 Confirmed GGG" with high-priority audio announcements, supplemented by retroactive historical log extraction and protection.
+8. **Surface Landing, Gravity & Rhino Mining Support** (Disabled by default):
    - Extreme gravity danger warnings exclusively on landable worlds (3G+ hazard); surface volcanism and geological signals.
    - High-value mining reconnaissance rating (**⛏️ Scout: High / Med**) powered by EDSM telemetry.
    - Automatic query of ring hotspots and planetary mining locations (PML) via Spansh integration.
    - Filtering for systems hosting stations with Large Landing Pads within configurable arrival distance thresholds.
    - Automated DSS ring hotspot markdown logging and one-click CMDR surface coordinate insertion.
    - *Disabled by default to focus on pure exploration. Can be enabled anytime in Settings (Extension Modules).*
-8. **Customizable Module Toggles**:
+9. **Customizable Module Toggles**:
    - Individually toggle **Exobiology**, **Rhino Mining**, and **Faction & Population (BGS)** modules in the settings modal (focused on pure exploration by default with mining and faction modules turned off).
-9. **Text-to-Speech Audio Alerts (TTS)**:
-   - Voice announcements for First Discoveries upon system arrival and high-value exobiology bodies (40M+ Cr) using Web Speech API or local VOICEVOX. Visual alerts and audio announcements can be toggled independently.
-   - *Please adhere to the terms of service and attribution requirements for each TTS engine and character library. Please refer to each provider's official terms of service for any unverified voices.*
-10. **UI Customization & Instant Bilingual Support**:
+10. **Text-to-Speech Audio Alerts (TTS)**:
+    - Voice announcements for First Discoveries upon system arrival, high-value exobiology bodies (40M+ Cr with 5x first-sampler bonus / 8M+ Cr base), and confirmed/candidate Green Gas Giants using Web Speech API or local VOICEVOX. Visual alerts and audio announcements can be toggled independently.
+    - *Please adhere to the terms of service and attribution requirements for each TTS engine and character library. Please refer to each provider's official terms of service for any unverified voices.*
+11. **UI Customization & Instant Bilingual Support**:
     - Switchable themes: **Modern Deep Space**, **Elite Classic Amber HUD**, and **Cyan Explorer HUD**.
     - Flexible layout switching between 1-column (standard) and 2-column (parallel Orrery + hierarchy tree).
     - Adjustable font size (numeric px input) with instant reset (<kbd>Ctrl + 0</kbd>).
@@ -287,8 +297,8 @@ From the **🤝 CMDR Data Share** dropdown menu in the system header, export and
 - **Mining Hotspots & Surface Coordinates (When Rhino module enabled)**:
   - Scanning rings with DSS automatically appends detected hotspots into the body note.
   - While landed, click "📍 現在地座標挿入" (Insert Coordinates) in the note editor to stamp your exact planetary coordinates.
-- **AI-Powered System Audit (Developer's Playful Experiment)**:
-  - Drag and drop your exported Web Share HTML or Share PNG Image (both embed complete astrophysical & orbital JSON) into ChatGPT, Claude, or Gemini alongside the **Astrophysical Reality Check Prompt (Developer's Playful Experiment)** below to generate an in-depth scientific peer review and exploratory reading.
+- **AI-Powered System Audit & LLM Orrery (Developer's Playful Experiment)**:
+  - Drag and drop your exported Web Share HTML (interactive standalone Orrery) or Share PNG Image (both embed complete astrophysical & orbital JSON) into ChatGPT, Claude, or Gemini alongside the **Astrophysical Reality Check Prompt (Developer's Playful Experiment)** below to generate an in-depth scientific peer review and immersive exploratory narrative.
 
 #### 💾 Portable Architecture & `data` Directory
 - **Zero Registry Footprint**: All database indexes, notes, and preferences reside locally inside the `data/` directory next to the executable.
