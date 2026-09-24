@@ -1,10 +1,11 @@
 """
-tts_service.py - Backend Text-To-Speech Service (VOICEVOX) with OBS Audio Capture Support
+tts_service.py - Backend Text-To-Speech Service (VOICEVOX) with OBS Audio Capture Support & Priority Queue
 Elite Dangerous Journal Analyzer
 
 Provides backend audio playback directly from the Python server process
 to allow OBS Studio's "Application Audio Capture" to hook TTS output independently.
-Features queued sequential playback to prevent audio overlap.
+Features priority-queued sequential playback to prevent audio overlap and allow urgent alerts
+(e.g., GGG detections) to jump ahead of routine announcements.
 """
 
 from __future__ import annotations
@@ -27,7 +28,8 @@ logger = logging.getLogger("ed_analyzer.tts_service")
 class TTSService:
     """
     Backend TTS Service managing VOICEVOX speech synthesis and direct OS audio output.
-    Uses an internal asyncio queue for sequential, non-overlapping playback.
+    Uses an internal asyncio PriorityQueue for sequential, non-overlapping playback,
+    with priority-based interrupt queueing for critical exploration alerts.
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
@@ -41,7 +43,10 @@ class TTSService:
         if config is not None:
             self.update_config(config)
 
-        self._queue: asyncio.Queue[Optional[Tuple[str, bool]]] = asyncio.Queue()
+        # PriorityQueue elements: (priority_rank: int, sequence_id: int, text: Optional[str])
+        # priority_rank: 0 for URGENT/priority, 1 for normal
+        self._queue: asyncio.PriorityQueue[Tuple[int, int, Optional[str]]] = asyncio.PriorityQueue()
+        self._counter: int = 0
         self._worker_task: Optional[asyncio.Task] = None
         self._running: bool = False
 
@@ -58,7 +63,8 @@ class TTSService:
         if not self._running:
             return
         self._running = False
-        await self._queue.put(None)
+        # Put sentinel with highest priority to exit promptly
+        await self._queue.put((0, 0, None))
         if self._worker_task:
             try:
                 await asyncio.wait_for(self._worker_task, timeout=2.0)
@@ -70,6 +76,8 @@ class TTSService:
     def enqueue_speak(self, text: str, priority: bool = False) -> bool:
         """
         Enqueues text for synthesis and playback.
+        When priority=True, jumps ahead of normal queued items while preserving FIFO
+        within the same priority level.
         Returns True if enqueued, False if disabled or invalid text.
         """
         if not self.config.get("enabled", True):
@@ -79,8 +87,10 @@ class TTSService:
         if not clean_text:
             return False
 
-        # Put into queue non-blocking
-        self._queue.put_nowait((clean_text, priority))
+        self._counter += 1
+        priority_rank = 0 if priority else 1
+        # Put into PriorityQueue non-blocking
+        self._queue.put_nowait((priority_rank, self._counter, clean_text))
         return True
 
     def test_speak(self) -> bool:
@@ -130,15 +140,15 @@ class TTSService:
         return self.config.copy()
 
     async def _worker(self) -> None:
-        """Sequential queue processing worker."""
+        """Sequential queue processing worker with priority ordering."""
         while self._running:
             try:
                 item = await self._queue.get()
-                if item is None:
+                priority_rank, seq, text = item
+                if text is None:
                     self._queue.task_done()
                     break
 
-                text, priority = item
                 if self.config.get("enabled", True):
                     await self._synthesize_and_play(text)
                 self._queue.task_done()

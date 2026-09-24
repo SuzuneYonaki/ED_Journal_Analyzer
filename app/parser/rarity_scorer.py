@@ -1,10 +1,10 @@
 """
-rarity_scorer.py - Rule-based Deterministic Astrophysical Rarity Scorer
+rarity_scorer.py - Rule-based Deterministic Astrophysical Rarity Scorer & GGG Detector
 Elite Dangerous Journal Analyzer
 
-Calculates deterministic rarity scores, tags, and detailed anomaly reports
-from Elite Dangerous journal Scan events based on astrophysical physical models,
-stellar evolution constraints, extreme orbital dynamics, and ring morphologies.
+Calculates deterministic rarity scores, tags, detailed anomaly reports, and
+Green Gas Giant (GGG) multi-variable probabilities from Elite Dangerous journal
+Scan events based on physical models, stellar evolution constraints, and extreme orbital dynamics.
 """
 
 from __future__ import annotations
@@ -62,86 +62,216 @@ def calculate_density_g_cm3(
     return density_kg_m3 / 1000.0
 
 
+def calculate_ggg_probability(
+    body_data: dict,
+    main_star_type: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Evaluates multi-variable probability score for Green Gas Giants (GGG).
+    Returns a deterministic assessment dictionary:
+    {
+        "score": int,
+        "is_candidate": bool,
+        "alert_level": Optional[str],  # "URGENT" | "NOTICE" | None
+        "tts_message": Optional[str],
+        "breakdown": list[dict]
+    }
+    """
+    planet_class = _get_field(body_data, "PlanetClass", "planet_class")
+    surface_temp = _get_field(body_data, "SurfaceTemperature", "surface_temperature")
+    mass_em = _get_field(body_data, "MassEM", "mass_em")
+    dist_ls = _get_field(body_data, "DistanceFromArrivalLS", "distance_from_arrival_ls")
+    body_name = _get_field(body_data, "BodyName", "body_name", default="Unknown Body")
+
+    # Star type resolution
+    resolved_star = main_star_type
+    if resolved_star is None:
+        resolved_star = _get_field(body_data, "parent_star_type", "main_star_type", "star_type")
+
+    p_str = (planet_class or "").lower()
+
+    # Pre-requisite condition: Must be Sudarsky gas giant with water-based or ammonia-based life
+    has_water_life = "water based life" in p_str or "water-based life" in p_str
+    has_ammonia_life = "ammonia based life" in p_str or "ammonia-based life" in p_str
+
+    if not (has_water_life or has_ammonia_life):
+        return {
+            "score": 0,
+            "is_candidate": False,
+            "alert_level": None,
+            "tts_message": None,
+            "breakdown": []
+        }
+
+    score = 0
+    breakdown: List[Dict[str, Any]] = []
+
+    # 1. Base Class Bonus
+    if has_water_life:
+        score += 35
+        breakdown.append({"rule": "Water-based Life Gas Giant", "points": 35})
+    elif has_ammonia_life:
+        score += 20
+        breakdown.append({"rule": "Ammonia-based Life Gas Giant", "points": 20})
+
+    # 2. Surface Temperature
+    if surface_temp is not None:
+        try:
+            st = float(surface_temp)
+            if 160.0 <= st <= 260.0:
+                score += 25
+                breakdown.append({"rule": f"Optimal Temperature ({st:.1f} K in 160-260 K)", "points": 25})
+            elif 140.0 <= st <= 300.0:
+                score += 15
+                breakdown.append({"rule": f"Viable Temperature ({st:.1f} K in 140-300 K)", "points": 15})
+        except (ValueError, TypeError):
+            pass
+
+    # 3. Mass (Earth Masses)
+    if mass_em is not None:
+        try:
+            m = float(mass_em)
+            if 50.0 <= m <= 400.0:
+                score += 15
+                breakdown.append({"rule": f"Optimal Mass ({m:.1f} M_Earth in 50-400)", "points": 15})
+            elif m >= 15.0:
+                score += 10
+                breakdown.append({"rule": f"Viable Mass ({m:.1f} M_Earth >= 15)", "points": 10})
+        except (ValueError, TypeError):
+            pass
+
+    # 4. Distance From Arrival (Ls)
+    if dist_ls is not None:
+        try:
+            d = float(dist_ls)
+            if 500.0 <= d <= 5000.0:
+                score += 15
+                breakdown.append({"rule": f"Optimal Habitable Separation ({d:.1f} Ls in 500-5000)", "points": 15})
+        except (ValueError, TypeError):
+            pass
+
+    # 5. Host Star Spectral Type
+    if resolved_star:
+        s_upper = str(resolved_star).upper().strip()
+        # Eligible: F, G, K, N (Neutron), White Dwarfs (DA/D...), H (Black Hole)
+        is_f_g_k = any(s_upper.startswith(pfx) for pfx in ("F", "G", "K"))
+        is_neutron = s_upper.startswith("N")
+        is_black_hole = s_upper.startswith("H") or "BLACKHOLE" in s_upper
+        is_white_dwarf = s_upper.startswith("D") or "WHITE DWARF" in s_upper
+
+        if is_f_g_k or is_neutron or is_black_hole or is_white_dwarf:
+            score += 10
+            breakdown.append({"rule": f"Favorable Host Star ({s_upper})", "points": 10})
+
+    # Alert level and TTS notification determination
+    if score >= 80:
+        alert_level = "URGENT"
+        is_candidate = True
+        tts_message = f"注意。{body_name} は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。"
+    elif score >= 60:
+        alert_level = "NOTICE"
+        is_candidate = True
+        tts_message = None
+    else:
+        alert_level = None
+        is_candidate = False
+        tts_message = None
+
+    return {
+        "score": score,
+        "is_candidate": is_candidate,
+        "alert_level": alert_level,
+        "tts_message": tts_message,
+        "breakdown": breakdown
+    }
+
+
 def calculate_celestial_rarity(
     body_data: dict,
-    star_system_age: Optional[float] = None
-) -> dict:
+    star_system_age: Optional[float] = None,
+    main_star_type: Optional[str] = None
+) -> Dict[str, Any]:
     """
-    Calculates astrophysical rarity score and anomaly tags for a celestial body.
-
-    Args:
-        body_data: Dictionary containing ED Journal Scan event or DB bodies row.
-                   Supports both PascalCase ED journal keys and snake_case DB columns.
-        star_system_age: Optional system age in millions of years (Age_MY).
+    Calculates deterministic rarity score, tags, and detailed anomaly metrics
+    for an Elite Dangerous celestial body based on journal Scan attributes.
 
     Returns:
-        dict: {
-            "score": int,
-            "tags": list[str],
-            "details": dict
-        }
+    {
+        "rarity_score": int,
+        "score": int,
+        "tags": list[str],
+        "details": dict,
+        "ggg_evaluation": dict
+    }
     """
     if not isinstance(body_data, dict):
         return {
+            "rarity_score": 0,
             "score": 0,
             "tags": [],
-            "details": {"breakdown": []}
+            "details": {"breakdown": []},
+            "ggg_evaluation": {
+                "score": 0,
+                "is_candidate": False,
+                "alert_level": None,
+                "tts_message": None
+            }
         }
 
     score: int = 0
     tags: List[str] = []
     breakdown: List[Dict[str, Any]] = []
 
-    # ---------------------------------------------------------
-    # 0. Field Extractions with Strict None Guarding
-    # ---------------------------------------------------------
-    # Star / Planet classification
-    star_type_raw = _get_field(body_data, "StarType", "star_type")
-    star_type: Optional[str] = str(star_type_raw).strip() if star_type_raw is not None else None
-    is_star: bool = bool(star_type and star_type != "" and star_type.lower() != "null")
+    # Safely extract core attributes
+    star_type = _get_field(body_data, "StarType", "star_type")
+    planet_class = _get_field(body_data, "PlanetClass", "planet_class")
+    mass_em = _get_field(body_data, "MassEM", "mass_em")
+    stellar_mass = _get_field(body_data, "StellarMass", "stellar_mass")
+    radius_m = _get_field(body_data, "Radius", "radius")
+    eccentricity = _get_field(body_data, "Eccentricity", "eccentricity")
+    orbital_inclination = _get_field(body_data, "OrbitalInclination", "orbital_inclination")
+    orbital_period_s = _get_field(body_data, "OrbitalPeriod", "orbital_period")
+    axial_tilt_rad = _get_field(body_data, "AxialTilt", "axial_tilt")
 
-    planet_class_raw = _get_field(body_data, "PlanetClass", "planet_class")
-    planet_class: Optional[str] = str(planet_class_raw).strip() if planet_class_raw is not None else None
-
-    # System Age (Age_MY)
-    sys_age_val = star_system_age if star_system_age is not None else _get_field(body_data, "Age_MY", "age_my")
-    system_age_my: Optional[float] = float(sys_age_val) if sys_age_val is not None else None
-
-    # Orbital Dynamics
-    ecc_raw = _get_field(body_data, "Eccentricity", "eccentricity")
-    eccentricity: Optional[float] = float(ecc_raw) if ecc_raw is not None else None
-
-    inc_raw = _get_field(body_data, "OrbitalInclination", "orbital_inclination")
-    orbital_inclination: Optional[float] = float(inc_raw) if inc_raw is not None else None
-
-    period_raw = _get_field(body_data, "OrbitalPeriod", "orbital_period")
-    orbital_period_s: Optional[float] = float(period_raw) if period_raw is not None else None
-
-    tilt_raw = _get_field(body_data, "AxialTilt", "axial_tilt")
-    axial_tilt_rad: Optional[float] = float(tilt_raw) if tilt_raw is not None else None
-
-    # Physical Dimensions
-    radius_m_raw = _get_field(body_data, "Radius", "radius")
-    radius_m: Optional[float] = float(radius_m_raw) if radius_m_raw is not None else None
-
-    mass_em_raw = _get_field(body_data, "MassEM", "mass_em")
-    mass_em: Optional[float] = float(mass_em_raw) if mass_em_raw is not None else None
-
-    stellar_mass_raw = _get_field(body_data, "StellarMass", "stellar_mass")
-    stellar_mass: Optional[float] = float(stellar_mass_raw) if stellar_mass_raw is not None else None
-
-    # Rings
+    # Rings data normalization
     rings_data = _get_field(body_data, "Rings", "rings")
     if isinstance(rings_data, str):
         try:
             rings_data = json.loads(rings_data)
         except Exception:
             rings_data = []
-    if not isinstance(rings_data, list):
+    elif not isinstance(rings_data, list):
         rings_data = []
 
+    # System Age (Age_MY)
+    sys_age_val = star_system_age if star_system_age is not None else _get_field(body_data, "Age_MY", "age_my")
+    system_age_my: Optional[float] = None
+    if sys_age_val is not None:
+        try:
+            system_age_my = float(sys_age_val)
+        except (ValueError, TypeError):
+            system_age_my = None
+
+    # Density Calculation
+    density_g_cm3 = calculate_density_g_cm3(
+        float(mass_em) if mass_em is not None else None,
+        float(stellar_mass) if stellar_mass is not None else None,
+        float(radius_m) if radius_m is not None else None
+    )
+
+    # Axial Tilt conversion to degrees
+    axial_tilt_deg: Optional[float] = None
+    if axial_tilt_rad is not None:
+        try:
+            # Journal AxialTilt is provided in radians
+            axial_tilt_deg = abs(float(axial_tilt_rad) * 180.0 / math.pi)
+        except (ValueError, TypeError):
+            axial_tilt_deg = None
+
+    is_star = bool(star_type)
+
     # ---------------------------------------------------------
-    # 1. System Age & Stellar Evolution Anomalies
+    # 1. Stellar Age & Evolution Anomalies
     # ---------------------------------------------------------
     if system_age_my is not None:
         # Ultra-Young System: Age_MY < 10
@@ -158,9 +288,9 @@ def calculate_celestial_rarity(
             tags.append(tag)
             breakdown.append({"tag": tag, "points": 20, "reason": f"System age {system_age_my} MY > 12500 MY"})
 
-        # Stellar Evolution Anomaly: O/B stars surviving beyond expected lifetime (> 300 MY)
-        if is_star and star_type:
-            st_upper = star_type.upper()
+        # Stellar Evolution Anomaly: O or B class star with Age_MY > 300
+        if is_star:
+            st_upper = (star_type or "").upper()
             if (st_upper.startswith("O") or st_upper.startswith("B")) and system_age_my > 300.0:
                 score += 30
                 tag = "Stellar Evolution Anomaly (O/B Over-aged)"
@@ -168,75 +298,74 @@ def calculate_celestial_rarity(
                 breakdown.append({
                     "tag": tag,
                     "points": 30,
-                    "reason": f"O/B type star '{star_type}' in an aged system ({system_age_my} MY > 300 MY)"
+                    "reason": f"O/B star ({st_upper}) in system aged {system_age_my} MY > 300 MY"
                 })
 
     # ---------------------------------------------------------
-    # 2. Orbital Mechanics Limits
+    # 2. Orbital Mechanics Extremes
     # ---------------------------------------------------------
-    # Eccentricity
+    # Eccentricity extremes
     if eccentricity is not None:
-        if eccentricity >= 0.9:
+        ecc = float(eccentricity)
+        if ecc >= 0.9:
             score += 30
             tag = "Hyper-Eccentric"
             tags.append(tag)
-            breakdown.append({"tag": tag, "points": 30, "reason": f"Eccentricity {eccentricity:.4f} >= 0.9"})
-        elif eccentricity >= 0.8:
+            breakdown.append({"tag": tag, "points": 30, "reason": f"Eccentricity {ecc:.4f} >= 0.9"})
+        elif ecc >= 0.8:
             score += 15
             tag = "High Eccentricity"
             tags.append(tag)
-            breakdown.append({"tag": tag, "points": 15, "reason": f"Eccentricity {eccentricity:.4f} in [0.8, 0.9)"})
+            breakdown.append({"tag": tag, "points": 15, "reason": f"Eccentricity {ecc:.4f} in [0.8, 0.9)"})
 
-    # Orbital Inclination (Degrees)
+    # Orbital Inclination extremes
     if orbital_inclination is not None:
-        abs_inc = abs(orbital_inclination)
-        # Retrograde Orbit: abs(OrbitalInclination) > 90
+        inc = float(orbital_inclination)
+        abs_inc = abs(inc)
+        # Retrograde Orbit: abs(OrbitalInclination) > 90 deg
         if abs_inc > 90.0:
             score += 25
             tag = "Retrograde Orbit"
             tags.append(tag)
-            breakdown.append({"tag": tag, "points": 25, "reason": f"Orbital inclination {orbital_inclination:.2f}° > 90°"})
-
-        # Polar Orbit: 85 <= abs(OrbitalInclination) <= 95
+            breakdown.append({"tag": tag, "points": 25, "reason": f"Inclination {inc:.2f}° > 90° (Retrograde)"})
+        # Polar Orbit: 85 <= abs(OrbitalInclination) <= 95 deg
         if 85.0 <= abs_inc <= 95.0:
             score += 15
             tag = "Polar Orbit"
             tags.append(tag)
-            breakdown.append({"tag": tag, "points": 15, "reason": f"Orbital inclination {orbital_inclination:.2f}° in [85°, 95°]"})
+            breakdown.append({"tag": tag, "points": 15, "reason": f"Inclination {inc:.2f}° near 90° (Polar)"})
 
-    # Ultra-Short Orbital Period (Hot Orbit, Planets only, < 1 day)
-    if not is_star and orbital_period_s is not None and 0 < orbital_period_s < 86400.0:
-        score += 20
-        tag = "Ultra-Short Period"
-        tags.append(tag)
-        breakdown.append({
-            "tag": tag,
-            "points": 20,
-            "reason": f"Orbital period {orbital_period_s / 3600.0:.2f} h < 24 h (1 day)"
-        })
+    # Ultra-Short Orbital Period: Planets orbiting in under 1 Earth day (< 86400 s)
+    if not is_star and orbital_period_s is not None:
+        p_sec = float(orbital_period_s)
+        if 0 < p_sec < 86400.0:
+            score += 20
+            tag = "Ultra-Short Period"
+            tags.append(tag)
+            breakdown.append({
+                "tag": tag,
+                "points": 20,
+                "reason": f"Orbital period {p_sec / 3600.0:.2f} h < 24.0 h"
+            })
 
-    # Extreme Axial Tilt (Sideways Rotation, 80° - 100°)
-    axial_tilt_deg: Optional[float] = None
-    if axial_tilt_rad is not None:
-        axial_tilt_deg = math.degrees(axial_tilt_rad)
-        abs_tilt = abs(axial_tilt_deg)
-        if 80.0 <= abs_tilt <= 100.0:
+    # Extreme Axial Tilt: 80 <= abs(AxialTilt) <= 100 degrees
+    if axial_tilt_deg is not None:
+        if 80.0 <= axial_tilt_deg <= 100.0:
             score += 15
             tag = "Extreme Axial Tilt (Sideways)"
             tags.append(tag)
             breakdown.append({
                 "tag": tag,
                 "points": 15,
-                "reason": f"Axial tilt {axial_tilt_deg:.2f}° within sideways range [80°, 100°]"
+                "reason": f"Axial tilt {axial_tilt_deg:.2f}° perpendicular to orbital plane"
             })
 
     # ---------------------------------------------------------
     # 3. Density & Structural Extremes
     # ---------------------------------------------------------
-    density_g_cm3 = calculate_density_g_cm3(mass_em, stellar_mass, radius_m)
-    if density_g_cm3 is not None and density_g_cm3 > 0:
+    if density_g_cm3 is not None and not is_star:
         p_class_upper = (planet_class or "").upper()
-        # Chthonian Candidate / Super-Dense Core: Rock/Metal body with density > 15.0 g/cm^3
+        # Chthonian / Super-Dense Core: Rocky or High Metal Content with density > 15.0 g/cm^3
         is_rocky_metal = any(k in p_class_upper for k in ["METAL", "ROCKY", "HIGH METAL"])
         if is_rocky_metal and density_g_cm3 > 15.0:
             score += 30
@@ -272,10 +401,13 @@ def calculate_celestial_rarity(
                     inner_rad = _get_field(r, "InnerRad", "inner_rad")
                     outer_rad = _get_field(r, "OuterRad", "outer_rad")
                     if inner_rad is not None and outer_rad is not None:
-                        ring_width = float(outer_rad) - float(inner_rad)
-                        if ring_width > 10.0 * radius_m:
-                            has_massive_ring = True
-                            break
+                        try:
+                            ring_width = float(outer_rad) - float(inner_rad)
+                            if ring_width > 10.0 * float(radius_m):
+                                has_massive_ring = True
+                                break
+                        except (ValueError, TypeError):
+                            pass
 
         if has_massive_ring:
             score += 20
@@ -307,9 +439,25 @@ def calculate_celestial_rarity(
             })
 
     # ---------------------------------------------------------
-    # 5. Result Assembly
+    # 5. GGG (Green Gas Giant) Probability Evaluation
+    # ---------------------------------------------------------
+    ggg_eval = calculate_ggg_probability(body_data, main_star_type=main_star_type)
+    if ggg_eval["is_candidate"]:
+        ggg_tag = "Green Gas Giant Candidate"
+        if ggg_tag not in tags:
+            tags.append(ggg_tag)
+        score += ggg_eval["score"]
+        breakdown.append({
+            "tag": ggg_tag,
+            "points": ggg_eval["score"],
+            "reason": f"GGG evaluation alert_level={ggg_eval['alert_level']} (Score: {ggg_eval['score']})"
+        })
+
+    # ---------------------------------------------------------
+    # 6. Result Assembly
     # ---------------------------------------------------------
     return {
+        "rarity_score": score,
         "score": score,
         "tags": tags,
         "details": {
@@ -320,5 +468,11 @@ def calculate_celestial_rarity(
             "orbital_period_s": round(orbital_period_s, 2) if orbital_period_s is not None else None,
             "axial_tilt_deg": round(axial_tilt_deg, 4) if axial_tilt_deg is not None else None,
             "breakdown": breakdown
+        },
+        "ggg_evaluation": {
+            "score": ggg_eval["score"],
+            "is_candidate": ggg_eval["is_candidate"],
+            "alert_level": ggg_eval["alert_level"],
+            "tts_message": ggg_eval["tts_message"]
         }
     }

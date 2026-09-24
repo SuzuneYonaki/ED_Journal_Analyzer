@@ -9,6 +9,8 @@ from app.db.database import get_db_connection, save_or_merge_mining_site
 from app.parser.value_calculator import calculate_body_value
 from app.parser.exobiology import predict_exobiology_candidates, get_species_value
 from app.analyzer.anomaly_finder import detect_anomalies
+from app.parser.rarity_scorer import calculate_celestial_rarity
+from app.services.tts_service import tts_service
 from app.services.edsm_service import edsm_service
 from app.live.rhino.note_integrator import update_body_note_in_db
 from app.live.telemetry import telemetry_tracker
@@ -453,6 +455,9 @@ class JournalParser:
             "orbital_inclination": inclination,
             "rings": rings,
             "reserve_level": reserve_level,
+            "radius": radius,
+            "axial_tilt": axial_tilt,
+            "Age_MY": data.get("Age_MY"),
             "bio_signals": 0
         }
 
@@ -508,8 +513,28 @@ class JournalParser:
         self._lock_confirmed_organics_into_predictions(sys_addr, body_id, bio_predictions)
         bio_pred_json = json.dumps(bio_predictions)
 
-        # Detect Anomalies
+        # Detect Celestial Rarity & Anomalies
+        rarity_res = calculate_celestial_rarity(
+            body_dict,
+            star_system_age=body_dict.get("Age_MY"),
+            main_star_type=parent_star_type
+        )
+        ggg = rarity_res.get("ggg_evaluation") or {}
+        if ggg.get("alert_level") == "URGENT" and ggg.get("tts_message"):
+            tts_service.enqueue_speak(ggg["tts_message"], priority=True)
+
         anomalies = detect_anomalies(body_dict)
+        rarity_tags = rarity_res.get("tags") or []
+        for r_tag in rarity_tags:
+            if not any(a.get("tag") == r_tag for a in anomalies if isinstance(a, dict)):
+                color = "green" if "Green Gas Giant" in r_tag else "orange"
+                anomalies.append({
+                    "type": "rarity",
+                    "tag": r_tag,
+                    "color": color,
+                    "desc": r_tag,
+                    "desc_en": r_tag
+                })
         anomalies_json = json.dumps(anomalies)
 
         self.cursor.execute("""
