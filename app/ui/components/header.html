@@ -52,13 +52,27 @@
           <span class="stat-label" data-i18n="stat_rocky_ice">Rocky Icy</span>
           <span id="stat-rocky-ice" class="stat-value" style="color: #a5f3fc;">0</span>
         </div>
-        <div class="stat-item" data-i18n-title="stat_gg_tip" title="全ガスジャイアント（各種クラスI〜V・水生/アンモニア生命・ヘリウム等）の累計スキャン数">
-          <span class="stat-label" data-i18n="stat_gg">Gas Giants</span>
-          <span id="stat-gg" class="stat-value" style="color: #c084fc;">0</span>
-        </div>
-        <div class="stat-item" data-i18n-title="stat_ggg_tip" title="グリーンガスジャイアント (Green Gas Giant) の累計スキャン数">
-          <span class="stat-label" style="color: #34d399;" data-i18n="stat_ggg">🟢 GGG</span>
-          <span id="stat-ggg" class="stat-value" style="color: #34d399; text-shadow: 0 0 6px rgba(16, 185, 129, 0.5);">0</span>
+        <!-- Gas Giants Group with full breakdown -->
+        <div class="stat-item stat-item-gg-group" data-i18n-title="stat_gg_tip" title="全ガスジャイアント（各種クラスI〜V・生命・ヘリウム等）の累計スキャン数内訳">
+          <div class="stat-gg-main">
+            <span class="stat-label" data-i18n="stat_gg">Gas Giants</span>
+            <span id="stat-gg" class="stat-value" style="color: #c084fc;">0</span>
+          </div>
+          <div class="stat-gg-breakdown">
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_c1_tip" title="Sudarsky Class I"><span class="gg-tag">I</span><b id="stat-gg-c1">0</b></span>
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_c2_tip" title="Sudarsky Class II"><span class="gg-tag">II</span><b id="stat-gg-c2">0</b></span>
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_c3_tip" title="Sudarsky Class III"><span class="gg-tag">III</span><b id="stat-gg-c3">0</b></span>
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_c4_tip" title="Sudarsky Class IV"><span class="gg-tag">IV</span><b id="stat-gg-c4">0</b></span>
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_c5_tip" title="Sudarsky Class V"><span class="gg-tag">V</span><b id="stat-gg-c5">0</b></span>
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_wbl_tip" title="Gas Giant with Water-based Life"><span class="gg-tag">WbL</span><b id="stat-gg-wbl">0</b></span>
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_wblr_tip" title="Ringed Gas Giant with Water-based Life"><span class="gg-tag">WbL (R)</span><b id="stat-gg-wblr">0</b></span>
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_abl_tip" title="Gas Giant with Ammonia-based Life"><span class="gg-tag">AbL</span><b id="stat-gg-abl">0</b></span>
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_ablr_tip" title="Ringed Gas Giant with Ammonia-based Life"><span class="gg-tag">AbL (R)</span><b id="stat-gg-ablr">0</b></span>
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_herich_tip" title="Helium-rich Gas Giant"><span class="gg-tag">He-Rich</span><b id="stat-gg-herich">0</b></span>
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_he_tip" title="Helium Gas Giant"><span class="gg-tag">He</span><b id="stat-gg-he">0</b></span>
+            <span class="stat-gg-sub" data-i18n-title="stat_gg_wg_tip" title="Water Giant"><span class="gg-tag">WG</span><b id="stat-gg-wg">0</b></span>
+            <span class="stat-gg-sub stat-gg-sub-ggg" data-i18n-title="stat_gg_ggg_tip" title="Confirmed Green Gas Giant"><span class="gg-tag">🟢 GGG</span><b id="stat-ggg">0</b></span>
+          </div>
         </div>
         <div class="stat-item">
           <span class="stat-label" data-i18n="stat_bio">生体 (Bio) 星系</span>
