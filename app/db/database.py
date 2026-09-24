@@ -682,7 +682,22 @@ def init_db(conn=None):
                     material_name=mat,
                     timestamp=row["timestamp"]
                 )
-    except Exception as mig_err:
+    except Exception:
+        pass
+
+    # Migration: clean up legacy "Green Gas Giant Candidate" in anomalies_json to "GGG Candidate"
+    try:
+        cursor.execute("""
+            UPDATE bodies
+            SET anomalies_json = REPLACE(anomalies_json, 'Green Gas Giant Candidate', 'GGG Candidate')
+            WHERE anomalies_json LIKE '%Green Gas Giant Candidate%';
+        """)
+        cursor.execute("""
+            UPDATE system_physics_evaluations
+            SET anomalies_json = REPLACE(anomalies_json, 'Green Gas Giant Candidate', 'GGG Candidate')
+            WHERE anomalies_json LIKE '%Green Gas Giant Candidate%';
+        """)
+    except Exception:
         pass
 
     conn.commit()
@@ -903,8 +918,21 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None) -> Dict[
             if st:
                 star_counts[st] = int(r["cnt"] or 0)
 
+        # Check if codex_entries table exists to avoid sqlite3.OperationalError on unmigrated DBs
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='codex_entries'")
+        has_codex = cursor.fetchone() is not None
+
+        codex_clause = """
+                    OR EXISTS (
+                        SELECT 1 FROM codex_entries ce
+                        WHERE ce.system_address = bodies.system_address
+                        AND ce.body_id = bodies.body_id
+                        AND ce.is_ggg = 1
+                    )
+        """ if has_codex else ""
+
         # 3. Planet Classes & Special Variants
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT
                 COUNT(CASE WHEN LOWER(planet_class) IN ('earthlike body', 'earth-like world') THEN 1 END) AS earth_like,
                 COUNT(CASE WHEN LOWER(planet_class) = 'water world' THEN 1 END) AS water_world,
@@ -933,13 +961,7 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None) -> Dict[
                 COUNT(CASE WHEN LOWER(planet_class) IN ('rocky ice body', 'rocky ice world') THEN 1 END) AS rocky_ice,
                 COUNT(CASE WHEN (
                     anomalies_json LIKE '%Confirmed GGG%'
-                    OR anomalies_json LIKE '%Green Gas Giant%'
-                    OR EXISTS (
-                        SELECT 1 FROM codex_entries ce
-                        WHERE ce.system_address = bodies.system_address
-                        AND ce.body_id = bodies.body_id
-                        AND ce.is_ggg = 1
-                    )
+                    {codex_clause}
                 ) THEN 1 END) AS green_gas_giant
             FROM bodies
             WHERE planet_class IS NOT NULL AND TRIM(planet_class) != ''
@@ -990,6 +1012,31 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None) -> Dict[
             "stars": star_counts,
             "planet_counts": planet_counts,
             "planets": planet_counts
+        }
+    except Exception as e:
+        print(f"[DB] Error aggregating celestial statistics: {e}")
+        return {
+            "summary": {
+                "total_bodies": 0, "total_stars": 0, "total_planets": 0, "total_ringed": 0,
+                "total_bodies_scanned": 0, "total_stars_scanned": 0, "total_planets_scanned": 0, "total_ringed_bodies": 0
+            },
+            "star_counts": {}, "stars": {},
+            "planet_counts": {
+                "earth_like": 0, "water_world": 0, "ammonia_world": 0, "water_giant": 0,
+                "gas_giant_water_life": 0, "gas_giant_water_life_ringed": 0, "gas_giant_water_life_unringed": 0,
+                "gas_giant_ammonia_life": 0, "gas_giant_ammonia_life_ringed": 0, "gas_giant_ammonia_life_unringed": 0,
+                "sudarsky_class_1": 0, "sudarsky_class_2": 0, "sudarsky_class_3": 0, "sudarsky_class_4": 0, "sudarsky_class_5": 0,
+                "helium_gas_giant": 0, "high_metal_content": 0, "metal_rich": 0, "rocky_body": 0, "icy_body": 0, "rocky_ice": 0,
+                "green_gas_giant": 0, "gas_giants_total": 0
+            },
+            "planets": {
+                "earth_like": 0, "water_world": 0, "ammonia_world": 0, "water_giant": 0,
+                "gas_giant_water_life": 0, "gas_giant_water_life_ringed": 0, "gas_giant_water_life_unringed": 0,
+                "gas_giant_ammonia_life": 0, "gas_giant_ammonia_life_ringed": 0, "gas_giant_ammonia_life_unringed": 0,
+                "sudarsky_class_1": 0, "sudarsky_class_2": 0, "sudarsky_class_3": 0, "sudarsky_class_4": 0, "sudarsky_class_5": 0,
+                "helium_gas_giant": 0, "high_metal_content": 0, "metal_rich": 0, "rocky_body": 0, "icy_body": 0, "rocky_ice": 0,
+                "green_gas_giant": 0, "gas_giants_total": 0
+            }
         }
     finally:
         if should_close:

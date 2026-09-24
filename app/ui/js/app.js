@@ -1272,9 +1272,12 @@ function renderHierarchyTree(container, nodes) {
     if (modSettings.rhino !== false && node.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${node.mining_signals}</span>`);
     if (node.anomalies && node.anomalies.length > 0) {
       node.anomalies.forEach(a => {
-        const isGgg = a.type === 'confirmed_ggg' || (a.tag && (a.tag.includes('Confirmed GGG') || a.tag.includes('Green Gas Giant'))) || a.color === 'green';
-        if (isGgg) {
+        const isConfirmedGgg = a.type === 'confirmed_ggg' || (a.tag && a.tag.includes('Confirmed GGG'));
+        const isGggCand = a.type === 'ggg_candidate' || (a.tag && a.tag.includes('GGG Candidate'));
+        if (isConfirmedGgg) {
           badges.push(`<span class="tag-badge tag-ggg" title="${a.desc || a.tag}">🟢 ${a.tag}</span>`);
+        } else if (isGggCand) {
+          badges.push(`<span class="tag-badge" style="background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4);" title="${a.desc || a.tag}">🟡 ${a.tag}</span>`);
         } else {
           badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`);
         }
@@ -1384,9 +1387,12 @@ function renderFlatBodiesList(container, bodies) {
     if (modSettings.rhino !== false && body.mining_signals > 0) badges.push(`<span class="tag-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">⛏️ MINING: ${body.mining_signals}</span>`);
     if (body.anomalies && body.anomalies.length > 0) {
       body.anomalies.forEach(a => {
-        const isGgg = a.type === 'confirmed_ggg' || (a.tag && (a.tag.includes('Confirmed GGG') || a.tag.includes('Green Gas Giant'))) || a.color === 'green';
-        if (isGgg) {
+        const isConfirmedGgg = a.type === 'confirmed_ggg' || (a.tag && a.tag.includes('Confirmed GGG'));
+        const isGggCand = a.type === 'ggg_candidate' || (a.tag && a.tag.includes('GGG Candidate'));
+        if (isConfirmedGgg) {
           badges.push(`<span class="tag-badge tag-ggg" title="${a.desc || a.tag}">🟢 ${a.tag}</span>`);
+        } else if (isGggCand) {
+          badges.push(`<span class="tag-badge" style="background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4);" title="${a.desc || a.tag}">🟡 ${a.tag}</span>`);
         } else {
           badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`);
         }

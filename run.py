@@ -16,7 +16,7 @@ if sys.stderr is None:
     sys.stderr = io.StringIO()
 
 from app.config import HOST, BASE_DIR, DATA_DIR, WEBVIEW_CACHE_DIR, APP_VERSION
-from app.db.database import checkpoint_wal
+from app.db.database import checkpoint_wal, init_db
 from app.server.api import app
 
 def log_msg(msg: str):
@@ -180,6 +180,13 @@ def wait_for_server(url, timeout=12.0):
 def main():
     log_msg(f"=== Starting ED Journal Analyzer (PID {os.getpid()}) ===")
     
+    # 0. Ensure database tables and schema migrations are applied
+    try:
+        init_db()
+        log_msg("[Startup] Database schema verified and initialized.")
+    except Exception as e:
+        log_msg(f"[Startup Error] Failed to initialize DB: {e}")
+
     # 1. Startup safety: Terminate stale instances
     cleanup_stale_instances()
     free_port_if_stale(8686)

@@ -586,18 +586,30 @@ class JournalParser:
             confirmed_ggg_variant=confirmed_ggg_variant
         )
         ggg = rarity_res.get("ggg_evaluation") or {}
-        if self.is_live and ggg.get("alert_level") == "URGENT" and ggg.get("tts_message"):
-            tts_service.enqueue_speak(ggg["tts_message"], priority=True)
+        if self.is_live and ggg.get("is_candidate") and ggg.get("tts_message"):
+            tts_service.enqueue_speak(ggg["tts_message"], priority=(ggg.get("alert_level") == "URGENT"))
 
         anomalies = detect_anomalies(body_dict)
         rarity_tags = rarity_res.get("tags") or []
         for r_tag in rarity_tags:
             if not any((a.get("tag") == r_tag if isinstance(a, dict) else a == r_tag) for a in anomalies):
                 is_conf_ggg = "Confirmed GGG" in r_tag
-                color = "green" if ("Green Gas Giant" in r_tag or is_conf_ggg) else "orange"
-                desc = f"確定GGG: {confirmed_ggg_variant or 'Codex'}" if is_conf_ggg else r_tag
+                is_ggg_cand = "GGG Candidate" in r_tag
+                if is_conf_ggg:
+                    color = "green"
+                    a_type = "confirmed_ggg"
+                    desc = f"確定GGG: {confirmed_ggg_variant or 'Codex'}"
+                elif is_ggg_cand:
+                    color = "cyan"
+                    a_type = "ggg_candidate"
+                    desc = "GGG候補 (要目視確認)"
+                else:
+                    color = "orange"
+                    a_type = "rarity"
+                    desc = r_tag
+
                 anomalies.append({
-                    "type": "confirmed_ggg" if is_conf_ggg else "rarity",
+                    "type": a_type,
                     "tag": r_tag,
                     "color": color,
                     "desc": desc,

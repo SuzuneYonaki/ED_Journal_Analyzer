@@ -511,10 +511,17 @@ def get_global_stats(
     c.execute("SELECT COUNT(*) as count FROM scanned_organics")
     stats["total_scanned_organics"] = c.fetchone()["count"]
 
-    celestial_stats = get_celestial_statistics(conn)
-    stats["celestial_counts"] = celestial_stats.get("planets", {})
+    try:
+        celestial_stats = get_celestial_statistics(conn)
+        stats["celestial_counts"] = celestial_stats.get("planets", {})
+    except Exception as e:
+        logger.error(f"Failed to get celestial statistics for /api/stats: {e}")
+        stats["celestial_counts"] = {}
 
-    stats["current_location"] = get_current_cmdr_location(conn)
+    try:
+        stats["current_location"] = get_current_cmdr_location(conn)
+    except Exception:
+        stats["current_location"] = None
     conn.close()
     return stats
 
@@ -583,6 +590,16 @@ def get_systems(
     conn = get_db_connection()
     c = conn.cursor()
 
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='codex_entries'")
+    has_codex_tbl = c.fetchone() is not None
+    codex_ggg_check = """
+                OR EXISTS (
+                    SELECT 1 FROM codex_entries ce
+                    WHERE ce.system_address = systems.system_address
+                    AND ce.is_ggg = 1
+                )
+    """ if has_codex_tbl else ""
+
     page = max(1, page or 1)
     limit = min(500, max(1, limit or 50))
 
@@ -629,17 +646,12 @@ def get_systems(
     if has_anomalies:
         conditions.append("systems.has_anomalies = 1")
     if has_ggg:
-        conditions.append("""EXISTS (
+        conditions.append(f"""EXISTS (
             SELECT 1 FROM bodies b
             WHERE b.system_address = systems.system_address
             AND (
                 b.anomalies_json LIKE '%Confirmed GGG%'
-                OR b.anomalies_json LIKE '%Green Gas Giant%'
-                OR EXISTS (
-                    SELECT 1 FROM codex_entries ce
-                    WHERE ce.system_address = systems.system_address
-                    AND ce.is_ggg = 1
-                )
+                {codex_ggg_check}
             )
         )""")
     if has_first_discover:
@@ -954,12 +966,7 @@ def get_systems(
                         WHERE b.system_address = systems.system_address
                         AND (
                             b.anomalies_json LIKE '%Confirmed GGG%'
-                            OR b.anomalies_json LIKE '%Green Gas Giant%'
-                            OR EXISTS (
-                                SELECT 1 FROM codex_entries ce
-                                WHERE ce.system_address = systems.system_address
-                                AND ce.is_ggg = 1
-                            )
+                            {codex_ggg_check}
                         )
                     ) AS has_ggg
                 FROM systems
@@ -1045,12 +1052,7 @@ def get_systems(
                     WHERE b.system_address = systems.system_address
                     AND (
                         b.anomalies_json LIKE '%Confirmed GGG%'
-                        OR b.anomalies_json LIKE '%Green Gas Giant%'
-                        OR EXISTS (
-                            SELECT 1 FROM codex_entries ce
-                            WHERE ce.system_address = systems.system_address
-                            AND ce.is_ggg = 1
-                        )
+                        {codex_ggg_check}
                     )
                 ) AS has_ggg
             FROM systems

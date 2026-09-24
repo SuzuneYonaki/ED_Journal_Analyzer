@@ -171,7 +171,7 @@ def calculate_ggg_probability(
     elif score >= 60:
         alert_level = "NOTICE"
         is_candidate = True
-        tts_message = None
+        tts_message = f"情報。{body_name} はグリーンガスジャイアントの可能性があります。目視観測を推奨します。"
     else:
         alert_level = None
         is_candidate = False
@@ -462,13 +462,13 @@ def calculate_celestial_rarity(
             "points": 100,
             "reason": f"Codex-verified Green Gas Giant ({confirmed_variant or 'Identified'})"
         })
-        ggg_eval["is_candidate"] = True
+        ggg_eval["is_candidate"] = False
         ggg_eval["is_confirmed"] = True
         ggg_eval["alert_level"] = "CONFIRMED"
         ggg_eval["confirmed_variant"] = confirmed_variant
         ggg_eval["score"] = max(ggg_eval.get("score", 0), 100)
     elif ggg_eval["is_candidate"]:
-        ggg_tag = "Green Gas Giant Candidate"
+        ggg_tag = "GGG Candidate"
         if ggg_tag not in tags:
             tags.append(ggg_tag)
         score += ggg_eval["score"]
