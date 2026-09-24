@@ -25,31 +25,31 @@ from app.services.tts_service import tts_service
     (
         "$Codex_Ent_Green_Sudarsky_Class_III_Name;",
         "Sudarsky_Class_III",
-        "スダルスキー・クラス3 ガス巨人",
+        "スダルスキー・クラス3 ガスジャイアント",
         "Sudarsky Class III Gas Giant"
     ),
     (
         "$Codex_Ent_Green_Sudarsky_Class_I_Name;",
         "Sudarsky_Class_I",
-        "スダルスキー・クラス1 ガス巨人",
+        "スダルスキー・クラス1 ガスジャイアント",
         "Sudarsky Class I Gas Giant"
     ),
     (
         "$Codex_Ent_Green_Gas_Giant_Water_Life_Name;",
         "Gas_Giant_Water_Life",
-        "水生生命保有ガス巨人",
+        "水生生命保有ガスジャイアント",
         "Gas Giant with Water-based Life"
     ),
     (
         "$Codex_Ent_Green_Gas_Giant_Ammonia_Life_Name;",
         "Gas_Giant_Ammonia_Life",
-        "アンモニア生命保有ガス巨人",
+        "アンモニア生命保有ガスジャイアント",
         "Gas Giant with Ammonia-based Life"
     ),
     (
         "$Codex_Ent_Green_Helium_Rich_Gas_Giant_Name;",
         "Helium_Rich_Gas_Giant",
-        "高ヘリウム含有ガス巨人",
+        "高ヘリウム含有ガスジャイアント",
         "Helium-rich Gas Giant"
     ),
     (
@@ -148,8 +148,8 @@ def test_codex_entry_ggg_speech_and_db_persistence(monkeypatch, test_parser):
     assert len(spoken_messages) >= 1
     last_msg, priority = spoken_messages[-1]
     assert priority is True
-    assert "警告。正真正銘のグリーンガスジャイアントを発見しました！" in last_msg
-    assert "種別は、スダルスキー・クラス3 ガス巨人 です。" in last_msg
+    assert "グリーンガスジャイアント、目視確認を推奨。" in last_msg
+    assert "種別は、スダルスキー・クラス3 ガスジャイアントです。" in last_msg
 
     # Verify DB anomalies_json contains confirmed tags
     cursor = conn.cursor()
@@ -165,17 +165,17 @@ def test_codex_entry_ggg_speech_and_db_persistence(monkeypatch, test_parser):
 @pytest.mark.parametrize("codex_name, expected_speech_sub, expected_tag_sub", [
     (
         "$Codex_Ent_Green_Gas_Giant_Water_Life_Name;",
-        "水生生命保有ガス巨人",
+        "水生生命保有ガスジャイアント",
         "Confirmed GGG (Gas Giant with Water-based Life)"
     ),
     (
         "$Codex_Ent_Green_Gas_Giant_Ammonia_Life_Name;",
-        "アンモニア生命保有ガス巨人",
+        "アンモニア生命保有ガスジャイアント",
         "Confirmed GGG (Gas Giant with Ammonia-based Life)"
     ),
     (
         "$Codex_Ent_Green_Helium_Rich_Gas_Giant_Name;",
-        "高ヘリウム含有ガス巨人",
+        "高ヘリウム含有ガスジャイアント",
         "Confirmed GGG (Helium-rich Gas Giant)"
     ),
     (

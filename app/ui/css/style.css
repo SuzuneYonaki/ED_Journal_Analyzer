@@ -269,6 +269,71 @@ header {
   color: var(--ed-gold);
 }
 
+/* Gas Giants Header Group & Breakdown */
+.stat-item-gg-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: rgba(192, 132, 252, 0.08);
+  border: 1px solid rgba(192, 132, 252, 0.3);
+  border-radius: 5px;
+  padding: 2px 7px;
+  gap: 2px;
+}
+
+.stat-gg-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.stat-gg-breakdown {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.stat-gg-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(192, 132, 252, 0.25);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 0.62rem;
+  font-family: var(--font-mono);
+  color: #e2e8f0;
+  line-height: 1.2;
+}
+
+.stat-gg-sub .gg-tag {
+  color: #c084fc;
+  font-weight: 600;
+  font-size: 0.58rem;
+}
+
+.stat-gg-sub b {
+  color: #fff;
+  font-weight: bold;
+}
+
+.stat-gg-sub.stat-gg-sub-ggg {
+  border-color: rgba(0, 255, 136, 0.5);
+  background: rgba(0, 255, 136, 0.12);
+}
+
+.stat-gg-sub.stat-gg-sub-ggg .gg-tag {
+  color: #00ff88;
+}
+
+.stat-gg-sub.stat-gg-sub-ggg b {
+  color: #00ff88;
+}
+
 .header-actions {
   display: flex;
   gap: 10px;
@@ -2323,6 +2388,22 @@ header {
   background: rgba(0, 255, 136, 0.25);
   color: var(--ed-green);
   border: 1px solid var(--ed-green);
+}
+.sysmap-mini-badge.ggg-confirmed {
+  background: rgba(0, 255, 136, 0.35);
+  color: #00ff88;
+  border: 1px solid #00ff88;
+  font-weight: 800;
+  box-shadow: 0 0 6px rgba(0, 255, 136, 0.65);
+  text-shadow: 0 0 4px rgba(0, 255, 136, 0.8);
+  letter-spacing: 0.5px;
+}
+.sysmap-mini-badge.ggg-candidate {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid #10b981;
+  font-weight: 700;
+  box-shadow: 0 0 4px rgba(16, 185, 129, 0.35);
 }
 .sysmap-mini-badge.bio {
   background: rgba(0, 255, 136, 0.15);

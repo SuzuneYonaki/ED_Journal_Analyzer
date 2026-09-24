@@ -24,6 +24,9 @@ except ImportError:
 
 logger = logging.getLogger("ed_analyzer.tts_service")
 
+DEFAULT_GGG_CANDIDATE_TEXT = "{body}はグリーンガスジャイアント候補です。"
+DEFAULT_GGG_CONFIRMED_TEXT = "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。"
+
 
 class TTSService:
     """

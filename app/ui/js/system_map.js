@@ -917,7 +917,7 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   const effectiveRole = isBary ? 'barycentre-root' : role;
 
   const card = document.createElement('div');
-  card.className = `sysmap-body-node ${effectiveRole} ${isSelected ? 'selected' : ''} ${isTarget ? 'target-pulse' : ''}`;
+  card.className = `sysmap-body-node sysmap-node ${effectiveRole} ${isSelected ? 'selected' : ''} ${isTarget ? 'target-pulse' : ''}`;
   card.dataset.bodyId = body.body_id;
 
   card.onclick = (e) => {
@@ -979,6 +979,50 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
 
   // Badges & Signals
   const badgeList = [];
+
+  // GGG (Green Gas Giant) Badges: Confirmed [GGG] & Candidate [GGG？]
+  let isConfirmedGgg = Boolean(body.is_confirmed_ggg);
+  let confirmedVariant = body.confirmed_ggg_variant || '';
+  let isGggCandidate = Boolean(body.ggg_evaluation && body.ggg_evaluation.is_candidate);
+
+  let anomaliesList = body.anomalies;
+  if (!anomaliesList && body.anomalies_json) {
+    try {
+      anomaliesList = typeof body.anomalies_json === 'string' ? JSON.parse(body.anomalies_json) : body.anomalies_json;
+    } catch (e) {
+      anomaliesList = [];
+    }
+  }
+  if (Array.isArray(anomaliesList)) {
+    for (const a of anomaliesList) {
+      if (!a) continue;
+      const tagStr = typeof a === 'string' ? a : (a.tag || '');
+      const typeStr = typeof a === 'object' ? (a.type || '') : '';
+      if (typeStr === 'confirmed_ggg' || tagStr.includes('Confirmed GGG')) {
+        isConfirmedGgg = true;
+        if (!confirmedVariant) {
+          if (a.desc && a.desc.includes('確定GGG:')) {
+            confirmedVariant = a.desc.replace('確定GGG:', '').trim();
+          } else {
+            const vMatch = tagStr.match(/Confirmed GGG \((.+)\)/);
+            if (vMatch) confirmedVariant = vMatch[1];
+          }
+        }
+      } else if (typeStr === 'ggg_candidate' || tagStr.includes('GGG Candidate')) {
+        isGggCandidate = true;
+      }
+    }
+  }
+
+  if (isConfirmedGgg) {
+    const gggTitle = `確定グリーンガスジャイアント: ${confirmedVariant || (lang === 'en' ? 'Codex Verified' : 'Codex確認済')}`;
+    badgeList.push(`<span class="sysmap-mini-badge ggg-confirmed" title="${gggTitle}">[GGG]</span>`);
+  } else if (isGggCandidate) {
+    const candTitle = lang === 'en'
+      ? 'グリーンガスジャイアント候補 (FSSまたは目視確認推奨)'
+      : 'グリーンガスジャイアント候補 (FSSまたは目視確認推奨)';
+    badgeList.push(`<span class="sysmap-mini-badge ggg-candidate" title="${candTitle}">[GGG？]</span>`);
+  }
   if (isBary) {
     const isMulti = body.starGroup && body.starGroup.length > 2;
     const baryLabel = isMulti

@@ -144,23 +144,36 @@ async function fetchGlobalStats() {
     const url = `/api/stats${params.toString() ? '?' + params.toString() : ''}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
     const pc = data.celestial_counts || {};
-    document.getElementById('stat-systems').innerText = Number(data.total_systems).toLocaleString();
-    document.getElementById('stat-bodies').innerText = Number(data.total_bodies).toLocaleString();
-    if (document.getElementById('stat-elw')) document.getElementById('stat-elw').innerText = Number(pc.earth_like !== undefined ? pc.earth_like : (data.elw_systems || 0)).toLocaleString();
-    if (document.getElementById('stat-ww')) document.getElementById('stat-ww').innerText = Number(pc.water_world !== undefined ? pc.water_world : (data.ww_systems || 0)).toLocaleString();
-    if (document.getElementById('stat-ammonia')) document.getElementById('stat-ammonia').innerText = Number(pc.ammonia_world !== undefined ? pc.ammonia_world : (data.ammonia_systems || 0)).toLocaleString();
-    if (document.getElementById('stat-hmc')) document.getElementById('stat-hmc').innerText = Number(pc.high_metal_content || 0).toLocaleString();
-    if (document.getElementById('stat-mr')) document.getElementById('stat-mr').innerText = Number(pc.metal_rich || 0).toLocaleString();
-    if (document.getElementById('stat-icy')) document.getElementById('stat-icy').innerText = Number(pc.icy_body || 0).toLocaleString();
-    if (document.getElementById('stat-rocky')) document.getElementById('stat-rocky').innerText = Number(pc.rocky_body || 0).toLocaleString();
-    if (document.getElementById('stat-rocky-ice')) document.getElementById('stat-rocky-ice').innerText = Number(pc.rocky_ice || 0).toLocaleString();
-    if (document.getElementById('stat-gg')) document.getElementById('stat-gg').innerText = Number(pc.gas_giants_total || 0).toLocaleString();
-    if (document.getElementById('stat-ggg')) document.getElementById('stat-ggg').innerText = Number(pc.green_gas_giant || 0).toLocaleString();
-    const bioSysCount = Number(data.bio_systems || 0).toLocaleString();
-    const bioSigCount = Number(data.total_bio_signals || 0).toLocaleString();
-    document.getElementById('stat-bio').innerText = `${bioSysCount} (${bioSigCount} Sig)`;
-    document.getElementById('stat-total-payout').innerText = formatCredits(data.total_potential_value);
+    if (document.getElementById('stat-systems')) document.getElementById('stat-systems').innerText = Number(data.total_systems ?? 0).toLocaleString();
+    if (document.getElementById('stat-bodies')) document.getElementById('stat-bodies').innerText = Number(data.total_bodies ?? 0).toLocaleString();
+    if (document.getElementById('stat-elw')) document.getElementById('stat-elw').innerText = Number(pc.earth_like !== undefined ? pc.earth_like : (data.elw_systems ?? 0)).toLocaleString();
+    if (document.getElementById('stat-ww')) document.getElementById('stat-ww').innerText = Number(pc.water_world !== undefined ? pc.water_world : (data.ww_systems ?? 0)).toLocaleString();
+    if (document.getElementById('stat-ammonia')) document.getElementById('stat-ammonia').innerText = Number(pc.ammonia_world !== undefined ? pc.ammonia_world : (data.ammonia_systems ?? 0)).toLocaleString();
+    if (document.getElementById('stat-hmc')) document.getElementById('stat-hmc').innerText = Number(pc.high_metal_content ?? 0).toLocaleString();
+    if (document.getElementById('stat-mr')) document.getElementById('stat-mr').innerText = Number(pc.metal_rich ?? 0).toLocaleString();
+    if (document.getElementById('stat-icy')) document.getElementById('stat-icy').innerText = Number(pc.icy_body ?? 0).toLocaleString();
+    if (document.getElementById('stat-rocky')) document.getElementById('stat-rocky').innerText = Number(pc.rocky_body ?? 0).toLocaleString();
+    if (document.getElementById('stat-rocky-ice')) document.getElementById('stat-rocky-ice').innerText = Number(pc.rocky_ice ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg')) document.getElementById('stat-gg').innerText = Number(pc.gas_giants_total ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-c1')) document.getElementById('stat-gg-c1').innerText = Number(pc.sudarsky_class_1 ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-c2')) document.getElementById('stat-gg-c2').innerText = Number(pc.sudarsky_class_2 ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-c3')) document.getElementById('stat-gg-c3').innerText = Number(pc.sudarsky_class_3 ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-c4')) document.getElementById('stat-gg-c4').innerText = Number(pc.sudarsky_class_4 ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-c5')) document.getElementById('stat-gg-c5').innerText = Number(pc.sudarsky_class_5 ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-wbl')) document.getElementById('stat-gg-wbl').innerText = Number(pc.gas_giant_water_life_unringed ?? pc.gas_giant_water_life ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-wblr')) document.getElementById('stat-gg-wblr').innerText = Number(pc.gas_giant_water_life_ringed ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-abl')) document.getElementById('stat-gg-abl').innerText = Number(pc.gas_giant_ammonia_life_unringed ?? pc.gas_giant_ammonia_life ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-ablr')) document.getElementById('stat-gg-ablr').innerText = Number(pc.gas_giant_ammonia_life_ringed ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-herich')) document.getElementById('stat-gg-herich').innerText = Number(pc.helium_rich_gas_giant ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-he')) document.getElementById('stat-gg-he').innerText = Number(pc.helium_gas_giant ?? 0).toLocaleString();
+    if (document.getElementById('stat-gg-wg')) document.getElementById('stat-gg-wg').innerText = Number(pc.water_giant ?? 0).toLocaleString();
+    if (document.getElementById('stat-ggg')) document.getElementById('stat-ggg').innerText = Number(pc.green_gas_giant ?? 0).toLocaleString();
+    const bioSysCount = Number(data.bio_systems ?? 0).toLocaleString();
+    const bioSigCount = Number(data.total_bio_signals ?? 0).toLocaleString();
+    if (document.getElementById('stat-bio')) document.getElementById('stat-bio').innerText = `${bioSysCount} (${bioSigCount} Sig)`;
+    if (document.getElementById('stat-total-payout')) document.getElementById('stat-total-payout').innerText = formatCredits(data.total_potential_value ?? 0);
     if (data.app_version) {
       const versionEl = document.getElementById('settings-app-version');
       if (versionEl) versionEl.innerText = `v${data.app_version}`;
@@ -2879,8 +2892,8 @@ const ttsState = {
   highBioText: '{body}、高額生物反応です。見込額{value}クレジット。',
   gggEnabled: true, // GGGは極めて希少なためデフォルト有効
   gggMode: 'both', // 'both' | 'tts' | 'buzzer'
-  gggConfirmedText: '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。',
-  gggCandidateText: '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。',
+  gggConfirmedText: '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。',
+  gggCandidateText: '{body}はグリーンガスジャイアント候補です。',
   engine: 'web_speech', // 'web_speech' | 'voicevox'
   webVoiceURI: '',
   voicevoxSpeakerId: '3', // ずんだもん (ノーマル)
@@ -3675,8 +3688,8 @@ async function initSettingsModal() {
     if (highBioTextInput) highBioTextInput.value = ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。';
     if (gggToggle) gggToggle.checked = (ttsState.gggEnabled !== false);
     if (gggModeSelect) gggModeSelect.value = ttsState.gggMode || 'both';
-    if (gggConfirmedTextInput) gggConfirmedTextInput.value = ttsState.gggConfirmedText || '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。';
-    if (gggCandidateTextInput) gggCandidateTextInput.value = ttsState.gggCandidateText || '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。';
+    if (gggConfirmedTextInput) gggConfirmedTextInput.value = ttsState.gggConfirmedText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
+    if (gggCandidateTextInput) gggCandidateTextInput.value = ttsState.gggCandidateText || '{body}はグリーンガスジャイアント候補です。';
     if (engineSelect) engineSelect.value = ttsState.engine;
     if (customTextInput) customTextInput.value = ttsState.customText;
     if (volumeRange) {
@@ -3743,8 +3756,8 @@ async function initSettingsModal() {
       if (highBioTextInput) ttsState.highBioText = highBioTextInput.value || '{body}、高額生物反応です。見込額{value}クレジット。';
       if (gggToggle) ttsState.gggEnabled = gggToggle.checked;
       if (gggModeSelect) ttsState.gggMode = gggModeSelect.value;
-      if (gggConfirmedTextInput) ttsState.gggConfirmedText = gggConfirmedTextInput.value || '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。';
-      if (gggCandidateTextInput) ttsState.gggCandidateText = gggCandidateTextInput.value || '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。';
+      if (gggConfirmedTextInput) ttsState.gggConfirmedText = gggConfirmedTextInput.value || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
+      if (gggCandidateTextInput) ttsState.gggCandidateText = gggCandidateTextInput.value || '{body}はグリーンガスジャイアント候補です。';
       if (engineSelect) ttsState.engine = engineSelect.value;
       if (webVoiceSelect) ttsState.webVoiceURI = webVoiceSelect.value;
       if (voicevoxSpeakerSelect) ttsState.voicevoxSpeakerId = voicevoxSpeakerSelect.value;
@@ -3799,8 +3812,8 @@ async function initSettingsModal() {
       }
       if (mode === 'both' || mode === 'tts') {
         const rawText = gggConfirmedTextInput ? gggConfirmedTextInput.value : ttsState.gggConfirmedText;
-        const msg = (rawText || '警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{variant}です。おめでとうございます、CMDR。')
-          .replace(/\{variant\}/gi, 'スダルスキー・クラス1 ガス巨人')
+        const msg = (rawText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。')
+          .replace(/\{variant\}/gi, 'スダルスキー・クラス1 ガスジャイアント')
           .replace(/\{body\}/gi, 'Planet A 1');
         setTimeout(() => {
           if (engineSelect && engineSelect.value === 'voicevox') {
@@ -3821,7 +3834,7 @@ async function initSettingsModal() {
       }
       if (mode === 'both' || mode === 'tts') {
         const rawText = gggCandidateTextInput ? gggCandidateTextInput.value : ttsState.gggCandidateText;
-        const msg = (rawText || '注意。{body}は高確率のグリーンガスジャイアント候補です。直ちに目視観測を実施してください。')
+        const msg = (rawText || '{body}はグリーンガスジャイアント候補です。')
           .replace(/\{body\}/gi, 'Planet B 2');
         setTimeout(() => {
           if (engineSelect && engineSelect.value === 'voicevox') {

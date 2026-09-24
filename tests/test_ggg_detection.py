@@ -28,8 +28,8 @@ def test_ggg_candidate_vs_confirmed():
     prob = calculate_ggg_probability(candidate_body)
     assert prob["is_candidate"] is True
     assert prob["score"] >= 80
-    assert prob["alert_level"] == "URGENT"
-    assert "高確率のグリーンガスジャイアント候補" in prob["tts_message"]
+    assert "グリーンガスジャイアント候補" in prob["tts_message"]
+    assert prob["tts_message"] == "Test Gas Giant A 1はグリーンガスジャイアント候補です。"
 
     # Evaluate rarity without codex confirmation
     rarity_candidate = calculate_celestial_rarity(candidate_body, is_confirmed_ggg=False)

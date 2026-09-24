@@ -18,19 +18,19 @@ from app.live.telemetry import telemetry_tracker
 CODEX_GGG_PATTERN = re.compile(r"^\$Codex_Ent_Green_(?P<variant>.+?)_Name;?$", re.IGNORECASE)
 
 GGG_VARIANTS_MAP: dict[str, tuple[str, str]] = {
-    "sudarsky_class_i": ("スダルスキー・クラス1 ガス巨人", "Sudarsky Class I Gas Giant"),
-    "sudarsky_class_ii": ("スダルスキー・クラス2 ガス巨人", "Sudarsky Class II Gas Giant"),
-    "sudarsky_class_iii": ("スダルスキー・クラス3 ガス巨人", "Sudarsky Class III Gas Giant"),
-    "sudarsky_class_iv": ("スダルスキー・クラス4 ガス巨人", "Sudarsky Class IV Gas Giant"),
-    "sudarsky_class_v": ("スダルスキー・クラス5 ガス巨人", "Sudarsky Class V Gas Giant"),
-    "water_life": ("水生生命保有ガス巨人", "Gas Giant with Water-based Life"),
-    "gas_giant_water_life": ("水生生命保有ガス巨人", "Gas Giant with Water-based Life"),
-    "ammonia_life": ("アンモニア生命保有ガス巨人", "Gas Giant with Ammonia-based Life"),
-    "gas_giant_ammonia_life": ("アンモニア生命保有ガス巨人", "Gas Giant with Ammonia-based Life"),
-    "helium_rich": ("高ヘリウム含有ガス巨人", "Helium-rich Gas Giant"),
-    "helium_rich_gas_giant": ("高ヘリウム含有ガス巨人", "Helium-rich Gas Giant"),
-    "helium": ("ヘリウムガス巨人", "Helium Gas Giant"),
-    "helium_gas_giant": ("ヘリウムガス巨人", "Helium Gas Giant"),
+    "sudarsky_class_i": ("スダルスキー・クラス1 ガスジャイアント", "Sudarsky Class I Gas Giant"),
+    "sudarsky_class_ii": ("スダルスキー・クラス2 ガスジャイアント", "Sudarsky Class II Gas Giant"),
+    "sudarsky_class_iii": ("スダルスキー・クラス3 ガスジャイアント", "Sudarsky Class III Gas Giant"),
+    "sudarsky_class_iv": ("スダルスキー・クラス4 ガスジャイアント", "Sudarsky Class IV Gas Giant"),
+    "sudarsky_class_v": ("スダルスキー・クラス5 ガスジャイアント", "Sudarsky Class V Gas Giant"),
+    "water_life": ("水生生命保有ガスジャイアント", "Gas Giant with Water-based Life"),
+    "gas_giant_water_life": ("水生生命保有ガスジャイアント", "Gas Giant with Water-based Life"),
+    "ammonia_life": ("アンモニア生命保有ガスジャイアント", "Gas Giant with Ammonia-based Life"),
+    "gas_giant_ammonia_life": ("アンモニア生命保有ガスジャイアント", "Gas Giant with Ammonia-based Life"),
+    "helium_rich": ("高ヘリウム含有ガスジャイアント", "Helium-rich Gas Giant"),
+    "helium_rich_gas_giant": ("高ヘリウム含有ガスジャイアント", "Helium-rich Gas Giant"),
+    "helium": ("ヘリウムガスジャイアント", "Helium Gas Giant"),
+    "helium_gas_giant": ("ヘリウムガスジャイアント", "Helium Gas Giant"),
     "water_giant": ("ウォーター・ジャイアント", "Water Giant"),
 }
 
@@ -58,16 +58,33 @@ def resolve_ggg_variant(entry_name: str) -> tuple[str, str, str] | None:
 
 def is_ggg_tts_enabled() -> bool:
     """Checks tts_settings.json to see if GGG audio alerts are enabled."""
+    return get_ggg_tts_config().get("enabled", True)
+
+
+def get_ggg_tts_config() -> dict:
+    """Checks tts_settings.json for GGG audio alert settings and templates."""
+    cfg = {
+        "enabled": True,
+        "mode": "both",
+        "confirmed_text": "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。",
+        "candidate_text": "{body}はグリーンガスジャイアント候補です。"
+    }
     try:
         from app.config import DATA_DIR
         settings_file = DATA_DIR / "tts_settings.json"
         if settings_file.exists():
             with open(settings_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return bool(data.get("gggEnabled", True))
+                if not data.get("enabled", True):
+                    cfg["enabled"] = False
+                    return cfg
+                cfg["enabled"] = bool(data.get("gggEnabled", True))
+                cfg["mode"] = data.get("gggMode", "both")
+                cfg["confirmed_text"] = data.get("gggConfirmedText") or cfg["confirmed_text"]
+                cfg["candidate_text"] = data.get("gggCandidateText") or cfg["candidate_text"]
     except Exception:
         pass
-    return True
+    return cfg
 
 
 def get_high_bio_tts_config() -> dict:
@@ -694,8 +711,11 @@ class JournalParser:
             confirmed_ggg_variant=confirmed_ggg_variant
         )
         ggg = rarity_res.get("ggg_evaluation") or {}
-        if self.is_live and is_ggg_tts_enabled() and ggg.get("is_candidate") and ggg.get("tts_message"):
-            tts_service.enqueue_speak(ggg["tts_message"], priority=(ggg.get("alert_level") == "URGENT"))
+        if self.is_live and is_ggg_tts_enabled() and ggg.get("is_candidate"):
+            ggg_cfg = get_ggg_tts_config()
+            tpl = ggg_cfg.get("candidate_text") or "{body}はグリーンガスジャイアント候補です。"
+            cand_msg = tpl.replace("{body}", str(body_dict.get("BodyName") or "天体"))
+            tts_service.enqueue_speak(cand_msg, priority=(ggg.get("alert_level") == "URGENT"))
 
         anomalies = detect_anomalies(body_dict)
         rarity_tags = rarity_res.get("tags") or []
@@ -1148,7 +1168,10 @@ class JournalParser:
 
             # Trigger priority TTS announcement only when live and enabled
             if self.is_live and is_ggg_tts_enabled():
-                tts_msg = f"警告。正真正銘のグリーンガスジャイアントを発見しました！種別は、{tts_speech_name} です。おめでとうございます、CMDR。"
+                ggg_cfg = get_ggg_tts_config()
+                raw_tpl = ggg_cfg.get("confirmed_text") or "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。"
+                target_name = body_name or (f"星系 {data.get('System', '')}" if data.get("System") else "天体")
+                tts_msg = raw_tpl.replace("{body}", target_name).replace("{variant}", tts_speech_name)
                 tts_service.enqueue_speak(tts_msg, priority=True)
 
             # Persist confirmed GGG anomaly tags to bodies table
