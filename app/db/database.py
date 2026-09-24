@@ -1008,7 +1008,8 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None, bypass_c
                 COUNT(CASE WHEN LOWER(planet_class) LIKE '%class iv gas giant%' THEN 1 END) AS sudarsky_class_4,
                 COUNT(CASE WHEN LOWER(planet_class) LIKE '%class v gas giant%' THEN 1 END) AS sudarsky_class_5,
 
-                COUNT(CASE WHEN LOWER(planet_class) LIKE '%helium%' THEN 1 END) AS helium_gas_giant,
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%helium%rich%' THEN 1 END) AS helium_rich_gas_giant,
+                COUNT(CASE WHEN LOWER(planet_class) LIKE '%helium%' AND LOWER(planet_class) NOT LIKE '%helium%rich%' THEN 1 END) AS helium_gas_giant,
                 COUNT(CASE WHEN LOWER(planet_class) IN ('high metal content body', 'high metal content world') THEN 1 END) AS high_metal_content,
                 COUNT(CASE WHEN LOWER(planet_class) = 'metal rich body' THEN 1 END) AS metal_rich,
                 COUNT(CASE WHEN LOWER(planet_class) = 'rocky body' THEN 1 END) AS rocky_body,
@@ -1032,7 +1033,7 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None, bypass_c
                 "gas_giant_water_life": 0, "gas_giant_water_life_ringed": 0, "gas_giant_water_life_unringed": 0,
                 "gas_giant_ammonia_life": 0, "gas_giant_ammonia_life_ringed": 0, "gas_giant_ammonia_life_unringed": 0,
                 "sudarsky_class_1": 0, "sudarsky_class_2": 0, "sudarsky_class_3": 0, "sudarsky_class_4": 0, "sudarsky_class_5": 0,
-                "helium_gas_giant": 0, "high_metal_content": 0, "metal_rich": 0, "rocky_body": 0, "icy_body": 0, "rocky_ice": 0,
+                "helium_rich_gas_giant": 0, "helium_gas_giant": 0, "high_metal_content": 0, "metal_rich": 0, "rocky_body": 0, "icy_body": 0, "rocky_ice": 0,
                 "green_gas_giant": 0
             }
 
@@ -1046,6 +1047,7 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None, bypass_c
             planet_counts.get("gas_giant_water_life", 0) +
             planet_counts.get("gas_giant_ammonia_life", 0) +
             planet_counts.get("helium_gas_giant", 0) +
+            planet_counts.get("helium_rich_gas_giant", 0) +
             planet_counts.get("water_giant", 0)
         )
         planet_counts["gas_giants_total"] = gas_giants_total
@@ -1084,7 +1086,7 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None, bypass_c
                 "gas_giant_water_life": 0, "gas_giant_water_life_ringed": 0, "gas_giant_water_life_unringed": 0,
                 "gas_giant_ammonia_life": 0, "gas_giant_ammonia_life_ringed": 0, "gas_giant_ammonia_life_unringed": 0,
                 "sudarsky_class_1": 0, "sudarsky_class_2": 0, "sudarsky_class_3": 0, "sudarsky_class_4": 0, "sudarsky_class_5": 0,
-                "helium_gas_giant": 0, "high_metal_content": 0, "metal_rich": 0, "rocky_body": 0, "icy_body": 0, "rocky_ice": 0,
+                "helium_rich_gas_giant": 0, "helium_gas_giant": 0, "high_metal_content": 0, "metal_rich": 0, "rocky_body": 0, "icy_body": 0, "rocky_ice": 0,
                 "green_gas_giant": 0, "gas_giants_total": 0
             },
             "planets": {
@@ -1092,7 +1094,7 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None, bypass_c
                 "gas_giant_water_life": 0, "gas_giant_water_life_ringed": 0, "gas_giant_water_life_unringed": 0,
                 "gas_giant_ammonia_life": 0, "gas_giant_ammonia_life_ringed": 0, "gas_giant_ammonia_life_unringed": 0,
                 "sudarsky_class_1": 0, "sudarsky_class_2": 0, "sudarsky_class_3": 0, "sudarsky_class_4": 0, "sudarsky_class_5": 0,
-                "helium_gas_giant": 0, "high_metal_content": 0, "metal_rich": 0, "rocky_body": 0, "icy_body": 0, "rocky_ice": 0,
+                "helium_rich_gas_giant": 0, "helium_gas_giant": 0, "high_metal_content": 0, "metal_rich": 0, "rocky_body": 0, "icy_body": 0, "rocky_ice": 0,
                 "green_gas_giant": 0, "gas_giants_total": 0
             }
         }
