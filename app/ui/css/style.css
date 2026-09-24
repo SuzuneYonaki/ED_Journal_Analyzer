@@ -2324,6 +2324,22 @@ header {
   color: var(--ed-green);
   border: 1px solid var(--ed-green);
 }
+.sysmap-mini-badge.ggg-confirmed {
+  background: rgba(0, 255, 136, 0.35);
+  color: #00ff88;
+  border: 1px solid #00ff88;
+  font-weight: 800;
+  box-shadow: 0 0 6px rgba(0, 255, 136, 0.65);
+  text-shadow: 0 0 4px rgba(0, 255, 136, 0.8);
+  letter-spacing: 0.5px;
+}
+.sysmap-mini-badge.ggg-candidate {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid #10b981;
+  font-weight: 700;
+  box-shadow: 0 0 4px rgba(16, 185, 129, 0.35);
+}
 .sysmap-mini-badge.bio {
   background: rgba(0, 255, 136, 0.15);
   color: #6ee7b7;
