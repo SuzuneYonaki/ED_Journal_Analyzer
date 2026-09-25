@@ -281,14 +281,15 @@ function getBodyIconClass(body) {
     if (st === 'N') return 'icon-neutron';
     return 'icon-star';
   }
-  const pc = (body.planet_class || '').toLowerCase();
-  if (pc.includes('earthlike') || pc.includes('earth-like')) return 'icon-elw';
-  if (pc.includes('ammonia')) return 'icon-ammonia';
-  if (pc.includes('water world')) return 'icon-water';
-  if (pc.includes('high metal') || pc.includes('metal rich')) return 'icon-hmc';
-  if (pc.includes('rocky')) return 'icon-rocky';
-  if (pc.includes('icy')) return 'icon-icy';
-  if (pc.includes('gas giant')) return 'icon-gas';
+  const pc = (body.planet_class || body.PlanetClass || body.sub_type || '').toLowerCase();
+  if (pc.includes('earthlike') || pc.includes('earth-like') || pc.includes('地球型')) return 'icon-elw';
+  if (pc.includes('ammonia') || pc.includes('アンモニア')) return 'icon-ammonia';
+  if (pc.includes('water world') || pc.includes('海洋惑星')) return 'icon-water';
+  if (pc.includes('high metal') || pc.includes('metal rich') || pc.includes('metal-rich') || pc.includes('高金属') || pc.includes('金属豊富')) return 'icon-hmc';
+  if (pc.includes('rocky ice') || pc.includes('rocky-ice') || pc.includes('岩石氷')) return 'icon-icy';
+  if (pc.includes('rocky') || pc.includes('岩石')) return 'icon-rocky';
+  if (pc.includes('icy') || pc.includes('氷')) return 'icon-icy';
+  if (pc.includes('gas giant') || pc.includes('water giant') || pc.includes('gas') || pc.includes('ガス')) return 'icon-gas';
   return 'icon-rocky';
 }
 
@@ -298,14 +299,17 @@ function getBodyIconLabel(body) {
     if (body.star_type.toUpperCase() === 'SUPERMASSIVEBLACKHOLE') return 'SMBH';
     return body.star_type;
   }
-  const pc = (body.planet_class || '').toLowerCase();
-  if (pc.includes('earthlike')) return 'ELW';
-  if (pc.includes('water world')) return 'WW';
-  if (pc.includes('ammonia')) return 'AW';
-  if (pc.includes('high metal')) return 'HMC';
-  if (pc.includes('gas giant')) return 'GG';
-  if (pc.includes('rocky')) return 'R';
-  if (pc.includes('icy')) return 'I';
+  const pc = (body.planet_class || body.PlanetClass || body.sub_type || '').toLowerCase();
+  if (pc.includes('earthlike') || pc.includes('earth-like') || pc.includes('地球型')) return 'ELW';
+  if (pc.includes('water world') || pc.includes('海洋惑星')) return 'WW';
+  if (pc.includes('water giant')) return 'WG';
+  if (pc.includes('ammonia') || pc.includes('アンモニア')) return 'AW';
+  if (pc.includes('high metal') || pc.includes('高金属')) return 'HMC';
+  if (pc.includes('metal rich') || pc.includes('metal-rich') || pc.includes('金属豊富')) return 'MR';
+  if (pc.includes('gas giant') || pc.includes('gas') || pc.includes('ガス')) return 'GG';
+  if (pc.includes('rocky ice') || pc.includes('rocky-ice') || pc.includes('岩石氷')) return 'RI';
+  if (pc.includes('rocky') || pc.includes('岩石')) return 'R';
+  if (pc.includes('icy') || pc.includes('氷')) return 'I';
   return 'P';
 }
 
