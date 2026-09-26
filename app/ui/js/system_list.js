@@ -297,15 +297,15 @@ function renderSystemList() {
 
     card.innerHTML = `
       <div class="system-card-header">
-        <div class="system-card-title-group">
-          <span class="system-card-title" title="${sysName}">${sysName}</span>
-          ${coordsStr ? `<span class="system-coords" style="font-size: 0.7rem; color: var(--text-secondary); font-family: monospace; letter-spacing: -0.3px;">${coordsStr}</span>` : ''}
-        </div>
+        <span class="system-card-title" title="${sysName}">${sysName}</span>
         <span class="system-card-value">${formatCredits(sys.total_potential_value)}</span>
+      </div>
+      <div class="system-card-sub-header">
+        ${coordsStr ? `<span class="system-coords" title="${coordsStr}">${coordsStr}</span>` : '<span></span>'}
+        <span class="system-card-visited">${t('visited_meta')}: ${visitedDate} (${sys.visit_count}${t('times')})</span>
       </div>
       <div class="system-card-meta">
         <span>${t('bodies_count')}: ${sys.scanned_bodies} / ${sys.total_bodies || '?'}${mainStar}</span>
-        <span>${t('visited_meta')}: ${visitedDate} (${sys.visit_count}${t('times')})</span>
       </div>
       <div class="system-card-tags">
         ${tags.join('')}
