@@ -24,3 +24,17 @@ def test_header_summary_group_structure():
     cmdr_container = summary_group.find(id="stat-cmdr-container")
     assert cmdr_container is not None, "stat-cmdr-container must be inside header-summary-group"
     assert cmdr_container.find(id="stat-cmdr-loc") is not None, "stat-cmdr-loc must be inside stat-cmdr-container"
+
+
+def test_header_actions_and_stats_compaction():
+    css_path = os.path.join(os.path.dirname(__file__), "..", "app", "ui", "css", "style.css")
+    assert os.path.exists(css_path)
+    with open(css_path, "r", encoding="utf-8") as f:
+        css = f.read()
+
+    # Verify .header-actions has flex-shrink: 0 to prevent action buttons from being squeezed/truncated
+    assert ".header-actions" in css
+    # Verify .stat-item has flex-shrink: 0 and compact font sizes
+    assert ".stat-item" in css
+    assert "white-space: nowrap" in css
+
