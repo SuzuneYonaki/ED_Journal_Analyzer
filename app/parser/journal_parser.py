@@ -65,6 +65,7 @@ def get_ggg_tts_config() -> dict:
     """Checks tts_settings.json for GGG audio alert settings and templates."""
     cfg = {
         "enabled": True,
+        "engine": "voicevox",
         "mode": "both",
         "confirmed_text": "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。",
         "candidate_text": "{body}はグリーンガスジャイアント候補です。"
@@ -79,6 +80,7 @@ def get_ggg_tts_config() -> dict:
                     cfg["enabled"] = False
                     return cfg
                 cfg["enabled"] = bool(data.get("gggEnabled", True))
+                cfg["engine"] = data.get("engine", "voicevox")
                 cfg["mode"] = data.get("gggMode", "both")
                 cfg["confirmed_text"] = data.get("gggConfirmedText") or cfg["confirmed_text"]
                 cfg["candidate_text"] = data.get("gggCandidateText") or cfg["candidate_text"]
@@ -91,6 +93,7 @@ def get_high_bio_tts_config() -> dict:
     """Checks tts_settings.json for high-value exobiology alert settings."""
     cfg = {
         "enabled": False,
+        "engine": "voicevox",
         "mode": "both",
         "threshold": 40_000_000,
         "threshold_type": "bonus",
@@ -106,6 +109,7 @@ def get_high_bio_tts_config() -> dict:
                     cfg["enabled"] = False
                     return cfg
                 cfg["enabled"] = bool(data.get("highBioEnabled", False))
+                cfg["engine"] = data.get("engine", "voicevox")
                 cfg["mode"] = data.get("highBioMode", "both")
                 cfg["text"] = data.get("highBioText") or cfg["text"]
                 if "highBioThreshold" in data and data["highBioThreshold"] is not None:
@@ -127,6 +131,8 @@ class JournalParser:
         self.event_callback = event_callback
         self.is_live = is_live
         self._announced_high_bio_bodies = set()
+        self._announced_ggg_candidate = set()
+        self._announced_ggg_confirmed = set()
         
         # State tracking for SRV and surface activities
         self.current_system_address = None
@@ -158,6 +164,12 @@ class JournalParser:
         if not cfg.get("enabled"):
             return False
 
+        if cfg.get("mode") not in ("both", "tts"):
+            return False
+
+        if cfg.get("engine") == "webspeech":
+            return False
+
         if not bio_predictions:
             return False
 
@@ -184,12 +196,99 @@ class JournalParser:
                     sys_name = row["star_system"]
 
             msg = cfg.get("text", "{body}、高額生物反応です。見込額{value}クレジット。")
+            if "{body}" in msg and not body_name:
+                return False
+
             msg = msg.replace("{body}", body_name)
             msg = msg.replace("{value}", formatted_payout)
             msg = msg.replace("{payout}", formatted_payout)
             msg = msg.replace("{system}", sys_name)
 
             tts_service.enqueue_speak(msg, priority=False)
+            return True
+
+        return False
+
+    def _check_and_trigger_ggg_alert(
+        self,
+        sys_addr: int | None,
+        body_name: str | None,
+        is_confirmed: bool,
+        variant_name: str | None = None,
+        is_candidate: bool = False,
+        alert_level: str | None = None,
+    ) -> bool:
+        """
+        Triggers GGG TTS alert via backend TTSService if enabled,
+        strictly enforcing the {body} placeholder condition and deduplicating announcements.
+        """
+        if not self.is_live:
+            return False
+
+        if not is_ggg_tts_enabled():
+            return False
+
+        cfg = get_ggg_tts_config()
+        mode = cfg.get("mode", "both")
+        if mode not in ("both", "tts"):
+            return False
+
+        if cfg.get("engine") == "webspeech":
+            return False
+
+        # Alert key for deduplication
+        alert_key = (sys_addr or 0, body_name or "")
+
+        if is_confirmed:
+            if alert_key in self._announced_ggg_confirmed:
+                return False
+
+            raw_tpl = cfg.get("confirmed_text") or "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。"
+            # Strict {body} condition: if {body} is required by template, body_name must be present
+            if "{body}" in raw_tpl and not body_name:
+                return False
+
+            tts_msg = raw_tpl
+            if body_name:
+                tts_msg = tts_msg.replace("{body}", body_name)
+            tts_msg = tts_msg.replace("{variant}", variant_name or "ガスジャイアント")
+
+            if "{system}" in tts_msg:
+                sys_name = self.current_star_system or ""
+                if not sys_name and sys_addr:
+                    self.cursor.execute("SELECT star_system FROM systems WHERE system_address = ?", (sys_addr,))
+                    row = self.cursor.fetchone()
+                    if row and row["star_system"]:
+                        sys_name = row["star_system"]
+                tts_msg = tts_msg.replace("{system}", sys_name)
+
+            self._announced_ggg_confirmed.add(alert_key)
+            tts_service.enqueue_speak(tts_msg, priority=True)
+            return True
+
+        elif is_candidate:
+            if alert_key in self._announced_ggg_confirmed or alert_key in self._announced_ggg_candidate:
+                return False
+
+            raw_tpl = cfg.get("candidate_text") or "{body}はグリーンガスジャイアント候補です。"
+            if "{body}" in raw_tpl and not body_name:
+                return False
+
+            tts_msg = raw_tpl
+            if body_name:
+                tts_msg = tts_msg.replace("{body}", body_name)
+
+            if "{system}" in tts_msg:
+                sys_name = self.current_star_system or ""
+                if not sys_name and sys_addr:
+                    self.cursor.execute("SELECT star_system FROM systems WHERE system_address = ?", (sys_addr,))
+                    row = self.cursor.fetchone()
+                    if row and row["star_system"]:
+                        sys_name = row["star_system"]
+                tts_msg = tts_msg.replace("{system}", sys_name)
+
+            self._announced_ggg_candidate.add(alert_key)
+            tts_service.enqueue_speak(tts_msg, priority=(alert_level == "URGENT"))
             return True
 
         return False
@@ -692,13 +791,20 @@ class JournalParser:
             )
 
         # Check if this body has a confirmed GGG in codex_entries table or existing record
+        b_name = body_dict.get("body_name") or body_dict.get("BodyName")
         self.cursor.execute(
-            "SELECT ggg_variant FROM codex_entries WHERE system_address = ? AND body_id = ? AND is_ggg = 1 LIMIT 1",
-            (sys_addr, body_id)
+            "SELECT ggg_variant FROM codex_entries WHERE system_address = ? AND (body_id = ? OR (body_name IS NOT NULL AND body_name = ?)) AND is_ggg = 1 LIMIT 1",
+            (sys_addr, body_id, b_name)
         )
         codex_ggg = self.cursor.fetchone()
         is_confirmed_ggg = bool(codex_ggg)
         confirmed_ggg_variant = codex_ggg["ggg_variant"] if codex_ggg else None
+
+        if codex_ggg and body_id is not None and b_name:
+            self.cursor.execute(
+                "UPDATE codex_entries SET body_id = ? WHERE system_address = ? AND body_name = ? AND body_id IS NULL",
+                (body_id, sys_addr, b_name)
+            )
 
         if not is_confirmed_ggg and existing_anomalies_raw:
             try:
@@ -722,11 +828,21 @@ class JournalParser:
             confirmed_ggg_variant=confirmed_ggg_variant
         )
         ggg = rarity_res.get("ggg_evaluation") or {}
-        if self.is_live and is_ggg_tts_enabled() and ggg.get("is_candidate"):
-            ggg_cfg = get_ggg_tts_config()
-            tpl = ggg_cfg.get("candidate_text") or "{body}はグリーンガスジャイアント候補です。"
-            cand_msg = tpl.replace("{body}", str(body_dict.get("BodyName") or "天体"))
-            tts_service.enqueue_speak(cand_msg, priority=(ggg.get("alert_level") == "URGENT"))
+        if is_confirmed_ggg:
+            self._check_and_trigger_ggg_alert(
+                sys_addr=sys_addr,
+                body_name=b_name,
+                is_confirmed=True,
+                variant_name=confirmed_ggg_variant
+            )
+        elif ggg.get("is_candidate"):
+            self._check_and_trigger_ggg_alert(
+                sys_addr=sys_addr,
+                body_name=b_name,
+                is_confirmed=False,
+                is_candidate=True,
+                alert_level=ggg.get("alert_level")
+            )
 
         anomalies = detect_anomalies(body_dict)
         rarity_tags = rarity_res.get("tags") or []
@@ -1142,19 +1258,27 @@ class JournalParser:
 
         sys_addr = data.get("SystemAddress")
         body_id = data.get("BodyID") if data.get("BodyID") is not None else (data.get("Body") if isinstance(data.get("Body"), int) else None)
-        body_name = data.get("BodyName") or (data.get("Body") if isinstance(data.get("Body"), str) else None)
+        body_name = (
+            data.get("BodyName")
+            or (data.get("Body") if isinstance(data.get("Body"), str) else None)
+            or data.get("NearestDestination")
+            or data.get("NearestDestination_Localised")
+        )
         entry_name = data.get("Name")
 
         if not body_name and sys_addr is not None and body_id is not None:
             self.cursor.execute("SELECT body_name FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
             brow = self.cursor.fetchone()
-            if brow:
+            if brow and brow["body_name"]:
                 body_name = brow["body_name"]
+
+        if not body_name and body_id is not None:
+            body_name = f"天体 {body_id}"
 
         if body_id is None and sys_addr is not None and body_name:
             self.cursor.execute("SELECT body_id FROM bodies WHERE system_address = ? AND body_name = ?", (sys_addr, body_name))
             brow = self.cursor.fetchone()
-            if brow:
+            if brow and brow["body_id"] is not None:
                 body_id = brow["body_id"]
 
         ggg_info = resolve_ggg_variant(entry_name) if entry_name and isinstance(entry_name, str) else None
@@ -1188,12 +1312,12 @@ class JournalParser:
             raw_variant, tts_speech_name, en_name = ggg_info
 
             # Trigger priority TTS announcement only when live and enabled
-            if self.is_live and is_ggg_tts_enabled():
-                ggg_cfg = get_ggg_tts_config()
-                raw_tpl = ggg_cfg.get("confirmed_text") or "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。"
-                target_name = body_name or (f"星系 {data.get('System', '')}" if data.get("System") else "天体")
-                tts_msg = raw_tpl.replace("{body}", target_name).replace("{variant}", tts_speech_name)
-                tts_service.enqueue_speak(tts_msg, priority=True)
+            self._check_and_trigger_ggg_alert(
+                sys_addr=sys_addr,
+                body_name=body_name,
+                is_confirmed=True,
+                variant_name=tts_speech_name
+            )
 
             # Persist confirmed GGG anomaly tags to bodies table
             if sys_addr is not None and body_id is not None:

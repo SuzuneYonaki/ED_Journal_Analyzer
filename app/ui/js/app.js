@@ -3502,13 +3502,11 @@ function checkAndAnnounceHighBioBody(sysData, bodyData) {
       playHighBioBuzzer();
     }
     if (ttsState.highBioMode === 'tts' || ttsState.highBioMode === 'both') {
-      setTimeout(() => {
-        if (ttsState.engine === 'voicevox') {
-          playVoicevoxSpeech(msg);
-        } else {
+      if (ttsState.engine === 'webspeech') {
+        setTimeout(() => {
           playWebSpeech(msg);
-        }
-      }, ttsState.highBioMode === 'both' ? 600 : 0);
+        }, ttsState.highBioMode === 'both' ? 600 : 0);
+      }
     }
   }
 }
@@ -3562,27 +3560,25 @@ function checkAndAnnounceGggBody(sysData, bodyData) {
   }
 
   if (mode === 'both' || mode === 'tts') {
-    let msg = '';
-    if (isConfirmedGgg) {
-      const rawText = ttsState.gggConfirmedText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
-      msg = rawText
-        .replace(/\{body\}/gi, bodyName)
-        .replace(/\{variant\}/gi, confirmedVariant || 'ガスジャイアント')
-        .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
-    } else {
-      const rawText = ttsState.gggCandidateText || '{body}はグリーンガスジャイアント候補です。';
-      msg = rawText
-        .replace(/\{body\}/gi, bodyName)
-        .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
-    }
-
-    setTimeout(() => {
-      if (ttsState.engine === 'voicevox') {
-        playVoicevoxSpeech(msg);
+    if (ttsState.engine === 'webspeech') {
+      let msg = '';
+      if (isConfirmedGgg) {
+        const rawText = ttsState.gggConfirmedText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
+        msg = rawText
+          .replace(/\{body\}/gi, bodyName)
+          .replace(/\{variant\}/gi, confirmedVariant || 'ガスジャイアント')
+          .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
       } else {
-        playWebSpeech(msg);
+        const rawText = ttsState.gggCandidateText || '{body}はグリーンガスジャイアント候補です。';
+        msg = rawText
+          .replace(/\{body\}/gi, bodyName)
+          .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
       }
-    }, mode === 'both' ? 600 : 0);
+
+      setTimeout(() => {
+        playWebSpeech(msg);
+      }, mode === 'both' ? 600 : 0);
+    }
   }
 }
 

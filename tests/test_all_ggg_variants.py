@@ -226,3 +226,111 @@ def test_all_codex_ggg_variants_dispatch(monkeypatch, test_parser, codex_name, e
     tags = [a["tag"] for a in anomalies if isinstance(a, dict)]
     assert "Confirmed GGG" in tags
     assert expected_tag_sub in tags
+
+
+def test_codex_entry_nearest_destination_body_binding(monkeypatch, test_parser):
+    """
+    Verifies that real Elite Dangerous CodexEntry events containing 'NearestDestination'
+    properly bind the body name to {body} and do NOT read the star system name.
+    """
+    parser, conn = test_parser
+    sys_addr = 888777666555
+    sys_name = "Bleia Eud KM-W d1-18"
+    body_name = "Bleia Eud KM-W d1-18 4"
+
+    captured_tts = []
+    monkeypatch.setattr(tts_service, "enqueue_speak", lambda text, priority=False: captured_tts.append((text, priority)))
+
+    codex_event = {
+        "timestamp": "2026-09-26T12:00:00Z",
+        "event": "CodexEntry",
+        "EntryID": 140001,
+        "Name": "$Codex_Ent_Green_Sudarsky_Class_III_Name;",
+        "System": sys_name,
+        "SystemAddress": sys_addr,
+        "NearestDestination": body_name,
+        "NearestDestination_Localised": body_name
+    }
+    parser.process_journal_line(json.dumps(codex_event))
+
+    assert len(captured_tts) == 1
+    msg, prio = captured_tts[0]
+    assert prio is True
+    # Must contain the body name, NOT '星系 Bleia Eud KM-W d1-18'
+    assert body_name in msg
+    assert f"星系 {sys_name}" not in msg
+    assert "スダルスキー・クラス3 ガスジャイアント" in msg
+
+
+def test_codex_entry_body_placeholder_strict_suppression(monkeypatch, test_parser):
+    """
+    Verifies that when a CodexEntry lacks any body information and {body} is present
+    in the confirmed text template, TTS is strictly suppressed rather than fabricated with system name.
+    """
+    parser, conn = test_parser
+    sys_addr = 999888777666
+    sys_name = "Test Unknown System"
+
+    captured_tts = []
+    monkeypatch.setattr(tts_service, "enqueue_speak", lambda text, priority=False: captured_tts.append((text, priority)))
+
+    # CodexEntry with ONLY System and SystemAddress, NO body info
+    codex_event = {
+        "timestamp": "2026-09-26T12:05:00Z",
+        "event": "CodexEntry",
+        "EntryID": 140001,
+        "Name": "$Codex_Ent_Green_Sudarsky_Class_III_Name;",
+        "System": sys_name,
+        "SystemAddress": sys_addr
+    }
+    parser.process_journal_line(json.dumps(codex_event))
+
+    # Should be strictly suppressed because {body} cannot be resolved
+    assert len(captured_tts) == 0
+
+
+def test_ggg_tts_no_double_fire_between_codex_and_scan(monkeypatch, test_parser):
+    """
+    Verifies that when CodexEntry triggers confirmed GGG speech for a body,
+    subsequent Scan event for that same body does NOT trigger a duplicate speech.
+    """
+    parser, conn = test_parser
+    sys_addr = 444333222111
+    body_id = 4
+    body_name = "Eol Prou AB-C d1-4 4"
+
+    captured_tts = []
+    monkeypatch.setattr(tts_service, "enqueue_speak", lambda text, priority=False: captured_tts.append((text, priority)))
+
+    # 1. CodexEntry arrives first with NearestDestination
+    codex_event = {
+        "timestamp": "2026-09-26T12:10:00Z",
+        "event": "CodexEntry",
+        "EntryID": 140001,
+        "Name": "$Codex_Ent_Green_Sudarsky_Class_III_Name;",
+        "System": "Eol Prou AB-C d1-4",
+        "SystemAddress": sys_addr,
+        "NearestDestination": body_name
+    }
+    parser.process_journal_line(json.dumps(codex_event))
+    assert len(captured_tts) == 1
+
+    # 2. Subsequent Scan event for the same body arrives
+    scan_event = {
+        "timestamp": "2026-09-26T12:15:00Z",
+        "event": "Scan",
+        "ScanType": "Detailed",
+        "BodyName": body_name,
+        "BodyID": body_id,
+        "StarSystem": "Eol Prou AB-C d1-4",
+        "SystemAddress": sys_addr,
+        "DistanceFromArrivalLS": 1500.0,
+        "PlanetClass": "Sudarsky class III gas giant with water based life",
+        "SurfaceTemperature": 200.0,
+        "MassEM": 100.0
+    }
+    parser.process_journal_line(json.dumps(scan_event))
+
+    # Must still be exactly 1 call (no duplicate firing!)
+    assert len(captured_tts) == 1
+
