@@ -666,6 +666,19 @@ function updateCollapsibleBadges() {
     badgeStar.innerText = starCount > 0 ? starCount : '';
     badgeStar.classList.toggle('active', starCount > 0);
   }
+
+  let sortCount = 0;
+  if (state.datePreset && state.datePreset !== 'all') sortCount++;
+  if (state.dateFrom || state.dateTo) sortCount++;
+  if (state.sortBy && (state.sortBy !== 'rarity_score' || state.sortOrder !== 'desc')) sortCount++;
+  if (state.sortBy2) sortCount++;
+  if (state.sortBy3) sortCount++;
+  if (state.liveSyncEnabled) sortCount++;
+  const badgeSort = document.getElementById('badge-sort-filters');
+  if (badgeSort) {
+    badgeSort.innerText = sortCount > 0 ? sortCount : '';
+    badgeSort.classList.toggle('active', sortCount > 0);
+  }
 }
 
 function initCollapsibleSections() {

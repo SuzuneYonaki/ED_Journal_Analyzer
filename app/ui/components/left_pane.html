@@ -10,11 +10,16 @@
               <button id="btn-pane-tab-physics" class="concept-tab-btn" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 3px; border: 1px solid transparent; cursor: pointer; color: #a5f3fc; background: transparent; white-space: nowrap;" data-i18n-title="tip_tab_physics" title="天体物理・レア度解析">🌌 <span data-i18n="concept_tab_physics_short">天体物理</span></button>
             </div>
 
-            <!-- Real-time Live Sync Toggle Button (Always visible & responsive) -->
-            <button id="btn-live-toggle" class="btn-live paused" style="padding: 3px 8px; font-size: 0.72rem; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap;" data-i18n-title="live_sync_tip" title="リアルタイム自動更新の有効/無効を切り替え（オフにすると過去ジャーナル閲覧時に自動ジャンプや再取得が行われません）">
-              <span class="live-indicator-dot"></span>
-              <span id="live-status-text" data-i18n="live_sync_off">PAUSED</span>
-            </button>
+            <!-- Right Controls: Clear All Filters & Real-time Live Sync Toggle Button -->
+            <div style="display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;">
+              <button type="button" id="btn-clear-all-filters" class="btn-page" style="padding: 2px 7px; font-size: 0.72rem; border-color: rgba(239, 68, 68, 0.4); color: #fca5a5; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;" data-i18n-title="btn_clear_all_filters_tip" title="すべての検索条件・天体フィルター・期間・ソートを初期化">
+                🧹 <span data-i18n="btn_clear_all">全クリア</span>
+              </button>
+              <button id="btn-live-toggle" class="btn-live paused" style="padding: 3px 8px; font-size: 0.72rem; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap;" data-i18n-title="live_sync_tip" title="リアルタイム自動更新の有効/無効を切り替え（オフにすると過去ジャーナル閲覧時に自動ジャンプや再取得が行われません）">
+                <span class="live-indicator-dot"></span>
+                <span id="live-status-text" data-i18n="live_sync_off">PAUSED</span>
+              </button>
+            </div>
           </div>
 
           <div class="search-bar">
@@ -304,12 +309,16 @@
                 <span class="collapsible-chevron">▼</span>
                 <span data-i18n="section_sort_filters">⏱️ 期間・ソート設定</span>
               </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button type="button" id="btn-clear-sort-filters" class="btn-page" style="padding: 1px 6px; font-size: 0.65rem;" data-i18n="filter_clear">クリア</button>
+                <span class="collapsible-badge" id="badge-sort-filters"></span>
+              </div>
             </div>
             <div class="collapsible-body">
               <!-- Date Range & Fuzzy Filtering Section -->
               <div class="date-filter-section" style="display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; background: rgba(0,0,0,0.25); border-radius: 4px; border: 1px solid var(--border-color);">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-                  <span style="font-size: 0.75rem; color: var(--ed-cyan); font-weight: bold; display: flex; align-items: center; gap: 4px;" data-i18n="date_filter_title">
+                  <span style="font-size: 0.75rem; color: var(--ed-cyan); font-weight: bold; display: flex; align-items: center; gap: 4px; white-space: nowrap;" data-i18n="date_filter_title">
                     📅 訪問期間:
                   </span>
                   <select id="date-preset-select" class="sort-select" style="flex: 1; font-size: 0.78rem;">
@@ -323,6 +332,7 @@
                     <option value="last_year" data-i18n="preset_last_year">昨年 (2025)</option>
                     <option value="custom" data-i18n="preset_custom">カスタム範囲指定...</option>
                   </select>
+                  <button type="button" id="btn-clear-date-top" class="btn-page" style="padding: 1px 6px; font-size: 0.65rem;" data-i18n="filter_clear">クリア</button>
                 </div>
                 <div id="custom-date-inputs" style="display: none; flex-direction: column; gap: 4px; margin-top: 2px;">
                   <div style="display: flex; align-items: center; gap: 4px;">
@@ -343,6 +353,10 @@
 
               <!-- Sort Controls Section -->
               <div class="sort-section" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="font-size: 0.75rem; color: var(--ed-cyan); font-weight: bold;" data-i18n="section_sort_controls">📊 ソート順:</span>
+                  <button type="button" id="btn-clear-sort-only" class="btn-page" style="padding: 1px 6px; font-size: 0.65rem;" data-i18n="filter_clear">クリア</button>
+                </div>
                 <div class="sort-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
                   <span style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;" data-i18n="sort_primary">1次ソート:</span>
                   <select id="sort-select" class="sort-select" style="flex: 1; font-size: 0.78rem;">
