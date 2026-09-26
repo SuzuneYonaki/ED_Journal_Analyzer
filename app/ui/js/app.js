@@ -849,6 +849,8 @@ function renderCurrentView() {
   } else if (state.currentView === 'flat') {
     const sorted = getSortedBodies(state.currentSystemData.bodies);
     renderFlatBodiesList(container, sorted);
+  } else if (state.currentView === 'orrery') {
+    renderOrreryView(container, state.currentSystemData);
   } else if (state.currentView === 'bio') {
     const sorted = getSortedBodies(state.currentSystemData.bodies);
     renderBioOnlyView(container, sorted);
@@ -863,12 +865,259 @@ function renderCurrentView() {
 
   // Auto focus & scroll to target body
   const targetId = state.selectedBody ? state.selectedBody.body_id : state.targetBodyId;
-  if (targetId !== null && targetId !== undefined && state.currentView !== 'physics') {
+  if (targetId !== null && targetId !== undefined && state.currentView !== 'physics' && state.currentView !== 'orrery') {
     focusAndScrollToTargetBody(targetId);
   }
 }
 
 // escapeHtml is defined in utils.js
+
+async function renderOrreryView(container, systemData) {
+  if (!systemData || !systemData.system) {
+    container.innerHTML = `<div style="color: var(--text-secondary); text-align: center; padding: 40px;">${t('select_system_desc')}</div>`;
+    return;
+  }
+
+  const sysAddr = systemData.system.system_address;
+  const lang = state.lang || 'ja';
+  const cacheKey = `${sysAddr}_${lang}`;
+
+  if (systemData._orreryHtml && systemData._orreryCacheKey === cacheKey) {
+    container.innerHTML = systemData._orreryHtml;
+    initOrreryInteractions(container, systemData);
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 350px; color: #c084fc;">
+      <div class="loading-spinner" style="width: 38px; height: 38px; border: 3px solid rgba(192, 132, 252, 0.2); border-top-color: #c084fc; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
+      <div style="font-size: 1.05rem; font-weight: bold;">🪐 ${t('view_orrery') || 'Orrery'} を生成中...</div>
+    </div>
+  `;
+
+  try {
+    const res = await fetch(`/api/system/${sysAddr}/orrery?lang=${lang}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    systemData._orreryHtml = data.html;
+    systemData._orreryCacheKey = cacheKey;
+
+    if (state.currentView === 'orrery' && state.currentSystemData && state.currentSystemData.system && state.currentSystemData.system.system_address === sysAddr) {
+      container.innerHTML = data.html;
+      initOrreryInteractions(container, systemData);
+    }
+  } catch (err) {
+    console.error("Failed to render Orrery:", err);
+    container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--danger-color);">Orrery view loading error: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function initOrreryInteractions(container, systemData) {
+  const wrapper = container.querySelector('#orrery-wrapper');
+  const layer = container.querySelector('#orrery-pan-zoom-layer');
+  const tooltip = container.querySelector('#orrery-tooltip');
+  if (!wrapper || !layer) return;
+
+  let scale = 1.0;
+  let panX = 0;
+  let panY = 0;
+  let isDragging = false;
+  let startX = 0, startY = 0;
+
+  function updateTransform() {
+    layer.setAttribute('transform', `matrix(${scale} 0 0 ${scale} ${panX} ${panY})`);
+  }
+
+  window.zoomOrrery = function(factor) {
+    const newScale = Math.max(0.12, Math.min(35.0, scale * factor));
+    const rect = wrapper.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    panX = cx - (cx - panX) * (newScale / scale);
+    panY = cy - (cy - panY) * (newScale / scale);
+    scale = newScale;
+    updateTransform();
+  };
+
+  window.resetOrreryView = function() {
+    scale = 1.0;
+    panX = 0;
+    panY = 0;
+    updateTransform();
+  };
+
+  window.focusOrreryTarget = function(targetX, targetY, targetScale) {
+    targetScale = targetScale || 2.4;
+    const rect = wrapper.getBoundingClientRect();
+    const svgW = 1000, svgH = 700;
+    const ratioX = rect.width / svgW;
+    const ratioY = rect.height / svgH;
+
+    scale = targetScale;
+    panX = (rect.width / 2) - (targetX * ratioX * scale);
+    panY = (rect.height / 2) - (targetY * ratioY * scale);
+    updateTransform();
+  };
+
+  wrapper.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = wrapper.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.18 : 0.85;
+    const newScale = Math.max(0.12, Math.min(40.0, scale * factor));
+
+    panX = mouseX - (mouseX - panX) * (newScale / scale);
+    panY = mouseY - (mouseY - panY) * (newScale / scale);
+    scale = newScale;
+    updateTransform();
+  }, { passive: false });
+
+  wrapper.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    isDragging = true;
+    startX = e.clientX - panX;
+    startY = e.clientY - panY;
+    wrapper.style.cursor = 'grabbing';
+  });
+
+  const onMouseMove = (e) => {
+    if (!isDragging) return;
+    panX = e.clientX - startX;
+    panY = e.clientY - startY;
+    updateTransform();
+  };
+
+  const onMouseUp = () => {
+    if (isDragging) {
+      isDragging = false;
+      wrapper.style.cursor = 'grab';
+    }
+  };
+
+  if (window._orreryMouseMove) window.removeEventListener('mousemove', window._orreryMouseMove);
+  if (window._orreryMouseUp) window.removeEventListener('mouseup', window._orreryMouseUp);
+  window._orreryMouseMove = onMouseMove;
+  window._orreryMouseUp = onMouseUp;
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+
+  // Touch support (mobile / pinch zoom)
+  let initialTouchDist = null;
+  let initialTouchScale = 1.0;
+  wrapper.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      startX = e.touches[0].clientX - panX;
+      startY = e.touches[0].clientY - panY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      initialTouchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      initialTouchScale = scale;
+    }
+  }, { passive: true });
+
+  wrapper.addEventListener('touchmove', (e) => {
+    if (isDragging && e.touches.length === 1) {
+      panX = e.touches[0].clientX - startX;
+      panY = e.touches[0].clientY - startY;
+      updateTransform();
+    } else if (e.touches.length === 2 && initialTouchDist) {
+      const currentDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const factor = currentDist / initialTouchDist;
+      scale = Math.max(0.12, Math.min(35.0, initialTouchScale * factor));
+      updateTransform();
+    }
+  }, { passive: true });
+
+  wrapper.addEventListener('touchend', () => {
+    isDragging = false;
+    initialTouchDist = null;
+  });
+
+  // Pre-select active body if one is currently selected in state
+  if (state.selectedBody) {
+    const selId = state.selectedBody.body_id;
+    const selName = state.selectedBody.body_name;
+    let selNode = null;
+    if (selId !== undefined && selId !== null && selId !== '') {
+      selNode = wrapper.querySelector(`.orrery-node[data-body-id="${selId}"]`);
+    }
+    if (!selNode && selName) {
+      const allNodes = wrapper.querySelectorAll('.orrery-node');
+      for (const n of allNodes) {
+        if (n.getAttribute('data-name') === selName) {
+          selNode = n;
+          break;
+        }
+      }
+    }
+    if (selNode) {
+      selNode.classList.add('selected');
+    }
+  }
+
+  // Hover tooltip and click-to-select
+  const isJa = (state.lang !== 'en');
+  const nodes = wrapper.querySelectorAll('.orrery-node');
+  nodes.forEach(node => {
+    node.addEventListener('mouseenter', (e) => {
+      if (!tooltip) return;
+      const name = node.getAttribute('data-name');
+      const type = node.getAttribute('data-type');
+      const dist = node.getAttribute('data-dist');
+      const grav = node.getAttribute('data-grav');
+      const temp = node.getAttribute('data-temp');
+
+      let content = `<b style="color: var(--ed-orange);">${escapeHtml(name)}</b><br><span style="color: var(--ed-cyan);">${escapeHtml(type)}</span>`;
+      if (dist && dist !== '0') content += `<br>${isJa ? '距離: ' : 'Distance: '}${Number(dist).toLocaleString()} Ls`;
+      if (grav && grav !== '--') content += `<br>${isJa ? '重力: ' : 'Gravity: '}${escapeHtml(grav)}`;
+      if (temp && temp !== '--') content += `<br>${isJa ? '表面温度: ' : 'Surface Temp: '}${escapeHtml(temp)}`;
+
+      tooltip.innerHTML = content;
+      tooltip.style.display = 'block';
+    });
+
+    node.addEventListener('mousemove', (e) => {
+      if (!tooltip) return;
+      const rect = wrapper.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+      tooltip.style.top = (e.clientY - rect.top + 10) + 'px';
+    });
+
+    node.addEventListener('mouseleave', () => {
+      if (tooltip) tooltip.style.display = 'none';
+    });
+
+    node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      wrapper.querySelectorAll('.orrery-node').forEach(n => n.classList.remove('selected'));
+      node.classList.add('selected');
+
+      const bodyId = node.getAttribute('data-body-id');
+      const name = node.getAttribute('data-name');
+      const bodies = systemData.bodies || [];
+      let found = null;
+      if (bodyId) {
+        found = bodies.find(b => String(b.body_id) === String(bodyId));
+      }
+      if (!found && name) {
+        found = bodies.find(b => b.body_name === name);
+      }
+      if (found) {
+        state.selectedBody = found;
+        state.targetBodyId = found.body_id;
+        renderBodyInspector();
+      }
+    });
+  });
+}
 
 async function renderPhysicsReport(container, systemData) {
   if (!systemData || !systemData.system) {
@@ -2276,6 +2525,15 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCurrentView();
   });
 
+  const btnViewOrrery = document.getElementById('btn-view-orrery');
+  if (btnViewOrrery) {
+    btnViewOrrery.addEventListener('click', () => {
+      state.currentView = 'orrery';
+      updateViewButtons();
+      renderCurrentView();
+    });
+  }
+
   const btnViewBio = document.getElementById('btn-view-bio');
   if (btnViewBio) {
     btnViewBio.addEventListener('click', () => {
@@ -2312,6 +2570,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateViewButtons() {
     const btnSys = document.getElementById('btn-view-sysmap');
     const btnFlat = document.getElementById('btn-view-flat');
+    const btnOrrery = document.getElementById('btn-view-orrery');
     const btnBio = document.getElementById('btn-view-bio');
     const btnMining = document.getElementById('btn-view-mining');
     const btnVis = document.getElementById('btn-view-visits');
@@ -2319,6 +2578,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnSys) btnSys.classList.toggle('active', state.currentView === 'sysmap');
     if (btnFlat) btnFlat.classList.toggle('active', state.currentView === 'flat');
+    if (btnOrrery) btnOrrery.classList.toggle('active', state.currentView === 'orrery');
     if (btnBio) btnBio.classList.toggle('active', state.currentView === 'bio');
     if (btnMining) btnMining.classList.toggle('active', state.currentView === 'mining');
     if (btnVis) btnVis.classList.toggle('active', state.currentView === 'visits');

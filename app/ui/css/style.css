@@ -3038,3 +3038,82 @@ header {
 .share-dropdown-item:hover {
   background: rgba(255, 255, 255, 0.08) !important;
 }
+
+/* Central Pane Orrery View */
+.orrery-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 540px;
+  box-sizing: border-box;
+}
+.orrery-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.orrery-header-bar h2 {
+  font-size: 1.1rem;
+  margin: 0;
+  color: #fff;
+}
+.orrery-controls {
+  display: flex;
+  gap: 6px;
+}
+.orrery-jump-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.orrery-btn {
+  background: rgba(255, 113, 0, 0.12);
+  border: 1px solid rgba(255, 113, 0, 0.4);
+  color: var(--ed-orange);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.orrery-btn:hover {
+  background: rgba(255, 113, 0, 0.25);
+  border-color: var(--ed-orange);
+  color: #fff;
+}
+.orrery-viewport-wrapper {
+  width: 100%;
+  flex: 1;
+  min-height: 480px;
+  overflow: hidden;
+  position: relative;
+  background: radial-gradient(circle at center, #0d131f 0%, #06090e 100%);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: grab;
+}
+.orrery-node {
+  cursor: pointer;
+}
+.orrery-node:hover circle {
+  filter: drop-shadow(0 0 6px #00d2ff);
+}
+.orrery-node.selected circle {
+  stroke: #00d2ff !important;
+  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 8px #00d2ff) !important;
+}

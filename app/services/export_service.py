@@ -688,10 +688,11 @@ def build_interactive_orrery(system_data: Dict[str, Any], bodies: List[Dict[str,
             r_star = 18 if is_prim else 13
             glow_id = "star-glow" if is_prim else "companion-glow"
             b_name = html.escape(s_body.get("body_name", f"Star {star_key}"))
+            star_body_id = s_body.get("body_id", "")
             temp_val = f'{s_body.get("surface_temperature", "--")} K'
             star_type_text = strings["star_type_label"].format(type=s_type)
             star_key_text = strings["star_key_label"].format(key=star_key, type=s_type)
-            svg_elements.append(f'<g class="orrery-node" data-name="{b_name}" data-type="{star_type_text}" data-dist="{dist_val}" data-temp="{temp_val}">')
+            svg_elements.append(f'<g class="orrery-node" data-body-id="{star_body_id}" data-name="{b_name}" data-type="{star_type_text}" data-dist="{dist_val}" data-temp="{temp_val}">')
             svg_elements.append(f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="{r_star}" fill="{s_color}" filter="url(#{glow_id})" />')
             svg_elements.append(f'<text x="{sx:.1f}" y="{sy + r_star + 13:.1f}" font-size="10" font-weight="bold" fill="#fed7aa" text-anchor="middle" font-family="sans-serif">{star_key_text}</text>')
             svg_elements.append('</g>')
@@ -716,8 +717,9 @@ def build_interactive_orrery(system_data: Dict[str, Any], bodies: List[Dict[str,
             g_str = f"{p_body.get('surface_gravity_g', 0):.2f}G" if (p_body and p_body.get('surface_gravity_g')) else "--"
             p_dist = p_body.get("distance_from_arrival_ls", 0) if p_body else 0
             p_temp = f"{p_body.get('surface_temperature', '--')} K" if (p_body and p_body.get('surface_temperature')) else "--"
+            planet_body_id = p_body.get("body_id", "") if p_body else ""
 
-            svg_elements.append(f'<g class="orrery-node" data-name="{p_name}" data-type="{html.escape(p_class)}" data-dist="{p_dist}" data-grav="{g_str}" data-temp="{p_temp}">')
+            svg_elements.append(f'<g class="orrery-node" data-body-id="{planet_body_id}" data-name="{p_name}" data-type="{html.escape(p_class)}" data-dist="{p_dist}" data-grav="{g_str}" data-temp="{p_temp}">')
             svg_elements.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="6.5" fill="{p_color}" />')
             svg_elements.append(f'<text x="{px:.1f}" y="{py - 8:.1f}" font-size="8" fill="#e2e8f0" text-anchor="middle" font-family="sans-serif">{p_name} ({g_str})</text>')
             svg_elements.append('</g>')
@@ -735,8 +737,9 @@ def build_interactive_orrery(system_data: Dict[str, Any], bodies: List[Dict[str,
                 m_color = get_body_visual_color(m_class)
                 m_dist = m_body.get("distance_from_arrival_ls", 0)
                 m_grav = f"{m_body.get('surface_gravity_g', 0):.2f}G" if m_body.get('surface_gravity_g') else "--"
+                moon_body_id = m_body.get("body_id", "") if m_body else ""
 
-                svg_elements.append(f'<g class="orrery-node" data-name="{m_name}" data-type="{html.escape(m_class)}" data-dist="{m_dist}" data-grav="{m_grav}">')
+                svg_elements.append(f'<g class="orrery-node" data-body-id="{moon_body_id}" data-name="{m_name}" data-type="{html.escape(m_class)}" data-dist="{m_dist}" data-grav="{m_grav}">')
                 svg_elements.append(f'<circle cx="{mx:.1f}" cy="{my:.1f}" r="3" fill="{m_color}" />')
                 svg_elements.append('</g>')
 

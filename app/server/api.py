@@ -1682,6 +1682,17 @@ def get_system_detail(system_address: int):
         "physics_evaluation": system_data.get("physics_evaluation")
     }
 
+@app.get("/api/system/{system_address}/orrery")
+def get_system_orrery(system_address: int, lang: str = "ja"):
+    detail = get_system_detail(system_address)
+    if isinstance(detail, JSONResponse):
+        return detail
+    sys_data = detail.get("system", {})
+    bodies = detail.get("bodies", [])
+    from app.services.export_service import build_interactive_orrery
+    orrery_html = build_interactive_orrery(sys_data, bodies, lang=lang)
+    return {"html": orrery_html}
+
 @app.post("/api/systems/{system_address}/edsm_sync")
 def sync_system_edsm(system_address: int):
     """
