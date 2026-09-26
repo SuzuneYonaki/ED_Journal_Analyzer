@@ -376,6 +376,12 @@ async function selectSystem(systemAddress, preserveSelectedBody = false, resetJu
           checkAndAnnounceHighBioBody(data.system, b);
         });
       }
+      // Check Green Gas Giant (GGG) alert
+      if (ttsState.gggEnabled !== false) {
+        data.bodies.forEach(b => {
+          checkAndAnnounceGggBody(data.system, b);
+        });
+      }
     } else {
       state.selectedBody = null;
     }
@@ -3163,75 +3169,119 @@ const ttsState = {
   rate: 1.0
 };
 
+let sharedAudioCtx = null;
+
+function getSharedAudioContext() {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!sharedAudioCtx) {
+      sharedAudioCtx = new AudioContextClass();
+    }
+    if (sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume().catch(e => console.warn('AudioContext resume on get failed:', e));
+    }
+    return sharedAudioCtx;
+  } catch (e) {
+    console.warn('Failed to get AudioContext:', e);
+    return null;
+  }
+}
+
+// Unlock audio context on initial user interaction (click or keypress)
+if (typeof window !== 'undefined') {
+  const unlockAudio = () => {
+    if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume().catch(() => {});
+    }
+  };
+  window.addEventListener('click', unlockAudio, { passive: true });
+  window.addEventListener('keydown', unlockAudio, { passive: true });
+}
+
 const announcedHighBioBodies = new Set();
+const announcedGggBodies = new Set();
+
+function _executeGggChime(ctx) {
+  const now = ctx.currentTime;
+  // Sci-fi high mystery alert: 523.25Hz (C5) -> 659.25Hz (E5) -> 783.99Hz (G5) -> 1046.50Hz (C6)
+  const notes = [
+    { freq: 523.25, start: 0, dur: 0.1 },
+    { freq: 659.25, start: 0.1, dur: 0.1 },
+    { freq: 783.99, start: 0.2, dur: 0.12 },
+    { freq: 1046.50, start: 0.32, dur: 0.4 }
+  ];
+  notes.forEach(n => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(n.freq, now + n.start);
+    gain.gain.setValueAtTime(0, now + n.start);
+    gain.gain.linearRampToValueAtTime(0.35 * (ttsState.volume || 1.0), now + n.start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now + n.start);
+    osc.stop(now + n.start + n.dur);
+  });
+}
 
 function playGggChime() {
   try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    const now = ctx.currentTime;
-    // Sci-fi high mystery alert: 523.25Hz (C5) -> 659.25Hz (E5) -> 783.99Hz (G5) -> 1046.50Hz (C6)
-    const notes = [
-      { freq: 523.25, start: 0, dur: 0.1 },
-      { freq: 659.25, start: 0.1, dur: 0.1 },
-      { freq: 783.99, start: 0.2, dur: 0.12 },
-      { freq: 1046.50, start: 0.32, dur: 0.4 }
-    ];
-    notes.forEach(n => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(n.freq, now + n.start);
-      gain.gain.setValueAtTime(0, now + n.start);
-      gain.gain.linearRampToValueAtTime(0.35 * (ttsState.volume || 1.0), now + n.start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + n.start);
-      osc.stop(now + n.start + n.dur);
-    });
+    const ctx = getSharedAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(() => _executeGggChime(ctx)).catch(() => _executeGggChime(ctx));
+    } else {
+      _executeGggChime(ctx);
+    }
   } catch (e) {
     console.warn('GGG chime audio failed:', e);
   }
 }
 
+function _executeHighBioBuzzer(ctx) {
+  const now = ctx.currentTime;
+  // Harmonic 3-tone chime: 587.33Hz (D5) -> 880Hz (A5) -> 1174.66Hz (D6)
+  const notes = [
+    { freq: 587.33, start: 0, dur: 0.12 },
+    { freq: 880.00, start: 0.12, dur: 0.14 },
+    { freq: 1174.66, start: 0.26, dur: 0.35 }
+  ];
+
+  notes.forEach(n => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(n.freq, now + n.start);
+
+    gain.gain.setValueAtTime(0, now + n.start);
+    gain.gain.linearRampToValueAtTime(0.3 * (ttsState.volume || 1.0), now + n.start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now + n.start);
+    osc.stop(now + n.start + n.dur);
+  });
+}
+
 function playHighBioBuzzer() {
   try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    const now = ctx.currentTime;
-
-    // Harmonic 3-tone chime: 587.33Hz (D5) -> 880Hz (A5) -> 1174.66Hz (D6)
-    const notes = [
-      { freq: 587.33, start: 0, dur: 0.12 },
-      { freq: 880.00, start: 0.12, dur: 0.14 },
-      { freq: 1174.66, start: 0.26, dur: 0.35 }
-    ];
-
-    notes.forEach(n => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(n.freq, now + n.start);
-
-      gain.gain.setValueAtTime(0, now + n.start);
-      gain.gain.linearRampToValueAtTime(0.3 * (ttsState.volume || 1.0), now + n.start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + n.start);
-      osc.stop(now + n.start + n.dur);
-    });
+    const ctx = getSharedAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(() => _executeHighBioBuzzer(ctx)).catch(() => _executeHighBioBuzzer(ctx));
+    } else {
+      _executeHighBioBuzzer(ctx);
+    }
   } catch (e) {
     console.warn('Audio buzzer failed:', e);
   }
 }
 
 function checkAndAnnounceHighBioBody(sysData, bodyData) {
-  if (!ttsState.enabled || !ttsState.highBioEnabled) return;
+  if (!ttsState.highBioEnabled) return;
   if (!bodyData) return;
 
   const bodyName = bodyData.body_name || bodyData.BodyName;
@@ -3305,6 +3355,79 @@ function checkAndAnnounceHighBioBody(sysData, bodyData) {
         }
       }, ttsState.highBioMode === 'both' ? 600 : 0);
     }
+  }
+}
+
+function checkAndAnnounceGggBody(sysData, bodyData) {
+  if (ttsState.gggEnabled === false) return;
+  if (!bodyData) return;
+
+  const bodyName = bodyData.body_name || bodyData.BodyName;
+  const sysAddr = bodyData.system_address || (sysData ? sysData.system_address : null);
+  if (!bodyName) return;
+
+  const alertKey = `${sysAddr || 'sys'}_${bodyName}`;
+  if (announcedGggBodies.has(alertKey)) return;
+
+  let isConfirmedGgg = Boolean(bodyData.is_confirmed_ggg);
+  let confirmedVariant = bodyData.confirmed_ggg_variant || '';
+  let isGggCandidate = Boolean(bodyData.ggg_evaluation && bodyData.ggg_evaluation.is_candidate);
+
+  // Check anomalies list if available
+  let anomalies = bodyData.anomalies || [];
+  if (typeof anomalies === 'string') {
+    try { anomalies = JSON.parse(anomalies); } catch (e) { anomalies = []; }
+  }
+  if (!Array.isArray(anomalies) && bodyData.anomalies_json) {
+    try { anomalies = JSON.parse(bodyData.anomalies_json); } catch (e) { anomalies = []; }
+  }
+  if (Array.isArray(anomalies)) {
+    anomalies.forEach(a => {
+      if (!a) return;
+      const typeStr = String(a.type || '');
+      const tagStr = String(a.tag || '');
+      if (typeStr === 'confirmed_ggg' || tagStr.includes('Confirmed GGG')) {
+        isConfirmedGgg = true;
+        if (a.desc && a.desc.includes('確定GGG:')) {
+          confirmedVariant = a.desc.replace('確定GGG:', '').trim();
+        }
+      } else if (typeStr === 'ggg_candidate' || tagStr.includes('GGG Candidate')) {
+        isGggCandidate = true;
+      }
+    });
+  }
+
+  if (!isConfirmedGgg && !isGggCandidate) return;
+
+  announcedGggBodies.add(alertKey);
+
+  const mode = ttsState.gggMode || 'both';
+  if (mode === 'both' || mode === 'buzzer') {
+    playGggChime();
+  }
+
+  if (mode === 'both' || mode === 'tts') {
+    let msg = '';
+    if (isConfirmedGgg) {
+      const rawText = ttsState.gggConfirmedText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
+      msg = rawText
+        .replace(/\{body\}/gi, bodyName)
+        .replace(/\{variant\}/gi, confirmedVariant || 'ガスジャイアント')
+        .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
+    } else {
+      const rawText = ttsState.gggCandidateText || '{body}はグリーンガスジャイアント候補です。';
+      msg = rawText
+        .replace(/\{body\}/gi, bodyName)
+        .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
+    }
+
+    setTimeout(() => {
+      if (ttsState.engine === 'voicevox') {
+        playVoicevoxSpeech(msg);
+      } else {
+        playWebSpeech(msg);
+      }
+    }, mode === 'both' ? 600 : 0);
   }
 }
 
