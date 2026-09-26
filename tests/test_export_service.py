@@ -536,3 +536,39 @@ def test_api_export_and_import_png_endpoints():
     assert bad_resp.status_code == 400
     assert "メタデータ" in bad_resp.json()["error"]
 
+
+def test_api_export_unvisited_restrictions_i18n():
+    from fastapi.testclient import TestClient
+    from app.server.api import app
+    from app.db.database import get_db_connection, init_db
+
+    client = TestClient(app)
+    conn = get_db_connection()
+    init_db(conn)
+    c = conn.cursor()
+    c.execute(
+        "INSERT OR REPLACE INTO systems (system_address, star_system, main_star_type, visit_count, is_external) VALUES (?, ?, ?, ?, ?)",
+        (999888, "Unvisited System", "M", 0, 1)
+    )
+    conn.commit()
+    conn.close()
+
+    # 1. HTML unvisited export restriction (JA and EN)
+    res_html_ja = client.get("/api/export/html/999888?lang=ja")
+    assert res_html_ja.status_code == 403
+    assert "外部参照（未訪問）星系のため" in res_html_ja.json()["error"]
+
+    res_html_en = client.get("/api/export/html/999888?lang=en")
+    assert res_html_en.status_code == 403
+    assert "unvisited" in res_html_en.json()["error"].lower()
+
+    # 2. Image unvisited export restriction (JA and EN)
+    res_img_ja = client.get("/api/export/image/999888?lang=ja")
+    assert res_img_ja.status_code == 403
+    assert "外部参照（未訪問）星系のため" in res_img_ja.json()["error"]
+
+    res_img_en = client.get("/api/export/image/999888?lang=en")
+    assert res_img_en.status_code == 403
+    assert "unvisited" in res_img_en.json()["error"].lower()
+
+

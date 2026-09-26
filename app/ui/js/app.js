@@ -4456,7 +4456,7 @@ async function initSettingsModal() {
 
 function initExportImportModals() {
   // Method 2: Standalone Web Share HTML Export
-  function showExportSuccessToast(title, filePath) {
+  function showExportSuccessToast(title, filePath, type = 'html') {
     let toast = document.getElementById('app-export-toast');
     if (!toast) {
       toast = document.createElement('div');
@@ -4477,25 +4477,49 @@ function initExportImportModals() {
       document.body.appendChild(toast);
     }
 
-    toast.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--ed-cyan); font-size: 0.95rem; margin-bottom: 6px;">
-        <span>🌐</span> <span>${title}</span>
-      </div>
-      <div style="color: #cbd5e1; font-size: 0.78rem; word-break: break-all; margin-bottom: 8px; background: rgba(0,0,0,0.3); padding: 6px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">
-        <b>保存先:</b> <code style="color: #38bdf8;">${filePath || 'exports/ フォルダ'}</code>
-      </div>
-      <div style="color: #94a3b8; font-size: 0.72rem; margin-bottom: 10px;">
-        🤖 <b>AI推論対応</b>: 全天体の天体物理・軌道観測JSONが内包されています。各種生成AIに本HTMLをそのまま読み込ませて星系形成史シナリオを推論できます。
-      </div>
-      <div style="display: flex; gap: 8px; justify-content: flex-end;">
-        <button id="btn-toast-open-folder" class="btn-primary" style="padding: 4px 12px; font-size: 0.78rem; background: rgba(0, 210, 255, 0.2); border: 1px solid var(--ed-cyan); color: var(--ed-cyan); cursor: pointer;">
-          📂 保存フォルダーを開く
-        </button>
-        <button id="btn-toast-close" class="view-btn" style="padding: 4px 10px; font-size: 0.78rem; cursor: pointer;">
-          閉じる
-        </button>
-      </div>
-    `;
+    if (type === 'snippet') {
+      const msg = title || (typeof t === 'function' ? t('toast_snippet_copied') : null) || '📋 配信・SNS向け短評テキストをクリップボードにコピーしました！';
+      const closeText = (typeof t === 'function' ? t('btn_toast_close') : null) || '閉じる';
+      toast.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--ed-cyan); font-size: 0.9rem;">
+            <span>${msg}</span>
+          </div>
+          <button id="btn-toast-close" class="view-btn" style="padding: 2px 8px; font-size: 0.75rem; cursor: pointer;">
+            ${closeText}
+          </button>
+        </div>
+      `;
+    } else {
+      const defaultDir = (typeof t === 'function' ? t('toast_default_export_dir') : null) || 'exports/ フォルダ';
+      const saveLocLabel = (typeof t === 'function' ? t('toast_save_location') : null) || '保存先:';
+      const aiFeatureHtml = type === 'png'
+        ? ((typeof t === 'function' ? t('toast_ai_feature_png') : null) || '🤖 <b>観測データ内包</b>: ComfyUI方式で観測データを内包。本アプリにドラッグ＆ドロップで星系を展開できます。')
+        : ((typeof t === 'function' ? t('toast_ai_feature_html') : null) || '🤖 <b>AI推論対応</b>: 全天体の天体物理・軌道観測JSONが内包されています。各種生成AIに本HTMLをそのまま読み込ませて星系形成史シナリオを推論できます。');
+      const openFolderText = (typeof t === 'function' ? t('btn_toast_open_folder') : null) || '📂 保存フォルダーを開く';
+      const closeText = (typeof t === 'function' ? t('btn_toast_close') : null) || '閉じる';
+
+      toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--ed-cyan); font-size: 0.95rem; margin-bottom: 6px;">
+          <span>🌐</span> <span>${title}</span>
+        </div>
+        <div style="color: #cbd5e1; font-size: 0.78rem; word-break: break-all; margin-bottom: 8px; background: rgba(0,0,0,0.3); padding: 6px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">
+          <b>${saveLocLabel}</b> <code style="color: #38bdf8;">${filePath || defaultDir}</code>
+        </div>
+        <div style="color: #94a3b8; font-size: 0.72rem; margin-bottom: 10px;">
+          ${aiFeatureHtml}
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button id="btn-toast-open-folder" class="btn-primary" style="padding: 4px 12px; font-size: 0.78rem; background: rgba(0, 210, 255, 0.2); border: 1px solid var(--ed-cyan); color: var(--ed-cyan); cursor: pointer;">
+            ${openFolderText}
+          </button>
+          <button id="btn-toast-close" class="view-btn" style="padding: 4px 10px; font-size: 0.78rem; cursor: pointer;">
+            ${closeText}
+          </button>
+        </div>
+      `;
+    }
+
     toast.style.display = 'block';
 
     document.getElementById('btn-toast-open-folder')?.addEventListener('click', async () => {
@@ -4661,7 +4685,8 @@ function initExportImportModals() {
         URL.revokeObjectURL(url);
 
         // Show toast with location & trigger explorer reveal
-        showExportSuccessToast('Web共有HTMLを出力しました', exportPath);
+        const successMsg = (typeof t === 'function' ? t('toast_export_html_success') : null) || 'Web共有HTMLを出力しました';
+        showExportSuccessToast(successMsg, exportPath, 'html');
         if (exportPath) {
           try {
             await fetch('/api/export/open_location', {
@@ -4673,7 +4698,8 @@ function initExportImportModals() {
         }
       } catch (err) {
         console.error('Failed to export HTML:', err);
-        alert(t('export_failed') || 'HTML出力に失敗しました');
+        const failMsg = (typeof t === 'function' ? (t('export_html_failed') || t('export_failed')) : null) || 'HTML出力に失敗しました';
+        alert(failMsg);
       } finally {
         btnExportHtml.innerHTML = origHtml;
         btnExportHtml.disabled = false;
@@ -4710,7 +4736,8 @@ function initExportImportModals() {
         URL.revokeObjectURL(url);
 
         // Show toast with location & trigger explorer reveal
-        showExportSuccessToast('サマリー画像を出力しました', exportPath);
+        const successMsg = (typeof t === 'function' ? t('toast_export_png_success') : null) || 'サマリー画像を出力しました';
+        showExportSuccessToast(successMsg, exportPath, 'png');
         if (exportPath) {
           try {
             await fetch('/api/export/open_location', {
@@ -4722,7 +4749,8 @@ function initExportImportModals() {
         }
       } catch (err) {
         console.error('Failed to export PNG card:', err);
-        alert(t('export_failed') || 'サマリー画像の出力に失敗しました');
+        const failMsg = (typeof t === 'function' ? (t('export_png_failed') || t('export_failed')) : null) || 'サマリー画像の出力に失敗しました';
+        alert(failMsg);
       } finally {
         btnExportPng.innerHTML = origHtml;
         btnExportPng.disabled = false;
@@ -4760,7 +4788,8 @@ function initExportImportModals() {
 
         btnCopySnsSnippet.innerHTML = `<span>✅ ${t('copied_name') || 'コピー完了!'}</span>`;
         if (typeof showExportSuccessToast === 'function') {
-          showExportSuccessToast(t('snippet_copied') || '配信・SNS向け短評テキストをコピーしました！', '');
+          const copyMsg = (typeof t === 'function' ? t('toast_snippet_copied') : null) || '📋 配信・SNS向け短評テキストをクリップボードにコピーしました！';
+          showExportSuccessToast(copyMsg, '', 'snippet');
         }
         setTimeout(() => {
           btnCopySnsSnippet.innerHTML = origHtml;
@@ -4768,7 +4797,8 @@ function initExportImportModals() {
         }, 2000);
       } catch (err) {
         console.error('Failed to copy SNS snippet:', err);
-        alert(t('snippet_copy_failed') || '短評テキストの取得に失敗しました');
+        const failMsg = (typeof t === 'function' ? t('snippet_copy_failed') : null) || '短評テキストの取得に失敗しました';
+        alert(failMsg);
         btnCopySnsSnippet.innerHTML = origHtml;
         btnCopySnsSnippet.disabled = false;
       }

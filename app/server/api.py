@@ -2093,7 +2093,8 @@ def export_standalone_html_endpoint(
     # Restriction: Unvisited external systems cannot be exported
     if (sys_row["visit_count"] or 0) == 0:
         conn.close()
-        return JSONResponse({"error": "外部参照（未訪問）星系のため、Web共有HTMLのエクスポートは行えません。"}, status_code=403)
+        err_msg = "Cannot export Web Share HTML for unvisited external reference systems." if lang == "en" else "外部参照（未訪問）星系のため、Web共有HTMLのエクスポートは行えません。"
+        return JSONResponse({"error": err_msg}, status_code=403)
 
     system_data = dict(sys_row)
     c.execute("SELECT * FROM bodies WHERE system_address = ? ORDER BY distance_from_arrival_ls ASC, body_id ASC", (system_address,))
@@ -2174,7 +2175,8 @@ def export_summary_image_endpoint(system_address: int, lang: str = "ja"):
     # Restriction: Unvisited external systems cannot be exported
     if (sys_row["visit_count"] or 0) == 0:
         conn.close()
-        return JSONResponse({"error": "外部参照（未訪問）星系のため、サマリー画像のエクスポートは行えません。"}, status_code=403)
+        err_msg = "Cannot export summary image for unvisited external reference systems." if lang == "en" else "外部参照（未訪問）星系のため、サマリー画像のエクスポートは行えません。"
+        return JSONResponse({"error": err_msg}, status_code=403)
 
     system_data = dict(sys_row)
     c.execute("SELECT * FROM bodies WHERE system_address = ? ORDER BY distance_from_arrival_ls ASC, body_id ASC", (system_address,))
