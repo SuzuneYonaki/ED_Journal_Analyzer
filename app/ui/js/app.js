@@ -3128,7 +3128,10 @@ function handleLiveJournalEvent(eventName, eventData) {
     state.jumpState = 'arrived_waiting_fss';
     state.targetJumpSystem = eventData.StarSystem || '';
     clearSystemBioSummary();
-    
+
+    // Auto switch to System view on FSDJump / CarrierJump / Location
+    switchCenterPaneView('sysmap');
+
     // Refresh global stats & systems list
     fetchGlobalStats();
     fetchSystems();
