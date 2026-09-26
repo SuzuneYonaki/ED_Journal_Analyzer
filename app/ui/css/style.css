@@ -2185,6 +2185,45 @@ header {
   font-size: 0.55rem;
 }
 
+/* Star Icon Center Label Dynamic Sizing in System Map */
+.sysmap-sphere.root-star .sysmap-icon-label,
+.sysmap-star-label {
+  font-family: var(--font-mono);
+  font-weight: 900;
+  -webkit-text-stroke: 1.5px #000;
+  paint-order: stroke fill;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+  letter-spacing: -0.5px;
+}
+
+.sysmap-sphere.root-star .sysmap-icon-label.star-len-1,
+.sysmap-star-label.star-len-1 {
+  font-size: 2.2rem;
+}
+
+.sysmap-sphere.root-star .sysmap-icon-label.star-len-2,
+.sysmap-star-label.star-len-2 {
+  font-size: 1.55rem;
+}
+
+.sysmap-sphere.root-star .sysmap-icon-label.star-len-3,
+.sysmap-star-label.star-len-3 {
+  font-size: 1.25rem;
+}
+
+.sysmap-sphere.root-star .sysmap-icon-label.star-len-4,
+.sysmap-star-label.star-len-4 {
+  font-size: 1.05rem;
+  -webkit-text-stroke: 1.2px #000;
+}
+
+.sysmap-sphere.root-star .sysmap-icon-label.star-len-long,
+.sysmap-star-label.star-len-long {
+  font-size: 0.82rem;
+  -webkit-text-stroke: 1px #000;
+  letter-spacing: -1px;
+}
+
 /* Landable Arc (Blue Crescent) */
 .sysmap-landable-arc {
   position: absolute;

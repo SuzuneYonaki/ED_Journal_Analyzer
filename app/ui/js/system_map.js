@@ -910,6 +910,18 @@ function renderSystemMapView(container, hierarchyNodes, flatBodies) {
   container.appendChild(controls);
 }
 
+function getStarLabelStyle(iconLabel, isStar = false) {
+  if (!isStar) return { size: '', cls: '' };
+  const len = (iconLabel || '').trim().length;
+  let size = '2.2rem';
+  let cls = 'star-len-1';
+  if (len === 2) { size = '1.55rem'; cls = 'star-len-2'; }
+  else if (len === 3) { size = '1.25rem'; cls = 'star-len-3'; }
+  else if (len === 4) { size = '1.05rem'; cls = 'star-len-4'; }
+  else if (len >= 5) { size = '0.82rem'; cls = 'star-len-long'; }
+  return { size, cls: `sysmap-star-label ${cls}` };
+}
+
 function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   const isSelected = state.selectedBody && state.selectedBody.body_id === body.body_id;
   const isTarget = state.targetBodyId !== null && body.body_id === state.targetBodyId;
@@ -1164,11 +1176,16 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     const landableArcHtml = isLandable ? '<div class="sysmap-landable-arc"></div>' : '';
     const ringHtml = hasPlanetaryRings ? `<div class="sysmap-ring-system ${primaryRingKey}"></div>` : '';
 
+    const isStarBody = Boolean(body.isStar || body.star_type || role === 'root-star' || role === 'companion-star');
+    const starLabelInfo = getStarLabelStyle(iconLabel, isStarBody);
+    const starStyleAttr = starLabelInfo.size ? ` style="font-size: ${starLabelInfo.size};"` : '';
+    const starClassAttr = starLabelInfo.cls ? ` ${starLabelInfo.cls}` : '';
+
     sphere.innerHTML = `
       ${landableArcHtml}
       ${ringHtml}
       <div class="sysmap-sphere ${iconClass} ${role}">
-        <span class="sysmap-icon-label">${iconLabel}</span>
+        <span class="sysmap-icon-label${starClassAttr}"${starStyleAttr}>${iconLabel}</span>
       </div>
     `;
   }
