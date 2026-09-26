@@ -219,7 +219,13 @@ function renderSystemList() {
     let mainStar = '';
     if (sys.main_star_type) {
       const style = getStarTypeStyle(sys.main_star_type);
-      mainStar = `<span class="tag-badge" style="background: ${style.bg}; color: ${style.text}; border: 1px solid ${style.border}; margin-left: 6px; font-weight: bold;">${sys.main_star_type}</span>`;
+      const lumClass = (sys.main_star_luminosity || '').trim();
+      const starLabel = lumClass ? `${sys.main_star_type} ${lumClass}` : sys.main_star_type;
+      mainStar = `<span class="tag-badge" style="background: ${style.bg}; color: ${style.text}; border: 1px solid ${style.border}; margin-left: 6px; font-weight: bold;" title="主星スペクトル・光度階級: ${starLabel}">${starLabel}</span>`;
+      if (sys.main_star_absolute_magnitude !== null && sys.main_star_absolute_magnitude !== undefined) {
+        const magVal = Number(sys.main_star_absolute_magnitude).toFixed(1);
+        mainStar += `<span class="tag-badge" style="background: rgba(234, 179, 8, 0.15); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.4); margin-left: 4px; font-size: 0.68rem;" title="主星絶対等級 (光量): ${magVal} Mag">✨ ${magVal} Mag</span>`;
+      }
     }
 
     const sysName = sys.star_system || (`System ${sys.system_address || ''}`);

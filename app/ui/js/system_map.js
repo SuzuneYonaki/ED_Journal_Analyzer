@@ -1044,6 +1044,18 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     badgeList.push('<span class="sysmap-mini-badge first-disc">⭐ 1st</span>');
   }
 
+  // Stellar Luminosity & Radiation Output Badges
+  if (body.star_type) {
+    const lum = (body.luminosity || '').trim();
+    if (lum) {
+      badgeList.push(`<span class="sysmap-mini-badge lum" style="background: rgba(251, 146, 60, 0.2); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.5); font-weight: bold;" title="光度階級 (Luminosity Class): ${lum}">🌟 ${lum}</span>`);
+    }
+    if (body.absolute_magnitude !== null && body.absolute_magnitude !== undefined) {
+      const magVal = Number(body.absolute_magnitude).toFixed(1);
+      badgeList.push(`<span class="sysmap-mini-badge mag" style="background: rgba(234, 179, 8, 0.15); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.4);" title="絶対等級 (Absolute Magnitude): ${magVal} Mag">✨ ${magVal} Mag</span>`);
+    }
+  }
+
   // Body Bookmark Badge
   if (body.bookmark) {
     const bmTitle = (body.bookmark.alias_name ? `[${body.bookmark.alias_name}] ` : '') + (body.bookmark.note_markdown || '');
