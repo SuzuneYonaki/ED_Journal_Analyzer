@@ -11,7 +11,7 @@
         <span id="header-logged-period" style="font-size: 0.62rem; color: #fed7aa; white-space: nowrap;" data-i18n="stat_period_all">全期間</span>
       </div>
 
-      <div class="header-stats" id="header-stats-content" style="margin: 0; padding: 0; border: none; display: flex; gap: 14px; align-items: center; transition: all 0.25s ease; flex-wrap: wrap;">
+      <div class="header-stats" id="header-stats-content" style="margin: 0; padding: 0; border: none; display: flex; gap: 8px; row-gap: 3px; align-items: center; transition: all 0.25s ease; flex-wrap: wrap;">
         <div class="stat-item" data-i18n-title="stat_systems_tip" title="訪問した星系の累計数">
           <span class="stat-label" data-i18n="stat_systems">訪問星系</span>
           <span id="stat-systems" class="stat-value">0</span>
@@ -106,7 +106,7 @@
 
     <div class="header-actions">
       <!-- Manual Log Rescan Button (Instant access without opening settings) -->
-      <button id="btn-rescan" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #fed7aa; background: rgba(255, 113, 0, 0.15); border: 1px solid rgba(255, 113, 0, 0.5); display: flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" data-i18n-title="tip_rescan_journal" title="最新のジャーナルログを即座に再解析・同期します">
+      <button id="btn-rescan" class="view-btn" style="padding: 4px 9px; font-size: 0.76rem; color: #fed7aa; background: rgba(255, 113, 0, 0.15); border: 1px solid rgba(255, 113, 0, 0.5); display: flex; align-items: center; gap: 4px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" data-i18n-title="tip_rescan_journal" title="最新のジャーナルログを即座に再解析・同期します">
         <span id="rescan-icon">🔄</span>
         <span id="rescan-text" data-i18n="btn_rescan">ログスキャン</span>
       </button>
@@ -117,20 +117,20 @@
       </button>
 
       <!-- Unified Settings Modal Button (Logs, UI Scaling, TTS, Credits) -->
-      <button id="btn-settings-open" class="view-btn" style="padding: 5px 12px; font-size: 0.8rem; color: #fff; background: rgba(255, 113, 0, 0.15); border: 1px solid var(--ed-orange); display: flex; align-items: center; gap: 5px; z-index: 9999; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px; box-shadow: 0 0 6px rgba(255, 113, 0, 0.2);" data-i18n-title="tip_settings_btn" title="⚙️ 設定 & 文字サイズ & ログ同期 & TTS & 謝辞">
+      <button id="btn-settings-open" class="view-btn" style="padding: 4px 9px; font-size: 0.76rem; color: #fff; background: rgba(255, 113, 0, 0.15); border: 1px solid var(--ed-orange); display: flex; align-items: center; gap: 4px; z-index: 9999; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px; box-shadow: 0 0 6px rgba(255, 113, 0, 0.2);" data-i18n-title="tip_settings_btn" title="⚙️ 設定 & 文字サイズ & ログ同期 & TTS & 謝辞">
         <span data-i18n="btn_settings">⚙️ 設定</span>
       </button>
 
       <!-- Layout Switcher Button (1-Column / 2-Columns) -->
-      <button id="btn-toggle-layout" class="view-btn" style="padding: 5px 10px; font-size: 0.8rem; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; display: flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" data-i18n-title="tip_toggle_layout" title="UIレイアウト切替 (1列 / 2列)">
+      <button id="btn-toggle-layout" class="view-btn" style="padding: 4px 8px; font-size: 0.76rem; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; display: flex; align-items: center; gap: 4px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" data-i18n-title="tip_toggle_layout" title="UIレイアウト切替 (1列 / 2列)">
         <span id="layout-toggle-icon">◫</span>
         <span id="layout-toggle-text" data-i18n="btn_layout_2col">2列表示</span>
       </button>
 
       <!-- Language Switcher -->
-      <div class="lang-switch-group" style="display: flex; gap: 4px; background: var(--bg-card); padding: 2px; border-radius: 4px; border: 1px solid var(--border-color);">
-        <button id="btn-lang-ja" class="view-btn active" style="padding: 4px 8px; font-size: 0.75rem;">JP</button>
-        <button id="btn-lang-en" class="view-btn" style="padding: 4px 8px; font-size: 0.75rem;">EN</button>
+      <div class="lang-switch-group" style="display: flex; gap: 2px; background: var(--bg-card); padding: 2px; border-radius: 4px; border: 1px solid var(--border-color); flex-shrink: 0;">
+        <button id="btn-lang-ja" class="view-btn active" style="padding: 3px 6px; font-size: 0.72rem;">JP</button>
+        <button id="btn-lang-en" class="view-btn" style="padding: 3px 6px; font-size: 0.72rem;">EN</button>
       </div>
     </div>
   </header>
