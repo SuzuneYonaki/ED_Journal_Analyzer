@@ -943,6 +943,13 @@ function initHeaderStatsCollapse() {
   btnToggle.addEventListener('click', () => {
     applyCollapse(!headerGroup.classList.contains('collapsed'));
   });
+
+  const indicatorEl = document.getElementById('header-update-indicator');
+  if (indicatorEl) {
+    indicatorEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
 }
 
 // Header Update Notification Management
@@ -967,36 +974,65 @@ function renderHeaderUpdateState() {
   const versionEl = document.getElementById('header-update-version');
   const summaryEl = document.getElementById('header-update-summary');
   const linkEl = document.getElementById('header-update-link');
+  const bannerLink = document.getElementById('header-update-banner-link');
+  const leftUpdateBtn = document.getElementById('header-left-update-btn');
+  const leftUpdateVersion = document.getElementById('header-left-update-version');
 
   const updateInfo = (typeof state !== 'undefined' && state.updateInfo) ? state.updateInfo : null;
-  if (!headerGroup || !updateInfo) return;
+  if (!updateInfo) return;
 
   if (updateInfo.has_update) {
-    headerGroup.classList.add('has-new-version');
-    const isCollapsed = headerGroup.classList.contains('collapsed');
-
-    if (indicator) {
-      indicator.style.display = isCollapsed ? 'none' : 'inline-flex';
-    }
-    if (banner) {
-      banner.style.display = isCollapsed ? 'flex' : 'none';
-    }
-
-    if (versionEl) {
-      versionEl.textContent = updateInfo.latest_version || '';
-    }
-    if (summaryEl) {
+    if (leftUpdateBtn) {
+      leftUpdateBtn.style.display = 'inline-flex';
+      if (updateInfo.release_url) {
+        leftUpdateBtn.href = updateInfo.release_url;
+      }
+      if (leftUpdateVersion) {
+        leftUpdateVersion.textContent = updateInfo.latest_version ? `${updateInfo.latest_version}` : '';
+      }
       const summaryText = updateInfo.summary || updateInfo.release_name || '';
-      summaryEl.textContent = summaryText;
-      summaryEl.title = summaryText;
+      leftUpdateBtn.title = `新バージョン ${updateInfo.latest_version || ''} が利用可能です\n${summaryText}\nクリックしてGitHub最新リリースを開く`;
     }
-    if (linkEl && updateInfo.release_url) {
-      linkEl.href = updateInfo.release_url;
+
+    if (headerGroup) {
+      headerGroup.classList.add('has-new-version');
+      const isCollapsed = headerGroup.classList.contains('collapsed');
+
+      if (indicator) {
+        indicator.style.display = isCollapsed ? 'none' : 'inline-flex';
+        if (updateInfo.release_url) {
+          indicator.href = updateInfo.release_url;
+        }
+      }
+      if (banner) {
+        banner.style.display = isCollapsed ? 'flex' : 'none';
+      }
+
+      if (versionEl) {
+        versionEl.textContent = updateInfo.latest_version || '';
+      }
+      if (summaryEl) {
+        const summaryText = updateInfo.summary || updateInfo.release_name || '';
+        summaryEl.textContent = summaryText;
+        summaryEl.title = summaryText;
+      }
+      if (bannerLink && updateInfo.release_url) {
+        bannerLink.href = updateInfo.release_url;
+        bannerLink.title = (updateInfo.summary || updateInfo.release_name) ? `${updateInfo.summary || updateInfo.release_name} (${updateInfo.release_url})` : updateInfo.release_url;
+      }
+      if (linkEl && updateInfo.release_url) {
+        linkEl.href = updateInfo.release_url;
+      }
     }
   } else {
-    headerGroup.classList.remove('has-new-version');
-    if (indicator) indicator.style.display = 'none';
-    if (banner) banner.style.display = 'none';
+    if (leftUpdateBtn) {
+      leftUpdateBtn.style.display = 'none';
+    }
+    if (headerGroup) {
+      headerGroup.classList.remove('has-new-version');
+      if (indicator) indicator.style.display = 'none';
+      if (banner) banner.style.display = 'none';
+    }
   }
 }
 
