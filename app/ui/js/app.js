@@ -2206,6 +2206,151 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Clear Sort & Date Filter Handlers
+  function resetDateFilter() {
+    if (presetSelect) presetSelect.value = 'all';
+    applyDatePreset('all');
+  }
+
+  function resetSortSettings() {
+    const sortSelect1 = document.getElementById('sort-select');
+    const sortSelect2 = document.getElementById('sort-select-2');
+    const sortSelect3 = document.getElementById('sort-select-3');
+    const cbSort = document.getElementById('cb-sort-composite');
+
+    state.sortBy = 'rarity_score';
+    state.sortOrder = 'desc';
+    state.savedSortBy = 'rarity_score';
+    state.savedSortOrder = 'desc';
+    if (sortSelect1) sortSelect1.value = 'rarity_score-desc';
+
+    state.sortBy2 = null;
+    state.sortOrder2 = null;
+    state.savedSortBy2 = null;
+    state.savedSortOrder2 = null;
+    if (sortSelect2) sortSelect2.value = 'none';
+
+    state.sortBy3 = null;
+    state.sortOrder3 = null;
+    state.savedSortBy3 = null;
+    state.savedSortOrder3 = null;
+    if (sortSelect3) sortSelect3.value = 'none';
+
+    state.sortMode = 'composite';
+    if (cbSort) cbSort.checked = true;
+
+    if (state.liveSyncEnabled) {
+      state.liveSyncEnabled = false;
+      updateLiveSyncButtonUI();
+    }
+    updateSortControlsUI();
+  }
+
+  function resetAllSearchAndFilters() {
+    // 1. Search text
+    const searchInput = document.getElementById('system-search');
+    const btnSearchClear = document.getElementById('btn-search-clear');
+    if (searchInput) searchInput.value = '';
+    if (btnSearchClear) btnSearchClear.style.display = 'none';
+    state.searchQuery = '';
+
+    // 2. General filters
+    document.querySelectorAll('#group-general-filters .chip').forEach(chip => {
+      chip.classList.remove('active');
+      if (chip.dataset.filter) {
+        state.filters[chip.dataset.filter] = false;
+      }
+    });
+
+    // 3. Celestial filters
+    document.querySelectorAll('.celestial-chip').forEach(chip => {
+      chip.classList.remove('active');
+    });
+    state.celestialFilters = [];
+
+    // 4. Mining filters
+    document.querySelectorAll('#group-mining-filters .chip').forEach(chip => {
+      chip.classList.remove('active');
+      if (chip.dataset.filter) {
+        state.filters[chip.dataset.filter] = false;
+      }
+    });
+    document.querySelectorAll('.scout-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.scout === '');
+    });
+    state.miningScout = '';
+    const chkPad = document.getElementById('chk-has-large-pad');
+    if (chkPad) chkPad.checked = false;
+    state.hasLargePad = false;
+    const selDist = document.getElementById('sel-max-arrival-dist');
+    if (selDist) selDist.value = '';
+    state.maxArrivalDistLs = null;
+
+    // 5. Star & Lum filters
+    document.querySelectorAll('.star-filter-cb').forEach(cb => { cb.checked = false; });
+    state.starTypes = [];
+    const rStarAny = document.querySelector('input[name="star-match-mode"][value="any"]');
+    if (rStarAny) rStarAny.checked = true;
+    state.starMatchMode = 'any';
+
+    document.querySelectorAll('.lum-filter-cb').forEach(cb => { cb.checked = false; });
+    state.luminosityClasses = [];
+    const rLumAny = document.querySelector('input[name="lum-match-mode"][value="any"]');
+    if (rLumAny) rLumAny.checked = true;
+    state.luminosityMatchMode = 'any';
+
+    // 6. Date filter
+    resetDateFilter();
+
+    // 7. Sort & Live settings
+    resetSortSettings();
+
+    // 8. Re-fetch
+    state.page = 1;
+    updateCollapsibleBadges();
+    fetchSystems({ autoSelectTop: true });
+    fetchGlobalStats();
+  }
+
+  const btnClearAllFilters = document.getElementById('btn-clear-all-filters');
+  if (btnClearAllFilters) {
+    btnClearAllFilters.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetAllSearchAndFilters();
+    });
+  }
+
+  const btnClearSortFilters = document.getElementById('btn-clear-sort-filters');
+  if (btnClearSortFilters) {
+    btnClearSortFilters.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetDateFilter();
+      resetSortSettings();
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+      fetchGlobalStats();
+    });
+  }
+
+  const btnClearDateTop = document.getElementById('btn-clear-date-top');
+  if (btnClearDateTop) {
+    btnClearDateTop.addEventListener('click', () => {
+      resetDateFilter();
+    });
+  }
+
+  const btnClearSortOnly = document.getElementById('btn-clear-sort-only');
+  if (btnClearSortOnly) {
+    btnClearSortOnly.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetSortSettings();
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    });
+  }
+
   // Copy System Name
   function copySelectedSystem() {
     if (!state.selectedSystem || !state.selectedSystem.star_system) return;
