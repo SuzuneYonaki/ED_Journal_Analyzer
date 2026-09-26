@@ -161,6 +161,13 @@ async def on_startup():
     init_db()
     start_watcher()
     await tts_service.start()
+    if TTS_SETTINGS_FILE.exists():
+        try:
+            with open(TTS_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                saved_tts = json.load(f)
+                sync_tts_settings_to_service(saved_tts)
+        except Exception:
+            pass
     # Trigger background parse automatically on startup in separate thread
     threading.Thread(target=run_background_parse, daemon=True).start()
 
@@ -1964,13 +1971,59 @@ def save_module_settings_endpoint(settings: dict):
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
+def sync_tts_settings_to_service(settings: dict):
+    """Synchronizes dict settings (camelCase or snake_case) to backend tts_service."""
+    update_data = {}
+    if "enabled" in settings:
+        update_data["enabled"] = bool(settings["enabled"])
+
+    url = settings.get("voicevoxUrl") or settings.get("voicevox_url")
+    if url is not None:
+        update_data["voicevox_url"] = str(url).rstrip("/")
+
+    sp_id = settings.get("voicevoxSpeakerId") or settings.get("speaker_id")
+    if sp_id is not None:
+        try:
+            update_data["speaker_id"] = int(sp_id)
+        except (ValueError, TypeError):
+            pass
+
+    speed = settings.get("rate") or settings.get("speed_scale")
+    if speed is not None:
+        try:
+            update_data["speed_scale"] = float(speed)
+        except (ValueError, TypeError):
+            pass
+
+    vol = settings.get("volume") or settings.get("volume_scale")
+    if vol is not None:
+        try:
+            update_data["volume_scale"] = float(vol)
+        except (ValueError, TypeError):
+            pass
+
+    if update_data:
+        tts_service.update_config(update_data)
+
 @app.post("/api/tts_settings")
 def save_tts_settings_endpoint(settings: dict):
     try:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
+        # Load existing settings if any, then merge
+        saved_settings = {}
+        if TTS_SETTINGS_FILE.exists():
+            try:
+                with open(TTS_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                    saved_settings = json.load(f)
+            except Exception:
+                pass
+        saved_settings.update(settings)
         with open(TTS_SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(settings, f, ensure_ascii=False, indent=2)
-        return {"status": "saved", "settings": settings}
+            json.dump(saved_settings, f, ensure_ascii=False, indent=2)
+
+        # Synchronize with tts_service immediately
+        sync_tts_settings_to_service(saved_settings)
+        return {"status": "saved", "settings": saved_settings}
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
@@ -2024,9 +2077,31 @@ def tts_update_config_endpoint(req: TTSConfigRequest):
     tts_service.update_config(update_data)
     try:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
-        current_cfg = tts_service.get_config()
+        # Preserve full existing settings in TTS_SETTINGS_FILE without destroying other keys
+        saved_settings = {}
+        if TTS_SETTINGS_FILE.exists():
+            try:
+                with open(TTS_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                    saved_settings = json.load(f)
+            except Exception:
+                pass
+        if "voicevox_url" in update_data:
+            saved_settings["voicevoxUrl"] = update_data["voicevox_url"]
+            saved_settings["voicevox_url"] = update_data["voicevox_url"]
+        if "speaker_id" in update_data:
+            saved_settings["voicevoxSpeakerId"] = str(update_data["speaker_id"])
+            saved_settings["speaker_id"] = update_data["speaker_id"]
+        if "speed_scale" in update_data:
+            saved_settings["rate"] = update_data["speed_scale"]
+            saved_settings["speed_scale"] = update_data["speed_scale"]
+        if "volume_scale" in update_data:
+            saved_settings["volume"] = update_data["volume_scale"]
+            saved_settings["volume_scale"] = update_data["volume_scale"]
+        if "enabled" in update_data:
+            saved_settings["enabled"] = update_data["enabled"]
+
         with open(TTS_SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(current_cfg, f, ensure_ascii=False, indent=2)
+            json.dump(saved_settings, f, ensure_ascii=False, indent=2)
     except Exception:
         pass
     return {

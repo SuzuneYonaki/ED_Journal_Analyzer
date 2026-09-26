@@ -3782,15 +3782,21 @@ async function updateTtsPolicyView() {
 async function checkVoicevoxConnection() {
   const statusEl = document.getElementById('tts-voicevox-status');
   const speakerSelect = document.getElementById('tts-voicevox-speaker-select');
+  const urlInput = document.getElementById('tts-voicevox-url');
   if (!statusEl) return;
 
+  const targetUrl = (urlInput && urlInput.value.trim())
+    ? urlInput.value.trim().replace(/\/+$/, '')
+    : (ttsState.voicevoxUrl || 'http://127.0.0.1:50021');
+
   try {
-    const res = await fetch(`${ttsState.voicevoxUrl}/speakers`, { method: 'GET' });
+    const res = await fetch(`${targetUrl}/speakers`, { method: 'GET' });
     if (!res.ok) throw new Error('Status ' + res.status);
     const speakers = await res.json();
-    
+
     if (speakerSelect && Array.isArray(speakers)) {
       speakerSelect.innerHTML = '';
+      let matched = false;
       speakers.forEach(sp => {
         const group = document.createElement('optgroup');
         group.label = sp.name;
@@ -3806,15 +3812,23 @@ async function checkVoicevoxConnection() {
             opt.innerText = `${sp.name} (${st.name})`;
             if (String(st.id) === String(ttsState.voicevoxSpeakerId)) {
               opt.selected = true;
+              matched = true;
             }
             group.appendChild(opt);
           });
         }
         speakerSelect.appendChild(group);
       });
+      if (!matched && speakerSelect.options.length > 0) {
+        // Keep current ttsState.voicevoxSpeakerId if valid, otherwise select first
+        const hasOption = Array.from(speakerSelect.options).some(o => o.value === String(ttsState.voicevoxSpeakerId));
+        if (!hasOption) {
+          speakerSelect.options[0].selected = true;
+        }
+      }
     }
 
-    statusEl.innerHTML = `<span style="color: #6ee7b7;">${(typeof t === 'function' ? t('voicevox_connected') : null) || '🟢 VOICEVOX 接続成功 (127.0.0.1:50021)'}</span>`;
+    statusEl.innerHTML = `<span style="color: #6ee7b7;">${(typeof t === 'function' ? t('voicevox_connected') : null) || '🟢 VOICEVOX 接続成功 (' + targetUrl + ')'}</span>`;
   } catch (err) {
     statusEl.innerHTML = `<span style="color: #94a3b8;">${(typeof t === 'function' ? t('voicevox_not_found') : null) || '🔴 VOICEVOX 未検出 (起動すると自動連携されます。未起動時はWeb Speech APIが使われます)'}</span>`;
   } finally {
@@ -4241,6 +4255,8 @@ async function initSettingsModal() {
     if (gggCandidateTextInput) gggCandidateTextInput.value = ttsState.gggCandidateText || '{body}はグリーンガスジャイアント候補です。';
     if (engineSelect) engineSelect.value = ttsState.engine;
     if (customTextInput) customTextInput.value = ttsState.customText;
+    const voicevoxUrlInput = document.getElementById('tts-voicevox-url');
+    if (voicevoxUrlInput) voicevoxUrlInput.value = ttsState.voicevoxUrl || 'http://127.0.0.1:50021';
     if (volumeRange) {
       volumeRange.value = ttsState.volume;
       if (volVal) volVal.innerText = `${Math.round(ttsState.volume * 100)}%`;
@@ -4263,7 +4279,8 @@ async function initSettingsModal() {
   }
 
   if (btnOpen && modal) {
-    btnOpen.addEventListener('click', () => {
+    btnOpen.addEventListener('click', async () => {
+      await loadTTSSettings();
       switchTab('logs');
       modal.style.display = 'flex';
     });
@@ -4271,12 +4288,14 @@ async function initSettingsModal() {
 
   if (btnClose && modal) {
     btnClose.addEventListener('click', () => {
+      // Close without saving unapplied modifications
       modal.style.display = 'none';
     });
   }
 
   if (btnCloseFooter && modal) {
     btnCloseFooter.addEventListener('click', () => {
+      // Close without saving unapplied modifications
       modal.style.display = 'none';
     });
   }
@@ -4294,7 +4313,7 @@ async function initSettingsModal() {
         } catch (e) {}
       }
 
-      // Save TTS
+      // Save TTS only when Apply button is explicitly clicked
       if (enabledToggle) ttsState.enabled = enabledToggle.checked;
       if (highBioToggle) ttsState.highBioEnabled = highBioToggle.checked;
       if (highBioModeSelect) ttsState.highBioMode = highBioModeSelect.value;
@@ -4310,11 +4329,15 @@ async function initSettingsModal() {
       if (engineSelect) ttsState.engine = engineSelect.value;
       if (webVoiceSelect) ttsState.webVoiceURI = webVoiceSelect.value;
       if (voicevoxSpeakerSelect) ttsState.voicevoxSpeakerId = voicevoxSpeakerSelect.value;
+      const voicevoxUrlInput = document.getElementById('tts-voicevox-url');
+      if (voicevoxUrlInput && voicevoxUrlInput.value.trim()) {
+        ttsState.voicevoxUrl = voicevoxUrlInput.value.trim().replace(/\/+$/, '');
+      }
       if (customTextInput) ttsState.customText = customTextInput.value || 'First discover.';
       if (volumeRange) ttsState.volume = parseFloat(volumeRange.value) || 1.0;
       if (rateRange) ttsState.rate = parseFloat(rateRange.value) || 1.0;
 
-      saveTTSSettings();
+      await saveTTSSettings();
       updateTTSHeaderIcon();
 
       // Feedback on Apply button without closing the modal
