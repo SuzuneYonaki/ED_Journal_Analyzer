@@ -1599,6 +1599,16 @@ header {
   flex-direction: column;
   flex-shrink: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.inspector-bottom-spacer {
+  height: 48px;
+  flex-shrink: 0;
+  width: 100%;
 }
 
 .inspector-header {

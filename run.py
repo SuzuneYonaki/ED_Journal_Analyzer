@@ -227,9 +227,9 @@ def main():
             window = webview.create_window(
                 title=f"Elite Dangerous Journal Analyzer & Exploration Orrery (v{APP_VERSION})",
                 url=url,
-                width=1400,
-                height=900,
-                min_size=(1024, 700),
+                width=1380,
+                height=840,
+                min_size=(1024, 660),
                 background_color="#0a0c10"
             )
         else:
