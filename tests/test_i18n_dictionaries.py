@@ -154,3 +154,49 @@ def test_i18n_apply_dom():
     assert res["title"] == "Unknown"
     assert res["placeholder"] == "Unknown"
 
+
+def test_header_tooltip_keys_exist():
+    expected_header_tips = [
+        "stat_systems_tip", "stat_bodies_tip", "stat_elw_tip", "stat_ww_tip",
+        "stat_ammonia_tip", "stat_hmc_tip", "stat_mr_tip", "stat_icy_tip",
+        "stat_rocky_tip", "stat_rocky_ice_tip"
+    ]
+    for key in expected_header_tips:
+        ja_val = run_js_eval(f't("{key}")', setup_code='setLanguage("ja");')
+        en_val = run_js_eval(f't("{key}")', setup_code='setLanguage("en");')
+        assert ja_val and ja_val != key, f"Missing JA translation for {key}"
+        assert en_val and en_val != key, f"Missing EN translation for {key}"
+
+
+def test_all_html_and_js_keys_present_in_dictionaries():
+    import re
+    ui_dir = Path(__file__).resolve().parent.parent / "app" / "ui"
+
+    html_keys = set()
+    for html_file in ui_dir.rglob("*.html"):
+        txt = html_file.read_text(encoding="utf-8")
+        matches = re.findall(r'data-i18n(?:-placeholder|-title|-aria-label|-html)?=["\']([^"\']+)["\']', txt)
+        html_keys.update(matches)
+
+    js_keys = set()
+    for js_file in (ui_dir / "js").glob("*.js"):
+        if js_file.name == "i18n.js":
+            continue
+        txt = js_file.read_text(encoding="utf-8")
+        matches = re.findall(r'\bt\(\s*["\']([^"\']+)["\']', txt)
+        js_keys.update(matches)
+
+    keys_ja = set(run_js_eval('Object.keys(i18n.ja)'))
+    keys_en = set(run_js_eval('Object.keys(i18n.en)'))
+
+    missing_html_in_ja = html_keys - keys_ja
+    missing_html_in_en = html_keys - keys_en
+    missing_js_in_ja = js_keys - keys_ja
+    missing_js_in_en = js_keys - keys_en
+
+    assert not missing_html_in_ja, f"HTML keys missing in JA dictionary: {missing_html_in_ja}"
+    assert not missing_html_in_en, f"HTML keys missing in EN dictionary: {missing_html_in_en}"
+    assert not missing_js_in_ja, f"JS t() keys missing in JA dictionary: {missing_js_in_ja}"
+    assert not missing_js_in_en, f"JS t() keys missing in EN dictionary: {missing_js_in_en}"
+
+

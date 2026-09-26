@@ -1027,12 +1027,15 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   }
 
   if (isConfirmedGgg) {
-    const gggTitle = `確定グリーンガスジャイアント: ${confirmedVariant || (lang === 'en' ? 'Codex Verified' : 'Codex確認済')}`;
+    const variantStr = confirmedVariant || (lang === 'en' ? 'Codex Verified' : 'Codex確認済');
+    const gggTitle = typeof t === 'function'
+      ? t('ggg_confirmed_badge_title', { variant: variantStr })
+      : `確定グリーンガスジャイアント: ${variantStr}`;
     badgeList.push(`<span class="sysmap-mini-badge ggg-confirmed" title="${gggTitle}">[GGG]</span>`);
   } else if (isGggCandidate) {
-    const candTitle = lang === 'en'
-      ? 'グリーンガスジャイアント候補 (FSSまたは目視確認推奨)'
-      : 'グリーンガスジャイアント候補 (FSSまたは目視確認推奨)';
+    const candTitle = typeof t === 'function'
+      ? t('ggg_candidate_badge_title')
+      : (lang === 'en' ? 'Green Gas Giant candidate (FSS or visual check recommended)' : 'グリーンガスジャイアント候補 (FSSまたは目視確認推奨)');
     badgeList.push(`<span class="sysmap-mini-badge ggg-candidate" title="${candTitle}">[GGG？]</span>`);
   }
   if (isBary) {
