@@ -97,8 +97,26 @@ def test_body_icons():
     elw = run_js_utils_eval('getBodyIconClass({ planet_class: "Earthlike body" })')
     assert elw == 'icon-elw'
 
+    elw_hyphen = run_js_utils_eval('getBodyIconClass({ planet_class: "Earth-like world" })')
+    assert elw_hyphen == 'icon-elw'
+
+    elw_label1 = run_js_utils_eval('getBodyIconLabel({ planet_class: "Earth-like world" })')
+    assert elw_label1 == 'ELW'
+
+    elw_label2 = run_js_utils_eval('getBodyIconLabel({ PlanetClass: "Earthlike body" })')
+    assert elw_label2 == 'ELW'
+
     ww_label = run_js_utils_eval('getBodyIconLabel({ planet_class: "Water world" })')
     assert ww_label == 'WW'
+
+    mr_label = run_js_utils_eval('getBodyIconLabel({ planet_class: "Metal rich body" })')
+    assert mr_label == 'MR'
+
+    wg_label = run_js_utils_eval('getBodyIconLabel({ planet_class: "Water giant" })')
+    assert wg_label == 'WG'
+
+    ri_label = run_js_utils_eval('getBodyIconLabel({ planet_class: "Rocky ice body" })')
+    assert ri_label == 'RI'
 
 
 def test_module_settings_defaults():
