@@ -1854,6 +1854,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initStellarFilters();
   initLayoutSwitcher();
   initHeaderStatsCollapse();
+  if (typeof initSystemCardKeyboardNavigation === 'function') {
+    initSystemCardKeyboardNavigation();
+  }
   if (typeof checkForAppUpdate === 'function') {
     checkForAppUpdate();
   }

@@ -1127,6 +1127,13 @@ header {
   box-shadow: inset 3px 0 0 var(--ed-orange);
 }
 
+.system-card:focus,
+.system-card:focus-visible {
+  outline: none;
+  border-color: var(--ed-orange);
+  box-shadow: 0 0 0 2px rgba(255, 113, 0, 0.4), inset 3px 0 0 var(--ed-orange);
+}
+
 .system-card-header {
   display: flex;
   justify-content: space-between;

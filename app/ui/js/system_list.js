@@ -126,7 +126,19 @@ function renderSystemList() {
     const card = document.createElement('div');
     card.className = `system-card ${state.selectedSystem && state.selectedSystem.system_address === sys.system_address ? 'selected' : ''}`;
     card.dataset.sysAddr = sys.system_address;
+    card.tabIndex = 0;
+    if (typeof card.setAttribute === 'function') {
+      card.setAttribute('tabindex', '0');
+    }
     card.onclick = () => selectSystem(sys.system_address);
+    if (typeof card.addEventListener === 'function') {
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          selectSystem(sys.system_address);
+        }
+      });
+    }
 
     const tags = [];
     if (sys.has_first_discover || sys.first_discovered_bodies > 0) {
@@ -342,6 +354,103 @@ function scrollToTopOfSystemCards() {
       container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
+}
+
+let isNavigatingSystemCards = false;
+
+function isInputOrModalActive(e) {
+  const target = (e && e.target) ? e.target : document.activeElement;
+  if (!target) return false;
+  const tag = (target.tagName || '').toUpperCase();
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  if (target.isContentEditable) return true;
+
+  const modalOverlays = document.querySelectorAll('.modal-overlay');
+  for (const modal of modalOverlays) {
+    if (modal.offsetParent !== null || (window.getComputedStyle && window.getComputedStyle(modal).display !== 'none')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function focusCardByIndex(index) {
+  const container = document.getElementById('system-list');
+  if (!container) return;
+  const cards = container.querySelectorAll('.system-card');
+  if (cards && cards[index]) {
+    cards[index].focus();
+    cards[index].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+async function navigateSystemCard(direction) {
+  if (isNavigatingSystemCards) return;
+  if (!state.systems || state.systems.length === 0) return;
+
+  isNavigatingSystemCards = true;
+  try {
+    const currentSysAddr = state.selectedSystem ? state.selectedSystem.system_address : null;
+    let idx = state.systems.findIndex(s => String(s.system_address) === String(currentSysAddr));
+
+    if (direction === 'down') {
+      if (idx === -1) {
+        await selectSystem(state.systems[0].system_address);
+        focusCardByIndex(0);
+      } else if (idx < state.systems.length - 1) {
+        idx++;
+        await selectSystem(state.systems[idx].system_address);
+        focusCardByIndex(idx);
+      } else if (state.page < state.totalPages) {
+        state.page++;
+        await fetchSystems({ autoSelectTop: false });
+        if (state.systems && state.systems.length > 0) {
+          await selectSystem(state.systems[0].system_address);
+          focusCardByIndex(0);
+          scrollToTopOfSystemCards();
+        }
+      }
+    } else if (direction === 'up') {
+      if (idx === -1) {
+        await selectSystem(state.systems[0].system_address);
+        focusCardByIndex(0);
+      } else if (idx > 0) {
+        idx--;
+        await selectSystem(state.systems[idx].system_address);
+        focusCardByIndex(idx);
+      } else if (state.page > 1) {
+        state.page--;
+        await fetchSystems({ autoSelectTop: false });
+        const lastIdx = state.systems.length - 1;
+        if (lastIdx >= 0) {
+          await selectSystem(state.systems[lastIdx].system_address);
+          focusCardByIndex(lastIdx);
+        }
+      } else {
+        // At page 1, index 0 (top/latest)
+        focusCardByIndex(0);
+      }
+    }
+  } catch (err) {
+    console.warn('navigateSystemCard error:', err);
+  } finally {
+    isNavigatingSystemCards = false;
+  }
+}
+
+function initSystemCardKeyboardNavigation() {
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (isInputOrModalActive(e)) return;
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      navigateSystemCard('down');
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      navigateSystemCard('up');
+    }
+  });
 }
 
 function renderPagination(totalCount) {
@@ -924,6 +1033,10 @@ if (typeof window !== 'undefined') {
   window.clearSystemBioSummary = clearSystemBioSummary;
   window.checkForAppUpdate = checkForAppUpdate;
   window.renderHeaderUpdateState = renderHeaderUpdateState;
+  window.initSystemCardKeyboardNavigation = initSystemCardKeyboardNavigation;
+  window.navigateSystemCard = navigateSystemCard;
+  window.focusCardByIndex = focusCardByIndex;
+  window.isInputOrModalActive = isInputOrModalActive;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -945,6 +1058,10 @@ if (typeof module !== 'undefined' && module.exports) {
     initHeaderStatsCollapse,
     clearSystemBioSummary,
     checkForAppUpdate,
-    renderHeaderUpdateState
+    renderHeaderUpdateState,
+    initSystemCardKeyboardNavigation,
+    navigateSystemCard,
+    focusCardByIndex,
+    isInputOrModalActive
   };
 }
