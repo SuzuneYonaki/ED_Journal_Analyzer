@@ -159,7 +159,7 @@ def test_header_tooltip_keys_exist():
     expected_header_tips = [
         "stat_systems_tip", "stat_bodies_tip", "stat_elw_tip", "stat_ww_tip",
         "stat_ammonia_tip", "stat_hmc_tip", "stat_mr_tip", "stat_icy_tip",
-        "stat_rocky_tip", "stat_rocky_ice_tip"
+        "stat_rocky_tip", "stat_rocky_ice_tip", "stat_bio_tip", "stat_payout_tip"
     ]
     for key in expected_header_tips:
         ja_val = run_js_eval(f't("{key}")', setup_code='setLanguage("ja");')
