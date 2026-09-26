@@ -1123,17 +1123,9 @@ header {
 .system-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: baseline;
   gap: 8px;
-  margin-bottom: 6px;
-}
-
-.system-card-title-group {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
+  margin-bottom: 3px;
 }
 
 .system-card-title {
@@ -1144,6 +1136,8 @@ header {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
   display: block;
 }
 
@@ -1151,26 +1145,49 @@ header {
   color: var(--ed-orange);
 }
 
+.system-card-sub-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.system-card-visited {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .system-card-meta {
   font-size: 0.72rem;
   color: var(--text-secondary);
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 5px;
 }
 
 .system-card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 3px;
 }
 
 .tag-badge {
   font-size: 0.65rem;
-  padding: 2px 6px;
+  padding: 2px 5px;
   border-radius: 3px;
   font-weight: 500;
   font-family: var(--font-mono);
+  max-width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .tag-elw { background: rgba(0, 255, 136, 0.2); color: var(--ed-green); border: 1px solid rgba(0, 255, 136, 0.5); font-weight: bold; }
