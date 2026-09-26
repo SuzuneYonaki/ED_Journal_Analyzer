@@ -473,6 +473,92 @@ function updateModuleVisibilityUI() {
   }
 }
 
+function updateViewButtons() {
+  const btnSys = document.getElementById('btn-view-sysmap');
+  const btnFlat = document.getElementById('btn-view-flat');
+  const btnOrrery = document.getElementById('btn-view-orrery');
+  const btnBio = document.getElementById('btn-view-bio');
+  const btnMining = document.getElementById('btn-view-mining');
+  const btnVis = document.getElementById('btn-view-visits');
+  const btnPhys = document.getElementById('btn-view-physics');
+
+  if (btnSys) btnSys.classList.toggle('active', state.currentView === 'sysmap');
+  if (btnFlat) btnFlat.classList.toggle('active', state.currentView === 'flat');
+  if (btnOrrery) btnOrrery.classList.toggle('active', state.currentView === 'orrery');
+  if (btnBio) btnBio.classList.toggle('active', state.currentView === 'bio');
+  if (btnMining) btnMining.classList.toggle('active', state.currentView === 'mining');
+  if (btnVis) btnVis.classList.toggle('active', state.currentView === 'visits');
+  if (btnPhys) btnPhys.classList.toggle('active', state.currentView === 'physics');
+
+  // Show completed bio filter container only on bio view
+  const bioFilterContainer = document.getElementById('bio-filter-hide-completed-container');
+  if (bioFilterContainer) {
+    bioFilterContainer.style.display = state.currentView === 'bio' ? 'inline-flex' : 'none';
+  }
+
+  // Show body sort controls only for list-based views (flat, bio, mining)
+  const bodySortWrapper = document.getElementById('body-sort-wrapper');
+  if (bodySortWrapper) {
+    const showSort = (state.currentView === 'flat' || state.currentView === 'bio' || state.currentView === 'mining');
+    bodySortWrapper.style.display = showSort ? 'flex' : 'none';
+  }
+}
+
+function switchCenterPaneView(viewName) {
+  const modSettings = (typeof getModuleSettings === 'function') ? getModuleSettings() : {};
+  if (viewName === 'bio' && modSettings.exobiology === false) return;
+  if (viewName === 'mining' && modSettings.rhino === false) return;
+
+  state.currentView = viewName;
+  updateViewButtons();
+  renderCurrentView();
+}
+
+const CENTER_PANE_TAB_KEY_MAP = {
+  '1': 'sysmap',
+  '１': 'sysmap',
+  'Digit1': 'sysmap',
+  'Numpad1': 'sysmap',
+  '2': 'flat',
+  '２': 'flat',
+  'Digit2': 'flat',
+  'Numpad2': 'flat',
+  '3': 'orrery',
+  '３': 'orrery',
+  'Digit3': 'orrery',
+  'Numpad3': 'orrery',
+  '4': 'bio',
+  '４': 'bio',
+  'Digit4': 'bio',
+  'Numpad4': 'bio',
+  '5': 'visits',
+  '５': 'visits',
+  'Digit5': 'visits',
+  'Numpad5': 'visits',
+  '6': 'physics',
+  '６': 'physics',
+  'Digit6': 'physics',
+  'Numpad6': 'physics'
+};
+
+function initCenterPaneTabShortcuts() {
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (typeof isInputOrModalActive === 'function') {
+      if (isInputOrModalActive(e)) return;
+    } else {
+      const target = e.target;
+      if (target && (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable)) return;
+    }
+
+    const targetView = CENTER_PANE_TAB_KEY_MAP[e.key] || CENTER_PANE_TAB_KEY_MAP[e.code];
+    if (targetView) {
+      e.preventDefault();
+      switchCenterPaneView(targetView);
+    }
+  });
+}
+
 // System navigation and rendering functions are defined in system_list.js
 
 function getSortedBodies(bodies) {
@@ -1857,6 +1943,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof initSystemCardKeyboardNavigation === 'function') {
     initSystemCardKeyboardNavigation();
   }
+  if (typeof initCenterPaneTabShortcuts === 'function') {
+    initCenterPaneTabShortcuts();
+  }
   if (typeof checkForAppUpdate === 'function') {
     checkForAppUpdate();
   }
@@ -2674,93 +2763,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // View Controls
-  const btnViewSysmap = document.getElementById('btn-view-sysmap');
-  if (btnViewSysmap) {
-    btnViewSysmap.addEventListener('click', () => {
-      state.currentView = 'sysmap';
-      updateViewButtons();
-      renderCurrentView();
-    });
-  }
-
-  document.getElementById('btn-view-flat').addEventListener('click', () => {
-    state.currentView = 'flat';
-    updateViewButtons();
-    renderCurrentView();
-  });
-
-  const btnViewOrrery = document.getElementById('btn-view-orrery');
-  if (btnViewOrrery) {
-    btnViewOrrery.addEventListener('click', () => {
-      state.currentView = 'orrery';
-      updateViewButtons();
-      renderCurrentView();
-    });
-  }
-
-  const btnViewBio = document.getElementById('btn-view-bio');
-  if (btnViewBio) {
-    btnViewBio.addEventListener('click', () => {
-      state.currentView = 'bio';
-      updateViewButtons();
-      renderCurrentView();
-    });
-  }
-
-  const btnViewMining = document.getElementById('btn-view-mining');
-  if (btnViewMining) {
-    btnViewMining.addEventListener('click', () => {
-      state.currentView = 'mining';
-      updateViewButtons();
-      renderCurrentView();
-    });
-  }
-
-  document.getElementById('btn-view-visits').addEventListener('click', () => {
-    state.currentView = 'visits';
-    updateViewButtons();
-    renderCurrentView();
-  });
-
-  const btnViewPhysics = document.getElementById('btn-view-physics');
-  if (btnViewPhysics) {
-    btnViewPhysics.addEventListener('click', () => {
-      state.currentView = 'physics';
-      updateViewButtons();
-      renderCurrentView();
-    });
-  }
-
-  function updateViewButtons() {
-    const btnSys = document.getElementById('btn-view-sysmap');
-    const btnFlat = document.getElementById('btn-view-flat');
-    const btnOrrery = document.getElementById('btn-view-orrery');
-    const btnBio = document.getElementById('btn-view-bio');
-    const btnMining = document.getElementById('btn-view-mining');
-    const btnVis = document.getElementById('btn-view-visits');
-    const btnPhys = document.getElementById('btn-view-physics');
-
-    if (btnSys) btnSys.classList.toggle('active', state.currentView === 'sysmap');
-    if (btnFlat) btnFlat.classList.toggle('active', state.currentView === 'flat');
-    if (btnOrrery) btnOrrery.classList.toggle('active', state.currentView === 'orrery');
-    if (btnBio) btnBio.classList.toggle('active', state.currentView === 'bio');
-    if (btnMining) btnMining.classList.toggle('active', state.currentView === 'mining');
-    if (btnVis) btnVis.classList.toggle('active', state.currentView === 'visits');
-    if (btnPhys) btnPhys.classList.toggle('active', state.currentView === 'physics');
-
-    // Show completed bio filter container only on bio view
-    const bioFilterContainer = document.getElementById('bio-filter-hide-completed-container');
-    if (bioFilterContainer) {
-      bioFilterContainer.style.display = state.currentView === 'bio' ? 'inline-flex' : 'none';
-    }
-
-    // Show body sort controls only for list-based views (flat, bio, mining)
-    const bodySortWrapper = document.getElementById('body-sort-wrapper');
-    if (bodySortWrapper) {
-      const showSort = (state.currentView === 'flat' || state.currentView === 'bio' || state.currentView === 'mining');
-      bodySortWrapper.style.display = showSort ? 'flex' : 'none';
-    }
-  }
+  document.getElementById('btn-view-sysmap')?.addEventListener('click', () => switchCenterPaneView('sysmap'));
+  document.getElementById('btn-view-flat')?.addEventListener('click', () => switchCenterPaneView('flat'));
+  document.getElementById('btn-view-orrery')?.addEventListener('click', () => switchCenterPaneView('orrery'));
+  document.getElementById('btn-view-bio')?.addEventListener('click', () => switchCenterPaneView('bio'));
+  document.getElementById('btn-view-mining')?.addEventListener('click', () => switchCenterPaneView('mining'));
+  document.getElementById('btn-view-visits')?.addEventListener('click', () => switchCenterPaneView('visits'));
+  document.getElementById('btn-view-physics')?.addEventListener('click', () => switchCenterPaneView('physics'));
 
   // Concept Mode Switcher Tabs (Header & Left Pane synchronization)
   function initConceptTabs() {
@@ -5204,6 +5213,9 @@ if (typeof window !== 'undefined') {
   window.handleLiveJournalEvent = handleLiveJournalEvent;
   window.updateModuleVisibilityUI = updateModuleVisibilityUI;
   window.updateTtsPolicyView = updateTtsPolicyView;
+  window.switchCenterPaneView = switchCenterPaneView;
+  window.initCenterPaneTabShortcuts = initCenterPaneTabShortcuts;
+  window.updateViewButtons = updateViewButtons;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -5221,7 +5233,10 @@ if (typeof module !== 'undefined' && module.exports) {
     renderPhysicsReport,
     handleLiveJournalEvent,
     updateModuleVisibilityUI,
-    updateTtsPolicyView
+    updateTtsPolicyView,
+    switchCenterPaneView,
+    initCenterPaneTabShortcuts,
+    updateViewButtons
   };
 }
 

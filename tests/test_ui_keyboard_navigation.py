@@ -183,3 +183,148 @@ def test_system_card_keyboard_navigation_logic():
     # 6. Input guard
     assert data["input_active"] is True
     assert data["div_active"] is False
+
+
+def test_center_pane_number_shortcuts_logic():
+    """Verifies that number keys 1-6 switch center pane views in order."""
+    ui_dir = Path(__file__).resolve().parent.parent / "app" / "ui"
+    app_js_path = ui_dir / "js" / "app.js"
+    assert app_js_path.exists()
+    content = app_js_path.read_text(encoding="utf-8")
+
+    # 1. Verify functions and mapping dictionary exist in app.js
+    assert "function switchCenterPaneView(viewName)" in content
+    assert "function initCenterPaneTabShortcuts()" in content
+    assert "const CENTER_PANE_TAB_KEY_MAP =" in content
+    assert "'1': 'sysmap'" in content
+    assert "'2': 'flat'" in content
+    assert "'3': 'orrery'" in content
+    assert "'4': 'bio'" in content
+    assert "'5': 'visits'" in content
+    assert "'6': 'physics'" in content
+
+    # 2. Node.js execution verification
+    node_exe = shutil.which("node")
+    if not node_exe:
+        pytest.skip("Node.js is not installed or not in PATH")
+
+    test_script = f"""
+    const fs = require('fs');
+    const appPath = {json.dumps(str(app_js_path))};
+
+    // Minimal mock environment
+    global.window = global;
+    const listeners = {{}};
+    global.addEventListener = function(evt, cb) {{
+      (listeners[evt] = listeners[evt] || []).push(cb);
+    }};
+    global.window.addEventListener = global.addEventListener;
+    global.localStorage = {{ getItem: () => null, setItem: () => {{}} }};
+    global.location = {{ href: '', search: '' }};
+
+    global.document = {{
+      activeElement: null,
+      getElementById(id) {{
+        return {{
+          classList: {{ toggle() {{}} }},
+          style: {{ display: '' }},
+          addEventListener() {{}}
+        }};
+      }},
+      querySelectorAll() {{ return []; }},
+      addEventListener(evt, cb) {{
+        (listeners[evt] = listeners[evt] || []).push(cb);
+      }}
+    }};
+
+    global.getModuleSettings = () => ({{ exobiology: true, rhino: true }});
+    global.renderCurrentView = () => {{}};
+
+    // Load app.js module exports
+    const appModule = require(appPath);
+
+    // Initialize tab shortcuts
+    appModule.initCenterPaneTabShortcuts();
+
+    const keydownCbs = listeners['keydown'] || [];
+    function dispatchKey(key, code = '', extra = {{}}) {{
+      let prevented = false;
+      const evt = {{
+        key,
+        code,
+        ctrlKey: Boolean(extra.ctrlKey),
+        altKey: Boolean(extra.altKey),
+        metaKey: Boolean(extra.metaKey),
+        target: extra.target || null,
+        preventDefault() {{ prevented = true; }}
+      }};
+      keydownCbs.forEach(cb => cb(evt));
+      return prevented;
+    }}
+
+    const results = {{}};
+
+    // Test keys 1 to 6
+    dispatchKey('1', 'Digit1');
+    results.view1 = appModule.state.currentView; // 'sysmap'
+
+    dispatchKey('2', 'Digit2');
+    results.view2 = appModule.state.currentView; // 'flat'
+
+    dispatchKey('3', 'Digit3');
+    results.view3 = appModule.state.currentView; // 'orrery'
+
+    dispatchKey('4', 'Digit4');
+    results.view4 = appModule.state.currentView; // 'bio'
+
+    dispatchKey('5', 'Digit5');
+    results.view5 = appModule.state.currentView; // 'visits'
+
+    dispatchKey('6', 'Digit6');
+    results.view6 = appModule.state.currentView; // 'physics'
+
+    // Test numpad keys
+    dispatchKey('1', 'Numpad1');
+    results.viewNumpad1 = appModule.state.currentView; // 'sysmap'
+
+    // Test full-width Japanese IME numbers (\uFF12 is full-width '２')
+    dispatchKey('\\uFF12');
+    results.viewFullWidth2 = appModule.state.currentView; // 'flat'
+
+    // Test modifier key guard (Ctrl+1 should NOT change view)
+    const ctrlPrevented = dispatchKey('1', 'Digit1', {{ ctrlKey: true }});
+    results.ctrlPrevented = ctrlPrevented;
+    results.viewAfterCtrl = appModule.state.currentView; // remains 'flat'
+
+    // Test input element guard (typing '3' inside an input field should NOT change view)
+    const inputPrevented = dispatchKey('3', 'Digit3', {{ target: {{ tagName: 'INPUT' }} }});
+    results.inputPrevented = inputPrevented;
+    results.viewAfterInput = appModule.state.currentView; // remains 'flat'
+
+    console.log(JSON.stringify(results));
+    """
+
+    res = subprocess.run(
+        [node_exe, "-e", test_script],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    data = json.loads(res.stdout)
+
+    assert data["view1"] == "sysmap"
+    assert data["view2"] == "flat"
+    assert data["view3"] == "orrery"
+    assert data["view4"] == "bio"
+    assert data["view5"] == "visits"
+    assert data["view6"] == "physics"
+
+    assert data["viewNumpad1"] == "sysmap"
+    assert data["viewFullWidth2"] == "flat"
+
+    assert data["ctrlPrevented"] is False
+    assert data["viewAfterCtrl"] == "flat"
+
+    assert data["inputPrevented"] is False
+    assert data["viewAfterInput"] == "flat"
+
