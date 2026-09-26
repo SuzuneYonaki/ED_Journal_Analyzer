@@ -1631,6 +1631,16 @@ function renderFlatBodiesList(container, bodies) {
       badges.push(`<span class="tag-badge tag-bookmark" title="${bmTitle}">🔖 ${body.bookmark.alias_name || 'BOOKMARK'}</span>`);
     }
     if (body.landable) badges.push('<span class="tag-badge tag-landable">LANDABLE</span>');
+    if (body.star_type) {
+      const lum = (body.luminosity || '').trim();
+      if (lum) {
+        badges.push(`<span class="tag-badge" style="background: rgba(251, 146, 60, 0.2); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.5); font-weight: bold;" title="光度階級 (Luminosity Class): ${lum}">🌟 ${lum}</span>`);
+      }
+      if (body.absolute_magnitude !== null && body.absolute_magnitude !== undefined) {
+        const magVal = Number(body.absolute_magnitude).toFixed(1);
+        badges.push(`<span class="tag-badge" style="background: rgba(234, 179, 8, 0.15); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.4);" title="絶対等級 (Absolute Magnitude): ${magVal} Mag">✨ ${magVal} Mag</span>`);
+      }
+    }
     let bRings = body.rings_list;
     if (!bRings && body.rings && body.rings !== '[]' && body.rings !== '""') {
       try { bRings = typeof body.rings === 'string' ? JSON.parse(body.rings) : body.rings; } catch (e) { bRings = []; }

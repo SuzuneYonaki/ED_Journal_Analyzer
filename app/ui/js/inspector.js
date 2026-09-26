@@ -162,7 +162,12 @@ function renderBodyInspector() {
     const ringName = beltRingInfo ? (lang === 'en' ? (beltRingInfo.nameEn || beltRingInfo.name) : (beltRingInfo.nameJa || beltRingInfo.name)) : '';
     typeSubtitle = `🪐 Asteroid Belt${ringName ? ' (' + ringName + ')' : ''}`;
   } else if (b.star_type) {
-    typeSubtitle = `${t('star_type_label')}: ${b.star_type}`;
+    const lum = (b.luminosity || '').trim();
+    const lumStr = lum ? ` ${lum}` : '';
+    const magStr = (b.absolute_magnitude !== null && b.absolute_magnitude !== undefined)
+      ? ` · ✨ ${Number(b.absolute_magnitude).toFixed(1)} Mag`
+      : '';
+    typeSubtitle = `${t('star_type_label')}: ${b.star_type}${lumStr}${magStr}`;
   } else {
     typeSubtitle = `${b.planet_class || 'Body'}${b.terraforming_state ? ' [' + b.terraforming_state + ']' : ''}`;
   }
