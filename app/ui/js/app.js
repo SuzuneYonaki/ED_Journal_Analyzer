@@ -344,7 +344,7 @@ async function fetchSystems(options = {}) {
   }
 }
 
-async function selectSystem(systemAddress, preserveSelectedBody = false, resetJumpState = true) {
+async function selectSystem(systemAddress, preserveSelectedBody = false, resetJumpState = true, isLiveGggTrigger = false) {
   try {
     if (resetJumpState) {
       state.jumpState = 'idle';
@@ -380,8 +380,10 @@ async function selectSystem(systemAddress, preserveSelectedBody = false, resetJu
           checkAndAnnounceHighBioBody(data.system, b);
         });
       }
-      // Check Green Gas Giant (GGG) alert
-      if (ttsState.gggEnabled !== false) {
+      // Check Green Gas Giant (GGG) alert. Only announce on a genuine live journal
+      // event (arrival/scan), never when the user is just browsing an already-known
+      // system's history via the left pane or system map.
+      if (isLiveGggTrigger && ttsState.gggEnabled !== false) {
         data.bodies.forEach(b => {
           checkAndAnnounceGggBody(data.system, b);
         });
@@ -3145,7 +3147,7 @@ function handleLiveJournalEvent(eventName, eventData) {
     fetchSystems();
 
     if (eventData.SystemAddress) {
-      selectSystem(eventData.SystemAddress, false, false);
+      selectSystem(eventData.SystemAddress, false, false, true);
       checkAndAnnounceLiveFirstDiscovery(eventData.SystemAddress, eventData.StarSystem);
     } else {
       renderCurrentView();
@@ -3157,7 +3159,7 @@ function handleLiveJournalEvent(eventName, eventData) {
 
     const sysAddr = eventData.SystemAddress || (state.selectedSystem ? state.selectedSystem.system_address : null);
     if (sysAddr) {
-      selectSystem(sysAddr, false, false);
+      selectSystem(sysAddr, false, false, true);
       checkAndAnnounceLiveFirstDiscovery(sysAddr, eventData.StarSystem || (state.selectedSystem ? state.selectedSystem.star_system : ''));
     } else {
       triggerLiveRefresh();
@@ -3168,7 +3170,7 @@ function handleLiveJournalEvent(eventName, eventData) {
     fetchSystems();
 
     if (sysAddr && state.selectedSystem && String(state.selectedSystem.system_address) === String(sysAddr)) {
-      selectSystem(sysAddr, true, false);
+      selectSystem(sysAddr, true, false, true);
       checkAndAnnounceLiveFirstDiscovery(sysAddr, eventData.StarSystem || (state.selectedSystem ? state.selectedSystem.star_system : ''));
     } else {
       triggerLiveRefresh();
