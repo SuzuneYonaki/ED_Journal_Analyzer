@@ -328,6 +328,9 @@ const i18n = {
     bio_status_sample_1_short: "サンプル採取",
     bio_status_sample_2_short: "サンプル採取",
     orrery_generating: "Orrery を生成中...",
+    filter_min_count_title: "最小個数を指定 (≧N)",
+    filter_count_reset: "フィルター解除 (OFF)",
+    filter_count_quick: "クイック:",
     
     // Settings
     settings_lang_label: "🌐 表示言語 / Display Language",
@@ -1265,6 +1268,9 @@ const i18n = {
     bio_status_sample_1_short: "Sample Logged",
     bio_status_sample_2_short: "Sample Logged",
     orrery_generating: "Generating Orrery...",
+    filter_min_count_title: "Min Count (≧N)",
+    filter_count_reset: "Clear Filter (OFF)",
+    filter_count_quick: "Quick:",
     
     // Settings
     settings_lang_label: "🌐 Display Language",

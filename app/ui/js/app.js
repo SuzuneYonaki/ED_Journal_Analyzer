@@ -276,7 +276,11 @@ async function fetchSystems(options = {}) {
   }
 
   Object.entries(state.filters).forEach(([k, v]) => {
-    if (v) params.append(k, 'true');
+    if (typeof v === 'number' && v > 0) {
+      params.append(k, v.toString());
+    } else if (v === true) {
+      params.append(k, '1');
+    }
   });
 
   if (state.miningScout) {
@@ -2212,16 +2216,169 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Filter chips (General & Mining)
+  // Filter chips (General & Mining) - Numeric min count support (>= N)
+  const COUNTABLE_FILTERS = new Set([
+    'has_elw', 'has_water_world', 'has_ammonia', 'has_terraformable', 'has_bio',
+    'has_first_discover', 'has_high_g', 'has_landable_hmc', 'has_landable_metal_rich',
+    'has_landable_rocky', 'has_landable_icy', 'has_landable_rocky_ice', 'has_landable_ringed',
+    'has_mining_signals'
+  ]);
+
+  function updateFilterChipUI(chip, count) {
+    const num = (typeof count === 'number') ? count : (count ? 1 : 0);
+    chip.classList.toggle('active', num > 0);
+    let badge = chip.querySelector('.chip-count-badge');
+    if (num > 1) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'chip-count-badge';
+        chip.appendChild(badge);
+      }
+      badge.innerText = `≧${num}`;
+    } else {
+      if (badge) badge.remove();
+    }
+  }
+
+  let activeFilterPopover = null;
+  function closeActiveFilterPopover() {
+    if (activeFilterPopover && activeFilterPopover.parentElement) {
+      activeFilterPopover.remove();
+    }
+    activeFilterPopover = null;
+  }
+
+  function showFilterCountPopover(chip, filterKey) {
+    closeActiveFilterPopover();
+    const currentVal = (typeof state.filters[filterKey] === 'number') ? state.filters[filterKey] : (state.filters[filterKey] ? 1 : 0);
+    const pop = document.createElement('div');
+    pop.className = 'filter-count-popover';
+
+    const rect = chip.getBoundingClientRect();
+    pop.style.left = `${Math.max(10, Math.min(window.innerWidth - 175, rect.left))}px`;
+    pop.style.top = `${rect.bottom + 6}px`;
+
+    const titleText = (typeof t === 'function' && t('filter_min_count_title')) || '最小個数を指定 (≧N)';
+    const clearText = (typeof t === 'function' && t('filter_count_reset')) || 'フィルター解除 (OFF)';
+    const quickText = (typeof t === 'function' && t('filter_count_quick')) || 'クイック:';
+
+    pop.innerHTML = `
+      <div class="filter-count-popover-title">
+        <span>${titleText}</span>
+        <span style="cursor: pointer; padding: 0 4px; font-weight: bold;" class="popover-close">✕</span>
+      </div>
+      <div class="filter-count-stepper">
+        <button type="button" class="filter-count-btn btn-minus">−</button>
+        <input type="number" min="1" max="99" class="filter-count-input" value="${currentVal > 0 ? currentVal : 1}">
+        <button type="button" class="filter-count-btn btn-plus">＋</button>
+      </div>
+      <div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 2px;">${quickText}</div>
+      <div class="filter-count-quick-list">
+        <button type="button" class="filter-count-quick-btn ${currentVal === 1 ? 'active' : ''}" data-val="1">≧1</button>
+        <button type="button" class="filter-count-quick-btn ${currentVal === 2 ? 'active' : ''}" data-val="2">≧2</button>
+        <button type="button" class="filter-count-quick-btn ${currentVal === 3 ? 'active' : ''}" data-val="3">≧3</button>
+        <button type="button" class="filter-count-quick-btn ${currentVal === 5 ? 'active' : ''}" data-val="5">≧5</button>
+      </div>
+      <button type="button" class="filter-count-reset-btn">${clearText}</button>
+    `;
+
+    document.body.appendChild(pop);
+    activeFilterPopover = pop;
+
+    const input = pop.querySelector('.filter-count-input');
+    const applyCount = (val) => {
+      const n = Math.max(0, parseInt(val, 10) || 0);
+      state.filters[filterKey] = n;
+      updateFilterChipUI(chip, n);
+      state.page = 1;
+      updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+    };
+
+    pop.querySelector('.popover-close').onclick = (e) => {
+      e.stopPropagation();
+      closeActiveFilterPopover();
+    };
+
+    pop.querySelector('.btn-minus').onclick = (e) => {
+      e.stopPropagation();
+      let cur = parseInt(input.value, 10) || 1;
+      cur = Math.max(1, cur - 1);
+      input.value = cur;
+      applyCount(cur);
+    };
+
+    pop.querySelector('.btn-plus').onclick = (e) => {
+      e.stopPropagation();
+      let cur = parseInt(input.value, 10) || 1;
+      cur = Math.min(99, cur + 1);
+      input.value = cur;
+      applyCount(cur);
+    };
+
+    input.onchange = () => {
+      let cur = parseInt(input.value, 10) || 1;
+      cur = Math.max(1, Math.min(99, cur));
+      input.value = cur;
+      applyCount(cur);
+    };
+
+    pop.querySelectorAll('.filter-count-quick-btn').forEach(qb => {
+      qb.onclick = (e) => {
+        e.stopPropagation();
+        const v = parseInt(qb.dataset.val, 10);
+        input.value = v;
+        applyCount(v);
+        closeActiveFilterPopover();
+      };
+    });
+
+    pop.querySelector('.filter-count-reset-btn').onclick = (e) => {
+      e.stopPropagation();
+      applyCount(0);
+      closeActiveFilterPopover();
+    };
+
+    pop.onclick = (e) => e.stopPropagation();
+  }
+
+  window.addEventListener('click', () => {
+    closeActiveFilterPopover();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeActiveFilterPopover();
+  });
+
   document.querySelectorAll('.chip[data-filter]').forEach(chip => {
+    const filterKey = chip.dataset.filter;
+    const isCountable = COUNTABLE_FILTERS.has(filterKey);
+
     chip.addEventListener('click', () => {
-      const filterKey = chip.dataset.filter;
-      state.filters[filterKey] = !state.filters[filterKey];
-      chip.classList.toggle('active', state.filters[filterKey]);
+      closeActiveFilterPopover();
+      const current = state.filters[filterKey];
+
+      if (isCountable) {
+        // Toggle: if inactive (0/false), set to 1. If active (>=1), turn off to 0.
+        const nextVal = (typeof current === 'number' && current > 0) || current === true ? 0 : 1;
+        state.filters[filterKey] = nextVal;
+        updateFilterChipUI(chip, nextVal);
+      } else {
+        state.filters[filterKey] = !state.filters[filterKey];
+        chip.classList.toggle('active', state.filters[filterKey]);
+      }
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
     });
+
+    if (isCountable) {
+      chip.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showFilterCountPopover(chip, filterKey);
+      });
+      chip.setAttribute('title', `${chip.getAttribute('title') || ''} (右クリック/長押しで個数指定)`.trim());
+    }
   });
 
   // Celestial & Orbital Anomaly Filter chips
@@ -2261,7 +2418,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnClearGeneral.addEventListener('click', (e) => {
       e.stopPropagation();
       document.querySelectorAll('#group-general-filters .chip').forEach(chip => {
-        chip.classList.remove('active');
+        updateFilterChipUI(chip, 0);
         state.filters[chip.dataset.filter] = false;
       });
       state.page = 1;
@@ -2289,7 +2446,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnClearMining.addEventListener('click', (e) => {
       e.stopPropagation();
       document.querySelectorAll('#group-mining-filters .chip').forEach(chip => {
-        chip.classList.remove('active');
+        updateFilterChipUI(chip, 0);
         if (chip.dataset.filter) {
           state.filters[chip.dataset.filter] = false;
         }

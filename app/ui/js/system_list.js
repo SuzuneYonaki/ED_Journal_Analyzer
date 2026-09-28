@@ -750,7 +750,7 @@ function renderSystemHeader() {
 // Collapsible Groups & Badges
 function updateCollapsibleBadges() {
   const generalKeys = ['has_elw', 'has_water_world', 'has_ammonia', 'has_terraformable', 'has_bio', 'has_first_discover', 'has_bookmarks', 'is_shared', 'has_high_g', 'has_anomalies', 'has_ggg'];
-  const generalCount = generalKeys.filter(k => state.filters[k]).length;
+  const generalCount = generalKeys.filter(k => (state.filters[k] === true || state.filters[k] > 0)).length;
   const badgeGen = document.getElementById('badge-general-filters');
   if (badgeGen) {
     badgeGen.innerText = generalCount > 0 ? generalCount : '';
@@ -758,7 +758,7 @@ function updateCollapsibleBadges() {
   }
 
   const miningKeys = ['has_landable_hmc', 'has_landable_metal_rich', 'has_landable_rocky', 'has_landable_icy', 'has_landable_rocky_ice', 'has_landable_ringed', 'has_mining_signals'];
-  let miningCount = miningKeys.filter(k => state.filters[k]).length;
+  let miningCount = miningKeys.filter(k => (state.filters[k] === true || state.filters[k] > 0)).length;
   if (state.miningScout) miningCount++;
   if (state.hasLargePad) miningCount++;
   if (state.maxArrivalDistLs !== null && state.maxArrivalDistLs !== undefined && state.maxArrivalDistLs !== '') miningCount++;

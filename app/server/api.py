@@ -6,7 +6,7 @@ import asyncio
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Union, Any
 from pydantic import BaseModel
 from fastapi import FastAPI, Query, BackgroundTasks, WebSocket, WebSocketDisconnect, Response, UploadFile, File
 from fastapi.staticfiles import StaticFiles
@@ -548,28 +548,40 @@ def get_celestial_counts():
         }
     }
 
+def _parse_filter_min_count(val: Any) -> int:
+    """Parses filter parameter which can be bool, int, or string ('true', '2', etc.)."""
+    if val is None or val is False or val == "" or str(val).lower() in ("false", "none", "0"):
+        return 0
+    if val is True or str(val).lower() == "true":
+        return 1
+    try:
+        return max(0, int(val))
+    except (ValueError, TypeError):
+        return 0
+
+
 @app.get("/api/systems")
 def get_systems(
     q: Optional[str] = "",
-    has_elw: Optional[bool] = False,
-    has_water_world: Optional[bool] = False,
-    has_ammonia: Optional[bool] = False,
-    has_terraformable: Optional[bool] = False,
-    has_bio: Optional[bool] = False,
-    has_landable: Optional[bool] = False,
-    has_high_g: Optional[bool] = False,
-    has_anomalies: Optional[bool] = False,
-    has_ggg: Optional[bool] = False,
-    has_first_discover: Optional[bool] = False,
-    has_landable_hmc: Optional[bool] = False,
-    has_landable_metal_rich: Optional[bool] = False,
-    has_landable_rocky: Optional[bool] = False,
-    has_landable_icy: Optional[bool] = False,
-    has_landable_rocky_ice: Optional[bool] = False,
-    has_landable_ringed: Optional[bool] = False,
-    has_mining_signals: Optional[bool] = False,
-    has_bookmarks: Optional[bool] = False,
-    is_shared: Optional[bool] = False,
+    has_elw: Optional[Union[int, str]] = None,
+    has_water_world: Optional[Union[int, str]] = None,
+    has_ammonia: Optional[Union[int, str]] = None,
+    has_terraformable: Optional[Union[int, str]] = None,
+    has_bio: Optional[Union[int, str]] = None,
+    has_landable: Optional[Union[int, str]] = None,
+    has_high_g: Optional[Union[int, str]] = None,
+    has_anomalies: Optional[Union[int, str]] = None,
+    has_ggg: Optional[Union[int, str]] = None,
+    has_first_discover: Optional[Union[int, str]] = None,
+    has_landable_hmc: Optional[Union[int, str]] = None,
+    has_landable_metal_rich: Optional[Union[int, str]] = None,
+    has_landable_rocky: Optional[Union[int, str]] = None,
+    has_landable_icy: Optional[Union[int, str]] = None,
+    has_landable_rocky_ice: Optional[Union[int, str]] = None,
+    has_landable_ringed: Optional[Union[int, str]] = None,
+    has_mining_signals: Optional[Union[int, str]] = None,
+    has_bookmarks: Optional[Union[int, str]] = None,
+    is_shared: Optional[Union[int, str]] = None,
     star_types: Optional[List[str]] = Query(None),
     star_match_mode: Optional[str] = "any",
     luminosity_classes: Optional[List[str]] = Query(None),
@@ -631,29 +643,89 @@ def get_systems(
         )""")
         params.extend([term, term, term, term])
 
-    if has_bookmarks:
+    if _parse_filter_min_count(has_bookmarks):
         conditions.append("EXISTS (SELECT 1 FROM body_bookmarks bb WHERE bb.system_address = systems.system_address)")
 
-    if is_shared:
+    if _parse_filter_min_count(is_shared):
         conditions.append("systems.is_shared = 1")
 
-    if has_elw:
+    c_elw = _parse_filter_min_count(has_elw)
+    if c_elw == 1:
         conditions.append("systems.has_elw = 1")
-    if has_water_world:
+    elif c_elw > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND (LOWER(b.planet_class) LIKE '%earthlike%' OR LOWER(b.planet_class) LIKE '%earth-like%')
+        ) >= ?""")
+        params.append(c_elw)
+
+    c_ww = _parse_filter_min_count(has_water_world)
+    if c_ww == 1:
         conditions.append("systems.has_water_world = 1")
-    if has_ammonia:
+    elif c_ww > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND LOWER(b.planet_class) LIKE '%water world%'
+        ) >= ?""")
+        params.append(c_ww)
+
+    c_aw = _parse_filter_min_count(has_ammonia)
+    if c_aw == 1:
         conditions.append("systems.has_ammonia = 1")
-    if has_terraformable:
+    elif c_aw > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND LOWER(b.planet_class) LIKE '%ammonia%'
+        ) >= ?""")
+        params.append(c_aw)
+
+    c_tf = _parse_filter_min_count(has_terraformable)
+    if c_tf == 1:
         conditions.append("systems.has_terraformable = 1")
-    if has_bio:
+    elif c_tf > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND LOWER(b.terraforming_state) LIKE '%terraform%'
+        ) >= ?""")
+        params.append(c_tf)
+
+    c_bio = _parse_filter_min_count(has_bio)
+    if c_bio == 1:
         conditions.append("systems.has_bio = 1")
-    if has_landable:
+    elif c_bio > 1:
+        conditions.append("systems.total_bio_signals >= ?")
+        params.append(c_bio)
+
+    c_landable = _parse_filter_min_count(has_landable)
+    if c_landable == 1:
         conditions.append("systems.has_landable = 1")
-    if has_high_g:
+    elif c_landable > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND b.landable = 1
+        ) >= ?""")
+        params.append(c_landable)
+
+    c_hg = _parse_filter_min_count(has_high_g)
+    if c_hg == 1:
         conditions.append("systems.has_high_g = 1")
-    if has_anomalies:
+    elif c_hg > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND b.landable = 1 AND b.surface_gravity_g >= 3.0
+        ) >= ?""")
+        params.append(c_hg)
+
+    if _parse_filter_min_count(has_anomalies):
         conditions.append("systems.has_anomalies = 1")
-    if has_ggg:
+
+    if _parse_filter_min_count(has_ggg):
         conditions.append(f"""EXISTS (
             SELECT 1 FROM bodies b
             WHERE b.system_address = systems.system_address
@@ -662,24 +734,91 @@ def get_systems(
                 {codex_ggg_check}
             )
         )""")
-    if has_first_discover:
+
+    c_fd = _parse_filter_min_count(has_first_discover)
+    if c_fd == 1:
         conditions.append("systems.has_first_discover = 1")
+    elif c_fd > 1:
+        conditions.append("systems.first_discovered_bodies >= ?")
+        params.append(c_fd)
 
     # Landable Mining Target Class & Feature Filtering (ignores non-landable bodies)
-    if has_landable_hmc:
+    c_hmc = _parse_filter_min_count(has_landable_hmc)
+    if c_hmc == 1:
         conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%high metal%')")
-    if has_landable_metal_rich:
+    elif c_hmc > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%high metal%'
+        ) >= ?""")
+        params.append(c_hmc)
+
+    c_mr = _parse_filter_min_count(has_landable_metal_rich)
+    if c_mr == 1:
         conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%metal rich%')")
-    if has_landable_rocky:
+    elif c_mr > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%metal rich%'
+        ) >= ?""")
+        params.append(c_mr)
+
+    c_rocky = _parse_filter_min_count(has_landable_rocky)
+    if c_rocky == 1:
         conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%rocky body%')")
-    if has_landable_icy:
+    elif c_rocky > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%rocky body%'
+        ) >= ?""")
+        params.append(c_rocky)
+
+    c_icy = _parse_filter_min_count(has_landable_icy)
+    if c_icy == 1:
         conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%icy body%')")
-    if has_landable_rocky_ice:
+    elif c_icy > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND b.landable = 1 AND LOWER(b.planet_class) LIKE '%icy body%'
+        ) >= ?""")
+        params.append(c_icy)
+
+    c_rocky_ice = _parse_filter_min_count(has_landable_rocky_ice)
+    if c_rocky_ice == 1:
         conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND (LOWER(b.planet_class) LIKE '%rocky ice%' OR LOWER(b.planet_class) LIKE '%icy rocky%'))")
-    if has_landable_ringed:
+    elif c_rocky_ice > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND b.landable = 1 AND (LOWER(b.planet_class) LIKE '%rocky ice%' OR LOWER(b.planet_class) LIKE '%icy rocky%')
+        ) >= ?""")
+        params.append(c_rocky_ice)
+
+    c_ringed = _parse_filter_min_count(has_landable_ringed)
+    if c_ringed == 1:
         conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.landable = 1 AND b.rings IS NOT NULL AND b.rings != '' AND b.rings != '[]' AND b.rings != '\"\"')")
-    if has_mining_signals:
+    elif c_ringed > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND b.landable = 1 AND b.rings IS NOT NULL AND b.rings != '' AND b.rings != '[]' AND b.rings != '\"\"'
+        ) >= ?""")
+        params.append(c_ringed)
+
+    c_mining_sig = _parse_filter_min_count(has_mining_signals)
+    if c_mining_sig == 1:
         conditions.append("EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND b.mining_signals > 0)")
+    elif c_mining_sig > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND b.mining_signals > 0
+        ) >= ?""")
+        params.append(c_mining_sig)
 
     # Date range filtering
     target_date_col = "first_visited" if date_field == "first_visited" else "last_visited"
