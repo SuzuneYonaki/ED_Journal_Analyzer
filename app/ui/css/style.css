@@ -3272,3 +3272,139 @@ header {
   stroke-width: 2.5px !important;
   filter: drop-shadow(0 0 8px #00d2ff) !important;
 }
+
+/* Filter Min Count Badge & Popover */
+.chip-count-badge {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 5px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2;
+  vertical-align: middle;
+  letter-spacing: 0.5px;
+}
+
+.filter-count-popover {
+  position: fixed;
+  z-index: 10000;
+  background: #0f172a;
+  border: 1px solid var(--ed-cyan);
+  border-radius: 6px;
+  padding: 8px 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 210, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #f8fafc;
+  min-width: 150px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.filter-count-popover-title {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+
+.filter-count-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.filter-count-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.85rem;
+  transition: all 0.15s;
+}
+
+.filter-count-btn:hover {
+  background: rgba(0, 210, 255, 0.2);
+  border-color: var(--ed-cyan);
+  color: var(--ed-cyan);
+}
+
+.filter-count-input {
+  width: 44px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border-color);
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 0.82rem;
+  font-weight: bold;
+  font-family: var(--font-mono);
+}
+
+.filter-count-input:focus {
+  border-color: var(--ed-cyan);
+  outline: none;
+}
+
+.filter-count-quick-list {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.filter-count-quick-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  padding: 3px 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.filter-count-quick-btn:hover {
+  background: rgba(255, 113, 0, 0.25);
+  border-color: var(--ed-orange);
+  color: #fff;
+}
+
+.filter-count-quick-btn.active {
+  background: var(--ed-orange);
+  border-color: var(--ed-orange);
+  color: #000;
+  font-weight: bold;
+}
+
+.filter-count-reset-btn {
+  background: transparent;
+  border: 1px dashed rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  margin-top: 2px;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.filter-count-reset-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #fff;
+}
+
