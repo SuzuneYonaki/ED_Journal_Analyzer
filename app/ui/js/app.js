@@ -122,6 +122,10 @@ function updateStaticTexts() {
   }
 
   // Re-render dynamic components with translated labels
+  if (state.currentSystemData) {
+    state.currentSystemData._orreryHtml = null;
+    state.currentSystemData._orreryCacheKey = null;
+  }
   updateLiveSyncButtonUI();
   updateSortControlsUI();
   renderSystemList();
@@ -627,18 +631,18 @@ function renderBodyExobiologyBlock(node) {
 
     let stageDots = "●●●";
     let badgeClass = "bio-badge-confirmed";
-    let badgeText = `✓ [3/3 ${t('bio_status_analyzed')}]`;
+    let badgeText = `✓ [3/3 ${t('bio_status_analyzed_short') || t('bio_status_analyzed')}]`;
     let rowClass = "confirmed";
 
     if (stage === 1) {
       stageDots = "●○○";
       badgeClass = "tag-badge";
-      badgeText = `🔬 [1/3 ${t('bio_status_sample_1')}]`;
+      badgeText = `🔬 [1/3 ${t('bio_status_sample_1_short') || t('bio_status_sample_1')}]`;
       rowClass = "in-progress";
     } else if (stage === 2) {
       stageDots = "●●○";
       badgeClass = "tag-badge";
-      badgeText = `🔬 [2/3 ${t('bio_status_sample_2')}]`;
+      badgeText = `🔬 [2/3 ${t('bio_status_sample_2_short') || t('bio_status_sample_2')}]`;
       rowClass = "in-progress";
     }
 
@@ -753,7 +757,7 @@ function renderBodyExobiologyBlock(node) {
     slotRows.push(`
       <details style="margin-top: 4px; border: 1px dashed rgba(255,255,255,0.15); border-radius: 4px; padding: 4px 8px;">
         <summary style="font-size: 0.72rem; color: var(--text-secondary); cursor: pointer; user-select: none;">
-          🔍 他の候補の可能性 (${alternativeCandidates.length}件を表示/非表示)
+          ${(t('bio_alt_candidates_toggle') || '🔍 他の候補の可能性 ({count}件を表示/非表示)').replace('{count}', alternativeCandidates.length)}
         </summary>
         <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
           ${altRows}
@@ -971,7 +975,7 @@ async function renderOrreryView(container, systemData) {
   }
 
   const sysAddr = systemData.system.system_address;
-  const lang = state.lang || 'ja';
+  const lang = (typeof getAppLang === 'function' ? getAppLang() : (window.currentLang || 'ja'));
   const cacheKey = `${sysAddr}_${lang}`;
 
   if (systemData._orreryHtml && systemData._orreryCacheKey === cacheKey) {
@@ -983,7 +987,7 @@ async function renderOrreryView(container, systemData) {
   container.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 350px; color: #c084fc;">
       <div class="loading-spinner" style="width: 38px; height: 38px; border: 3px solid rgba(192, 132, 252, 0.2); border-top-color: #c084fc; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
-      <div style="font-size: 1.05rem; font-weight: bold;">🪐 ${t('view_orrery') || 'Orrery'} を生成中...</div>
+      <div style="font-size: 1.05rem; font-weight: bold;">🪐 ${t('orrery_generating') || (lang === 'en' ? 'Generating Orrery...' : 'Orrery を生成中...')}</div>
     </div>
   `;
 
@@ -1156,7 +1160,8 @@ function initOrreryInteractions(container, systemData) {
   }
 
   // Hover tooltip and click-to-select
-  const isJa = (state.lang !== 'en');
+  const appLang = (typeof getAppLang === 'function' ? getAppLang() : (window.currentLang || 'ja'));
+  const isJa = (appLang === 'ja');
   const nodes = wrapper.querySelectorAll('.orrery-node');
   nodes.forEach(node => {
     node.addEventListener('mouseenter', (e) => {
@@ -1168,7 +1173,7 @@ function initOrreryInteractions(container, systemData) {
       const temp = node.getAttribute('data-temp');
 
       let content = `<b style="color: var(--ed-orange);">${escapeHtml(name)}</b><br><span style="color: var(--ed-cyan);">${escapeHtml(type)}</span>`;
-      if (dist && dist !== '0') content += `<br>${isJa ? '距離: ' : 'Distance: '}${Number(dist).toLocaleString()} Ls`;
+      if (dist && dist !== '0') content += `<br>${isJa ? '到着距離: ' : 'Distance: '}${Number(dist).toLocaleString()} Ls`;
       if (grav && grav !== '--') content += `<br>${isJa ? '重力: ' : 'Gravity: '}${escapeHtml(grav)}`;
       if (temp && temp !== '--') content += `<br>${isJa ? '表面温度: ' : 'Surface Temp: '}${escapeHtml(temp)}`;
 
@@ -1848,11 +1853,14 @@ function renderBioOnlyView(container, bodies) {
     const geoHtml = renderBodyGeoBlock(body);
     const miningHtml = renderBodyMiningBlock(body);
 
+    const isJa = ((typeof getAppLang === 'function' ? getAppLang() : (window.currentLang || 'ja')) === 'ja');
+    const samplingProgressPattern = t('bio_sampling_progress') || (isJa ? '🌱 採取進捗: {current} / {total}' : '🌱 Sampling Progress: {current} / {total}');
     const completionBadge = body.is_bio_completed
       ? `<span class="tag-badge" style="background: rgba(0, 255, 136, 0.2); color: var(--ed-green); border: 1px solid rgba(0, 255, 136, 0.4); font-size: 0.72rem;">✅ ${t('bio_body_all_completed')}</span>`
-      : `<span class="tag-badge" style="background: rgba(255, 113, 0, 0.15); color: var(--ed-orange); border: 1px solid rgba(255, 113, 0, 0.3); font-size: 0.72rem;">🌱 採取進捗: ${body.completed_bio_count || 0} / ${body.bio_signals || 0}</span>`;
+      : `<span class="tag-badge" style="background: rgba(255, 113, 0, 0.15); color: var(--ed-orange); border: 1px solid rgba(255, 113, 0, 0.3); font-size: 0.72rem;">${samplingProgressPattern.replace('{current}', body.completed_bio_count || 0).replace('{total}', body.bio_signals || 0)}</span>`;
 
-    const targetBadge = isTarget ? '<span class="tag-badge" style="background: rgba(0, 255, 136, 0.25); color: var(--ed-green); border: 1px solid rgba(0, 255, 136, 0.8); font-weight: bold; font-size: 0.72rem;">🎯 ACTIVE TARGET (探査中)</span>' : '';
+    const activeTargetText = t('active_target_survey') || (isJa ? '🎯 ACTIVE TARGET (探査中)' : '🎯 ACTIVE TARGET (Surveying)');
+    const targetBadge = isTarget ? `<span class="tag-badge" style="background: rgba(0, 255, 136, 0.25); color: var(--ed-green); border: 1px solid rgba(0, 255, 136, 0.8); font-weight: bold; font-size: 0.72rem;">${activeTargetText}</span>` : '';
 
     card.innerHTML = `
       <div class="node-card-top">

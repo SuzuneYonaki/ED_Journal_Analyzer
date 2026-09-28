@@ -321,6 +321,13 @@ const i18n = {
     bio_status_sample_2: "サンプル採取中 (2/3)",
     bio_status_sample_1: "サンプル採取中 (1/3)",
     bio_body_all_completed: "全Bioスキャン完了",
+    bio_sampling_progress: "🌱 採取進捗: {current} / {total}",
+    active_target_survey: "🎯 ACTIVE TARGET (探査中)",
+    bio_alt_candidates_toggle: "🔍 他の候補の可能性 ({count}件を表示/非表示)",
+    bio_status_analyzed_short: "スキャン完了",
+    bio_status_sample_1_short: "サンプル採取",
+    bio_status_sample_2_short: "サンプル採取",
+    orrery_generating: "Orrery を生成中...",
     
     // Settings
     settings_lang_label: "🌐 表示言語 / Display Language",
@@ -1251,6 +1258,13 @@ const i18n = {
     bio_status_sample_2: "Sampling In Progress (2/3)",
     bio_status_sample_1: "Sampling Logged (1/3)",
     bio_body_all_completed: "All Bio Scanned",
+    bio_sampling_progress: "🌱 Sampling Progress: {current} / {total}",
+    active_target_survey: "🎯 ACTIVE TARGET (Surveying)",
+    bio_alt_candidates_toggle: "🔍 Potential Alternatives (Show/Hide {count} candidates)",
+    bio_status_analyzed_short: "Scan Complete",
+    bio_status_sample_1_short: "Sample Logged",
+    bio_status_sample_2_short: "Sample Logged",
+    orrery_generating: "Generating Orrery...",
     
     // Settings
     settings_lang_label: "🌐 Display Language",
