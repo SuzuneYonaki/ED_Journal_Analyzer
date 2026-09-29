@@ -22,6 +22,14 @@ hiddenimports = [
     'psutil',
     'app.analyzer.stellar_physics',
     'app.services.physics_translator',
+    # Only imported dynamically from addons/*/addon.py, which is loaded at
+    # runtime via importlib (see app/addons/manager.py) and is therefore
+    # invisible to PyInstaller's static import-graph analysis. Confirmed
+    # missing from the bundle despite collect_submodules('app') below
+    # (verified via PYZ-00.toc) -- list explicitly so the addon can import
+    # them.
+    'app.parser.rarity_scorer',
+    'app.services.spansh_service',
 ] + collect_submodules('uvicorn') + collect_submodules('fastapi') + collect_submodules('webview') + collect_submodules('psutil') + collect_submodules('app')
 
 datas = [

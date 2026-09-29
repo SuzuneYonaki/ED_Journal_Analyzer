@@ -1993,6 +1993,46 @@ function renderVisitsTimeline(container, visits) {
 
 // Collapsible sections, stellar filters, layout and stats toggles are defined in system_list.js
 
+// Custom confirm dialog: native window.confirm()/alert() are unreliable
+// inside pywebview's embedded WebView2 window (some backends don't wire up
+// JS dialogs at all, so the call can throw or resolve falsy immediately,
+// silently cancelling whatever it was gating). Renders using the same
+// .modal-overlay/.modal-content classes as the rest of the app's modals.
+function showAppConfirm(message, options = {}) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+    overlay.style.zIndex = '100000';
+
+    const confirmLabel = options.confirmLabel || (typeof t === 'function' ? t('btn_confirm_generic') : null) || 'OK';
+    const cancelLabel = options.cancelLabel || (typeof t === 'function' ? t('btn_cancel_generic') : null) || 'Cancel';
+
+    overlay.innerHTML = `
+      <div class="modal-content" style="max-width: 440px;">
+        <div class="modal-body" style="padding: 20px; font-size: 0.88rem; color: var(--text-primary); line-height: 1.6;">
+          ${message}
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; padding: 0 20px 16px;">
+          <button id="app-confirm-cancel" class="view-btn" style="padding: 6px 16px; font-size: 0.8rem;">${cancelLabel}</button>
+          <button id="app-confirm-ok" class="btn-primary" style="padding: 6px 16px; font-size: 0.8rem;">${confirmLabel}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    function cleanup(result) {
+      overlay.remove();
+      resolve(result);
+    }
+    overlay.querySelector('#app-confirm-ok').addEventListener('click', () => cleanup(true));
+    overlay.querySelector('#app-confirm-cancel').addEventListener('click', () => cleanup(false));
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) cleanup(false);
+    });
+  });
+}
+
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
   updateStaticTexts();
@@ -4604,7 +4644,8 @@ async function initSettingsModal() {
           if (nextEnabled) {
             const msg = (typeof t === 'function' ? t('addon_network_confirm') : null)
               || 'Enabling this feature will contact external servers. An internet connection is required. Continue?';
-            if (!window.confirm(msg)) return false;
+            const confirmed = await showAppConfirm(msg);
+            if (!confirmed) return false;
           }
           const results = await Promise.all(networkAddons.map((a) => postToggle(a.id, nextEnabled)));
           return results.every(Boolean);
