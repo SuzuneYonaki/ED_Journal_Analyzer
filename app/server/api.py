@@ -276,6 +276,84 @@ def get_current_cmdr_location(conn) -> Optional[dict]:
         print("Warning: get_current_cmdr_location failed:", err)
     return None
 
+def get_cmdr_jump_stats(conn) -> dict:
+    """
+    Calculates total jump distance and straight-line distance from initial journal visit to current location.
+    """
+    res = {
+        "total_jump_dist": 0.0,
+        "jump_count": 0,
+        "straight_dist": None,
+        "initial_system": None,
+        "initial_coords": None,
+        "current_system": None,
+        "current_coords": None
+    }
+    try:
+        c = conn.cursor()
+        # 1. Total jump distance and jump count from visits
+        c.execute("""
+            SELECT COALESCE(SUM(jump_dist), 0.0) as total_dist, COUNT(*) as cnt
+            FROM visits
+            WHERE jump_dist > 0
+        """)
+        row = c.fetchone()
+        if row:
+            res["total_jump_dist"] = round(float(row["total_dist"]), 1)
+            res["jump_count"] = int(row["cnt"])
+
+        # 2. Initial visit system and coords (earliest valid timestamp with coords)
+        c.execute("""
+            SELECT star_system, star_pos_x, star_pos_y, star_pos_z, timestamp
+            FROM visits
+            WHERE star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
+            ORDER BY timestamp ASC LIMIT 1
+        """)
+        init_row = c.fetchone()
+        if not init_row:
+            c.execute("""
+                SELECT star_system, star_pos_x, star_pos_y, star_pos_z, first_visited as timestamp
+                FROM systems
+                WHERE star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
+                ORDER BY first_visited ASC LIMIT 1
+            """)
+            init_row = c.fetchone()
+
+        # 3. Current visit system and coords (latest valid timestamp with coords)
+        c.execute("""
+            SELECT star_system, star_pos_x, star_pos_y, star_pos_z, timestamp
+            FROM visits
+            WHERE star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
+            ORDER BY timestamp DESC LIMIT 1
+        """)
+        cur_row = c.fetchone()
+        if not cur_row:
+            c.execute("""
+                SELECT star_system, star_pos_x, star_pos_y, star_pos_z, last_visited as timestamp
+                FROM systems
+                WHERE star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL
+                ORDER BY last_visited DESC LIMIT 1
+            """)
+            cur_row = c.fetchone()
+
+        if init_row:
+            res["initial_system"] = init_row["star_system"]
+            res["initial_coords"] = [init_row["star_pos_x"], init_row["star_pos_y"], init_row["star_pos_z"]]
+        if cur_row:
+            res["current_system"] = cur_row["star_system"]
+            res["current_coords"] = [cur_row["star_pos_x"], cur_row["star_pos_y"], cur_row["star_pos_z"]]
+
+        if init_row and cur_row:
+            dx = cur_row["star_pos_x"] - init_row["star_pos_x"]
+            dy = cur_row["star_pos_y"] - init_row["star_pos_y"]
+            dz = cur_row["star_pos_z"] - init_row["star_pos_z"]
+            straight = (dx * dx + dy * dy + dz * dz) ** 0.5
+            res["straight_dist"] = round(straight, 1)
+
+    except Exception as err:
+        logger.error(f"Failed to get cmdr jump stats: {err}")
+    return res
+
 @app.get("/api/cmdr/coordinates")
 def get_cmdr_coordinates():
     """
@@ -529,6 +607,10 @@ def get_global_stats(
         stats["current_location"] = get_current_cmdr_location(conn)
     except Exception:
         stats["current_location"] = None
+    try:
+        stats["jump_stats"] = get_cmdr_jump_stats(conn)
+    except Exception:
+        stats["jump_stats"] = None
     stats["app_version"] = APP_VERSION
     conn.close()
     return stats
@@ -1427,6 +1509,12 @@ def get_systems(
         lm_dists = calculate_landmark_distances(r.get("star_pos_x"), r.get("star_pos_y"), r.get("star_pos_z"))
         r.update(lm_dists)
 
+    jump_stats = None
+    try:
+        jump_stats = get_cmdr_jump_stats(conn)
+    except Exception:
+        pass
+
     conn.close()
 
     return {
@@ -1434,6 +1522,7 @@ def get_systems(
         "page": page,
         "limit": limit,
         "current_location": cur_loc,
+        "jump_stats": jump_stats,
         "systems": rows
     }
 

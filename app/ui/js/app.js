@@ -137,6 +137,33 @@ function updateStaticTexts() {
   renderBodyInspector();
 }
 
+function updateHeaderJumpStats(jumpStats) {
+  const jumpDistEl = document.getElementById('stat-jump-dist');
+  if (!jumpDistEl) return;
+  if (!jumpStats) {
+    jumpDistEl.innerText = '-- ly';
+    return;
+  }
+  const totalDist = Number(jumpStats.total_jump_dist ?? 0);
+  const straightDist = jumpStats.straight_dist !== null && jumpStats.straight_dist !== undefined ? Number(jumpStats.straight_dist) : null;
+  const jumpCount = Number(jumpStats.jump_count ?? 0);
+  const initSys = jumpStats.initial_system || '初期星系';
+  const curSys = jumpStats.current_system || '現在星系';
+
+  if (totalDist > 0 || straightDist !== null) {
+    jumpDistEl.innerText = `${totalDist.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ly`;
+    let tip = `🚀 累計ジャンプ距離: ${totalDist.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ly (${jumpCount.toLocaleString()} ジャンプ)`;
+    if (straightDist !== null) {
+      tip += `\n📏 直線距離: ${straightDist.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ly\n(${initSys} ➔ ${curSys})`;
+    }
+    jumpDistEl.title = tip;
+    const container = document.getElementById('stat-jump-dist-container');
+    if (container) container.title = tip;
+  } else {
+    jumpDistEl.innerText = '-- ly';
+  }
+}
+
 // API Calls
 let statsRetryTimeout = null;
 let systemsRetryTimeout = null;
@@ -210,6 +237,11 @@ async function fetchGlobalStats() {
       } else {
         cmdrLocEl.innerText = '--';
       }
+    }
+
+    // CMDR Jump Stats
+    if (data.jump_stats) {
+      updateHeaderJumpStats(data.jump_stats);
     }
   } catch (err) {
     console.warn('fetchStats failed, retrying in 1.5s:', err);
@@ -336,6 +368,11 @@ async function fetchSystems(options = {}) {
         jumpedToNewSystem = true;
         selectSystem(cl.system_address);
       }
+    }
+
+    // CMDR Jump Stats
+    if (data.jump_stats) {
+      updateHeaderJumpStats(data.jump_stats);
     }
 
     renderSystemList();
