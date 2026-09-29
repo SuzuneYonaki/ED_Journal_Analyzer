@@ -934,13 +934,26 @@ def get_systems(
             conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND ({combined_lum_or}))")
 
     # Celestial Bodies, Orbital & Anomaly Filters (Eccentric, Inclined, Fast, Binary, Rings, etc.)
-    active_celestial_filters = []
+    # Supports "eccentric", "ringed:2", etc.
+    active_celestial_filters = {}
     if celestial_filters:
         for cf in celestial_filters:
             for item in str(cf).split(","):
                 clean = item.strip()
-                if clean and clean not in active_celestial_filters:
-                    active_celestial_filters.append(clean)
+                if not clean:
+                    continue
+                if ":" in clean:
+                    k, v = clean.split(":", 1)
+                    k = k.strip()
+                    try:
+                        c_val = max(1, int(v.strip()))
+                    except (ValueError, TypeError):
+                        c_val = 1
+                else:
+                    k = clean
+                    c_val = 1
+                if k and k not in active_celestial_filters:
+                    active_celestial_filters[k] = c_val
 
     if active_celestial_filters:
         celestial_sql_map = {
@@ -956,18 +969,36 @@ def get_systems(
             "volcanism": "(b.volcanism IS NOT NULL AND b.volcanism != '' AND LOWER(b.volcanism) != 'none')",
         }
 
-        cf_exprs = []
-        for cf_key in active_celestial_filters:
-            if cf_key in celestial_sql_map:
-                cf_exprs.append(celestial_sql_map[cf_key])
-
-        if cf_exprs:
-            if celestial_match_mode == "all":
-                for expr in cf_exprs:
-                    conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
-            else:
-                combined_cf_or = " OR ".join(cf_exprs)
-                conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND ({combined_cf_or}))")
+        if celestial_match_mode == "all":
+            for cf_key, min_cnt in active_celestial_filters.items():
+                if cf_key in celestial_sql_map:
+                    expr = celestial_sql_map[cf_key]
+                    if min_cnt == 1:
+                        conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
+                    else:
+                        conditions.append(f"""(
+                            SELECT COUNT(*) FROM bodies b 
+                            WHERE b.system_address = systems.system_address 
+                            AND {expr}
+                        ) >= ?""")
+                        params.append(min_cnt)
+        else:
+            cf_or_clauses = []
+            for cf_key, min_cnt in active_celestial_filters.items():
+                if cf_key in celestial_sql_map:
+                    expr = celestial_sql_map[cf_key]
+                    if min_cnt == 1:
+                        cf_or_clauses.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
+                    else:
+                        cf_or_clauses.append(f"""(
+                            SELECT COUNT(*) FROM bodies b 
+                            WHERE b.system_address = systems.system_address 
+                            AND {expr}
+                        ) >= ?""")
+                        params.append(min_cnt)
+            if cf_or_clauses:
+                combined_or = " OR ".join(cf_or_clauses)
+                conditions.append(f"({combined_or})")
 
     if mining_scout:
         ms = str(mining_scout).strip().lower()

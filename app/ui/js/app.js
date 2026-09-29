@@ -32,6 +32,7 @@ let state = {
   luminosityClasses: [],
   luminosityMatchMode: 'any',
   celestialFilters: [],
+  celestialCounts: {},
   celestialMatchMode: 'all',
   externalFootprintCheck: localStorage.getItem('ed_external_footprint_check') === 'true',
   uiLayoutMode: localStorage.getItem('ed_ui_layout') || '1col',
@@ -270,7 +271,12 @@ async function fetchSystems(options = {}) {
     params.append('luminosity_match_mode', state.luminosityMatchMode || 'any');
   }
 
-  if (state.celestialFilters && state.celestialFilters.length > 0) {
+  const celestialEntries = Object.entries(state.celestialCounts || {});
+  if (celestialEntries.length > 0) {
+    const serialized = celestialEntries.map(([k, c]) => (c > 1 ? `${k}:${c}` : k)).join(',');
+    params.append('celestial_filters', serialized);
+    params.append('celestial_match_mode', state.celestialMatchMode || 'all');
+  } else if (state.celestialFilters && state.celestialFilters.length > 0) {
     params.append('celestial_filters', state.celestialFilters.join(','));
     params.append('celestial_match_mode', state.celestialMatchMode || 'all');
   }
@@ -2248,9 +2254,26 @@ document.addEventListener('DOMContentLoaded', () => {
     activeFilterPopover = null;
   }
 
-  function showFilterCountPopover(chip, filterKey) {
+  function showFilterCountPopover(chip, filterKeyOrVal, onApplyCallback) {
     closeActiveFilterPopover();
-    const currentVal = (typeof state.filters[filterKey] === 'number') ? state.filters[filterKey] : (state.filters[filterKey] ? 1 : 0);
+    let currentVal = 0;
+    let onApply = null;
+
+    if (typeof onApplyCallback === 'function') {
+      currentVal = (typeof filterKeyOrVal === 'number') ? filterKeyOrVal : (filterKeyOrVal ? 1 : 0);
+      onApply = onApplyCallback;
+    } else {
+      const filterKey = filterKeyOrVal;
+      currentVal = (typeof state.filters[filterKey] === 'number') ? state.filters[filterKey] : (state.filters[filterKey] ? 1 : 0);
+      onApply = (n) => {
+        state.filters[filterKey] = n;
+        updateFilterChipUI(chip, n);
+        state.page = 1;
+        updateCollapsibleBadges();
+        fetchSystems({ autoSelectTop: true });
+      };
+    }
+
     const pop = document.createElement('div');
     pop.className = 'filter-count-popover';
 
@@ -2288,11 +2311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = pop.querySelector('.filter-count-input');
     const applyCount = (val) => {
       const n = Math.max(0, parseInt(val, 10) || 0);
-      state.filters[filterKey] = n;
-      updateFilterChipUI(chip, n);
-      state.page = 1;
-      updateCollapsibleBadges();
-      fetchSystems({ autoSelectTop: true });
+      onApply(n);
     };
 
     pop.querySelector('.popover-close').onclick = (e) => {
@@ -2383,22 +2402,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Celestial & Orbital Anomaly Filter chips
   document.querySelectorAll('.celestial-chip').forEach(chip => {
+    const cKey = chip.dataset.celestial;
+    if (!cKey) return;
+
     chip.addEventListener('click', () => {
-      const cKey = chip.dataset.celestial;
-      if (!cKey) return;
-      const idx = (state.celestialFilters || []).indexOf(cKey);
-      if (idx >= 0) {
-        state.celestialFilters.splice(idx, 1);
-        chip.classList.remove('active');
+      closeActiveFilterPopover();
+      const current = state.celestialCounts[cKey] || 0;
+      const nextVal = current > 0 ? 0 : 1;
+      if (nextVal > 0) {
+        state.celestialCounts[cKey] = 1;
+        if (!state.celestialFilters.includes(cKey)) state.celestialFilters.push(cKey);
       } else {
-        if (!state.celestialFilters) state.celestialFilters = [];
-        state.celestialFilters.push(cKey);
-        chip.classList.add('active');
+        delete state.celestialCounts[cKey];
+        const idx = state.celestialFilters.indexOf(cKey);
+        if (idx >= 0) state.celestialFilters.splice(idx, 1);
       }
+      updateFilterChipUI(chip, nextVal);
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
     });
+
+    chip.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showFilterCountPopover(chip, state.celestialCounts[cKey] || 0, (n) => {
+        if (n > 0) {
+          state.celestialCounts[cKey] = n;
+          if (!state.celestialFilters.includes(cKey)) state.celestialFilters.push(cKey);
+        } else {
+          delete state.celestialCounts[cKey];
+          const idx = state.celestialFilters.indexOf(cKey);
+          if (idx >= 0) state.celestialFilters.splice(idx, 1);
+        }
+        updateFilterChipUI(chip, n);
+        state.page = 1;
+        updateCollapsibleBadges();
+        fetchSystems({ autoSelectTop: true });
+      });
+    });
+
+    chip.setAttribute('title', `${chip.getAttribute('title') || ''} (右クリック/長押しで個数指定)`.trim());
   });
 
   // Celestial Match Mode Radio (AND vs OR)
@@ -2432,9 +2476,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btnClearCelestial.addEventListener('click', (e) => {
       e.stopPropagation();
       document.querySelectorAll('.celestial-chip').forEach(chip => {
-        chip.classList.remove('active');
+        updateFilterChipUI(chip, 0);
       });
       state.celestialFilters = [];
+      state.celestialCounts = {};
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
@@ -2780,7 +2825,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. General filters
     document.querySelectorAll('#group-general-filters .chip').forEach(chip => {
-      chip.classList.remove('active');
+      updateFilterChipUI(chip, 0);
       if (chip.dataset.filter) {
         state.filters[chip.dataset.filter] = false;
       }
@@ -2788,13 +2833,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 3. Celestial filters
     document.querySelectorAll('.celestial-chip').forEach(chip => {
-      chip.classList.remove('active');
+      updateFilterChipUI(chip, 0);
     });
     state.celestialFilters = [];
+    state.celestialCounts = {};
 
     // 4. Mining filters
     document.querySelectorAll('#group-mining-filters .chip').forEach(chip => {
-      chip.classList.remove('active');
+      updateFilterChipUI(chip, 0);
       if (chip.dataset.filter) {
         state.filters[chip.dataset.filter] = false;
       }
