@@ -944,6 +944,7 @@ const i18n = {
     sysmap_zoom_in_tip: "ズームイン (ホイール上 / 最大200%)",
     sysmap_zoom_out_tip: "ズームアウト (ホイール下 / 最小40%)",
     sysmap_zoom_reset_tip: "100%にリセット (ホイール中クリック)",
+    addon_disabled_toast: "⚠️ この機能は現在無効化されています ({name})。設定 > アドオンから有効化できます。",
   },
   en: {
     // Header
@@ -1888,6 +1889,7 @@ const i18n = {
     sysmap_zoom_in_tip: "Zoom In (Wheel Up / Max 200%)",
     sysmap_zoom_out_tip: "Zoom Out (Wheel Down / Min 40%)",
     sysmap_zoom_reset_tip: "Reset to 100% (Middle Click)",
+    addon_disabled_toast: "⚠️ This feature is currently disabled ({name}). Enable it under Settings > Addons.",
   }
 };
 
