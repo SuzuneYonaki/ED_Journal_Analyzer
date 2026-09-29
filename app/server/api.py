@@ -875,13 +875,26 @@ def get_systems(
             params.append(to_ts)
 
     # Star Types filtering (Stellar classification multi-search)
-    active_star_types = []
+    # Supports "O", "N:2", "M:3", etc.
+    active_star_types = {}
     if star_types:
         for st in star_types:
             for item in str(st).split(","):
                 clean = item.strip()
-                if clean and clean not in active_star_types:
-                    active_star_types.append(clean)
+                if not clean:
+                    continue
+                if ":" in clean:
+                    k, v = clean.split(":", 1)
+                    k = k.strip()
+                    try:
+                        c_val = max(1, int(v.strip()))
+                    except (ValueError, TypeError):
+                        c_val = 1
+                else:
+                    k = clean
+                    c_val = 1
+                if k and k not in active_star_types:
+                    active_star_types[k] = c_val
 
     if active_star_types:
         star_type_sql_map = {
@@ -903,30 +916,67 @@ def get_systems(
             "N": "(b.star_type = 'N')",
             "H": "(b.star_type = 'H' OR b.star_type LIKE '%BlackHole%')",
         }
-        
-        type_exprs = []
-        for st in active_star_types:
-            if st in star_type_sql_map:
-                type_exprs.append(star_type_sql_map[st])
-            else:
-                clean_escaped = st.replace("'", "''")
-                type_exprs.append(f"(b.star_type = '{clean_escaped}')")
 
         if star_match_mode == "all":
-            for expr in type_exprs:
-                conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
+            for st, min_cnt in active_star_types.items():
+                if st in star_type_sql_map:
+                    expr = star_type_sql_map[st]
+                else:
+                    clean_escaped = st.replace("'", "''")
+                    expr = f"(b.star_type = '{clean_escaped}')"
+
+                if min_cnt == 1:
+                    conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
+                else:
+                    conditions.append(f"""(
+                        SELECT COUNT(*) FROM bodies b 
+                        WHERE b.system_address = systems.system_address 
+                        AND {expr}
+                    ) >= ?""")
+                    params.append(min_cnt)
         else:
-            combined_or = " OR ".join(type_exprs)
-            conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND ({combined_or}))")
+            type_or_clauses = []
+            for st, min_cnt in active_star_types.items():
+                if st in star_type_sql_map:
+                    expr = star_type_sql_map[st]
+                else:
+                    clean_escaped = st.replace("'", "''")
+                    expr = f"(b.star_type = '{clean_escaped}')"
+
+                if min_cnt == 1:
+                    type_or_clauses.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
+                else:
+                    type_or_clauses.append(f"""(
+                        SELECT COUNT(*) FROM bodies b 
+                        WHERE b.system_address = systems.system_address 
+                        AND {expr}
+                    ) >= ?""")
+                    params.append(min_cnt)
+            if type_or_clauses:
+                combined_or = " OR ".join(type_or_clauses)
+                conditions.append(f"({combined_or})")
 
     # Luminosity / Evolutionary Stage Filtering (Independent from spectral type)
-    active_lum_classes = []
+    # Supports "I", "V:2", etc.
+    active_lum_classes = {}
     if luminosity_classes:
         for lc in luminosity_classes:
             for item in str(lc).split(","):
                 clean = item.strip()
-                if clean and clean not in active_lum_classes:
-                    active_lum_classes.append(clean)
+                if not clean:
+                    continue
+                if ":" in clean:
+                    k, v = clean.split(":", 1)
+                    k = k.strip()
+                    try:
+                        c_val = max(1, int(v.strip()))
+                    except (ValueError, TypeError):
+                        c_val = 1
+                else:
+                    k = clean
+                    c_val = 1
+                if k and k not in active_lum_classes:
+                    active_lum_classes[k] = c_val
 
     if active_lum_classes:
         lum_sql_map = {
@@ -946,20 +996,44 @@ def get_systems(
             "VII": "(b.luminosity = 'VII' OR b.star_type LIKE 'D%' OR b.star_type = 'N' OR b.star_type = 'H' OR b.star_type LIKE '%BlackHole%')",
         }
 
-        lum_exprs = []
-        for lc in active_lum_classes:
-            if lc in lum_sql_map:
-                lum_exprs.append(lum_sql_map[lc])
-            else:
-                clean_escaped = lc.replace("'", "''")
-                lum_exprs.append(f"(b.luminosity = '{clean_escaped}')")
-
         if luminosity_match_mode == "all":
-            for expr in lum_exprs:
-                conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
+            for lc, min_cnt in active_lum_classes.items():
+                if lc in lum_sql_map:
+                    expr = lum_sql_map[lc]
+                else:
+                    clean_escaped = lc.replace("'", "''")
+                    expr = f"(b.luminosity = '{clean_escaped}')"
+
+                if min_cnt == 1:
+                    conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
+                else:
+                    conditions.append(f"""(
+                        SELECT COUNT(*) FROM bodies b 
+                        WHERE b.system_address = systems.system_address 
+                        AND {expr}
+                    ) >= ?""")
+                    params.append(min_cnt)
         else:
-            combined_lum_or = " OR ".join(lum_exprs)
-            conditions.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND ({combined_lum_or}))")
+            lum_or_clauses = []
+            for lc, min_cnt in active_lum_classes.items():
+                if lc in lum_sql_map:
+                    expr = lum_sql_map[lc]
+                else:
+                    clean_escaped = lc.replace("'", "''")
+                    expr = f"(b.luminosity = '{clean_escaped}')"
+
+                if min_cnt == 1:
+                    lum_or_clauses.append(f"EXISTS (SELECT 1 FROM bodies b WHERE b.system_address = systems.system_address AND {expr})")
+                else:
+                    lum_or_clauses.append(f"""(
+                        SELECT COUNT(*) FROM bodies b 
+                        WHERE b.system_address = systems.system_address 
+                        AND {expr}
+                    ) >= ?""")
+                    params.append(min_cnt)
+            if lum_or_clauses:
+                combined_lum_or = " OR ".join(lum_or_clauses)
+                conditions.append(f"({combined_lum_or})")
 
     # Celestial Bodies, Orbital & Anomaly Filters (Eccentric, Inclined, Fast, Binary, Rings, etc.)
     # Supports "eccentric", "ringed:2", etc.
