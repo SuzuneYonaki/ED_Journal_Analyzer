@@ -2225,8 +2225,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Filter chips (General & Mining) - Numeric min count support (>= N)
   const COUNTABLE_FILTERS = new Set([
     'has_elw', 'has_water_world', 'has_ammonia', 'has_terraformable', 'has_bio',
-    'has_first_discover', 'has_high_g', 'has_landable_hmc', 'has_landable_metal_rich',
-    'has_landable_rocky', 'has_landable_icy', 'has_landable_rocky_ice', 'has_landable_ringed',
+    'has_first_discover', 'has_high_g', 'has_anomalies', 'has_ggg', 'has_bookmarks',
+    'has_landable_hmc', 'has_landable_metal_rich', 'has_landable_rocky',
+    'has_landable_icy', 'has_landable_rocky_ice', 'has_landable_ringed',
     'has_mining_signals'
   ]);
 
