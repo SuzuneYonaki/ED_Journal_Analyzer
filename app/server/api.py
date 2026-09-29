@@ -2195,6 +2195,8 @@ def get_tts_settings():
         "highBioThresholdType": "bonus",
         "highBioText": "{body}、高額生物反応です。見込額{value}クレジット。",
         "gggEnabled": True,
+        "gggConfirmedEnabled": True,
+        "gggCandidateEnabled": True,
         "gggMode": "both",
         "gggConfirmedText": "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。",
         "gggCandidateText": "{body}はグリーンガスジャイアント候補です。",

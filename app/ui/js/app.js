@@ -3571,6 +3571,8 @@ const ttsState = {
   highBioThresholdType: 'bonus',
   highBioText: '{body}、高額生物反応です。見込額{value}クレジット。',
   gggEnabled: true, // GGGは極めて希少なためデフォルト有効
+  gggConfirmedEnabled: true,
+  gggCandidateEnabled: true,
   gggMode: 'both', // 'both' | 'tts' | 'buzzer'
   gggConfirmedText: '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。',
   gggCandidateText: '{body}はグリーンガスジャイアント候補です。',
@@ -3809,7 +3811,13 @@ function checkAndAnnounceGggBody(sysData, bodyData) {
     });
   }
 
-  if (!isConfirmedGgg && !isGggCandidate) return;
+  if (isConfirmedGgg) {
+    if (ttsState.gggConfirmedEnabled === false) return;
+  } else if (isGggCandidate) {
+    if (ttsState.gggCandidateEnabled === false) return;
+  } else {
+    return;
+  }
 
   announcedGggBodies.add(alertKey);
 
@@ -4470,6 +4478,8 @@ async function initSettingsModal() {
   const highBioTextInput = document.getElementById('tts-high-bio-text');
   const btnHighBioTest = document.getElementById('btn-tts-high-bio-test');
   const gggToggle = document.getElementById('tts-ggg-toggle');
+  const gggConfirmedToggle = document.getElementById('tts-ggg-confirmed-toggle');
+  const gggCandidateToggle = document.getElementById('tts-ggg-candidate-toggle');
   const gggModeSelect = document.getElementById('tts-ggg-mode');
   const gggConfirmedTextInput = document.getElementById('tts-ggg-confirmed-text');
   const gggCandidateTextInput = document.getElementById('tts-ggg-candidate-text');
@@ -4494,6 +4504,8 @@ async function initSettingsModal() {
     if (highBioThresholdSelect) highBioThresholdSelect.value = String(ttsState.highBioThreshold ?? 40000000);
     if (highBioTextInput) highBioTextInput.value = ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。';
     if (gggToggle) gggToggle.checked = (ttsState.gggEnabled !== false);
+    if (gggConfirmedToggle) gggConfirmedToggle.checked = (ttsState.gggConfirmedEnabled !== false);
+    if (gggCandidateToggle) gggCandidateToggle.checked = (ttsState.gggCandidateEnabled !== false);
     if (gggModeSelect) gggModeSelect.value = ttsState.gggMode || 'both';
     if (gggConfirmedTextInput) gggConfirmedTextInput.value = ttsState.gggConfirmedText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
     if (gggCandidateTextInput) gggCandidateTextInput.value = ttsState.gggCandidateText || '{body}はグリーンガスジャイアント候補です。';
@@ -4567,6 +4579,8 @@ async function initSettingsModal() {
       }
       if (highBioTextInput) ttsState.highBioText = highBioTextInput.value || '{body}、高額生物反応です。見込額{value}クレジット。';
       if (gggToggle) ttsState.gggEnabled = gggToggle.checked;
+      if (gggConfirmedToggle) ttsState.gggConfirmedEnabled = gggConfirmedToggle.checked;
+      if (gggCandidateToggle) ttsState.gggCandidateEnabled = gggCandidateToggle.checked;
       if (gggModeSelect) ttsState.gggMode = gggModeSelect.value;
       if (gggConfirmedTextInput) ttsState.gggConfirmedText = gggConfirmedTextInput.value || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
       if (gggCandidateTextInput) ttsState.gggCandidateText = gggCandidateTextInput.value || '{body}はグリーンガスジャイアント候補です。';
