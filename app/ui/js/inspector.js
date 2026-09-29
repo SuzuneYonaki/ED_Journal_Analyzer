@@ -397,30 +397,27 @@ function renderBodyInspector() {
         <div style="margin-top: 4px; color: var(--text-secondary);">${t('barycentre_desc')} (${b.starGroup} 1, ${b.starGroup} 2...)</div>
       </div>
     `;
-  } else if (b.anomalies && b.anomalies.length > 0) {
+  } else if (b.anomalies && b.anomalies.some(a => !(a.type === 'ggg_candidate' || (a.tag && a.tag.includes('GGG Candidate'))))) {
     anomSection.style.display = 'block';
     const lang = (typeof getAppLang === 'function') ? getAppLang() : (typeof currentLang !== 'undefined' ? currentLang : 'ja');
-    anomTags.innerHTML = b.anomalies.map(a => {
-      const texts = getLocalizedAnomalyTexts(a, lang);
-      const isConfirmedGgg = a.type === 'confirmed_ggg' || (a.tag && a.tag.includes('Confirmed GGG'));
-      const isGggCand = a.type === 'ggg_candidate' || (a.tag && a.tag.includes('GGG Candidate'));
-      let badgeClass = 'tag-badge tag-anomaly';
-      let icon = '★';
-      let extraStyle = '';
-      if (isConfirmedGgg) {
-        badgeClass = 'tag-badge tag-ggg';
-        icon = '🟢';
-      } else if (isGggCand) {
-        badgeClass = 'tag-badge';
-        icon = '🟡';
-        extraStyle = 'background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4);';
-      }
-      return `
-        <div class="${badgeClass}" title="${escapeHtml(texts.tooltip)}" style="padding: 4px 8px; font-size: 0.75rem; ${extraStyle}">
-          ${icon} ${escapeHtml(texts.label)}
-        </div>
-      `;
-    }).join('');
+    anomTags.innerHTML = b.anomalies
+      // GGG Candidate anomalies are never badged (unlike Confirmed GGG).
+      .filter(a => !(a.type === 'ggg_candidate' || (a.tag && a.tag.includes('GGG Candidate'))))
+      .map(a => {
+        const texts = getLocalizedAnomalyTexts(a, lang);
+        const isConfirmedGgg = a.type === 'confirmed_ggg' || (a.tag && a.tag.includes('Confirmed GGG'));
+        let badgeClass = 'tag-badge tag-anomaly';
+        let icon = '★';
+        if (isConfirmedGgg) {
+          badgeClass = 'tag-badge tag-ggg';
+          icon = '🟢';
+        }
+        return `
+          <div class="${badgeClass}" title="${escapeHtml(texts.tooltip)}" style="padding: 4px 8px; font-size: 0.75rem;">
+            ${icon} ${escapeHtml(texts.label)}
+          </div>
+        `;
+      }).join('');
   } else {
     anomSection.style.display = 'none';
   }

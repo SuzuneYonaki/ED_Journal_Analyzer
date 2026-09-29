@@ -992,10 +992,10 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   // Badges & Signals
   const badgeList = [];
 
-  // GGG (Green Gas Giant) Badges: Confirmed [GGG] & Candidate [GGG？]
+  // GGG (Green Gas Giant) Badge: Confirmed [GGG] only -- candidate
+  // detections are not badged (kept out of view, unlike Confirmed GGG).
   let isConfirmedGgg = Boolean(body.is_confirmed_ggg);
   let confirmedVariant = body.confirmed_ggg_variant || '';
-  let isGggCandidate = Boolean(body.ggg_evaluation && body.ggg_evaluation.is_candidate);
 
   let anomaliesList = body.anomalies;
   if (!anomaliesList && body.anomalies_json) {
@@ -1020,8 +1020,6 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
             if (vMatch) confirmedVariant = vMatch[1];
           }
         }
-      } else if (typeStr === 'ggg_candidate' || tagStr.includes('GGG Candidate')) {
-        isGggCandidate = true;
       }
     }
   }
@@ -1032,11 +1030,6 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
       ? t('ggg_confirmed_badge_title', { variant: variantStr })
       : `確定グリーンガスジャイアント: ${variantStr}`;
     badgeList.push(`<span class="sysmap-mini-badge ggg-confirmed" title="${gggTitle}">[GGG]</span>`);
-  } else if (isGggCandidate) {
-    const candTitle = typeof t === 'function'
-      ? t('ggg_candidate_badge_title')
-      : (lang === 'en' ? 'Green Gas Giant candidate (FSS or visual check recommended)' : 'グリーンガスジャイアント候補 (FSSまたは目視確認推奨)');
-    badgeList.push(`<span class="sysmap-mini-badge ggg-candidate" title="${candTitle}">[GGG？]</span>`);
   }
   if (isBary) {
     const isMulti = body.starGroup && body.starGroup.length > 2;

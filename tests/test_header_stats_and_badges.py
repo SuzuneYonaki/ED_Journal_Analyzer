@@ -152,19 +152,17 @@ def test_api_stats_celestial_counts_endpoint(test_db, monkeypatch):
 def test_ggg_badge_classification_logic():
     """
     Validates the badge classification logic mirrored from system_map.js.
-    Ensures confirmed GGG receives [GGG] and candidate receives [GGG？].
+    Confirmed GGG receives [GGG]; candidate GGG is never badged (dropped
+    from display, unlike Confirmed GGG).
     """
     def get_ggg_badge(body: dict) -> tuple[str, str, str] | None:
         anomalies = body.get("anomalies") or []
         confirmed_anom = next((a for a in anomalies if "Confirmed GGG" in a), None)
         is_confirmed = bool(confirmed_anom or body.get("is_confirmed_ggg"))
-        is_cand = bool(body.get("is_ggg") and not is_confirmed)
 
         if is_confirmed:
             variant_str = confirmed_anom.replace("Confirmed GGG", "").strip(" ()") if confirmed_anom else "Gas Giant"
             return ("ggg-confirmed", "[GGG]", f"確定グリーンガスジャイアント: {variant_str}")
-        elif is_cand:
-            return ("ggg-candidate", "[GGG？]", "グリーンガスジャイアント候補 (FSSまたは目視確認推奨)")
         return None
 
     # Test Confirmed GGG from anomalies
@@ -182,13 +180,9 @@ def test_ggg_badge_classification_logic():
     assert res_flag[0] == "ggg-confirmed"
     assert res_flag[1] == "[GGG]"
 
-    # Test Candidate GGG
+    # Test Candidate GGG: no badge (dropped from display)
     b_cand = {"is_ggg": True}
-    res_cand = get_ggg_badge(b_cand)
-    assert res_cand is not None
-    assert res_cand[0] == "ggg-candidate"
-    assert res_cand[1] == "[GGG？]"
-    assert "グリーンガスジャイアント候補" in res_cand[2]
+    assert get_ggg_badge(b_cand) is None
 
     # Test Non-GGG body
     b_normal = {"planet_class": "Sudarsky class I gas giant"}
