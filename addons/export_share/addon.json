@@ -1,8 +1,8 @@
 {
   "id": "export_share",
-  "name": "Export & Package Sharing",
+  "name": "エクスポート & 共有",
   "version": "1.0.0",
-  "description": "Standalone Web共有HTML・SNSサマリー画像・.edsysパッケージのエクスポート/インポート機能（旧 app/server/api.py 直書きエンドポイントを移設）。星系一覧の並び替えや Orrery ビューなど、export_service.py を使うコア機能には影響しない。",
+  "description": "星系データをWeb共有用HTML・SNS投稿用画像・共有パッケージ(.edsys)として書き出したり、他プレイヤーが共有したパッケージを読み込んだりします。",
   "entry": "addon.py",
   "enabled_by_default": false
 }

@@ -1,8 +1,9 @@
 {
   "id": "spansh_sync",
-  "name": "Spansh Sync",
+  "name": "Spansh 連携",
   "version": "1.0.0",
-  "description": "Spansh API 連携。星系の環ホットスポット・PML採掘地点をオンデマンドで取得し、天体と注釈に反映する（旧 app/server/api.py 直書きエンドポイントを移設）。",
+  "description": "星系の環ホットスポットや惑星表面の採掘地点(PML)情報を Spansh から取得し、天体情報に反映します。",
   "entry": "addon.py",
-  "enabled_by_default": false
+  "enabled_by_default": false,
+  "requires_network": true
 }

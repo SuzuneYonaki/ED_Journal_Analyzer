@@ -13,8 +13,28 @@ const ADDON_PATH_RULES = [
   },
 ];
 
+// Addon ids whose UI elements are gated via CSS (see style.css's
+// body.addon-off-<id> rules) -- kept in sync with the [data-requires-addon]
+// attributes on those elements.
+const ADDON_GATED_IDS = ['edsm_sync', 'spansh_sync', 'tts', 'export_share'];
+
 window.__disabledAddons = window.__disabledAddons || {};
 const _lastToastAt = {};
+
+// Addon metadata (name/description) is authored in Japanese in each
+// addon.json; i18n.js carries the translated, user-facing-only copy under
+// addon_name_<id> / addon_desc_<id>. Falls back to the raw manifest field
+// for any addon without an i18n entry (e.g. a third-party addon).
+function getAddonDisplayName(addon) {
+  const key = 'addon_name_' + addon.id;
+  return (typeof t === 'function' ? t(key, null, addon.name) : null) || addon.name;
+}
+function getAddonDisplayDescription(addon) {
+  const key = 'addon_desc_' + addon.id;
+  return (typeof t === 'function' ? t(key, null, addon.description) : null) || addon.description;
+}
+window.getAddonDisplayName = getAddonDisplayName;
+window.getAddonDisplayDescription = getAddonDisplayDescription;
 
 function showAddonDisabledToast(name) {
   const now = Date.now();
@@ -89,8 +109,15 @@ function showAddonDisabledToast(name) {
   window.__disabledAddons = {};
   for (const a of addons) {
     if (!a.enabled || !a.loaded) {
-      window.__disabledAddons[a.id] = a.name;
+      window.__disabledAddons[a.id] = getAddonDisplayName(a);
     }
+  }
+
+  // Hide any [data-requires-addon="X"] element for a disabled addon X (see
+  // style.css). Applies to elements already in the DOM and, since it's a
+  // plain CSS selector, to anything rendered later too.
+  for (const addonId of ADDON_GATED_IDS) {
+    document.body.classList.toggle(`addon-off-${addonId}`, !!window.__disabledAddons[addonId]);
   }
 
   const host = document.getElementById('addon-panels');

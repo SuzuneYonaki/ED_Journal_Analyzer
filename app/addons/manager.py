@@ -32,6 +32,7 @@ class AddonManifest:
     entry: str = "addon.py"
     enabled_by_default: bool = False
     ui_entry: Optional[str] = None
+    requires_network: bool = False
     path: Optional[Path] = None
 
 
@@ -159,6 +160,7 @@ class AddonManager:
                     entry=raw.get("entry", "addon.py"),
                     enabled_by_default=bool(raw.get("enabled_by_default", False)),
                     ui_entry=raw.get("ui_entry"),
+                    requires_network=bool(raw.get("requires_network", False)),
                     path=entry,
                 )
                 self.manifests[manifest.id] = manifest
@@ -282,5 +284,6 @@ class AddonManager:
                 "loaded": is_loaded,
                 "error": loaded.error if loaded else None,
                 "ui_entry": f"/addons/{addon_id}/{manifest.ui_entry}" if (manifest.ui_entry and is_loaded) else None,
+                "requires_network": manifest.requires_network,
             })
         return out

@@ -39,8 +39,9 @@ addons/
 | `entry` | `register(ctx)` を定義したPythonファイル(フォルダ相対パス)。 |
 | `enabled_by_default` | 初回起動時のデフォルト有効/無効。ユーザーの選択は `data/addons_settings.json` に保存され、以後はそちらが優先される。 |
 | `ui_entry` | (任意) フロントエンドに動的挿入するESモジュールのパス(フォルダ相対)。`/addons/<id>/<ui_entry>` で配信される。 |
+| `requires_network` | (任意, 既定 false) `true` にすると、設定画面の「🧩 アドオン」タブでこのアドオンが個別の行ではなく**「🌐 外部オンラインアクセス」グループの一括トグル**にまとめられる。有効化時にはインターネット接続が必要である旨の確認ポップアップが出る(実例: `edsm_sync`, `spansh_sync`)。 |
 
-有効/無効はアプリ内の `GET /api/addons` / `POST /api/addons/{id}/toggle` から切り替え可能(切り替えは次回起動時に反映)。
+有効/無効はアプリ内の `GET /api/addons` / `POST /api/addons/{id}/toggle` から切り替え可能(切り替えは次回起動時に反映)。`name`/`description` は `/api/addons` レスポンスにそのまま含まれ、設定画面に表示される**エンドユーザー向けの文言**なので、実装の詳細(ファイルパス・関数名・移設元など)を書かず、機能の説明のみにとどめること。フロントエンド側は `i18n.js` の `addon_name_<id>` / `addon_desc_<id>` キーがあればそちらを優先表示し、無ければ `name`/`description` にフォールバックする。
 
 ## `addon.py` エントリポイント
 

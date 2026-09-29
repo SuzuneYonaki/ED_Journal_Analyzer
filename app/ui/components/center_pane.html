@@ -9,7 +9,7 @@
           </button>
           
           <!-- CMDR Data Share Dropdown Menu -->
-          <div class="share-dropdown-container" id="share-dropdown-container" style="position: relative; display: none;">
+          <div class="share-dropdown-container" id="share-dropdown-container" data-requires-addon="export_share" style="position: relative; display: none;">
             <button id="btn-share-dropdown-toggle" class="btn-icon" style="background: rgba(0, 210, 255, 0.12); border: 1px solid var(--ed-cyan); color: var(--ed-cyan); border-radius: 4px; padding: 3px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: bold;" data-i18n-title="tip_share_dropdown" title="CMDR Data Share: Web共有HTML・共有用画像・星系短評の出力メニュー">
               <span data-i18n="btn_cmdr_data_share">🤝 CMDR Data Share</span>
               <span style="font-size: 0.65rem; opacity: 0.8; margin-left: 2px;">▼</span>
@@ -35,10 +35,10 @@
 
           <div id="current-system-coords" class="system-coords"></div>
           <div id="current-system-edsm-badge" style="margin-left: 4px; display: inline-flex; align-items: center; gap: 4px;"></div>
-          <button id="btn-sync-edsm" class="btn-icon" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 4px; padding: 2px 6px; cursor: pointer; display: none; align-items: center; gap: 3px; font-size: 0.72rem;" data-i18n-title="tip_sync_edsm" title="EDSMから天体情報・BGS星系状態を即時照会・補完します">
+          <button id="btn-sync-edsm" data-requires-addon="edsm_sync" class="btn-icon" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 4px; padding: 2px 6px; cursor: pointer; display: none; align-items: center; gap: 3px; font-size: 0.72rem;" data-i18n-title="tip_sync_edsm" title="EDSMから天体情報・BGS星系状態を即時照会・補完します">
             <span data-i18n="btn_sync_edsm_label">🔄 EDSM同期</span>
           </button>
-          <button id="btn-sync-spansh" class="btn-icon" style="background: rgba(250, 204, 21, 0.12); border: 1px solid rgba(250, 204, 21, 0.4); color: #facc15; border-radius: 4px; padding: 2px 6px; cursor: pointer; display: none; align-items: center; gap: 3px; font-size: 0.72rem;" data-i18n-title="tip_sync_spansh" title="Spanshから環ホットスポット(Hotspots)・惑星採掘地点(PML)を即時照会・補完します">
+          <button id="btn-sync-spansh" data-requires-addon="spansh_sync" class="btn-icon" style="background: rgba(250, 204, 21, 0.12); border: 1px solid rgba(250, 204, 21, 0.4); color: #facc15; border-radius: 4px; padding: 2px 6px; cursor: pointer; display: none; align-items: center; gap: 3px; font-size: 0.72rem;" data-i18n-title="tip_sync_spansh" title="Spanshから環ホットスポット(Hotspots)・惑星採掘地点(PML)を即時照会・補完します">
             <span data-i18n="btn_sync_spansh_label">🪐 Spansh照会</span>
           </button>
           <div id="current-system-state-badge" style="margin-left: 4px; display: inline-flex; align-items: center; gap: 4px;"></div>
