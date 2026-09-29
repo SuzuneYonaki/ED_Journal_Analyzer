@@ -55,10 +55,11 @@ v0.8.15 より、EDSM/Spansh連携・TTS音声読み上げ・探査データ共�
 5. **天体ブックマーク・エイリアス（別名）・Markdownメモ帳**:
    - 天体単位でのブックマーク登録、ユーザー定義通称（エイリアス）、リアルタイムプレビュー対応のMarkdownメモ。
    - 星系名・天体名・エイリアス名・メモ本文を対象とした高速グローバル検索。
-6. **🤝 CMDR Data Share（3系統の探査データ共有・出力 & LLM天球儀連携）**:
-   - **🌐 Web共有HTML生成**: ワンクリックで単一の美しい星系図HTML（`exports/{星系名}_share.html`）を出力。外部通信なし・オフラインでブラウザ閲覧可能なインタラクティブ天球儀（Orrery）に加え、星系の完全な天体観測JSONを内包。**このHTML（または内部JSON）をLLM（ChatGPT, Claude, Gemini等）に直接読み込ませることで、天体物理の学術的妥当性推論や、星系探査シナリオ・SF的読み物の自動生成を行わせることができます。**
-   - **🖼️ 共有用画像生成**: 観測メタデータをPNGチャンクに埋め込んだ **ComfyUI方式サマリー画像カード** を出力。本アプリにドラッグ＆ドロップするだけで星系データを瞬時にインポート・復元可能（同様にLLMへの直接入力にも対応）。
+6. **🤝 CMDR Data Share（3系統の探査データ共有・出力 & LLM推論連携）**:
+   - **🌐 Web共有HTML生成**: ワンクリックで単一の星系図HTML（`exports/{星系名}_share.html`）を出力。本アプリ内では外部通信なし・オフラインで閲覧可能なインタラクティブ天球儀（Orrery）の描画に用いられ、アプリ外では、星系の完全な天体観測JSONを内包した**LLM（ChatGPT, Claude, Gemini等）向けの推論補佐用共有データ**としても利用できます。Elite Dangerousの1星系分のFSS完了ジャーナルをもとに、「独立した(孤立した)星系として、この天体配置は物理的に成立しうるか」といった天体物理シナリオをLLMに推論させる用途を想定しています。
+   - **🖼️ 共有用画像生成**: 観測メタデータ（簡易星系データJSON）をPNGチャンクに埋め込んだ **ComfyUI方式サマリー画像カード** を出力。SNS等での共有に対応するほか、本アプリにドラッグ＆ドロップするだけで星系データを瞬時にインポート・復元可能（同様にLLMへの直接入力にも対応）。
    - **📋 星系短評投稿文**: 特殊軌道、地質、生体、環情報などの見どころをまとめたテキストをワンクリックでクリップボードへコピー。Twitch配信コメントやDiscord、X（旧Twitter）への投稿に最適。
+   - ＊単一星系分のFSS完了ジャーナルデータさえあれば、本アプリを使わずとも同様のLLM推論は可能です。本機能はそのためのデータ整形・共有を簡便にするものです。
 7. **天体物理妥当性チェック・レア度スコア & 天文学モデル査読**:
    - 軌道力学（ヒル球・ロッシュ限界・古在共鳴）やハビタブルゾーン（Kopparapu 2013）、質量分類（Weiss & Marcy 2014）に基づく天体物理レア度スコア（100点満点）の自動算出とサマリーレポート生成。
    - 各天体の質量、密度、温度、重力、軌道離心率などの物理的整合性を機械的ロジックにより多角的に妥当性チェック。
@@ -156,10 +157,11 @@ Starting with v0.8.15, major features — EDSM/Spansh sync, TTS voice alerts, ex
 5. **Celestial Bookmarks, Aliases & Markdown Notebook**:
    - Bookmark specific bodies with custom alias names and live Markdown notes.
    - Comprehensive global search across star systems, body names, aliases, and notebook contents.
-6. **🤝 CMDR Data Share (3-Way Exploration Data Export & LLM System Integration)**:
-   - **🌐 Standalone Web HTML**: One-click generation of self-contained interactive HTML maps (`exports/{System}_share.html`) embedding full celestial JSON. Can be provided directly to LLMs (ChatGPT, Claude, Gemini) for astronomical analysis and sci-fi narrative generation.
-   - **🖼️ Summary Image Card**: Exports ComfyUI-style PNG image cards with embedded exploration metadata chunks. Drag-and-drop back into the app to restore data instantly.
-   - **📋 System Review Text**: Generates concise highlight summaries for Twitch, Discord, and social media.
+6. **🤝 CMDR Data Share (3-Way Exploration Data Export & LLM Inference Integration)**:
+   - **🌐 Standalone Web HTML**: One-click generation of a self-contained interactive HTML system map (`exports/{System}_share.html`). Within the app, it drives the offline, no-network Orrery view; outside the app, the same file — with its embedded full celestial observation JSON — also works as **shareable data to assist LLM inference** (ChatGPT, Claude, Gemini, etc.). It's built for scenarios like asking an LLM whether a body arrangement, based on a single Elite Dangerous system's FSS-complete journal data, could be physically plausible as an isolated system.
+   - **🖼️ Summary Image Card**: Exports a ComfyUI-style PNG image card with embedded observation metadata (a simplified system data JSON), suitable for sharing on social media. Drag-and-drop it back into the app to restore the system data instantly (also usable as direct LLM input).
+   - **📋 System Review Text**: One-click clipboard copy of a concise highlight summary (special orbits, geology, biology, rings, etc.) for Twitch chat, Discord, or social media posts.
+   - *Note: this LLM-inference workflow only needs a single system's FSS-complete journal data — it's possible without this application entirely. This feature simply makes formatting and sharing that data easier.*
 7. **Astrophysical Reality Audit & Rarity Scoring**:
    - Automatic 100-point rarity scoring and report generation based on orbital dynamics (Hill sphere, Roche limit, Kozai mechanism), habitable zones (Kopparapu 2013), and mass classifications (Weiss & Marcy 2014).
 8. **Rare & Anomalous Body Detection**:
