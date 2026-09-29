@@ -1,8 +1,10 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.server.api import app
+from app.addons import addon_manager
 
 client = TestClient(app)
+_tts_addon = addon_manager.loaded["tts"].module
 
 def test_module_settings_api(tmp_path, monkeypatch):
     test_file = tmp_path / "module_settings.json"
@@ -30,7 +32,7 @@ def test_module_settings_api(tmp_path, monkeypatch):
 
 def test_tts_settings_high_bio_default(tmp_path, monkeypatch):
     test_file = tmp_path / "tts_settings.json"
-    monkeypatch.setattr("app.server.api.TTS_SETTINGS_FILE", test_file)
+    monkeypatch.setattr(_tts_addon, "TTS_SETTINGS_FILE", test_file)
 
     res = client.get("/api/tts_settings")
     assert res.status_code == 200

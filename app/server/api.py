@@ -3,17 +3,16 @@ import os
 import threading
 import time
 import asyncio
-import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Union, Any
 from pydantic import BaseModel
-from fastapi import FastAPI, Query, BackgroundTasks, WebSocket, WebSocketDisconnect, Response, UploadFile, File
+from fastapi import FastAPI, Query, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR, DATA_DIR, EXPORTS_DIR, APP_VERSION
+from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR, DATA_DIR, APP_VERSION
 from app.db.database import (
     get_db_connection, init_db, get_mining_sites,
     add_manual_mining_site, update_mining_site, delete_mining_site, save_or_merge_mining_site,
@@ -22,23 +21,18 @@ from app.db.database import (
 from app.parser.journal_parser import JournalParser
 from app.parser.watcher import JournalWatcher
 from app.analyzer.orbit_analyzer import build_system_hierarchy
-from app.parser.exobiology import predict_exobiology_candidates, predict_system_exobiology_candidates
+## NOTE: predict_exobiology_candidates / predict_system_exobiology_candidates
+## are looked up via addon_manager.get_provider(...) below (see
+## addons/exobiology_prediction/) instead of being imported directly, so
+## disabling that addon also disables the live recompute in this file.
 from app.services.edsm_service import edsm_service
-from app.services.spansh_service import spansh_service
 from app.services.landmark_service import load_landmarks, calculate_landmark_distances
 from app.services.footprint_service import footprint_service
 from app.services.version_service import version_service
 from app.live.rhino.note_integrator import update_body_note_in_db
-from app.live.rhino.tracker import sync_body_mining_to_note, extract_all_mining_materials_for_body
-from app.services.export_service import (
-    generate_standalone_html,
-    generate_share_snippet,
-    generate_summary_png_card,
-    extract_package_from_png,
-    create_edsys_package,
-    import_edsys_package,
-    verify_package_signature
-)
+from app.live.rhino.tracker import sync_body_mining_to_note, extract_all_mining_materials_for_body, extract_rhino_mining_sites
+# app.services.export_service is imported inline (build_interactive_orrery in
+# get_system_orrery); its export/import endpoints now live in addons/export_share/.
 from app.analyzer.stellar_physics import (
     StellarPhysicsEngine,
     SystemNarrator,
@@ -51,7 +45,7 @@ from app.services.physics_translator import (
     translate_narrative_report_to_ja
 )
 
-from app.services.tts_service import tts_service
+from app.addons import addon_manager
 
 app = FastAPI(title="Elite Dangerous Journal Analyzer")
 
@@ -155,31 +149,46 @@ class LiveConnectionManager:
 manager = LiveConnectionManager()
 watcher_instance: Optional[JournalWatcher] = None
 
+# Addon discovery/import/route-mounting happens at import time, same as
+# every other route in this file (all @app.get/@app.post decorators below
+# run at import time too) -- so addon endpoints exist immediately, without
+# depending on the ASGI startup lifecycle (e.g. bare TestClient(app) usage,
+# which does not run @app.on_event("startup") unless used as `with ... as`).
+# Disabled addons cost nothing beyond a manifest read. DB migrations still
+# wait for on_startup below, since they require init_db() to have run first.
+addon_manager.discover()
+addon_manager.load_enabled(DATA_DIR / "addons")
+addon_manager.mount(app)
+
+def run_addon_migrations():
+    conn = get_db_connection()
+    try:
+        addon_manager.run_migrations(conn)
+    finally:
+        conn.close()
+
 @app.on_event("startup")
 async def on_startup():
     manager.loop = asyncio.get_running_loop()
     init_db()
+    run_addon_migrations()
     start_watcher()
-    await tts_service.start()
-    if TTS_SETTINGS_FILE.exists():
-        try:
-            with open(TTS_SETTINGS_FILE, "r", encoding="utf-8") as f:
-                saved_tts = json.load(f)
-                sync_tts_settings_to_service(saved_tts)
-        except Exception:
-            pass
+    # TTS start + settings sync is owned by the tts addon (addons/tts/addon.py)
+    # now; it registers its own startup hook via ctx.on_startup(...).
+    await addon_manager.run_startup_hooks()
     # Trigger background parse automatically on startup in separate thread
     threading.Thread(target=run_background_parse, daemon=True).start()
 
 @app.on_event("shutdown")
 async def on_shutdown():
-    await tts_service.stop()
+    await addon_manager.run_shutdown_hooks()
 
 def on_journal_file_updated(file_path: Optional[str] = None):
     manager.notify_update_from_thread(file_path)
 
 def on_journal_event(event_name: str, event_data: dict):
     manager.notify_event_from_thread(event_name, event_data)
+    addon_manager.dispatch("journal_event", event_name=event_name, event_data=event_data)
 
 def start_watcher():
     global watcher_instance
@@ -1526,60 +1535,9 @@ def get_systems(
         "systems": rows
     }
 
-def extract_rhino_mining_sites(mining_acts: list, include_raw: bool = False) -> list:
-    """
-    Extract distinct Rhino mining sites with coordinates (lat/lon) and commodities.
-    """
-    if not mining_acts:
-        return []
-
-    if include_raw:
-        target_acts = [a for a in mining_acts if a.get("category") in ["Refined", "Raw"] or a.get("srv_type")]
-    else:
-        target_acts = [a for a in mining_acts if a.get("category") == "Refined"]
-
-    if not target_acts:
-        return []
-
-    sites_map = {}
-    for act in target_acts:
-        lat = act.get("latitude")
-        lon = act.get("longitude")
-        if lat is not None and lon is not None:
-            coord_key = (round(float(lat), 4), round(float(lon), 4))
-        else:
-            coord_key = (None, None)
-
-        m_name = act.get("material_name_localised") or act.get("material_name")
-        if not m_name:
-            continue
-
-        ts = act.get("timestamp") or ""
-        if coord_key not in sites_map:
-            sites_map[coord_key] = {
-                "latitude": coord_key[0],
-                "longitude": coord_key[1],
-                "commodities": set(),
-                "last_mined": ts,
-                "first_mined": ts,
-                "body_name": act.get("body_name"),
-                "body_id": act.get("body_id"),
-                "srv_type": act.get("srv_type") or "mev_rhino"
-            }
-        sites_map[coord_key]["commodities"].add(m_name)
-        if ts > sites_map[coord_key]["last_mined"]:
-            sites_map[coord_key]["last_mined"] = ts
-        if ts < sites_map[coord_key]["first_mined"] or not sites_map[coord_key]["first_mined"]:
-            sites_map[coord_key]["first_mined"] = ts
-
-    result = []
-    for site in sites_map.values():
-        site["commodities"] = sorted(list(site["commodities"]))
-        result.append(site)
-
-    result.sort(key=lambda s: (1 if s["latitude"] is not None else 0, s["last_mined"] or ""), reverse=True)
-    return result
-
+## NOTE: extract_rhino_mining_sites moved to app/live/rhino/tracker.py
+## (imported above) so both this file and addons/export_share/ can use it
+## without a load-order dependency on this module's own definitions.
 
 class MiningSiteCreateRequest(BaseModel):
     system_address: int
@@ -1708,6 +1666,7 @@ def get_system_detail(system_address: int):
     """, (system_address,))
     main_star = system_data.get("main_star_type") or "F"
     bodies = []
+    exobiology_predict_body = addon_manager.get_provider("exobiology_predict_body")
     for r in c.fetchall():
         b = dict(r)
         b["main_star_type"] = main_star
@@ -1729,7 +1688,7 @@ def get_system_detail(system_address: int):
 
         # Always calculate latest exobiology predictions dynamically using full planet attributes & main star class
         try:
-            b["exobiology"] = predict_exobiology_candidates(b)
+            b["exobiology"] = exobiology_predict_body(b) if exobiology_predict_body else []
         except Exception:
             if b.get("exobiology_predictions"):
                 try:
@@ -1923,7 +1882,9 @@ def get_system_detail(system_address: int):
         b["scanned_species"] = [s.get("species_localised") or s.get("species") for s in b_scanned_list if s.get("species_localised") or s.get("species")]
 
     # Run system-wide exobiology prediction with cross-body co-occurrence & consistency weighting
-    predict_system_exobiology_candidates(bodies, system_data)
+    exobiology_predict_system = addon_manager.get_provider("exobiology_predict_system")
+    if exobiology_predict_system:
+        exobiology_predict_system(bodies, system_data)
 
     # Attach Exobiology totals and potential predictions to each body
     for b in bodies:
@@ -2065,41 +2026,10 @@ def get_system_orrery(system_address: int, lang: str = "ja"):
     orrery_html = build_interactive_orrery(sys_data, bodies, lang=lang)
     return {"html": orrery_html}
 
-@app.post("/api/systems/{system_address}/edsm_sync")
-def sync_system_edsm(system_address: int):
-    """
-    Directly triggers a high-priority EDSM query and celestial body completion for this system.
-    """
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT star_system FROM systems WHERE system_address = ?", (system_address,))
-    row = c.fetchone()
-    conn.close()
-    if not row or not row["star_system"]:
-        return JSONResponse({"error": "System not found"}, status_code=404)
-
-    sys_name = row["star_system"]
-    result = edsm_service.fetch_and_update_system_sync(system_address, sys_name)
-    return JSONResponse(result)
-
-@app.post("/api/systems/{system_address}/spansh_sync")
-def sync_system_spansh(system_address: int):
-    """
-    Directly triggers a Spansh query for ring DSS hotspots and planetary mining locations,
-    updating celestial bodies and markdown notes.
-    """
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT star_system FROM systems WHERE system_address = ?", (system_address,))
-    row = c.fetchone()
-    if not row or not row["star_system"]:
-        conn.close()
-        return JSONResponse({"error": "System not found"}, status_code=404)
-
-    sys_name = row["star_system"]
-    result = spansh_service.sync_system_spansh(conn, system_address, sys_name)
-    conn.close()
-    return JSONResponse(result)
+## NOTE: POST /api/systems/{system_address}/edsm_sync and .../spansh_sync
+## were moved out of this monolith into addons/edsm_sync/ and
+## addons/spansh_sync/ (both enabled_by_default=true, so behavior is
+## unchanged) -- see addons/README.md.
 
 @app.get("/api/systems/{system_address}/physics")
 def get_system_physics(system_address: int):
@@ -2202,7 +2132,11 @@ def run_background_parse():
             scan_state["message"] = f"Processed {curr}/{tot} journal files..."
 
     try:
-        parser = JournalParser()
+        # Addon hooks fire for the historical batch re-parse too (but not the
+        # live-update websocket broadcast, which is UI-only and would flood
+        # connected clients with thousands of startup-scan events).
+        addon_event_callback = lambda name, data: addon_manager.dispatch("journal_event", event_name=name, event_data=data)
+        parser = JournalParser(event_callback=addon_event_callback)
         target_dir = get_saved_journal_dir()
         tot = parser.parse_all_journals(str(target_dir), progress_callback=cb)
         scan_state["current"] = tot
@@ -2236,6 +2170,21 @@ def save_app_settings_endpoint(settings: dict):
         return {"status": "saved", "settings": updated}
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+@app.get("/api/addons")
+def list_addons():
+    """Lists every discovered addon (addons/<id>/addon.json) and its load state."""
+    return {"status": "success", "data": addon_manager.list_status()}
+
+class AddonToggleRequest(BaseModel):
+    enabled: bool
+
+@app.post("/api/addons/{addon_id}/toggle")
+def toggle_addon(addon_id: str, body: AddonToggleRequest):
+    if addon_id not in addon_manager.manifests:
+        return JSONResponse({"error": "Addon not found"}, status_code=404)
+    addon_manager.set_enabled(addon_id, body.enabled)
+    return {"status": "success", "restart_required": True}
 
 @app.post("/api/scan_now")
 def trigger_scan(background_tasks: BackgroundTasks):
@@ -2271,40 +2220,10 @@ def get_codex_ggg_entries():
     conn.close()
     return {"total": len(rows), "entries": rows}
 
-# TTS Settings Persistence Endpoints
-TTS_SETTINGS_FILE = DATA_DIR / "tts_settings.json"
-
-@app.get("/api/tts_settings")
-def get_tts_settings():
-    default_settings = {
-        "enabled": False,
-        "highBioEnabled": False,
-        "highBioMode": "both",
-        "highBioThreshold": 40000000,
-        "highBioThresholdType": "bonus",
-        "highBioText": "{body}、高額生物反応です。見込額{value}クレジット。",
-        "gggEnabled": True,
-        "gggConfirmedEnabled": True,
-        "gggCandidateEnabled": True,
-        "gggMode": "both",
-        "gggConfirmedText": "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。",
-        "gggCandidateText": "{body}はグリーンガスジャイアント候補です。",
-        "engine": "web_speech",
-        "webVoiceURI": "",
-        "voicevoxSpeakerId": "3",
-        "voicevoxUrl": "http://127.0.0.1:50021",
-        "customText": "First discover.",
-        "volume": 1.0,
-        "rate": 1.0
-    }
-    if TTS_SETTINGS_FILE.exists():
-        try:
-            with open(TTS_SETTINGS_FILE, "r", encoding="utf-8") as f:
-                saved = json.load(f)
-                default_settings.update(saved)
-        except Exception:
-            pass
-    return default_settings
+## NOTE: TTS settings persistence, /api/tts_settings, /api/tts/* endpoints,
+## and the TTS worker start()/stop() lifecycle were moved out of this
+## monolith into addons/tts/ (enabled_by_default=true, so behavior is
+## unchanged) -- see addons/README.md.
 
 MODULE_SETTINGS_FILE = DATA_DIR / "module_settings.json"
 
@@ -2334,167 +2253,13 @@ def save_module_settings_endpoint(settings: dict):
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
-def sync_tts_settings_to_service(settings: dict):
-    """Synchronizes dict settings (camelCase or snake_case) to backend tts_service."""
-    update_data = {}
-    if "enabled" in settings:
-        update_data["enabled"] = bool(settings["enabled"])
-
-    url = settings.get("voicevoxUrl") or settings.get("voicevox_url")
-    if url is not None:
-        update_data["voicevox_url"] = str(url).rstrip("/")
-
-    sp_id = settings.get("voicevoxSpeakerId") or settings.get("speaker_id")
-    if sp_id is not None:
-        try:
-            update_data["speaker_id"] = int(sp_id)
-        except (ValueError, TypeError):
-            pass
-
-    speed = settings.get("rate") or settings.get("speed_scale")
-    if speed is not None:
-        try:
-            update_data["speed_scale"] = float(speed)
-        except (ValueError, TypeError):
-            pass
-
-    vol = settings.get("volume") or settings.get("volume_scale")
-    if vol is not None:
-        try:
-            update_data["volume_scale"] = float(vol)
-        except (ValueError, TypeError):
-            pass
-
-    if update_data:
-        tts_service.update_config(update_data)
-
-@app.post("/api/tts_settings")
-def save_tts_settings_endpoint(settings: dict):
-    try:
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        # Load existing settings if any, then merge
-        saved_settings = {}
-        if TTS_SETTINGS_FILE.exists():
-            try:
-                with open(TTS_SETTINGS_FILE, "r", encoding="utf-8") as f:
-                    saved_settings = json.load(f)
-            except Exception:
-                pass
-        saved_settings.update(settings)
-        with open(TTS_SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(saved_settings, f, ensure_ascii=False, indent=2)
-
-        # Synchronize with tts_service immediately
-        sync_tts_settings_to_service(saved_settings)
-        return {"status": "saved", "settings": saved_settings}
-    except Exception as e:
-        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
-
-# --- Backend TTS (VOICEVOX) Endpoints ---
-
-class TTSSpeakRequest(BaseModel):
-    text: str
-    priority: Optional[bool] = False
-
-class TTSConfigRequest(BaseModel):
-    enabled: Optional[bool] = None
-    voicevox_url: Optional[str] = None
-    speaker_id: Optional[int] = None
-    speed_scale: Optional[float] = None
-    volume_scale: Optional[float] = None
-
-@app.post("/api/tts/speak")
-def tts_speak_endpoint(req: TTSSpeakRequest):
-    enqueued = tts_service.enqueue_speak(req.text, priority=bool(req.priority))
-    return {
-        "status": "success",
-        "data": {
-            "enqueued": enqueued,
-            "text": req.text
-        }
-    }
-
-@app.post("/api/tts/test")
-def tts_test_endpoint():
-    enqueued = tts_service.test_speak()
-    return {
-        "status": "success",
-        "data": {
-            "enqueued": enqueued,
-            "text": "音声キャプチャの接続テストです"
-        }
-    }
-
-@app.get("/api/tts/config")
-def tts_get_config_endpoint():
-    return {
-        "status": "success",
-        "data": tts_service.get_config()
-    }
-
-@app.post("/api/tts/config")
-def tts_update_config_endpoint(req: TTSConfigRequest):
-    dump_fn = getattr(req, "model_dump", getattr(req, "dict", None))
-    raw_data = dump_fn() if dump_fn else req.__dict__
-    update_data = {k: v for k, v in raw_data.items() if v is not None}
-    tts_service.update_config(update_data)
-    try:
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        # Preserve full existing settings in TTS_SETTINGS_FILE without destroying other keys
-        saved_settings = {}
-        if TTS_SETTINGS_FILE.exists():
-            try:
-                with open(TTS_SETTINGS_FILE, "r", encoding="utf-8") as f:
-                    saved_settings = json.load(f)
-            except Exception:
-                pass
-        if "voicevox_url" in update_data:
-            saved_settings["voicevoxUrl"] = update_data["voicevox_url"]
-            saved_settings["voicevox_url"] = update_data["voicevox_url"]
-        if "speaker_id" in update_data:
-            saved_settings["voicevoxSpeakerId"] = str(update_data["speaker_id"])
-            saved_settings["speaker_id"] = update_data["speaker_id"]
-        if "speed_scale" in update_data:
-            saved_settings["rate"] = update_data["speed_scale"]
-            saved_settings["speed_scale"] = update_data["speed_scale"]
-        if "volume_scale" in update_data:
-            saved_settings["volume"] = update_data["volume_scale"]
-            saved_settings["volume_scale"] = update_data["volume_scale"]
-        if "enabled" in update_data:
-            saved_settings["enabled"] = update_data["enabled"]
-
-        with open(TTS_SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(saved_settings, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
-    return {
-        "status": "success",
-        "data": tts_service.get_config()
-    }
-
 # --- Safe System Export & Sharing Endpoints ---
 
-class ExportPackageRequest(BaseModel):
-    system_addresses: List[int]
-    cmdr_name: Optional[str] = "Explorer"
-    notes: Optional[str] = ""
-    consent_token: bool = False
-
-class SavePackageLocalRequest(BaseModel):
-    system_addresses: List[int]
-    cmdr_name: Optional[str] = "Explorer"
-    notes: Optional[str] = ""
-    consent_token: bool = False
-    reveal: Optional[bool] = True
-
-class RevealPathRequest(BaseModel):
-    file_path: str
-
-class ImportExecuteRequest(BaseModel):
-    package: Optional[dict] = None
-    package_data: Optional[dict] = None
-    overwrite: Optional[bool] = False
-    consent_token: bool = False
+## NOTE: Export (standalone HTML / snippet / summary PNG / .edsys package)
+## and package-import endpoints were moved out of this monolith into
+## addons/export_share/ (enabled_by_default=true, so behavior is unchanged)
+## -- see addons/README.md. GET /api/system/{id}/orrery stays here (core UI
+## view, not an export/share action).
 
 @app.post("/api/external/import_edsm")
 def import_edsm_external_system(system_name: str):
@@ -2513,355 +2278,13 @@ def import_edsm_external_system(system_name: str):
 
     return JSONResponse(result)
 
-@app.get("/api/export/html/{system_address}")
-def export_standalone_html_endpoint(
-    system_address: int,
-    cmdr_name: Optional[str] = None,
-    is_anonymous: bool = False,
-    lang: str = "ja"
-):
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT * FROM systems WHERE system_address = ?", (system_address,))
-    sys_row = c.fetchone()
-    if not sys_row:
-        conn.close()
-        return JSONResponse({"error": "System not found"}, status_code=404)
+## NOTE: /api/export/html, /api/export/snippet, /api/export/image,
+## /api/export/open_location, /api/export/package(/save-local),
+## /api/system/reveal-file, /api/import/png, /api/import/package/preview
+## and /api/import/package/execute were moved out of this monolith into
+## addons/export_share/ (enabled_by_default=true, so behavior is
+## unchanged) -- see addons/README.md.
 
-    # Restriction: Unvisited external systems cannot be exported
-    if (sys_row["visit_count"] or 0) == 0:
-        conn.close()
-        err_msg = "Cannot export Web Share HTML for unvisited external reference systems." if lang == "en" else "外部参照（未訪問）星系のため、Web共有HTMLのエクスポートは行えません。"
-        return JSONResponse({"error": err_msg}, status_code=403)
-
-    system_data = dict(sys_row)
-    c.execute("SELECT * FROM bodies WHERE system_address = ? ORDER BY distance_from_arrival_ls ASC, body_id ASC", (system_address,))
-    bodies = [dict(r) for r in c.fetchall()]
-
-    c.execute("SELECT * FROM surface_mining_activities WHERE system_address = ? ORDER BY timestamp DESC", (system_address,))
-    raw_mining = [dict(r) for r in c.fetchall()]
-    db_sites = get_mining_sites(conn, system_address)
-    if db_sites:
-        mining_sites = db_sites
-    else:
-        mining_sites = extract_rhino_mining_sites(raw_mining, include_raw=True)
-
-    c.execute("SELECT * FROM body_bookmarks WHERE system_address = ?", (system_address,))
-    bookmarks = [dict(r) for r in c.fetchall()]
-    conn.close()
-
-    html_content = generate_standalone_html(
-        system_data=system_data,
-        bodies=bodies,
-        mining_sites=mining_sites,
-        bookmarks=bookmarks,
-        cmdr_name=cmdr_name,
-        is_anonymous=is_anonymous,
-        lang=lang
-    )
-    safe_sys_name = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in system_data.get("star_system", "system"))
-    filename = f"{safe_sys_name}_share.html"
-
-    # Save a permanent copy to the local exports directory
-    local_file_path = EXPORTS_DIR / filename
-    try:
-        local_file_path.write_text(html_content, encoding="utf-8")
-    except Exception as e:
-        print(f"Failed to save local export file {local_file_path}: {e}")
-
-    return HTMLResponse(
-        content=html_content,
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "X-Export-Path": str(local_file_path.resolve()),
-            "Access-Control-Expose-Headers": "X-Export-Path, Content-Disposition"
-        }
-    )
-
-@app.get("/api/export/snippet/{system_address}")
-def export_snippet_endpoint(system_address: int, lang: str = "ja"):
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT * FROM systems WHERE system_address = ?", (system_address,))
-    sys_row = c.fetchone()
-    if not sys_row:
-        conn.close()
-        return JSONResponse({"error": "System not found"}, status_code=404)
-
-    system_data = dict(sys_row)
-    c.execute("SELECT * FROM bodies WHERE system_address = ? ORDER BY distance_from_arrival_ls ASC, body_id ASC", (system_address,))
-    bodies = [dict(r) for r in c.fetchall()]
-    conn.close()
-
-    snippet = generate_share_snippet(system_data, bodies, lang=lang)
-    return {"status": "ok", "system_address": system_address, "snippet": snippet}
-
-@app.get("/api/export/image/{system_address}")
-def export_summary_image_endpoint(system_address: int, lang: str = "ja"):
-    """
-    Generates a ComfyUI-style SNS summary PNG card (1200x630) with embedded .edsys package metadata.
-    Deliberately omits Orrery and Credit payout values to entice viewers to drop into the app.
-    """
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT * FROM systems WHERE system_address = ?", (system_address,))
-    sys_row = c.fetchone()
-    if not sys_row:
-        conn.close()
-        return JSONResponse({"error": "System not found"}, status_code=404)
-
-    # Restriction: Unvisited external systems cannot be exported
-    if (sys_row["visit_count"] or 0) == 0:
-        conn.close()
-        err_msg = "Cannot export summary image for unvisited external reference systems." if lang == "en" else "外部参照（未訪問）星系のため、サマリー画像のエクスポートは行えません。"
-        return JSONResponse({"error": err_msg}, status_code=403)
-
-    system_data = dict(sys_row)
-    c.execute("SELECT * FROM bodies WHERE system_address = ? ORDER BY distance_from_arrival_ls ASC, body_id ASC", (system_address,))
-    bodies = [dict(r) for r in c.fetchall()]
-
-    # Retrieve CMDR name if available
-    cmdr_name = "Explorer"
-    try:
-        c.execute("SELECT commander_name FROM commanders ORDER BY last_seen DESC LIMIT 1")
-        cmdr_row = c.fetchone()
-        if cmdr_row and cmdr_row["commander_name"]:
-            cmdr_name = cmdr_row["commander_name"]
-    except Exception:
-        pass
-
-    # Create embedded package dict
-    package = create_edsys_package(
-        conn,
-        system_addresses=[system_address],
-        cmdr_name=cmdr_name,
-        notes="Exported via Summary PNG Card"
-    )
-    conn.close()
-
-    png_bytes = generate_summary_png_card(
-        system_data=system_data,
-        bodies=bodies,
-        package_dict=package,
-        lang=lang
-    )
-
-    safe_sys_name = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in system_data.get("star_system", "system"))
-    filename = f"{safe_sys_name}_summary.png"
-    local_file_path = EXPORTS_DIR / filename
-    try:
-        local_file_path.write_bytes(png_bytes)
-    except Exception as e:
-        print(f"Failed to save local export image {local_file_path}: {e}")
-
-    return Response(
-        content=png_bytes,
-        media_type="image/png",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "X-Export-Path": str(local_file_path.resolve()),
-            "Access-Control-Expose-Headers": "X-Export-Path, Content-Disposition"
-        }
-    )
-
-class OpenLocationRequest(BaseModel):
-    path: Optional[str] = None
-
-@app.post("/api/export/open_location")
-def open_export_location(payload: OpenLocationRequest):
-    target = Path(payload.path) if payload.path else EXPORTS_DIR
-    if not target.is_absolute():
-        target = (BASE_DIR / target).resolve()
-    
-    if not target.exists():
-        target = EXPORTS_DIR
-
-    try:
-        import subprocess
-        if target.is_file():
-            subprocess.Popen(f'explorer.exe /select,"{target}"')
-        else:
-            subprocess.Popen(f'explorer.exe "{target}"')
-        return {"success": True, "opened": str(target)}
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-@app.post("/api/export/package")
-def export_package_endpoint(payload: ExportPackageRequest):
-    if not payload.consent_token:
-        return JSONResponse({"error": "エクスポートには注意事項への同意が必要です。"}, status_code=400)
-    if not payload.system_addresses:
-        return JSONResponse({"error": "対象星系が選択されていません。"}, status_code=400)
-
-    conn = get_db_connection()
-    try:
-        # Restriction: Check for unvisited external systems
-        placeholders = ",".join("?" * len(payload.system_addresses))
-        c = conn.cursor()
-        c.execute(f"SELECT star_system FROM systems WHERE system_address IN ({placeholders}) AND (visit_count IS NULL OR visit_count = 0)", payload.system_addresses)
-        ext_rows = c.fetchall()
-        if ext_rows:
-            ext_names = [r["star_system"] for r in ext_rows]
-            return JSONResponse({"error": f"外部参照（未訪問）星系 ({', '.join(ext_names)}) はパッケージ書き出しできません。"}, status_code=403)
-
-        package = create_edsys_package(
-            conn,
-            system_addresses=payload.system_addresses,
-            cmdr_name=payload.cmdr_name or "Explorer",
-            notes=payload.notes or ""
-        )
-        return package
-    finally:
-        conn.close()
-
-@app.post("/api/export/package/save-local")
-def export_package_save_local(payload: SavePackageLocalRequest):
-    if not payload.consent_token:
-        return JSONResponse({"error": "エクスポートには注意事項への同意が必要です。"}, status_code=400)
-    if not payload.system_addresses:
-        return JSONResponse({"error": "対象星系が選択されていません。"}, status_code=400)
-
-    conn = get_db_connection()
-    try:
-        # Restriction: Check for unvisited external systems
-        placeholders = ",".join("?" * len(payload.system_addresses))
-        c = conn.cursor()
-        c.execute(f"SELECT star_system FROM systems WHERE system_address IN ({placeholders}) AND (visit_count IS NULL OR visit_count = 0)", payload.system_addresses)
-        ext_rows = c.fetchall()
-        if ext_rows:
-            ext_names = [r["star_system"] for r in ext_rows]
-            return JSONResponse({"error": f"外部参照（未訪問）星系 ({', '.join(ext_names)}) はパッケージ書き出しできません。"}, status_code=403)
-
-        package = create_edsys_package(
-            conn,
-            system_addresses=payload.system_addresses,
-            cmdr_name=payload.cmdr_name or "Explorer",
-            notes=payload.notes or ""
-        )
-        systems = package.get("systems", [])
-        if systems and systems[0].get("star_system"):
-            safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in systems[0]["star_system"])
-        else:
-            safe_name = "System_Export"
-
-        downloads_dir = Path.home() / "Downloads"
-        if not downloads_dir.exists():
-            downloads_dir = Path("./exports")
-            downloads_dir.mkdir(parents=True, exist_ok=True)
-
-        filename = f"{safe_name}.edsys"
-        out_path = downloads_dir / filename
-        counter = 1
-        while out_path.exists():
-            out_path = downloads_dir / f"{safe_name}_{counter}.edsys"
-            counter += 1
-
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(package, f, ensure_ascii=False, indent=2)
-
-        if payload.reveal:
-            try:
-                subprocess.Popen(f'explorer /select,"{str(out_path.resolve())}"', shell=True)
-            except Exception as e:
-                print(f"Could not open explorer: {e}")
-
-        return {
-            "status": "success",
-            "saved_path": str(out_path.resolve()),
-            "filename": out_path.name,
-            "directory": str(downloads_dir.resolve()),
-            "package": package
-        }
-    finally:
-        conn.close()
-
-@app.post("/api/system/reveal-file")
-def reveal_file_in_explorer(payload: RevealPathRequest):
-    p = Path(payload.file_path).resolve()
-    if p.exists():
-        try:
-            subprocess.Popen(f'explorer /select,"{str(p)}"', shell=True)
-            return {"status": "ok"}
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=500)
-    return JSONResponse({"error": "File not found"}, status_code=404)
-
-@app.post("/api/import/png")
-async def import_png_preview_endpoint(file: UploadFile = File(...)):
-    """
-    Extracts embedded .edsys package from an uploaded ComfyUI-style PNG summary card,
-    then returns the package preview structure.
-    """
-    try:
-        contents = await file.read()
-        pkg = extract_package_from_png(contents)
-        if not pkg:
-            return JSONResponse(
-                {"error": "PNG画像内に有効なED Journal Analyzerメタデータ（ed_journal_data）が見つかりませんでした。"},
-                status_code=400
-            )
-        # Delegate to preview logic
-        preview = import_package_preview(pkg)
-        # Include raw package in response so the frontend can execute import
-        preview["package"] = pkg
-        return preview
-    except Exception as e:
-        return JSONResponse({"error": f"PNGの解析に失敗しました: {str(e)}"}, status_code=400)
-
-@app.post("/api/import/package/preview")
-def import_package_preview(package: dict):
-    # Unwrap if sent as { package_data: ... } or { package: ... }
-    pkg = package.get("package_data") or package.get("package") or package
-    is_valid, reason = verify_package_signature(pkg)
-    metadata = pkg.get("metadata", {})
-    systems = pkg.get("systems", [])
-    preview_systems = []
-    total_bodies = 0
-    for s in systems:
-        b_count = len(s.get("bodies", []))
-        total_bodies += b_count
-        preview_systems.append({
-            "system_address": s.get("system_address"),
-            "star_system": s.get("star_system"),
-            "main_star_type": s.get("main_star_type"),
-            "body_count": b_count,
-            "mining_count": len(s.get("surface_mining", [])),
-            "bookmark_count": len(s.get("bookmarks", []))
-        })
-    cmdr = metadata.get("cmdr_name", "Unknown")
-    exp_at = metadata.get("exported_at", "")
-    notes = metadata.get("notes", "")
-    return {
-        "is_valid": is_valid,
-        "signature_valid": is_valid,
-        "validation_message": reason,
-        "cmdr_name": cmdr,
-        "created_by": cmdr,
-        "exported_at": exp_at,
-        "export_date": exp_at,
-        "system_count": len(systems),
-        "total_bodies": total_bodies,
-        "notes": notes,
-        "systems": preview_systems
-    }
-
-@app.post("/api/import/package/execute")
-def import_package_execute(payload: ImportExecuteRequest):
-    if not payload.consent_token:
-        return JSONResponse({"error": "インポートには注意事項への同意が必要です。"}, status_code=400)
-
-    pkg = payload.package or payload.package_data
-    if not pkg:
-        return JSONResponse({"error": "パッケージデータが存在しません。"}, status_code=400)
-
-    conn = get_db_connection()
-    try:
-        res = import_edsys_package(conn, pkg, overwrite=payload.overwrite, allow_invalid_signature=True)
-        return res
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
-    finally:
-        conn.close()
 
 @app.post("/api/systems/{system_address}/toggle-shared")
 def toggle_system_shared(system_address: int):

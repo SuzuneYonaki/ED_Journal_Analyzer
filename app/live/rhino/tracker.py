@@ -56,6 +56,62 @@ def extract_all_mining_materials_for_body(
         })
     return result
 
+def extract_rhino_mining_sites(mining_acts: list, include_raw: bool = False) -> list:
+    """
+    Extract distinct Rhino mining sites with coordinates (lat/lon) and commodities
+    from a flat list of surface_mining_activities rows (e.g. for a whole system).
+    """
+    if not mining_acts:
+        return []
+
+    if include_raw:
+        target_acts = [a for a in mining_acts if a.get("category") in ["Refined", "Raw"] or a.get("srv_type")]
+    else:
+        target_acts = [a for a in mining_acts if a.get("category") == "Refined"]
+
+    if not target_acts:
+        return []
+
+    sites_map = {}
+    for act in target_acts:
+        lat = act.get("latitude")
+        lon = act.get("longitude")
+        if lat is not None and lon is not None:
+            coord_key = (round(float(lat), 4), round(float(lon), 4))
+        else:
+            coord_key = (None, None)
+
+        m_name = act.get("material_name_localised") or act.get("material_name")
+        if not m_name:
+            continue
+
+        ts = act.get("timestamp") or ""
+        if coord_key not in sites_map:
+            sites_map[coord_key] = {
+                "latitude": coord_key[0],
+                "longitude": coord_key[1],
+                "commodities": set(),
+                "last_mined": ts,
+                "first_mined": ts,
+                "body_name": act.get("body_name"),
+                "body_id": act.get("body_id"),
+                "srv_type": act.get("srv_type") or "mev_rhino"
+            }
+        sites_map[coord_key]["commodities"].add(m_name)
+        if ts > sites_map[coord_key]["last_mined"]:
+            sites_map[coord_key]["last_mined"] = ts
+        if ts < sites_map[coord_key]["first_mined"] or not sites_map[coord_key]["first_mined"]:
+            sites_map[coord_key]["first_mined"] = ts
+
+    result = []
+    for site in sites_map.values():
+        site["commodities"] = sorted(list(site["commodities"]))
+        result.append(site)
+
+    result.sort(key=lambda s: (1 if s["latitude"] is not None else 0, s["last_mined"] or ""), reverse=True)
+    return result
+
+
 def sync_body_mining_to_note(
     conn: sqlite3.Connection,
     system_address: int,

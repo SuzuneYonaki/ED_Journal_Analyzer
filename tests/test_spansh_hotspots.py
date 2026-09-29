@@ -11,6 +11,7 @@ from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 from app.server.api import app
+from app.addons import addon_manager
 from app.services.spansh_service import SpanshService
 from app.live.rhino.note_integrator import RING_HOTSPOT_HEADER
 
@@ -200,11 +201,17 @@ def test_sync_system_spansh_handles_network_failure(mock_db):
 
 
 def test_api_spansh_sync_endpoint():
-    """Test POST /api/systems/{system_address}/spansh_sync via FastAPI TestClient."""
+    """Test POST /api/systems/{system_address}/spansh_sync via FastAPI TestClient.
+
+    This route is served by the spansh_sync addon (addons/spansh_sync/addon.py),
+    not app/server/api.py directly -- patch the loaded addon module's own
+    references, not app.server.api's.
+    """
     client = TestClient(app)
-    
-    with patch("app.server.api.get_db_connection") as mock_conn_fn, \
-         patch("app.server.api.spansh_service.sync_system_spansh") as mock_sync_fn:
+    addon_module = addon_manager.loaded["spansh_sync"].module
+
+    with patch.object(addon_module, "get_db_connection") as mock_conn_fn, \
+         patch.object(addon_module.spansh_service, "sync_system_spansh") as mock_sync_fn:
         
         mock_conn = MagicMock()
         mock_cursor = MagicMock()

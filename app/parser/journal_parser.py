@@ -7,15 +7,50 @@ from datetime import datetime
 
 from app.db.database import get_db_connection, save_or_merge_mining_site, invalidate_celestial_stats_cache
 from app.parser.value_calculator import calculate_body_value
-from app.parser.exobiology import predict_exobiology_candidates, get_species_value, evaluate_high_value_bio
+from app.parser.exobiology import get_species_value, evaluate_high_value_bio
 from app.analyzer.anomaly_finder import detect_anomalies
-from app.parser.rarity_scorer import calculate_celestial_rarity
 from app.services.tts_service import tts_service
 from app.services.edsm_service import edsm_service
 from app.live.rhino.note_integrator import update_body_note_in_db
 from app.live.telemetry import telemetry_tracker
+from app.addons import addon_manager
 
 CODEX_GGG_PATTERN = re.compile(r"^\$Codex_Ent_Green_(?P<variant>.+?)_Name;?$", re.IGNORECASE)
+
+# Empty-equivalent result shape matching rarity_scorer.calculate_celestial_rarity's
+# own fallback for invalid input -- reused here as the "addon disabled" default so
+# every downstream .get("tags") / .get("ggg_evaluation") call keeps working unchanged.
+_EMPTY_RARITY_RESULT = {
+    "rarity_score": 0,
+    "score": 0,
+    "tags": [],
+    "details": {"breakdown": []},
+    "ggg_evaluation": {
+        "score": 0,
+        "is_candidate": False,
+        "alert_level": None,
+        "tts_message": None
+    }
+}
+
+
+def _compute_rarity(body_dict: dict, **kwargs) -> dict:
+    """Delegates to the rarity_scorer addon's provider if enabled, else
+    returns the empty-equivalent default (see _EMPTY_RARITY_RESULT)."""
+    provider = addon_manager.get_provider("rarity_score")
+    if provider is None:
+        return _EMPTY_RARITY_RESULT
+    return provider(body_dict, **kwargs)
+
+
+def _compute_exobiology_predictions(body_dict: dict) -> list:
+    """Delegates to the exobiology_prediction addon's provider if enabled,
+    else returns an empty list (already a normal state elsewhere in this
+    file, e.g. when bio_signals == 0)."""
+    provider = addon_manager.get_provider("exobiology_predict_body")
+    if provider is None:
+        return []
+    return provider(body_dict)
 
 GGG_VARIANTS_MAP: dict[str, tuple[str, str]] = {
     "sudarsky_class_i": ("スダルスキー・クラス1 ガスジャイアント", "Sudarsky Class I Gas Giant"),
@@ -791,7 +826,7 @@ class JournalParser:
         max_pot = values.get("max_potential_value", 0)
 
         # Predict Exobiology candidates and preserve locked/confirmed organics
-        bio_predictions = predict_exobiology_candidates(body_dict)
+        bio_predictions = _compute_exobiology_predictions(body_dict)
         self._lock_confirmed_organics_into_predictions(sys_addr, body_id, bio_predictions)
         bio_pred_json = json.dumps(bio_predictions)
         if self.is_live and body_dict.get("bio_signals"):
@@ -830,7 +865,7 @@ class JournalParser:
                 pass
 
         # Detect Celestial Rarity & Anomalies
-        rarity_res = calculate_celestial_rarity(
+        rarity_res = _compute_rarity(
             body_dict,
             star_system_age=body_dict.get("Age_MY"),
             main_star_type=parent_star_type,
@@ -1075,7 +1110,7 @@ class JournalParser:
             if bio_count == 0:
                 bio_predictions = []
             else:
-                bio_predictions = predict_exobiology_candidates(b_dict)
+                bio_predictions = _compute_exobiology_predictions(b_dict)
                 self._lock_confirmed_organics_into_predictions(sys_addr, body_id or existing["body_id"], bio_predictions)
                 self._check_and_trigger_high_bio_alert(
                     sys_addr, body_id or existing["body_id"], b_dict.get("body_name", ""),
@@ -1123,7 +1158,7 @@ class JournalParser:
             if bio_count == 0:
                 bio_predictions = []
             else:
-                bio_predictions = predict_exobiology_candidates(b_dict)
+                bio_predictions = _compute_exobiology_predictions(b_dict)
                 self._lock_confirmed_organics_into_predictions(sys_addr, body_id or 0, bio_predictions)
                 self._check_and_trigger_high_bio_alert(
                     sys_addr, body_id or 0, b_dict.get("body_name", ""),

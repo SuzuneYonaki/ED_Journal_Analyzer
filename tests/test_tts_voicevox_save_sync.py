@@ -7,8 +7,11 @@ import pytest
 from pathlib import Path
 from fastapi.testclient import TestClient
 
-from app.server.api import app, TTS_SETTINGS_FILE, sync_tts_settings_to_service
+from app.server.api import app
+from app.addons import addon_manager
 from app.services.tts_service import tts_service
+
+_tts_addon = addon_manager.loaded["tts"].module
 
 
 @pytest.fixture
@@ -19,7 +22,7 @@ def client():
 def test_tts_settings_persistence_and_service_sync(tmp_path, monkeypatch, client):
     """Verifies that saving via /api/tts_settings preserves all fields and updates tts_service config."""
     test_settings_file = tmp_path / "tts_settings.json"
-    monkeypatch.setattr("app.server.api.TTS_SETTINGS_FILE", test_settings_file)
+    monkeypatch.setattr(_tts_addon, "TTS_SETTINGS_FILE", test_settings_file)
 
     payload = {
         "enabled": True,
@@ -58,7 +61,7 @@ def test_tts_settings_persistence_and_service_sync(tmp_path, monkeypatch, client
 def test_tts_config_does_not_destroy_settings_file(tmp_path, monkeypatch, client):
     """Verifies that calling /api/tts/config updates matching fields without wiping other UI settings."""
     test_settings_file = tmp_path / "tts_settings.json"
-    monkeypatch.setattr("app.server.api.TTS_SETTINGS_FILE", test_settings_file)
+    monkeypatch.setattr(_tts_addon, "TTS_SETTINGS_FILE", test_settings_file)
 
     # Initial full settings
     initial_settings = {

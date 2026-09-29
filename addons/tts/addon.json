@@ -1,0 +1,8 @@
+{
+  "id": "tts",
+  "name": "TTS Alerts (VOICEVOX)",
+  "version": "1.0.0",
+  "description": "VOICEVOX / Web Speech APIによる音声読み上げ。GGG検出・高額生物反応アラートの設定・再生を担当（旧 app/server/api.py 直書きエンドポイント＋起動/終了ライフサイクルを移設）。",
+  "entry": "addon.py",
+  "enabled_by_default": true
+}
