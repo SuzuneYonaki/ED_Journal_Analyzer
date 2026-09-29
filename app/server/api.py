@@ -643,8 +643,15 @@ def get_systems(
         )""")
         params.extend([term, term, term, term])
 
-    if _parse_filter_min_count(has_bookmarks):
+    c_bm = _parse_filter_min_count(has_bookmarks)
+    if c_bm == 1:
         conditions.append("EXISTS (SELECT 1 FROM body_bookmarks bb WHERE bb.system_address = systems.system_address)")
+    elif c_bm > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM body_bookmarks bb 
+            WHERE bb.system_address = systems.system_address
+        ) >= ?""")
+        params.append(c_bm)
 
     if _parse_filter_min_count(is_shared):
         conditions.append("systems.is_shared = 1")
@@ -722,10 +729,21 @@ def get_systems(
         ) >= ?""")
         params.append(c_hg)
 
-    if _parse_filter_min_count(has_anomalies):
+    c_anom = _parse_filter_min_count(has_anomalies)
+    if c_anom == 1:
         conditions.append("systems.has_anomalies = 1")
+    elif c_anom > 1:
+        conditions.append("""(
+            SELECT COUNT(*) FROM bodies b 
+            WHERE b.system_address = systems.system_address 
+            AND b.anomalies_json IS NOT NULL 
+            AND b.anomalies_json != '' 
+            AND b.anomalies_json != '[]'
+        ) >= ?""")
+        params.append(c_anom)
 
-    if _parse_filter_min_count(has_ggg):
+    c_ggg = _parse_filter_min_count(has_ggg)
+    if c_ggg == 1:
         conditions.append(f"""EXISTS (
             SELECT 1 FROM bodies b
             WHERE b.system_address = systems.system_address
@@ -734,6 +752,16 @@ def get_systems(
                 {codex_ggg_check}
             )
         )""")
+    elif c_ggg > 1:
+        conditions.append(f"""(
+            SELECT COUNT(*) FROM bodies b
+            WHERE b.system_address = systems.system_address
+            AND (
+                b.anomalies_json LIKE '%Confirmed GGG%'
+                {codex_ggg_check}
+            )
+        ) >= ?""")
+        params.append(c_ggg)
 
     c_fd = _parse_filter_min_count(has_first_discover)
     if c_fd == 1:
