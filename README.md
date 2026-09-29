@@ -1,6 +1,6 @@
 # Elite Dangerous Journal Analyzer & Exploration Orrery
 
-[![Version](https://img.shields.io/badge/version-v0.8.14-orange.svg)](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases)
+[![Version](https://img.shields.io/badge/version-v0.8.15-orange.svg)](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 
@@ -21,6 +21,8 @@
 
 **Elite Dangerous Journal Analyzer** は、宇宙シミュレーションゲーム『Elite Dangerous』のフライトジャーナルログ（`Journal.*.log`）をリアルタイムに自動解析・監視し、星系構造の可視化、探査価値の精密算出、Exobiology（生体スキャン）予測、採掘支援、天体ブックマーク・メモ機能を提供する**ローカルファースト型デスクトップGUIアプリケーション**です。
 
+v0.8.15 より、EDSM/Spansh連携・TTS音声読み上げ・探査データ共有・天体物理レア度スコア・生体種予測といった主要機能は、それぞれ独立した**アドオン**として実装されました。初期状態ではすべて無効化されており、必要な機能だけを設定画面から選んで有効化する、軽量かつプライバシー重視の運用が可能です。
+
 ---
 
 ### 🛡️ 設計思想：ローカルファースト & コミュニティ連携
@@ -31,6 +33,8 @@
   必要に応じて、EDSMやSpanshから天体物理データや環ホットスポット（Hotspots）、惑星採掘地点（PML）をオンデマンド照会・補完できます。未スキャン天体の公転軌道や価値を事前に把握可能です（未訪問星系にはエクスポート遮断等の安全ロック機構を完備）。
 - **多彩な探査データ共有 (CMDR Data Share)**:
   自力で探査・観測した成果は、スタンドアロンHTML、観測データを内包したComfyUI方式PNGカード、Twitch/SNS向けテキスト短評として自由に外部へ共有・復元できます。
+- **アドオンによる機能の取捨選択 (New in v0.8.15)**:
+  EDSM/Spansh連携、TTS、探査データ共有、天体物理レア度スコア、生体種予測は、それぞれ独立したアドオンとして提供され、既定ではすべて無効です。設定画面の「🧩 アドオン」タブから必要な機能だけを個別に有効化できます。EDSM/Spanshのように外部サーバーとの通信を伴う機能は「外部オンラインアクセス」として一括のオン/オフスイッチにまとめられており、有効化時には確認ポップアップで通知されます。
 
 ---
 
@@ -65,6 +69,10 @@
    - 各イベント通知は個別のON/OFFスイッチおよび通知音タイプ（音声＋チャイム / 音声のみ / チャイムのみ）で柔軟に制御可能。
 10. **完全多言語対応 (日本語 / 英語)**:
     - UI画面、星系図、天体インスペクター、Orrery、フィルター、設定、エクスポートHTMLまで、ボタン1つで日本語と英語をシームレスに切り替え可能。
+11. **🧩 アドオンシステム (機能の個別ON/OFF)**:
+    - EDSM/Spansh連携、TTS、探査データ共有（CMDR Data Share）、天体物理レア度スコア、生体種予測は、それぞれ独立したアドオンとして提供され、設定画面の「🧩 アドオン」タブから個別に有効/無効を切り替え可能。
+    - 既定ではすべて無効化されており、必要な機能だけを選んで軽量に使えます。外部通信を伴うEDSM/Spanshは「外部オンラインアクセス」として一括のオン/オフスイッチにまとめられ、有効化時には確認ポップアップが表示されます。
+    - 切り替えはアプリの再起動後に反映され、設定画面から再起動を実行できます。
 
 ---
 
@@ -114,6 +122,8 @@ python run.py
 
 **Elite Dangerous Journal Analyzer** is a **local-first desktop GUI application** designed to automatically analyze and monitor flight journal logs (`Journal.*.log`) in real time for *Elite Dangerous*. It provides interactive star system visualizations (Orrery), precise exploration payout estimation, Exobiology biological prediction, mining survey tools, and celestial bookmarking/note-taking.
 
+Starting with v0.8.15, major features — EDSM/Spansh sync, TTS voice alerts, exploration data sharing, astrophysical rarity scoring, and exobiology species prediction — are now implemented as independent **addons**. All of them ship disabled by default, so you can run a lightweight, privacy-focused core install and enable only the features you actually want from the Settings screen.
+
 ---
 
 ### 🛡️ Core Philosophy: Local-First & Community Connectivity
@@ -124,6 +134,8 @@ python run.py
   Query celestial telemetry, planetary ring hotspots, and planetary mining locations (PML) from EDSM and Spansh on demand. Safely inspect unmapped orbital architectures while keeping unvisited systems strictly isolated from exports.
 - **Rich Exploration Sharing (CMDR Data Share)**:
   Export your discovery findings as standalone interactive HTML system maps, ComfyUI-style PNG metadata summary cards, or clipboard summaries for Twitch/Discord/social media.
+- **Pick-and-Choose Addons (New in v0.8.15)**:
+  EDSM/Spansh sync, TTS, exploration data sharing, astrophysical rarity scoring, and exobiology species prediction are each an independent addon, shipped disabled by default. Enable only what you need from the Settings > Addons tab. Features that reach external servers (EDSM/Spansh) are consolidated into a single "External Online Access" switch with a confirmation prompt before it's turned on.
 
 ---
 
@@ -157,6 +169,10 @@ python run.py
    - Independent event toggles and alert mode selector (Voice + Chime / Voice only / Chime only).
 10. **Full Bilingual Support (Japanese / English)**:
     - Complete one-click localization across UI controls, Orrery views, inspector panels, settings modal, and exported HTML files.
+11. **🧩 Addon System (Per-Feature Enable/Disable)**:
+    - EDSM/Spansh sync, TTS, exploration data sharing (CMDR Data Share), astrophysical rarity scoring, and exobiology species prediction are each an independent addon, individually toggleable from the Settings > Addons tab.
+    - All ship disabled by default, so you only run what you need. EDSM/Spansh (which reach external servers) are consolidated into a single "External Online Access" switch with a confirmation prompt on enable.
+    - Toggling takes effect on the next restart; the Settings tab can trigger that restart for you.
 
 ---
 
