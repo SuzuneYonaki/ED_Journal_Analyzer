@@ -2192,22 +2192,49 @@ def toggle_addon(addon_id: str, body: AddonToggleRequest):
 def restart_app():
     """Relaunches the app process (used after toggling addons, which only
     take effect on the next startup). Flushes the SQLite WAL first, then
-    spawns a fresh process and exits this one -- pywebview's window runs on
-    this same process's main thread, so exiting closes it and the new
-    process opens its own window."""
-    def _do_restart():
-        time.sleep(0.3)
+    spawns a fresh, fully-detached process and exits this one -- pywebview's
+    window runs on this same process's main thread, so exiting closes it and
+    the new process opens its own window."""
+    def _log_restart(msg: str):
         try:
-            checkpoint_wal()
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            with open(DATA_DIR / "run.log", "a", encoding="utf-8") as f:
+                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [Restart] {msg}\n")
         except Exception:
             pass
+
+    def _do_restart():
+        time.sleep(0.5)
+        try:
+            checkpoint_wal()
+        except Exception as e:
+            _log_restart(f"WAL checkpoint failed: {e}")
         try:
             if getattr(sys, 'frozen', False):
-                subprocess.Popen([sys.executable])
+                args = [sys.executable]
             else:
-                subprocess.Popen([sys.executable, str(BASE_DIR / "run.py")] + sys.argv[1:])
+                args = [sys.executable, str(BASE_DIR / "run.py")] + sys.argv[1:]
+
+            popen_kwargs = {
+                # A windowed (console=False) build has no valid OS-level
+                # stdio handles; subprocess.Popen() would otherwise try to
+                # inherit them and raise OSError: [WinError 6] The handle
+                # is invalid. Redirect explicitly instead of inheriting.
+                "stdin": subprocess.DEVNULL,
+                "stdout": subprocess.DEVNULL,
+                "stderr": subprocess.DEVNULL,
+                "close_fds": True,
+            }
+            if os.name == "nt":
+                # Fully detach the child from this process's console/job so
+                # it survives independently of our imminent os._exit(0).
+                popen_kwargs["creationflags"] = (
+                    subprocess.CREATE_NEW_PROCESS_GROUP | getattr(subprocess, "DETACHED_PROCESS", 0)
+                )
+            subprocess.Popen(args, **popen_kwargs)
+            _log_restart(f"Relaunched: {args}")
         except Exception as e:
-            print(f"[Restart] Failed to relaunch: {e}")
+            _log_restart(f"Failed to relaunch: {e}")
             return
         os._exit(0)
     threading.Thread(target=_do_restart, daemon=True).start()
