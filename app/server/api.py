@@ -2215,6 +2215,20 @@ def restart_app():
             else:
                 args = [sys.executable, str(BASE_DIR / "run.py")] + sys.argv[1:]
 
+            # PyInstaller's onefile bootloader tags this process's own
+            # environment with internal bookkeeping vars (_MEIPASS2 and
+            # friends) pointing at ITS extraction directory. subprocess.Popen
+            # inherits the full environment by default, so the child would
+            # inherit those vars, get confused about where its own bundled
+            # DLLs (e.g. _sqlite3's) live, and fail to import them --
+            # exactly the "DLL load failed while importing _sqlite3" crash
+            # this was producing. Strip them so the child extracts and boots
+            # as a genuinely fresh instance.
+            child_env = os.environ.copy()
+            for key in list(child_env.keys()):
+                if key.startswith("_MEI") or key.startswith("_PYI"):
+                    del child_env[key]
+
             popen_kwargs = {
                 # A windowed (console=False) build has no valid OS-level
                 # stdio handles; subprocess.Popen() would otherwise try to
@@ -2224,13 +2238,13 @@ def restart_app():
                 "stdout": subprocess.DEVNULL,
                 "stderr": subprocess.DEVNULL,
                 "close_fds": True,
+                "env": child_env,
             }
             if os.name == "nt":
-                # Fully detach the child from this process's console/job so
-                # it survives independently of our imminent os._exit(0).
-                popen_kwargs["creationflags"] = (
-                    subprocess.CREATE_NEW_PROCESS_GROUP | getattr(subprocess, "DETACHED_PROCESS", 0)
-                )
+                # Let the child survive independently of our imminent
+                # os._exit(0) without tying it to our (soon-gone) process
+                # group.
+                popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
             subprocess.Popen(args, **popen_kwargs)
             _log_restart(f"Relaunched: {args}")
         except Exception as e:
