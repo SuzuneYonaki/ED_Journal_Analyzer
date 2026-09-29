@@ -301,7 +301,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <div>
                 <div style="font-weight: bold; color: var(--ed-green);" data-i18n="tts_ggg_label">🟢 グリーンガスジャイアント (GGG) 検知通知</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="tts_ggg_desc">確定GGG発見時およびFSSスキャン時の高確率候補検知時に音声・チャイムで警告します</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);" data-i18n="tts_ggg_desc">確定GGG発見時に音声・チャイムで警告します</div>
               </div>
               <label class="switch">
                 <input type="checkbox" id="tts-ggg-toggle" checked>
@@ -312,10 +312,6 @@
               <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; cursor: pointer; color: var(--ed-green);">
                 <input type="checkbox" id="tts-ggg-confirmed-toggle" checked style="accent-color: var(--ed-green); cursor: pointer;">
                 <span data-i18n="tts_ggg_confirmed_toggle_label">確定GGG通知</span>
-              </label>
-              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; cursor: pointer; color: #eab308;">
-                <input type="checkbox" id="tts-ggg-candidate-toggle" checked style="accent-color: #eab308; cursor: pointer;">
-                <span data-i18n="tts_ggg_candidate_toggle_label">候補GGG通知</span>
               </label>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
@@ -332,16 +328,9 @@
                 <input type="text" id="tts-ggg-confirmed-text" class="search-input" value="{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。" style="width: 100%; padding: 4px 8px; font-size: 0.75rem;">
               </div>
             </div>
-            <div>
-              <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="tts_ggg_candidate_text_label">GGG候補読み上げテキスト:</label>
-              <input type="text" id="tts-ggg-candidate-text" class="search-input" value="{body}はグリーンガスジャイアント候補です。" style="width: 100%; padding: 4px 8px; font-size: 0.75rem;">
-            </div>
             <div style="display: flex; gap: 8px; margin-top: 4px;">
               <button type="button" id="btn-tts-ggg-test" class="btn-primary" style="background: rgba(0, 255, 136, 0.2); border: 1px solid var(--ed-green); color: var(--ed-green); font-size: 0.75rem; padding: 4px 10px;" data-i18n="btn_tts_ggg_test">
                 🔊 GGGテスト発声 (確定)
-              </button>
-              <button type="button" id="btn-tts-ggg-cand-test" class="view-btn" style="border: 1px solid #eab308; color: #eab308; font-size: 0.75rem; padding: 4px 10px;" data-i18n="btn_tts_ggg_cand_test">
-                🔊 GGG候補テスト
               </button>
             </div>
           </div>

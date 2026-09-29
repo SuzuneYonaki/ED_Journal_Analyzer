@@ -1,9 +1,12 @@
 """
-test_ggg_tts_options.py - Unit tests for GGG confirmed and candidate TTS alert options
+test_ggg_tts_options.py - Unit tests for GGG confirmed TTS alert options
 Elite Dangerous Journal Analyzer
+
+Candidate (unconfirmed) GGG detections are never voiced -- only
+Codex-confirmed sightings trigger a TTS alert. The candidate badge/filter
+on the system map is unaffected and untested here.
 """
 import json
-import re
 from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
@@ -20,7 +23,7 @@ def client():
 
 
 def test_get_tts_settings_defaults(tmp_path, monkeypatch, client):
-    """Verifies that get_tts_settings returns gggConfirmedEnabled and gggCandidateEnabled by default."""
+    """Verifies that get_tts_settings returns gggConfirmedEnabled by default and no candidate key."""
     test_settings_file = tmp_path / "tts_settings.json"
     monkeypatch.setattr(_tts_addon, "TTS_SETTINGS_FILE", test_settings_file)
 
@@ -29,19 +32,17 @@ def test_get_tts_settings_defaults(tmp_path, monkeypatch, client):
     data = res.json()
     assert data["gggEnabled"] is True
     assert data["gggConfirmedEnabled"] is True
-    assert data["gggCandidateEnabled"] is True
+    assert "gggCandidateEnabled" not in data
 
 
-def test_save_and_retrieve_ggg_toggle_settings(tmp_path, monkeypatch, client):
-    """Verifies that gggConfirmedEnabled and gggCandidateEnabled can be persisted individually."""
+def test_save_and_retrieve_ggg_confirmed_setting(tmp_path, monkeypatch, client):
+    """Verifies that gggConfirmedEnabled can be persisted."""
     test_settings_file = tmp_path / "tts_settings.json"
     monkeypatch.setattr(_tts_addon, "TTS_SETTINGS_FILE", test_settings_file)
 
-    # Disable candidate alert, keep confirmed alert
     payload = {
         "gggEnabled": True,
-        "gggConfirmedEnabled": True,
-        "gggCandidateEnabled": False,
+        "gggConfirmedEnabled": False,
         "gggMode": "tts"
     }
 
@@ -49,111 +50,90 @@ def test_save_and_retrieve_ggg_toggle_settings(tmp_path, monkeypatch, client):
     assert res.status_code == 200
     assert res.json()["status"] == "saved"
 
-    # Verify file content
     with open(test_settings_file, "r", encoding="utf-8") as f:
         saved = json.load(f)
-    assert saved["gggConfirmedEnabled"] is True
-    assert saved["gggCandidateEnabled"] is False
+    assert saved["gggConfirmedEnabled"] is False
 
-    # Verify GET endpoint merges properly
     res_get = client.get("/api/tts_settings")
     assert res_get.status_code == 200
-    data_get = res_get.json()
-    assert data_get["gggConfirmedEnabled"] is True
-    assert data_get["gggCandidateEnabled"] is False
+    assert res_get.json()["gggConfirmedEnabled"] is False
 
 
-def test_ui_modal_contains_ggg_toggles():
-    """Verifies modals.html contains the toggle checkboxes for confirmed and candidate GGGs."""
+def test_ui_modal_contains_ggg_confirmed_toggle_only():
+    """Verifies modals.html has the confirmed GGG toggle and no candidate toggle."""
     modal_file = Path("app/ui/components/modals.html")
     assert modal_file.exists()
     content = modal_file.read_text(encoding="utf-8")
 
     assert 'id="tts-ggg-confirmed-toggle"' in content
-    assert 'id="tts-ggg-candidate-toggle"' in content
     assert 'data-i18n="tts_ggg_confirmed_toggle_label"' in content
-    assert 'data-i18n="tts_ggg_candidate_toggle_label"' in content
+    assert 'id="tts-ggg-candidate-toggle"' not in content
+    assert 'data-i18n="tts_ggg_candidate_toggle_label"' not in content
 
 
-def test_i18n_contains_ggg_toggle_labels():
-    """Verifies i18n.js has the translation keys in both ja and en dictionaries."""
+def test_i18n_contains_ggg_confirmed_label_only():
+    """Verifies i18n.js has the confirmed GGG label and no candidate label."""
     i18n_file = Path("app/ui/js/i18n.js")
     assert i18n_file.exists()
     content = i18n_file.read_text(encoding="utf-8")
 
-    # Match in ja dictionary
     assert 'tts_ggg_confirmed_toggle_label: "確定GGG通知"' in content
-    assert 'tts_ggg_candidate_toggle_label: "候補GGG通知"' in content
-
-    # Match in en dictionary
     assert 'tts_ggg_confirmed_toggle_label: "Confirmed GGG Alert"' in content
-    assert 'tts_ggg_candidate_toggle_label: "Candidate GGG Alert"' in content
+    assert 'tts_ggg_candidate_toggle_label' not in content
 
 
-def test_app_js_evaluates_ggg_toggles():
-    """Verifies app.js handles confirmed and candidate toggles in ttsState, updateTTSModalFields, and checkAndAnnounceGggBody."""
+def test_app_js_evaluates_ggg_confirmed_toggle_only():
+    """Verifies app.js handles the confirmed toggle in ttsState, updateTTSModalFields, and
+    checkAndAnnounceGggBody, with no candidate-related state left over."""
     app_js_file = Path("app/ui/js/app.js")
     assert app_js_file.exists()
     content = app_js_file.read_text(encoding="utf-8")
 
-    # ttsState initial properties
     assert "gggConfirmedEnabled: true" in content
-    assert "gggCandidateEnabled: true" in content
-
-    # DOM elements
     assert "tts-ggg-confirmed-toggle" in content
-    assert "tts-ggg-candidate-toggle" in content
-
-    # checkAndAnnounceGggBody branching
     assert "ttsState.gggConfirmedEnabled === false" in content
-    assert "ttsState.gggCandidateEnabled === false" in content
+
+    assert "gggCandidateEnabled" not in content
+    assert "tts-ggg-candidate-toggle" not in content
 
 
-def test_backend_parser_respects_ggg_candidate_toggle(tmp_path, monkeypatch):
-    """Verifies that journal_parser skips candidate alert when gggCandidateEnabled is false."""
+def test_backend_parser_only_supports_confirmed_ggg_alert(tmp_path, monkeypatch):
+    """Verifies journal_parser's GGG TTS alert path is confirmed-only: the config has no
+    candidate key, and _check_and_trigger_ggg_alert no longer accepts candidate params."""
     from app.parser.journal_parser import get_ggg_tts_config, JournalParser
-    from app.services.tts_service import tts_service
 
     test_settings_file = tmp_path / "tts_settings.json"
     monkeypatch.setattr("app.config.DATA_DIR", tmp_path)
 
-    # 1. Config with candidate_enabled = False
     with open(test_settings_file, "w", encoding="utf-8") as f:
         json.dump({
             "enabled": True,
             "gggEnabled": True,
             "gggConfirmedEnabled": True,
-            "gggCandidateEnabled": False,
             "engine": "voicevox"
         }, f)
 
     cfg = get_ggg_tts_config()
     assert cfg["confirmed_enabled"] is True
-    assert cfg["candidate_enabled"] is False
+    assert "candidate_enabled" not in cfg
 
-    # 2. Check parser trigger behavior
     import sqlite3
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
     parser = JournalParser(db_conn=conn, is_live=True)
     parser.current_star_system = "Sol"
-    # When is_candidate=True and candidate_enabled=False, must return False without speaking
-    enqueued = parser._check_and_trigger_ggg_alert(
-        sys_addr=123,
-        body_name="Body 1",
-        is_confirmed=False,
-        is_candidate=True,
-        alert_level="URGENT"
-    )
-    assert enqueued is False
 
-    # When is_confirmed=True and confirmed_enabled=True, must return True
+    # is_candidate / alert_level are no longer accepted parameters.
+    import inspect
+    sig = inspect.signature(parser._check_and_trigger_ggg_alert)
+    assert "is_candidate" not in sig.parameters
+    assert "alert_level" not in sig.parameters
+
+    # Confirmed alerts still fire normally.
     enqueued_confirmed = parser._check_and_trigger_ggg_alert(
         sys_addr=123,
         body_name="Body 2",
         is_confirmed=True,
         variant_name="Class II",
-        is_candidate=False
     )
     assert enqueued_confirmed is True
-
