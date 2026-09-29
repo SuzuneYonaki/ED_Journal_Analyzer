@@ -4308,21 +4308,23 @@ async function initSettingsModal() {
   const tabBtnLogs = document.getElementById('tab-btn-logs');
   const tabBtnUI = document.getElementById('tab-btn-ui');
   const tabBtnTTS = document.getElementById('tab-btn-tts');
+  const tabBtnAddons = document.getElementById('tab-btn-addons');
   const tabBtnCredits = document.getElementById('tab-btn-credits');
 
   const tabPaneLogs = document.getElementById('tab-pane-logs');
   const tabPaneUI = document.getElementById('tab-pane-ui');
   const tabPaneTTS = document.getElementById('tab-pane-tts');
+  const tabPaneAddons = document.getElementById('tab-pane-addons');
   const tabPaneCredits = document.getElementById('tab-pane-credits');
 
   function switchTab(tabName) {
-    [tabBtnLogs, tabBtnUI, tabBtnTTS, tabBtnCredits].forEach(btn => {
+    [tabBtnLogs, tabBtnUI, tabBtnTTS, tabBtnAddons, tabBtnCredits].forEach(btn => {
       if (btn) {
         btn.classList.remove('active');
         btn.style.borderBottom = 'none';
       }
     });
-    [tabPaneLogs, tabPaneUI, tabPaneTTS, tabPaneCredits].forEach(pane => {
+    [tabPaneLogs, tabPaneUI, tabPaneTTS, tabPaneAddons, tabPaneCredits].forEach(pane => {
       if (pane) pane.style.display = 'none';
     });
 
@@ -4346,6 +4348,13 @@ async function initSettingsModal() {
       }
       if (tabPaneTTS) tabPaneTTS.style.display = 'flex';
       updateTTSModalFields();
+    } else if (tabName === 'addons') {
+      if (tabBtnAddons) {
+        tabBtnAddons.classList.add('active');
+        tabBtnAddons.style.borderBottom = '2px solid #a78bfa';
+      }
+      if (tabPaneAddons) tabPaneAddons.style.display = 'flex';
+      if (typeof loadAddonSettingsToUI === 'function') loadAddonSettingsToUI();
     } else if (tabName === 'credits') {
       if (tabBtnCredits) {
         tabBtnCredits.classList.add('active');
@@ -4358,6 +4367,7 @@ async function initSettingsModal() {
   if (tabBtnLogs) tabBtnLogs.addEventListener('click', () => switchTab('logs'));
   if (tabBtnUI) tabBtnUI.addEventListener('click', () => switchTab('ui'));
   if (tabBtnTTS) tabBtnTTS.addEventListener('click', () => switchTab('tts'));
+  if (tabBtnAddons) tabBtnAddons.addEventListener('click', () => switchTab('addons'));
   if (tabBtnCredits) tabBtnCredits.addEventListener('click', () => switchTab('credits'));
 
   initFontSizeControl();
@@ -4482,6 +4492,97 @@ async function initSettingsModal() {
     btnResetJournalDir.addEventListener('click', () => {
       if (defaultJournalDirCache && inputJournalDir) {
         inputJournalDir.value = defaultJournalDirCache;
+      }
+    });
+  }
+
+  const addonToggleList = document.getElementById('addon-toggle-list');
+  const addonRestartBanner = document.getElementById('addon-restart-banner');
+  const btnAddonRestartNow = document.getElementById('btn-addon-restart-now');
+
+  function showAddonRestartBanner() {
+    if (addonRestartBanner) addonRestartBanner.style.display = 'flex';
+  }
+
+  async function loadAddonSettingsToUI() {
+    if (!addonToggleList) return;
+    addonToggleList.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.8rem;">${(typeof t === 'function' ? t('addons_loading') : null) || '読み込み中...'}</div>`;
+    let addons = [];
+    try {
+      const res = await fetch('/api/addons');
+      const json = await res.json();
+      addons = json.data ?? [];
+    } catch (e) {
+      addonToggleList.innerHTML = `<div style="color: #f87171; font-size: 0.8rem;">${(typeof t === 'function' ? t('addons_load_failed') : null) || 'アドオン一覧の取得に失敗しました。'}</div>`;
+      return;
+    }
+
+    if (addons.length === 0) {
+      addonToggleList.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.8rem;">${(typeof t === 'function' ? t('addons_none_found') : null) || 'アドオンが見つかりません。'}</div>`;
+      return;
+    }
+
+    addonToggleList.innerHTML = '';
+    for (const addon of addons) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px;';
+
+      const info = document.createElement('div');
+      info.style.cssText = 'flex: 1; min-width: 0;';
+      const errNote = addon.enabled && !addon.loaded
+        ? `<div style="color: #f87171; font-size: 0.7rem; margin-top: 2px;">⚠️ ${(typeof t === 'function' ? t('addon_load_error') : null) || '読み込みエラー'}: ${addon.error || ''}</div>`
+        : '';
+      info.innerHTML = `
+        <div style="font-weight: bold; color: #fff; font-size: 0.85rem;">${addon.name} <span style="color: var(--text-secondary); font-weight: normal; font-size: 0.72rem;">v${addon.version}</span></div>
+        <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px;">${addon.description || ''}</div>
+        ${errNote}
+      `;
+
+      const label = document.createElement('label');
+      label.className = 'switch';
+      label.style.flexShrink = '0';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = !!addon.enabled;
+      const slider = document.createElement('span');
+      slider.className = 'slider';
+      label.appendChild(input);
+      label.appendChild(slider);
+
+      input.addEventListener('change', async () => {
+        input.disabled = true;
+        try {
+          const res = await fetch(`/api/addons/${encodeURIComponent(addon.id)}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: input.checked })
+          });
+          if (res.ok) {
+            showAddonRestartBanner();
+          } else {
+            input.checked = !input.checked;
+          }
+        } catch (e) {
+          input.checked = !input.checked;
+        } finally {
+          input.disabled = false;
+        }
+      });
+
+      row.appendChild(info);
+      row.appendChild(label);
+      addonToggleList.appendChild(row);
+    }
+  }
+
+  if (btnAddonRestartNow) {
+    btnAddonRestartNow.addEventListener('click', async () => {
+      btnAddonRestartNow.disabled = true;
+      btnAddonRestartNow.innerText = (typeof t === 'function' ? t('addon_restarting') : null) || '⏳ 再起動中...';
+      try {
+        await fetch('/api/app/restart', { method: 'POST' });
+      } catch (e) {
+        // The process may exit before the response completes; that's expected.
       }
     });
   }

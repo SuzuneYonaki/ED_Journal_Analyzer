@@ -4,5 +4,5 @@
   "version": "1.0.0",
   "description": "天体物理レア度スコア・GGG候補確率判定 (rarity_scorer.py)。無効化すると星系年齢矛盾・軌道力学極限・密度・特殊環・GGG候補タグとGGG候補TTSアラートが出なくなるが、確定GGG(Codexベース)判定・星種/惑星種別の基本アノマリー(anomaly_finder.py)・生体信号数には影響しない。",
   "entry": "addon.py",
-  "enabled_by_default": true
+  "enabled_by_default": false
 }

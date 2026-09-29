@@ -19,6 +19,9 @@
         <button id="tab-btn-tts" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="tab_tts">
           🔊 音声読み上げ (TTS)
         </button>
+        <button id="tab-btn-addons" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="tab_addons">
+          🧩 アドオン
+        </button>
         <button id="tab-btn-credits" class="view-btn" style="border-radius: 4px 4px 0 0; padding: 8px 12px; font-size: 0.8rem;" data-i18n="tab_credits">
           📜 謝辞 & クレジット
         </button>
@@ -453,6 +456,22 @@
               </div>
               <div id="tts-policy-content" style="display: none; margin-top: 6px; padding: 8px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--border-color); border-radius: 4px; max-height: 140px; overflow-y: auto; font-family: monospace; font-size: 0.7rem; white-space: pre-wrap; color: #cbd5e1;"></div>
             </div>
+          </div>
+        </div>
+
+        <!-- Tab: Addons -->
+        <div id="tab-pane-addons" class="settings-tab-pane" style="display: none; flex-direction: column; gap: 12px;">
+          <div style="font-size: 0.78rem; color: var(--text-secondary);" data-i18n="addons_tab_desc">
+            各機能をアドオン単位で個別に有効/無効化できます。切り替えは<b>アプリの再起動後</b>に反映されます。
+          </div>
+          <div id="addon-restart-banner" style="display: none; align-items: center; justify-content: space-between; gap: 10px; background: rgba(245, 158, 11, 0.12); border: 1px solid #f59e0b; border-radius: 6px; padding: 10px 12px;">
+            <span style="color: #fbbf24; font-size: 0.8rem;" data-i18n="addon_restart_needed">⚠️ 変更を反映するには再起動が必要です</span>
+            <button id="btn-addon-restart-now" class="btn-primary" style="padding: 6px 14px; font-size: 0.78rem; white-space: nowrap;" data-i18n="btn_addon_restart_now">
+              🔄 今すぐ再起動
+            </button>
+          </div>
+          <div id="addon-toggle-list" style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="color: var(--text-secondary); font-size: 0.8rem;" data-i18n="addons_loading">読み込み中...</div>
           </div>
         </div>
 

@@ -72,7 +72,22 @@ export default function init(container, addon) {
 ## サンプル / 実例
 
 - `addons/sample_hello/` — フック購読・DBマイグレーション・APIルーター・UIパネルをすべて使う最小のサンプル(既定では無効)。機構の動作確認用。
-- `addons/edsm_sync/`, `addons/spansh_sync/` — 旧 `app/server/api.py` に直書きされていた EDSM/Spansh の手動同期エンドポイントを実際に移設した例。`prefix="/api"` で元のURL(`/api/systems/{id}/edsm_sync` 等)をそのまま維持しているため、フロントエンド側の変更は不要。両方とも `enabled_by_default: true` — コアから移設しただけで、デフォルトの挙動は変えていない。
+- `addons/edsm_sync/`, `addons/spansh_sync/` — 旧 `app/server/api.py` に直書きされていた EDSM/Spansh の手動同期エンドポイントを実際に移設した例。`prefix="/api"` で元のURL(`/api/systems/{id}/edsm_sync` 等)をそのまま維持しているため、フロントエンド側の変更は不要。
 - `addons/tts/` — TTS(VOICEVOX/Web Speech)の設定永続化・`/api/tts_settings`・`/api/tts/*` エンドポイント・再生ワーカーの起動終了ライフサイクルを移設した例。`ctx.on_startup`/`ctx.on_shutdown` の実例。`app/services/tts_service.py` のシングルトン本体と、`app/parser/journal_parser.py` からの直接呼び出し(GGG・高額生物アラート)はコア側に残置 — このアドオンを無効化すると設定API・再生ワーカーは止まるが、検出ロジック自体は変わらない。
 - `addons/export_share/` — Standalone Web共有HTML・SNSサマリー画像・`.edsys` パッケージのエクスポート/インポート機能一式(`/api/export/*`, `/api/system/reveal-file`, `/api/import/*`)を移設した例。`app/services/export_service.py` 本体は引き続きコア側に残置(`GET /api/system/{id}/orrery` が同モジュールの `build_interactive_orrery` を使う核心UIビューのため)。このアドオンを無効化するとエクスポート/インポート機能のみ止まり、Orreryタブや星系一覧など閲覧系の機能には影響しない。
 - `addons/rarity_scorer/`, `addons/exobiology_prediction/` — `provide()` の実例。コア計算ロジック(`app/parser/rarity_scorer.py` の天体物理レア度・GGG候補スコア、`app/parser/exobiology.py` の生体属/種予測)をファイル移動せずに `"rarity_score"` / `"exobiology_predict_body"` / `"exobiology_predict_system"` スロットへ登録するだけの薄いラッパー。`journal_parser.py`(ライブ監視・過去ログ一括再解析の両方)と `app/server/api.py` の星系詳細エンドポイント、`app/services/edsm/body_importer.py` の3箇所すべてが `AddonManager.get_provider(...)` 経由に統一されているため、無効化すると全箇所で一貫して機能が止まる。生体信号数(`bio_signals`)・確定GGG(Codexベース)判定・`anomaly_finder.py` の基本アノマリー・`scanned_organics` による確定生体表示は、どちらのアドオンとも独立したコア機能として無効化の影響を受けない。
+
+## 既定は全アドオン無効 & 設定画面からのトグル
+
+6つの移設済みアドオン(`edsm_sync`, `spansh_sync`, `tts`, `export_share`, `rarity_scorer`, `exobiology_prediction`)はすべて `enabled_by_default: false`。新規インストール直後はコア機能のみが動作し、ユーザーは アプリ内の **設定 > 🧩 アドオン** タブで個別にON/OFFを切り替える(`GET /api/addons` で一覧・`POST /api/addons/{id}/toggle` で切り替え)。切り替えは**次回起動時にのみ反映**されるため、タブ内に再起動を促すバナーが表示され、`POST /api/app/restart` でアプリ自身を再起動できる(WALをチェックポイントしてから同じ実行ファイル/スクリプトを再度起動し、自プロセスを終了する)。
+
+開発時にすべてのアドオンを有効にしてテストしたい場合は、`data/addons_settings.json` に `{"<id>": true, ...}` を書くか、`pytest` 実行時は `tests/conftest.py` が自動的に(実プロジェクトの `data/` は汚さず)全アドオンを有効にした状態でテストする。
+
+## リリースパッケージング
+
+`addons/` はコンパイル済みexeに焼き込まず、**exeと同じフォルダに置く生ファイル**として配布する(addon.py をリビルドなしで編集できるという設計上の利点を保つため)。`tools/package_release.py` が `dist/ED_Journal_Analyzer.exe` + `addons/` を1つのリリースZIPにまとめる(PyInstallerでのexeビルド後に実行する):
+
+```bash
+pyinstaller ED_Journal_Analyzer.spec
+python tools/package_release.py
+```
