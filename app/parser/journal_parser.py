@@ -65,6 +65,8 @@ def get_ggg_tts_config() -> dict:
     """Checks tts_settings.json for GGG audio alert settings and templates."""
     cfg = {
         "enabled": True,
+        "confirmed_enabled": True,
+        "candidate_enabled": True,
         "engine": "voicevox",
         "mode": "both",
         "confirmed_text": "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。",
@@ -80,6 +82,8 @@ def get_ggg_tts_config() -> dict:
                     cfg["enabled"] = False
                     return cfg
                 cfg["enabled"] = bool(data.get("gggEnabled", True))
+                cfg["confirmed_enabled"] = bool(data.get("gggConfirmedEnabled", True))
+                cfg["candidate_enabled"] = bool(data.get("gggCandidateEnabled", True))
                 cfg["engine"] = data.get("engine", "voicevox")
                 cfg["mode"] = data.get("gggMode", "both")
                 cfg["confirmed_text"] = data.get("gggConfirmedText") or cfg["confirmed_text"]
@@ -240,6 +244,9 @@ class JournalParser:
         alert_key = (sys_addr or 0, body_name or "")
 
         if is_confirmed:
+            if not cfg.get("confirmed_enabled", True):
+                return False
+
             if alert_key in self._announced_ggg_confirmed:
                 return False
 
@@ -267,6 +274,9 @@ class JournalParser:
             return True
 
         elif is_candidate:
+            if not cfg.get("candidate_enabled", True):
+                return False
+
             if alert_key in self._announced_ggg_confirmed or alert_key in self._announced_ggg_candidate:
                 return False
 
