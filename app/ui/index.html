@@ -42,6 +42,9 @@
 
   {% include "components/modals.html" %}
 
+  <!-- Addon UI panels are injected here by addons.js; hidden until at least one loads -->
+  <div id="addon-panels" class="addon-panels" hidden></div>
+
   <script src="/static/js/i18n.js?v={{ cache_bust }}"></script>
   <script src="/static/js/utils.js?v={{ cache_bust }}"></script>
   <script src="/static/js/inspector.js?v={{ cache_bust }}"></script>
@@ -49,6 +52,7 @@
   <script src="/static/js/system_list.js?v={{ cache_bust }}"></script>
   <script src="/static/js/system_map.js?v={{ cache_bust }}"></script>
   <script src="/static/js/app.js?v={{ cache_bust }}"></script>
+  <script type="module" src="/static/js/addons.js?v={{ cache_bust }}"></script>
 
 </body>
 </html>

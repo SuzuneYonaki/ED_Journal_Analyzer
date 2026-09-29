@@ -1,0 +1,9 @@
+{
+  "id": "sample_hello",
+  "name": "Sample Hello Addon",
+  "version": "0.1.0",
+  "description": "アドオン機構(フック購読・DBマイグレーション・APIルーター・UIパネル)の動作確認用サンプル。既定では無効。",
+  "entry": "addon.py",
+  "enabled_by_default": false,
+  "ui_entry": "ui/panel.js"
+}

@@ -8,7 +8,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.server.api import app, TTS_SETTINGS_FILE
+from app.server.api import app
+from app.addons import addon_manager
+
+_tts_addon = addon_manager.loaded["tts"].module
 
 
 @pytest.fixture
@@ -19,7 +22,7 @@ def client():
 def test_get_tts_settings_defaults(tmp_path, monkeypatch, client):
     """Verifies that get_tts_settings returns gggConfirmedEnabled and gggCandidateEnabled by default."""
     test_settings_file = tmp_path / "tts_settings.json"
-    monkeypatch.setattr("app.server.api.TTS_SETTINGS_FILE", test_settings_file)
+    monkeypatch.setattr(_tts_addon, "TTS_SETTINGS_FILE", test_settings_file)
 
     res = client.get("/api/tts_settings")
     assert res.status_code == 200
@@ -32,7 +35,7 @@ def test_get_tts_settings_defaults(tmp_path, monkeypatch, client):
 def test_save_and_retrieve_ggg_toggle_settings(tmp_path, monkeypatch, client):
     """Verifies that gggConfirmedEnabled and gggCandidateEnabled can be persisted individually."""
     test_settings_file = tmp_path / "tts_settings.json"
-    monkeypatch.setattr("app.server.api.TTS_SETTINGS_FILE", test_settings_file)
+    monkeypatch.setattr(_tts_addon, "TTS_SETTINGS_FILE", test_settings_file)
 
     # Disable candidate alert, keep confirmed alert
     payload = {
