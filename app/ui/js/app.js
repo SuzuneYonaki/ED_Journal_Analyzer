@@ -1699,7 +1699,7 @@ function renderHierarchyTree(container, nodes) {
         if (isConfirmedGgg) {
           badges.push(`<span class="tag-badge tag-ggg" title="${a.desc || a.tag}">🟢 ${a.tag}</span>`);
         } else if (isGggCand) {
-          badges.push(`<span class="tag-badge" style="background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4);" title="${a.desc || a.tag}">🟡 ${a.tag}</span>`);
+          // GGG Candidate anomalies are never badged (unlike Confirmed GGG).
         } else {
           badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`);
         }
@@ -1824,7 +1824,7 @@ function renderFlatBodiesList(container, bodies) {
         if (isConfirmedGgg) {
           badges.push(`<span class="tag-badge tag-ggg" title="${a.desc || a.tag}">🟢 ${a.tag}</span>`);
         } else if (isGggCand) {
-          badges.push(`<span class="tag-badge" style="background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4);" title="${a.desc || a.tag}">🟡 ${a.tag}</span>`);
+          // GGG Candidate anomalies are never badged (unlike Confirmed GGG).
         } else {
           badges.push(`<span class="tag-badge tag-anomaly">${a.tag}</span>`);
         }

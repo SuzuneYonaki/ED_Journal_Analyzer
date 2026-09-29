@@ -857,17 +857,17 @@ class JournalParser:
         anomalies = detect_anomalies(body_dict)
         rarity_tags = rarity_res.get("tags") or []
         for r_tag in rarity_tags:
+            # GGG Candidate is never surfaced as a badge/anomaly entry
+            # (unlike Confirmed GGG) -- it still contributes to the overall
+            # numeric rarity score above, just not as its own tag.
+            if "GGG Candidate" in r_tag:
+                continue
             if not any((a.get("tag") == r_tag if isinstance(a, dict) else a == r_tag) for a in anomalies):
                 is_conf_ggg = "Confirmed GGG" in r_tag
-                is_ggg_cand = "GGG Candidate" in r_tag
                 if is_conf_ggg:
                     color = "green"
                     a_type = "confirmed_ggg"
                     desc = f"確定GGG: {confirmed_ggg_variant or 'Codex'}"
-                elif is_ggg_cand:
-                    color = "cyan"
-                    a_type = "ggg_candidate"
-                    desc = "GGG候補 (要目視確認)"
                 else:
                     color = "orange"
                     a_type = "rarity"
@@ -881,12 +881,17 @@ class JournalParser:
                     "desc_en": r_tag
                 })
 
-        # Preserve any pre-existing anomalies attached to this body
+        # Preserve any pre-existing anomalies attached to this body (but
+        # never re-surface an old GGG Candidate tag from before it was
+        # dropped from display).
         if existing_anomalies_raw:
             try:
                 ex_items = json.loads(existing_anomalies_raw)
                 for ex_item in ex_items:
                     ex_tag = ex_item.get("tag") if isinstance(ex_item, dict) else str(ex_item)
+                    ex_type = ex_item.get("type") if isinstance(ex_item, dict) else None
+                    if ex_type == "ggg_candidate" or (ex_tag and "GGG Candidate" in ex_tag):
+                        continue
                     if ex_tag and not any((a.get("tag") == ex_tag if isinstance(a, dict) else a == ex_tag) for a in anomalies):
                         anomalies.append(ex_item)
             except Exception:
