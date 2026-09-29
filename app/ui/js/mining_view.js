@@ -252,28 +252,28 @@ function renderMiningView(container, bodies) {
     stateImpactHtml = `
       <div style="background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
         <span style="color: #4ade80; font-weight: bold; font-size: 0.76rem;">📈 ${t('mining_econ_boom_desc') || '【星系経済状態: Boom (好況)】採掘物資の高額売却ボーナス & 需要急増中！Rhino採掘素材の放出やミッションに最適な状態です。'}</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; background: rgba(34, 197, 94, 0.2); border-color: #4ade80; color: #4ade80; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
+        <button id="btn-mining-edsm-sync" data-requires-addon="edsm_sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; background: rgba(34, 197, 94, 0.2); border-color: #4ade80; color: #4ade80; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('investment')) {
     stateImpactHtml = `
       <div style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
         <span style="color: #38bdf8; font-weight: bold; font-size: 0.76rem;">💼 ${t('mining_econ_investment_desc') || '【星系経済状態: Investment (投資)】開発・インフラ需要拡大中！工業用金属・鉱物の需要が高まっています。'}</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
+        <button id="btn-mining-edsm-sync" data-requires-addon="edsm_sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('expansion')) {
     stateImpactHtml = `
       <div style="background: rgba(192, 132, 252, 0.12); border: 1px solid rgba(192, 132, 252, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
         <span style="color: #c084fc; font-weight: bold; font-size: 0.76rem;">🚀 ${t('mining_econ_expansion_desc') || '【星系状態: Expansion (拡張)】勢力拡大フェーズ。素材支援や探査データの価値が向上しています。'}</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #c084fc; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
+        <button id="btn-mining-edsm-sync" data-requires-addon="edsm_sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #c084fc; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('war') || sStateLower.includes('civil war')) {
     stateImpactHtml = `
       <div style="background: rgba(248, 113, 113, 0.12); border: 1px solid rgba(248, 113, 113, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
         <span style="color: #f87171; font-weight: bold; font-size: 0.76rem;">⚔️ ${t('mining_econ_war') || '【星系状態: War / Civil War (戦争)】交戦宙域。鉱物需要が高まる一方、敵対勢力や海賊の活動リスクに注意。'}</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #f87171; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
+        <button id="btn-mining-edsm-sync" data-requires-addon="edsm_sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #f87171; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('famine') || sStateLower.includes('outbreak')) {
@@ -281,7 +281,7 @@ function renderMiningView(container, bodies) {
     stateImpactHtml = `
       <div style="background: rgba(250, 204, 21, 0.12); border: 1px solid rgba(250, 204, 21, 0.45); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
         <span style="color: #facc15; font-weight: bold; font-size: 0.76rem;">⚠️ ${crisisMsg}</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #facc15; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
+        <button id="btn-mining-edsm-sync" data-requires-addon="edsm_sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #facc15; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('unrest') || sStateLower.includes('lockdown')) {
@@ -289,21 +289,21 @@ function renderMiningView(container, bodies) {
     stateImpactHtml = `
       <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
         <span style="color: #f87171; font-size: 0.76rem;">⚠️ ${unrestMsg}</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #f87171; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
+        <button id="btn-mining-edsm-sync" data-requires-addon="edsm_sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #f87171; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (sStateLower.includes('bust')) {
     stateImpactHtml = `
       <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
         <span style="color: #facc15; font-size: 0.76rem;">📉 ${t('mining_econ_bust_desc') || '【星系状態: Bust (不況)】市場価格が低迷傾向です。近隣の好況星系（Boom）での売却を推奨します。'}</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #facc15; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
+        <button id="btn-mining-edsm-sync" data-requires-addon="edsm_sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #facc15; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else if (curSys.population === 0) {
     stateImpactHtml = `
       <div style="background: rgba(100, 116, 139, 0.08); border: 1px solid rgba(100, 116, 139, 0.3); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
         <span style="color: #94a3b8; font-size: 0.76rem;">🌌 ${t('mining_econ_uninhabited') || '【無人星系】ステーション等はありませんが、未開拓の豊富な資源（Pristine Reserves等）に恵まれた採掘適地です。'}</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
+        <button id="btn-mining-edsm-sync" data-requires-addon="edsm_sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   } else {
@@ -316,7 +316,7 @@ function renderMiningView(container, bodies) {
     stateImpactHtml = `
       <div style="background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 10px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
         <span style="color: var(--text-secondary); font-size: 0.76rem;">${stateLabel}</span>
-        <button id="btn-mining-edsm-sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
+        <button id="btn-mining-edsm-sync" data-requires-addon="edsm_sync" class="btn-page" style="padding: 2px 8px; font-size: 0.7rem; color: #38bdf8; cursor: pointer;">${t('btn_sync_edsm') || '🔄 EDSM最新状態同期'}</button>
       </div>
     `;
   }

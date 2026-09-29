@@ -1,8 +1,8 @@
 {
   "id": "exobiology_prediction",
-  "name": "Exobiology Species Prediction",
+  "name": "生体種予測",
   "version": "1.0.0",
-  "description": "生体属/種の生息予測エンジン (exobiology.py の predict_exobiology_candidates / predict_system_exobiology_candidates)。無効化すると候補種・推定報酬額・高額生物TTSアラートが出なくなるが、生体信号数(bio_signals)や実際にDSS/採取で確定した生体(scanned_organics)の表示には影響しない。",
+  "description": "惑星の環境データから、生息する可能性のある生物種と推定報酬額を予測します。",
   "entry": "addon.py",
   "enabled_by_default": false
 }

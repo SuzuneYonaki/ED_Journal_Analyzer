@@ -3408,6 +3408,19 @@ header {
   color: #fff;
 }
 
+/* Addon-gated UI elements: hidden via a body.addon-off-<id> class that
+   addons.js applies once GET /api/addons resolves. Using an ancestor class
+   + attribute selector (rather than per-element JS toggling) means newly
+   rendered elements (e.g. mining_view.js's per-system-state EDSM button
+   variants) are hidden automatically the moment they're inserted, with no
+   MutationObserver needed. */
+body.addon-off-edsm_sync [data-requires-addon="edsm_sync"],
+body.addon-off-spansh_sync [data-requires-addon="spansh_sync"],
+body.addon-off-tts [data-requires-addon="tts"],
+body.addon-off-export_share [data-requires-addon="export_share"] {
+  display: none !important;
+}
+
 /* Addon panels: containers injected by addons.js for enabled addon UI modules */
 .addon-panels {
   display: flex;

@@ -4523,19 +4523,34 @@ async function initSettingsModal() {
     }
 
     addonToggleList.innerHTML = '';
-    for (const addon of addons) {
+
+    async function postToggle(addonId, enabled) {
+      const res = await fetch(`/api/addons/${encodeURIComponent(addonId)}/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      });
+      return res.ok;
+    }
+
+    function displayName(addon) {
+      return (typeof getAddonDisplayName === 'function' ? getAddonDisplayName(addon) : null) || addon.name;
+    }
+    function displayDesc(addon) {
+      return (typeof getAddonDisplayDescription === 'function' ? getAddonDisplayDescription(addon) : null) || addon.description;
+    }
+
+    function buildRow({ title, version, description, checked, errNote, onToggle }) {
       const row = document.createElement('div');
       row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px;';
 
       const info = document.createElement('div');
       info.style.cssText = 'flex: 1; min-width: 0;';
-      const errNote = addon.enabled && !addon.loaded
-        ? `<div style="color: #f87171; font-size: 0.7rem; margin-top: 2px;">⚠️ ${(typeof t === 'function' ? t('addon_load_error') : null) || '読み込みエラー'}: ${addon.error || ''}</div>`
-        : '';
+      const versionHtml = version ? ` <span style="color: var(--text-secondary); font-weight: normal; font-size: 0.72rem;">v${version}</span>` : '';
       info.innerHTML = `
-        <div style="font-weight: bold; color: #fff; font-size: 0.85rem;">${addon.name} <span style="color: var(--text-secondary); font-weight: normal; font-size: 0.72rem;">v${addon.version}</span></div>
-        <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px;">${addon.description || ''}</div>
-        ${errNote}
+        <div style="font-weight: bold; color: #fff; font-size: 0.85rem;">${title}${versionHtml}</div>
+        <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px;">${description || ''}</div>
+        ${errNote || ''}
       `;
 
       const label = document.createElement('label');
@@ -4543,27 +4558,24 @@ async function initSettingsModal() {
       label.style.flexShrink = '0';
       const input = document.createElement('input');
       input.type = 'checkbox';
-      input.checked = !!addon.enabled;
+      input.checked = checked;
       const slider = document.createElement('span');
       slider.className = 'slider';
       label.appendChild(input);
       label.appendChild(slider);
 
       input.addEventListener('change', async () => {
+        const nextEnabled = input.checked;
         input.disabled = true;
         try {
-          const res = await fetch(`/api/addons/${encodeURIComponent(addon.id)}/toggle`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ enabled: input.checked })
-          });
-          if (res.ok) {
+          const ok = await onToggle(nextEnabled);
+          if (ok) {
             showAddonRestartBanner();
           } else {
-            input.checked = !input.checked;
+            input.checked = !nextEnabled;
           }
         } catch (e) {
-          input.checked = !input.checked;
+          input.checked = !nextEnabled;
         } finally {
           input.disabled = false;
         }
@@ -4571,7 +4583,47 @@ async function initSettingsModal() {
 
       row.appendChild(info);
       row.appendChild(label);
-      addonToggleList.appendChild(row);
+      return row;
+    }
+
+    // Addons flagged requires_network (EDSM/Spansh: they call external
+    // servers) are consolidated into a single Online/Offline switch rather
+    // than one toggle per addon, and enabling it asks for confirmation
+    // since it means outbound internet access.
+    const networkAddons = addons.filter((a) => a.requires_network);
+    const standaloneAddons = addons.filter((a) => !a.requires_network);
+
+    if (networkAddons.length > 0) {
+      const allEnabled = networkAddons.every((a) => a.enabled);
+      const constituentNames = networkAddons.map(displayName).join(' / ');
+      addonToggleList.appendChild(buildRow({
+        title: (typeof t === 'function' ? t('addon_network_group_name') : null) || '🌐 External Online Access (EDSM / Spansh)',
+        description: `${(typeof t === 'function' ? t('addon_network_group_desc') : null) || ''} (${constituentNames})`,
+        checked: allEnabled,
+        onToggle: async (nextEnabled) => {
+          if (nextEnabled) {
+            const msg = (typeof t === 'function' ? t('addon_network_confirm') : null)
+              || 'Enabling this feature will contact external servers. An internet connection is required. Continue?';
+            if (!window.confirm(msg)) return false;
+          }
+          const results = await Promise.all(networkAddons.map((a) => postToggle(a.id, nextEnabled)));
+          return results.every(Boolean);
+        }
+      }));
+    }
+
+    for (const addon of standaloneAddons) {
+      const errNote = addon.enabled && !addon.loaded
+        ? `<div style="color: #f87171; font-size: 0.7rem; margin-top: 2px;">⚠️ ${(typeof t === 'function' ? t('addon_load_error') : null) || '読み込みエラー'}: ${addon.error || ''}</div>`
+        : '';
+      addonToggleList.appendChild(buildRow({
+        title: displayName(addon),
+        version: addon.version,
+        description: displayDesc(addon),
+        checked: !!addon.enabled,
+        errNote,
+        onToggle: (nextEnabled) => postToggle(addon.id, nextEnabled)
+      }));
     }
   }
 

@@ -1,8 +1,9 @@
 {
   "id": "edsm_sync",
-  "name": "EDSM Manual Sync",
+  "name": "EDSM 手動同期",
   "version": "1.0.0",
-  "description": "星系詳細画面からの手動EDSM同期（高優先度クエリ・天体補完）。EDSM連携本体（自動キュー・未訪問系インポート）は引き続きコア側 app/services/edsm_service.py が担う（旧 app/server/api.py 直書きエンドポイントを移設）。",
+  "description": "星系詳細画面から、EDSMデータベースの最新情報（天体構成・BGS勢力情報など）を手動で取得して反映します。",
   "entry": "addon.py",
-  "enabled_by_default": false
+  "enabled_by_default": false,
+  "requires_network": true
 }
