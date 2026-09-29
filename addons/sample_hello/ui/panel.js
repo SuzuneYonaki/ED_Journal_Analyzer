@@ -1,7 +1,8 @@
 export default function init(container, addon) {
+  const name = (typeof window.getAddonDisplayName === 'function' ? window.getAddonDisplayName(addon) : null) || addon.name;
   container.innerHTML = `
     <div class="addon-card">
-      <strong>${addon.name}</strong> v${addon.version}
+      <strong>${name}</strong> v${addon.version}
       <div class="addon-card-sub">Scan events seen this session: <span data-role="count">…</span></div>
     </div>
   `;

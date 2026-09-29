@@ -19,6 +19,10 @@ Produces: dist/ED_Journal_Analyzer_v<version>.zip containing:
     addons/<id>/addon.py
     addons/<id>/ui/... (if present)
     addons/README.md
+
+Dev-only addons (DEV_ONLY_ADDON_IDS, e.g. sample_hello) are intentionally
+excluded -- they exist to exercise the addon mechanism during development
+and have no value to an end user.
 """
 import argparse
 import re
@@ -32,6 +36,10 @@ DIST_DIR = REPO / "dist"
 EXE_NAME = "ED_Journal_Analyzer.exe"
 ADDONS_SRC = REPO / "addons"
 
+# Dev-only addons that exist purely to exercise the addon mechanism during
+# development -- never useful to an end user, so excluded from releases.
+DEV_ONLY_ADDON_IDS = {"sample_hello"}
+
 
 def read_app_version() -> str:
     config_text = (REPO / "app" / "config.py").read_text(encoding="utf-8")
@@ -43,7 +51,8 @@ def read_app_version() -> str:
 
 def iter_addon_files():
     """Yields (source_path, arcname) for every file that should ship under
-    addons/ in the release zip. Skips __pycache__ and other dev-only cruft."""
+    addons/ in the release zip. Skips __pycache__, other dev-only cruft, and
+    DEV_ONLY_ADDON_IDS (e.g. sample_hello)."""
     if not ADDONS_SRC.is_dir():
         return
     for path in sorted(ADDONS_SRC.rglob("*")):
@@ -53,7 +62,10 @@ def iter_addon_files():
             continue
         if path.suffix == ".pyc":
             continue
-        arcname = str(Path("addons") / path.relative_to(ADDONS_SRC))
+        rel = path.relative_to(ADDONS_SRC)
+        if rel.parts and rel.parts[0] in DEV_ONLY_ADDON_IDS:
+            continue
+        arcname = str(Path("addons") / rel)
         yield path, arcname
 
 
