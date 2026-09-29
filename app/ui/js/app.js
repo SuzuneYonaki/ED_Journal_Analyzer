@@ -28,8 +28,10 @@ let state = {
     is_shared: false
   },
   starTypes: [],
+  starCounts: {},
   starMatchMode: 'any',
   luminosityClasses: [],
+  lumCounts: {},
   luminosityMatchMode: 'any',
   celestialFilters: [],
   celestialCounts: {},
@@ -261,12 +263,20 @@ async function fetchSystems(options = {}) {
     params.append('date_field', state.dateField);
   }
 
-  if (state.starTypes && state.starTypes.length > 0) {
+  const starEntries = Object.entries(state.starCounts || {});
+  if (starEntries.length > 0) {
+    params.append('star_types', starEntries.map(([k, c]) => (c > 1 ? `${k}:${c}` : k)).join(','));
+    params.append('star_match_mode', state.starMatchMode || 'any');
+  } else if (state.starTypes && state.starTypes.length > 0) {
     params.append('star_types', state.starTypes.join(','));
     params.append('star_match_mode', state.starMatchMode || 'any');
   }
 
-  if (state.luminosityClasses && state.luminosityClasses.length > 0) {
+  const lumEntries = Object.entries(state.lumCounts || {});
+  if (lumEntries.length > 0) {
+    params.append('luminosity_classes', lumEntries.map(([k, c]) => (c > 1 ? `${k}:${c}` : k)).join(','));
+    params.append('luminosity_match_mode', state.luminosityMatchMode || 'any');
+  } else if (state.luminosityClasses && state.luminosityClasses.length > 0) {
     params.append('luminosity_classes', state.luminosityClasses.join(','));
     params.append('luminosity_match_mode', state.luminosityMatchMode || 'any');
   }
@@ -2520,14 +2530,24 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnClearStars) {
     btnClearStars.addEventListener('click', (e) => {
       e.stopPropagation();
-      document.querySelectorAll('.star-filter-cb').forEach(cb => { cb.checked = false; });
+      document.querySelectorAll('.star-filter-cb').forEach(cb => {
+        cb.checked = false;
+        const lbl = cb.closest('.star-cb-label');
+        if (lbl) updateFilterChipUI(lbl, 0);
+      });
       state.starTypes = [];
+      state.starCounts = {};
       const rStarAny = document.querySelector('input[name="star-match-mode"][value="any"]');
       if (rStarAny) rStarAny.checked = true;
       state.starMatchMode = 'any';
 
-      document.querySelectorAll('.lum-filter-cb').forEach(cb => { cb.checked = false; });
+      document.querySelectorAll('.lum-filter-cb').forEach(cb => {
+        cb.checked = false;
+        const lbl = cb.closest('.star-cb-label');
+        if (lbl) updateFilterChipUI(lbl, 0);
+      });
       state.luminosityClasses = [];
+      state.lumCounts = {};
       const rLumAny = document.querySelector('input[name="lum-match-mode"][value="any"]');
       if (rLumAny) rLumAny.checked = true;
       state.luminosityMatchMode = 'any';
@@ -2858,14 +2878,24 @@ document.addEventListener('DOMContentLoaded', () => {
     state.maxArrivalDistLs = null;
 
     // 5. Star & Lum filters
-    document.querySelectorAll('.star-filter-cb').forEach(cb => { cb.checked = false; });
+    document.querySelectorAll('.star-filter-cb').forEach(cb => {
+      cb.checked = false;
+      const lbl = cb.closest('.star-cb-label');
+      if (lbl) updateFilterChipUI(lbl, 0);
+    });
     state.starTypes = [];
+    state.starCounts = {};
     const rStarAny = document.querySelector('input[name="star-match-mode"][value="any"]');
     if (rStarAny) rStarAny.checked = true;
     state.starMatchMode = 'any';
 
-    document.querySelectorAll('.lum-filter-cb').forEach(cb => { cb.checked = false; });
+    document.querySelectorAll('.lum-filter-cb').forEach(cb => {
+      cb.checked = false;
+      const lbl = cb.closest('.star-cb-label');
+      if (lbl) updateFilterChipUI(lbl, 0);
+    });
     state.luminosityClasses = [];
+    state.lumCounts = {};
     const rLumAny = document.querySelector('input[name="lum-match-mode"][value="any"]');
     if (rLumAny) rLumAny.checked = true;
     state.luminosityMatchMode = 'any';

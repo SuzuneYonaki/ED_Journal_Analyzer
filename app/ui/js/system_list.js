@@ -823,13 +823,47 @@ function initCollapsibleSections() {
 function initStellarFilters() {
   const cbs = document.querySelectorAll('.star-filter-cb');
   cbs.forEach(cb => {
+    const lbl = cb.closest('.star-cb-label');
+    const val = cb.value;
+
     cb.addEventListener('change', () => {
+      if (cb.checked) {
+        state.starCounts[val] = 1;
+      } else {
+        delete state.starCounts[val];
+      }
+      if (lbl) updateFilterChipUI(lbl, cb.checked ? 1 : 0);
       const selected = Array.from(document.querySelectorAll('.star-filter-cb:checked')).map(el => el.value);
       state.starTypes = selected;
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
     });
+
+    if (lbl) {
+      lbl.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof showFilterCountPopover === 'function') {
+          showFilterCountPopover(lbl, state.starCounts[val] || (cb.checked ? 1 : 0), (n) => {
+            if (n > 0) {
+              state.starCounts[val] = n;
+              cb.checked = true;
+            } else {
+              delete state.starCounts[val];
+              cb.checked = false;
+            }
+            updateFilterChipUI(lbl, n);
+            const selected = Array.from(document.querySelectorAll('.star-filter-cb:checked')).map(el => el.value);
+            state.starTypes = selected;
+            state.page = 1;
+            updateCollapsibleBadges();
+            fetchSystems({ autoSelectTop: true });
+          });
+        }
+      });
+      lbl.setAttribute('title', `${lbl.getAttribute('title') || ''} (右クリック/長押しで個数指定)`.trim());
+    }
   });
 
   const modeRadios = document.querySelectorAll('input[name="star-match-mode"]');
@@ -846,8 +880,13 @@ function initStellarFilters() {
   const btnClear = document.getElementById('btn-clear-star-filters');
   if (btnClear) {
     btnClear.addEventListener('click', () => {
-      document.querySelectorAll('.star-filter-cb').forEach(cb => { cb.checked = false; });
+      document.querySelectorAll('.star-filter-cb').forEach(cb => {
+        cb.checked = false;
+        const lbl = cb.closest('.star-cb-label');
+        if (lbl) updateFilterChipUI(lbl, 0);
+      });
       state.starTypes = [];
+      state.starCounts = {};
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
@@ -857,13 +896,47 @@ function initStellarFilters() {
   // Stellar Luminosity & Evolutionary Stages (Independent Filter)
   const lumCbs = document.querySelectorAll('.lum-filter-cb');
   lumCbs.forEach(cb => {
+    const lbl = cb.closest('.star-cb-label');
+    const val = cb.value;
+
     cb.addEventListener('change', () => {
+      if (cb.checked) {
+        state.lumCounts[val] = 1;
+      } else {
+        delete state.lumCounts[val];
+      }
+      if (lbl) updateFilterChipUI(lbl, cb.checked ? 1 : 0);
       const selected = Array.from(document.querySelectorAll('.lum-filter-cb:checked')).map(el => el.value);
       state.luminosityClasses = selected;
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
     });
+
+    if (lbl) {
+      lbl.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof showFilterCountPopover === 'function') {
+          showFilterCountPopover(lbl, state.lumCounts[val] || (cb.checked ? 1 : 0), (n) => {
+            if (n > 0) {
+              state.lumCounts[val] = n;
+              cb.checked = true;
+            } else {
+              delete state.lumCounts[val];
+              cb.checked = false;
+            }
+            updateFilterChipUI(lbl, n);
+            const selected = Array.from(document.querySelectorAll('.lum-filter-cb:checked')).map(el => el.value);
+            state.luminosityClasses = selected;
+            state.page = 1;
+            updateCollapsibleBadges();
+            fetchSystems({ autoSelectTop: true });
+          });
+        }
+      });
+      lbl.setAttribute('title', `${lbl.getAttribute('title') || ''} (右クリック/長押しで個数指定)`.trim());
+    }
   });
 
   const lumRadios = document.querySelectorAll('input[name="lum-match-mode"]');
@@ -880,8 +953,13 @@ function initStellarFilters() {
   const btnClearLum = document.getElementById('btn-clear-lum-filters');
   if (btnClearLum) {
     btnClearLum.addEventListener('click', () => {
-      document.querySelectorAll('.lum-filter-cb').forEach(cb => { cb.checked = false; });
+      document.querySelectorAll('.lum-filter-cb').forEach(cb => {
+        cb.checked = false;
+        const lbl = cb.closest('.star-cb-label');
+        if (lbl) updateFilterChipUI(lbl, 0);
+      });
       state.luminosityClasses = [];
+      state.lumCounts = {};
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
