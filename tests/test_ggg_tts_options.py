@@ -104,3 +104,53 @@ def test_app_js_evaluates_ggg_toggles():
     # checkAndAnnounceGggBody branching
     assert "ttsState.gggConfirmedEnabled === false" in content
     assert "ttsState.gggCandidateEnabled === false" in content
+
+
+def test_backend_parser_respects_ggg_candidate_toggle(tmp_path, monkeypatch):
+    """Verifies that journal_parser skips candidate alert when gggCandidateEnabled is false."""
+    from app.parser.journal_parser import get_ggg_tts_config, JournalParser
+    from app.services.tts_service import tts_service
+
+    test_settings_file = tmp_path / "tts_settings.json"
+    monkeypatch.setattr("app.config.DATA_DIR", tmp_path)
+
+    # 1. Config with candidate_enabled = False
+    with open(test_settings_file, "w", encoding="utf-8") as f:
+        json.dump({
+            "enabled": True,
+            "gggEnabled": True,
+            "gggConfirmedEnabled": True,
+            "gggCandidateEnabled": False,
+            "engine": "voicevox"
+        }, f)
+
+    cfg = get_ggg_tts_config()
+    assert cfg["confirmed_enabled"] is True
+    assert cfg["candidate_enabled"] is False
+
+    # 2. Check parser trigger behavior
+    import sqlite3
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    parser = JournalParser(db_conn=conn, is_live=True)
+    parser.current_star_system = "Sol"
+    # When is_candidate=True and candidate_enabled=False, must return False without speaking
+    enqueued = parser._check_and_trigger_ggg_alert(
+        sys_addr=123,
+        body_name="Body 1",
+        is_confirmed=False,
+        is_candidate=True,
+        alert_level="URGENT"
+    )
+    assert enqueued is False
+
+    # When is_confirmed=True and confirmed_enabled=True, must return True
+    enqueued_confirmed = parser._check_and_trigger_ggg_alert(
+        sys_addr=123,
+        body_name="Body 2",
+        is_confirmed=True,
+        variant_name="Class II",
+        is_candidate=False
+    )
+    assert enqueued_confirmed is True
+
