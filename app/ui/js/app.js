@@ -3649,10 +3649,8 @@ const ttsState = {
   highBioText: '{body}、高額生物反応です。見込額{value}クレジット。',
   gggEnabled: true, // GGGは極めて希少なためデフォルト有効
   gggConfirmedEnabled: true,
-  gggCandidateEnabled: true,
   gggMode: 'both', // 'both' | 'tts' | 'buzzer'
   gggConfirmedText: '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。',
-  gggCandidateText: '{body}はグリーンガスジャイアント候補です。',
   engine: 'web_speech', // 'web_speech' | 'voicevox'
   webVoiceURI: '',
   voicevoxSpeakerId: '3', // ずんだもん (ノーマル)
@@ -3862,7 +3860,6 @@ function checkAndAnnounceGggBody(sysData, bodyData) {
 
   let isConfirmedGgg = Boolean(bodyData.is_confirmed_ggg);
   let confirmedVariant = bodyData.confirmed_ggg_variant || '';
-  let isGggCandidate = Boolean(bodyData.ggg_evaluation && bodyData.ggg_evaluation.is_candidate);
 
   // Check anomalies list if available
   let anomalies = bodyData.anomalies || [];
@@ -3882,19 +3879,15 @@ function checkAndAnnounceGggBody(sysData, bodyData) {
         if (a.desc && a.desc.includes('確定GGG:')) {
           confirmedVariant = a.desc.replace('確定GGG:', '').trim();
         }
-      } else if (typeStr === 'ggg_candidate' || tagStr.includes('GGG Candidate')) {
-        isGggCandidate = true;
       }
     });
   }
 
-  if (isConfirmedGgg) {
-    if (ttsState.gggConfirmedEnabled === false) return;
-  } else if (isGggCandidate) {
-    if (ttsState.gggCandidateEnabled === false) return;
-  } else {
-    return;
-  }
+  // Candidate (unconfirmed) GGG detections are never announced via TTS --
+  // only Codex-confirmed sightings are voiced. The candidate tag/badge
+  // itself still renders on the system map; this only gates the alert.
+  if (!isConfirmedGgg) return;
+  if (ttsState.gggConfirmedEnabled === false) return;
 
   announcedGggBodies.add(alertKey);
 
@@ -3905,19 +3898,11 @@ function checkAndAnnounceGggBody(sysData, bodyData) {
 
   if (mode === 'both' || mode === 'tts') {
     if (ttsState.engine === 'webspeech') {
-      let msg = '';
-      if (isConfirmedGgg) {
-        const rawText = ttsState.gggConfirmedText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
-        msg = rawText
-          .replace(/\{body\}/gi, bodyName)
-          .replace(/\{variant\}/gi, confirmedVariant || 'ガスジャイアント')
-          .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
-      } else {
-        const rawText = ttsState.gggCandidateText || '{body}はグリーンガスジャイアント候補です。';
-        msg = rawText
-          .replace(/\{body\}/gi, bodyName)
-          .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
-      }
+      const rawText = ttsState.gggConfirmedText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
+      const msg = rawText
+        .replace(/\{body\}/gi, bodyName)
+        .replace(/\{variant\}/gi, confirmedVariant || 'ガスジャイアント')
+        .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
 
       setTimeout(() => {
         playWebSpeech(msg);
@@ -4710,10 +4695,8 @@ async function initSettingsModal() {
   const btnHighBioTest = document.getElementById('btn-tts-high-bio-test');
   const gggToggle = document.getElementById('tts-ggg-toggle');
   const gggConfirmedToggle = document.getElementById('tts-ggg-confirmed-toggle');
-  const gggCandidateToggle = document.getElementById('tts-ggg-candidate-toggle');
   const gggModeSelect = document.getElementById('tts-ggg-mode');
   const gggConfirmedTextInput = document.getElementById('tts-ggg-confirmed-text');
-  const gggCandidateTextInput = document.getElementById('tts-ggg-candidate-text');
   const engineSelect = document.getElementById('tts-engine-select');
   const webVoiceSelect = document.getElementById('tts-web-voice-select');
   const voicevoxSpeakerSelect = document.getElementById('tts-voicevox-speaker-select');
@@ -4725,7 +4708,6 @@ async function initSettingsModal() {
   const rateVal = document.getElementById('tts-rate-val');
   const btnTest = document.getElementById('btn-tts-test');
   const btnGggTest = document.getElementById('btn-tts-ggg-test');
-  const btnGggCandTest = document.getElementById('btn-tts-ggg-cand-test');
   const btnCloseFooter = document.getElementById('btn-settings-close-footer');
 
   function updateTTSModalFields() {
@@ -4736,10 +4718,8 @@ async function initSettingsModal() {
     if (highBioTextInput) highBioTextInput.value = ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。';
     if (gggToggle) gggToggle.checked = (ttsState.gggEnabled !== false);
     if (gggConfirmedToggle) gggConfirmedToggle.checked = (ttsState.gggConfirmedEnabled !== false);
-    if (gggCandidateToggle) gggCandidateToggle.checked = (ttsState.gggCandidateEnabled !== false);
     if (gggModeSelect) gggModeSelect.value = ttsState.gggMode || 'both';
     if (gggConfirmedTextInput) gggConfirmedTextInput.value = ttsState.gggConfirmedText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
-    if (gggCandidateTextInput) gggCandidateTextInput.value = ttsState.gggCandidateText || '{body}はグリーンガスジャイアント候補です。';
     if (engineSelect) engineSelect.value = ttsState.engine;
     if (customTextInput) customTextInput.value = ttsState.customText;
     const voicevoxUrlInput = document.getElementById('tts-voicevox-url');
@@ -4811,10 +4791,8 @@ async function initSettingsModal() {
       if (highBioTextInput) ttsState.highBioText = highBioTextInput.value || '{body}、高額生物反応です。見込額{value}クレジット。';
       if (gggToggle) ttsState.gggEnabled = gggToggle.checked;
       if (gggConfirmedToggle) ttsState.gggConfirmedEnabled = gggConfirmedToggle.checked;
-      if (gggCandidateToggle) ttsState.gggCandidateEnabled = gggCandidateToggle.checked;
       if (gggModeSelect) ttsState.gggMode = gggModeSelect.value;
       if (gggConfirmedTextInput) ttsState.gggConfirmedText = gggConfirmedTextInput.value || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
-      if (gggCandidateTextInput) ttsState.gggCandidateText = gggCandidateTextInput.value || '{body}はグリーンガスジャイアント候補です。';
       if (engineSelect) ttsState.engine = engineSelect.value;
       if (webVoiceSelect) ttsState.webVoiceURI = webVoiceSelect.value;
       if (voicevoxSpeakerSelect) ttsState.voicevoxSpeakerId = voicevoxSpeakerSelect.value;
@@ -4876,27 +4854,6 @@ async function initSettingsModal() {
         const msg = (rawText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。')
           .replace(/\{variant\}/gi, 'スダルスキー・クラス1 ガスジャイアント')
           .replace(/\{body\}/gi, 'Planet A 1');
-        setTimeout(() => {
-          if (engineSelect && engineSelect.value === 'voicevox') {
-            playVoicevoxSpeech(msg);
-          } else {
-            playWebSpeech(msg);
-          }
-        }, mode === 'both' ? 500 : 0);
-      }
-    });
-  }
-
-  if (btnGggCandTest) {
-    btnGggCandTest.addEventListener('click', () => {
-      const mode = gggModeSelect ? gggModeSelect.value : (ttsState.gggMode || 'both');
-      if (mode === 'both' || mode === 'buzzer') {
-        playGggChime();
-      }
-      if (mode === 'both' || mode === 'tts') {
-        const rawText = gggCandidateTextInput ? gggCandidateTextInput.value : ttsState.gggCandidateText;
-        const msg = (rawText || '{body}はグリーンガスジャイアント候補です。')
-          .replace(/\{body\}/gi, 'Planet B 2');
         setTimeout(() => {
           if (engineSelect && engineSelect.value === 'voicevox') {
             playVoicevoxSpeech(msg);

@@ -97,15 +97,15 @@ def is_ggg_tts_enabled() -> bool:
 
 
 def get_ggg_tts_config() -> dict:
-    """Checks tts_settings.json for GGG audio alert settings and templates."""
+    """Checks tts_settings.json for GGG audio alert settings and templates.
+    Confirmed (Codex-verified) sightings only -- candidate GGG detections
+    are never voiced."""
     cfg = {
         "enabled": True,
         "confirmed_enabled": True,
-        "candidate_enabled": True,
         "engine": "voicevox",
         "mode": "both",
         "confirmed_text": "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。",
-        "candidate_text": "{body}はグリーンガスジャイアント候補です。"
     }
     try:
         from app.config import DATA_DIR
@@ -118,11 +118,9 @@ def get_ggg_tts_config() -> dict:
                     return cfg
                 cfg["enabled"] = bool(data.get("gggEnabled", True))
                 cfg["confirmed_enabled"] = bool(data.get("gggConfirmedEnabled", True))
-                cfg["candidate_enabled"] = bool(data.get("gggCandidateEnabled", True))
                 cfg["engine"] = data.get("engine", "voicevox")
                 cfg["mode"] = data.get("gggMode", "both")
                 cfg["confirmed_text"] = data.get("gggConfirmedText") or cfg["confirmed_text"]
-                cfg["candidate_text"] = data.get("gggCandidateText") or cfg["candidate_text"]
     except Exception:
         pass
     return cfg
@@ -170,7 +168,6 @@ class JournalParser:
         self.event_callback = event_callback
         self.is_live = is_live
         self._announced_high_bio_bodies = set()
-        self._announced_ggg_candidate = set()
         self._announced_ggg_confirmed = set()
         
         # State tracking for SRV and surface activities
@@ -254,12 +251,12 @@ class JournalParser:
         body_name: str | None,
         is_confirmed: bool,
         variant_name: str | None = None,
-        is_candidate: bool = False,
-        alert_level: str | None = None,
     ) -> bool:
         """
         Triggers GGG TTS alert via backend TTSService if enabled,
         strictly enforcing the {body} placeholder condition and deduplicating announcements.
+        Confirmed (Codex-verified) sightings only -- candidate GGG detections
+        are never voiced.
         """
         if not self.is_live:
             return False
@@ -306,34 +303,6 @@ class JournalParser:
 
             self._announced_ggg_confirmed.add(alert_key)
             tts_service.enqueue_speak(tts_msg, priority=True)
-            return True
-
-        elif is_candidate:
-            if not cfg.get("candidate_enabled", True):
-                return False
-
-            if alert_key in self._announced_ggg_confirmed or alert_key in self._announced_ggg_candidate:
-                return False
-
-            raw_tpl = cfg.get("candidate_text") or "{body}はグリーンガスジャイアント候補です。"
-            if "{body}" in raw_tpl and not body_name:
-                return False
-
-            tts_msg = raw_tpl
-            if body_name:
-                tts_msg = tts_msg.replace("{body}", body_name)
-
-            if "{system}" in tts_msg:
-                sys_name = self.current_star_system or ""
-                if not sys_name and sys_addr:
-                    self.cursor.execute("SELECT star_system FROM systems WHERE system_address = ?", (sys_addr,))
-                    row = self.cursor.fetchone()
-                    if row and row["star_system"]:
-                        sys_name = row["star_system"]
-                tts_msg = tts_msg.replace("{system}", sys_name)
-
-            self._announced_ggg_candidate.add(alert_key)
-            tts_service.enqueue_speak(tts_msg, priority=(alert_level == "URGENT"))
             return True
 
         return False
@@ -873,20 +842,16 @@ class JournalParser:
             confirmed_ggg_variant=confirmed_ggg_variant
         )
         ggg = rarity_res.get("ggg_evaluation") or {}
+        # Candidate (unconfirmed) GGG detections never trigger a TTS alert --
+        # only Codex-confirmed sightings are voiced. ggg["is_candidate"] is
+        # still used below to tag the body for the visual "GGG Candidate"
+        # badge/filter, which is unaffected by this.
         if is_confirmed_ggg:
             self._check_and_trigger_ggg_alert(
                 sys_addr=sys_addr,
                 body_name=b_name,
                 is_confirmed=True,
                 variant_name=confirmed_ggg_variant
-            )
-        elif ggg.get("is_candidate"):
-            self._check_and_trigger_ggg_alert(
-                sys_addr=sys_addr,
-                body_name=b_name,
-                is_confirmed=False,
-                is_candidate=True,
-                alert_level=ggg.get("alert_level")
             )
 
         anomalies = detect_anomalies(body_dict)
