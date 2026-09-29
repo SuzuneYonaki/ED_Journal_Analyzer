@@ -945,6 +945,15 @@ const i18n = {
     sysmap_zoom_out_tip: "ズームアウト (ホイール下 / 最小40%)",
     sysmap_zoom_reset_tip: "100%にリセット (ホイール中クリック)",
     addon_disabled_toast: "⚠️ この機能は現在無効化されています ({name})。設定 > アドオンから有効化できます。",
+    tab_addons: "🧩 アドオン",
+    addons_tab_desc: "各機能をアドオン単位で個別に有効/無効化できます。切り替えはアプリの再起動後に反映されます。",
+    addon_restart_needed: "⚠️ 変更を反映するには再起動が必要です",
+    btn_addon_restart_now: "🔄 今すぐ再起動",
+    addon_restarting: "⏳ 再起動中...",
+    addons_loading: "読み込み中...",
+    addons_load_failed: "アドオン一覧の取得に失敗しました。",
+    addons_none_found: "アドオンが見つかりません。",
+    addon_load_error: "読み込みエラー",
   },
   en: {
     // Header
@@ -1890,6 +1899,15 @@ const i18n = {
     sysmap_zoom_out_tip: "Zoom Out (Wheel Down / Min 40%)",
     sysmap_zoom_reset_tip: "Reset to 100% (Middle Click)",
     addon_disabled_toast: "⚠️ This feature is currently disabled ({name}). Enable it under Settings > Addons.",
+    tab_addons: "🧩 Addons",
+    addons_tab_desc: "Enable or disable each feature individually as an addon. Changes take effect after restarting the app.",
+    addon_restart_needed: "⚠️ Restart required to apply changes",
+    btn_addon_restart_now: "🔄 Restart Now",
+    addon_restarting: "⏳ Restarting...",
+    addons_loading: "Loading...",
+    addons_load_failed: "Failed to fetch the addon list.",
+    addons_none_found: "No addons found.",
+    addon_load_error: "Load error",
   }
 };
 

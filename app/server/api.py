@@ -1,5 +1,7 @@
 import json
 import os
+import subprocess
+import sys
 import threading
 import time
 import asyncio
@@ -14,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import DEFAULT_JOURNAL_DIR, BASE_DIR, DATA_DIR, APP_VERSION
 from app.db.database import (
-    get_db_connection, init_db, get_mining_sites,
+    get_db_connection, init_db, get_mining_sites, checkpoint_wal,
     add_manual_mining_site, update_mining_site, delete_mining_site, save_or_merge_mining_site,
     get_celestial_statistics
 )
@@ -2185,6 +2187,31 @@ def toggle_addon(addon_id: str, body: AddonToggleRequest):
         return JSONResponse({"error": "Addon not found"}, status_code=404)
     addon_manager.set_enabled(addon_id, body.enabled)
     return {"status": "success", "restart_required": True}
+
+@app.post("/api/app/restart")
+def restart_app():
+    """Relaunches the app process (used after toggling addons, which only
+    take effect on the next startup). Flushes the SQLite WAL first, then
+    spawns a fresh process and exits this one -- pywebview's window runs on
+    this same process's main thread, so exiting closes it and the new
+    process opens its own window."""
+    def _do_restart():
+        time.sleep(0.3)
+        try:
+            checkpoint_wal()
+        except Exception:
+            pass
+        try:
+            if getattr(sys, 'frozen', False):
+                subprocess.Popen([sys.executable])
+            else:
+                subprocess.Popen([sys.executable, str(BASE_DIR / "run.py")] + sys.argv[1:])
+        except Exception as e:
+            print(f"[Restart] Failed to relaunch: {e}")
+            return
+        os._exit(0)
+    threading.Thread(target=_do_restart, daemon=True).start()
+    return {"status": "restarting"}
 
 @app.post("/api/scan_now")
 def trigger_scan(background_tasks: BackgroundTasks):

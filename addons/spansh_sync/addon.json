@@ -4,5 +4,5 @@
   "version": "1.0.0",
   "description": "Spansh API 連携。星系の環ホットスポット・PML採掘地点をオンデマンドで取得し、天体と注釈に反映する（旧 app/server/api.py 直書きエンドポイントを移設）。",
   "entry": "addon.py",
-  "enabled_by_default": true
+  "enabled_by_default": false
 }
