@@ -971,6 +971,8 @@ const i18n = {
     addon_desc_exobiology_prediction: "惑星の環境データから、生息する可能性のある生物種と推定報酬額を予測します。",
     addon_name_sample_hello: "サンプルアドオン",
     addon_desc_sample_hello: "アドオン機構の動作確認用サンプルです。既定では無効になっています。",
+    btn_confirm_generic: "OK",
+    btn_cancel_generic: "キャンセル",
   },
   en: {
     // Header
@@ -1942,6 +1944,8 @@ const i18n = {
     addon_desc_exobiology_prediction: "Predicts which biological species may be present on a planet, along with their estimated payout, based on its environmental data.",
     addon_name_sample_hello: "Sample Addon",
     addon_desc_sample_hello: "A sample addon used to verify the addon system works. Disabled by default.",
+    btn_confirm_generic: "OK",
+    btn_cancel_generic: "Cancel",
   }
 };
 
