@@ -819,51 +819,64 @@ function initCollapsibleSections() {
   updateCollapsibleBadges();
 }
 
-// Stellar Multi-Search Filters
+// Stellar Multi-Search Filters (Badge-Style Chips)
 function initStellarFilters() {
-  const cbs = document.querySelectorAll('.star-filter-cb');
-  cbs.forEach(cb => {
-    const lbl = cb.closest('.star-cb-label');
-    const val = cb.value;
+  const getUpdateFilterChipUI = () => (typeof window.updateFilterChipUI === 'function' ? window.updateFilterChipUI : (typeof updateFilterChipUI === 'function' ? updateFilterChipUI : null));
+  const getShowFilterCountPopover = () => (typeof window.showFilterCountPopover === 'function' ? window.showFilterCountPopover : (typeof showFilterCountPopover === 'function' ? showFilterCountPopover : null));
+  const getCloseActiveFilterPopover = () => (typeof window.closeActiveFilterPopover === 'function' ? window.closeActiveFilterPopover : (typeof closeActiveFilterPopover === 'function' ? closeActiveFilterPopover : null));
 
-    cb.addEventListener('change', () => {
-      if (cb.checked) {
+  // 1. Stellar Spectral Type Chips
+  const starChips = document.querySelectorAll('.star-chip');
+  starChips.forEach(chip => {
+    const val = chip.dataset.star;
+    if (!val) return;
+
+    chip.addEventListener('click', () => {
+      const closePopover = getCloseActiveFilterPopover();
+      if (closePopover) closePopover();
+      const current = state.starCounts[val] || 0;
+      const nextVal = current > 0 ? 0 : 1;
+      if (nextVal > 0) {
         state.starCounts[val] = 1;
+        if (!state.starTypes.includes(val)) state.starTypes.push(val);
       } else {
         delete state.starCounts[val];
+        const idx = state.starTypes.indexOf(val);
+        if (idx >= 0) state.starTypes.splice(idx, 1);
       }
-      if (lbl) updateFilterChipUI(lbl, cb.checked ? 1 : 0);
-      const selected = Array.from(document.querySelectorAll('.star-filter-cb:checked')).map(el => el.value);
-      state.starTypes = selected;
+      const updateUI = getUpdateFilterChipUI();
+      if (updateUI) updateUI(chip, nextVal);
+      else chip.classList.toggle('active', nextVal > 0);
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
     });
 
-    if (lbl) {
-      lbl.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (typeof showFilterCountPopover === 'function') {
-          showFilterCountPopover(lbl, state.starCounts[val] || (cb.checked ? 1 : 0), (n) => {
-            if (n > 0) {
-              state.starCounts[val] = n;
-              cb.checked = true;
-            } else {
-              delete state.starCounts[val];
-              cb.checked = false;
-            }
-            updateFilterChipUI(lbl, n);
-            const selected = Array.from(document.querySelectorAll('.star-filter-cb:checked')).map(el => el.value);
-            state.starTypes = selected;
-            state.page = 1;
-            updateCollapsibleBadges();
-            fetchSystems({ autoSelectTop: true });
-          });
-        }
-      });
-      lbl.setAttribute('title', `${lbl.getAttribute('title') || ''} (右クリック/長押しで個数指定)`.trim());
-    }
+    chip.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const showPopover = getShowFilterCountPopover();
+      if (showPopover) {
+        showPopover(chip, state.starCounts[val] || 0, (n) => {
+          if (n > 0) {
+            state.starCounts[val] = n;
+            if (!state.starTypes.includes(val)) state.starTypes.push(val);
+          } else {
+            delete state.starCounts[val];
+            const idx = state.starTypes.indexOf(val);
+            if (idx >= 0) state.starTypes.splice(idx, 1);
+          }
+          const updateUI = getUpdateFilterChipUI();
+          if (updateUI) updateUI(chip, n);
+          else chip.classList.toggle('active', n > 0);
+          state.page = 1;
+          updateCollapsibleBadges();
+          fetchSystems({ autoSelectTop: true });
+        });
+      }
+    });
+
+    chip.setAttribute('title', `${chip.getAttribute('title') || ''} (右クリック/長押しで個数指定)`.trim());
   });
 
   const modeRadios = document.querySelectorAll('input[name="star-match-mode"]');
@@ -877,66 +890,80 @@ function initStellarFilters() {
     });
   });
 
-  const btnClear = document.getElementById('btn-clear-star-filters');
-  if (btnClear) {
-    btnClear.addEventListener('click', () => {
-      document.querySelectorAll('.star-filter-cb').forEach(cb => {
-        cb.checked = false;
-        const lbl = cb.closest('.star-cb-label');
-        if (lbl) updateFilterChipUI(lbl, 0);
-      });
-      state.starTypes = [];
-      state.starCounts = {};
-      state.page = 1;
-      updateCollapsibleBadges();
-      fetchSystems({ autoSelectTop: true });
+  const clearStarChips = () => {
+    const updateUI = getUpdateFilterChipUI();
+    document.querySelectorAll('.star-chip').forEach(chip => {
+      if (updateUI) updateUI(chip, 0);
+      else chip.classList.remove('active');
     });
+    state.starTypes = [];
+    state.starCounts = {};
+    state.page = 1;
+    updateCollapsibleBadges();
+    fetchSystems({ autoSelectTop: true });
+  };
+
+  const btnClearStars = document.getElementById('btn-clear-stars-filters');
+  if (btnClearStars) {
+    btnClearStars.addEventListener('click', clearStarChips);
+  }
+  const btnClearStar = document.getElementById('btn-clear-star-filters');
+  if (btnClearStar) {
+    btnClearStar.addEventListener('click', clearStarChips);
   }
 
-  // Stellar Luminosity & Evolutionary Stages (Independent Filter)
-  const lumCbs = document.querySelectorAll('.lum-filter-cb');
-  lumCbs.forEach(cb => {
-    const lbl = cb.closest('.star-cb-label');
-    const val = cb.value;
+  // 2. Stellar Luminosity & Evolutionary Stages Chips
+  const lumChips = document.querySelectorAll('.lum-chip');
+  lumChips.forEach(chip => {
+    const val = chip.dataset.lum;
+    if (!val) return;
 
-    cb.addEventListener('change', () => {
-      if (cb.checked) {
+    chip.addEventListener('click', () => {
+      const closePopover = getCloseActiveFilterPopover();
+      if (closePopover) closePopover();
+      const current = state.lumCounts[val] || 0;
+      const nextVal = current > 0 ? 0 : 1;
+      if (nextVal > 0) {
         state.lumCounts[val] = 1;
+        if (!state.luminosityClasses.includes(val)) state.luminosityClasses.push(val);
       } else {
         delete state.lumCounts[val];
+        const idx = state.luminosityClasses.indexOf(val);
+        if (idx >= 0) state.luminosityClasses.splice(idx, 1);
       }
-      if (lbl) updateFilterChipUI(lbl, cb.checked ? 1 : 0);
-      const selected = Array.from(document.querySelectorAll('.lum-filter-cb:checked')).map(el => el.value);
-      state.luminosityClasses = selected;
+      const updateUI = getUpdateFilterChipUI();
+      if (updateUI) updateUI(chip, nextVal);
+      else chip.classList.toggle('active', nextVal > 0);
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
     });
 
-    if (lbl) {
-      lbl.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (typeof showFilterCountPopover === 'function') {
-          showFilterCountPopover(lbl, state.lumCounts[val] || (cb.checked ? 1 : 0), (n) => {
-            if (n > 0) {
-              state.lumCounts[val] = n;
-              cb.checked = true;
-            } else {
-              delete state.lumCounts[val];
-              cb.checked = false;
-            }
-            updateFilterChipUI(lbl, n);
-            const selected = Array.from(document.querySelectorAll('.lum-filter-cb:checked')).map(el => el.value);
-            state.luminosityClasses = selected;
-            state.page = 1;
-            updateCollapsibleBadges();
-            fetchSystems({ autoSelectTop: true });
-          });
-        }
-      });
-      lbl.setAttribute('title', `${lbl.getAttribute('title') || ''} (右クリック/長押しで個数指定)`.trim());
-    }
+    chip.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const showPopover = getShowFilterCountPopover();
+      if (showPopover) {
+        showPopover(chip, state.lumCounts[val] || 0, (n) => {
+          if (n > 0) {
+            state.lumCounts[val] = n;
+            if (!state.luminosityClasses.includes(val)) state.luminosityClasses.push(val);
+          } else {
+            delete state.lumCounts[val];
+            const idx = state.luminosityClasses.indexOf(val);
+            if (idx >= 0) state.luminosityClasses.splice(idx, 1);
+          }
+          const updateUI = getUpdateFilterChipUI();
+          if (updateUI) updateUI(chip, n);
+          else chip.classList.toggle('active', n > 0);
+          state.page = 1;
+          updateCollapsibleBadges();
+          fetchSystems({ autoSelectTop: true });
+        });
+      }
+    });
+
+    chip.setAttribute('title', `${chip.getAttribute('title') || ''} (右クリック/長押しで個数指定)`.trim());
   });
 
   const lumRadios = document.querySelectorAll('input[name="lum-match-mode"]');
@@ -953,10 +980,10 @@ function initStellarFilters() {
   const btnClearLum = document.getElementById('btn-clear-lum-filters');
   if (btnClearLum) {
     btnClearLum.addEventListener('click', () => {
-      document.querySelectorAll('.lum-filter-cb').forEach(cb => {
-        cb.checked = false;
-        const lbl = cb.closest('.star-cb-label');
-        if (lbl) updateFilterChipUI(lbl, 0);
+      const updateUI = getUpdateFilterChipUI();
+      document.querySelectorAll('.lum-chip').forEach(chip => {
+        if (updateUI) updateUI(chip, 0);
+        else chip.classList.remove('active');
       });
       state.luminosityClasses = [];
       state.lumCounts = {};

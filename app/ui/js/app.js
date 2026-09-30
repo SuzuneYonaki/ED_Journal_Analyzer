@@ -2344,6 +2344,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     activeFilterPopover = null;
   }
+  window.updateFilterChipUI = updateFilterChipUI;
+  window.closeActiveFilterPopover = closeActiveFilterPopover;
+  window.showFilterCountPopover = showFilterCountPopover;
 
   function showFilterCountPopover(chip, filterKeyOrVal, onApplyCallback) {
     closeActiveFilterPopover();
@@ -2610,10 +2613,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnClearStars) {
     btnClearStars.addEventListener('click', (e) => {
       e.stopPropagation();
-      document.querySelectorAll('.star-filter-cb').forEach(cb => {
-        cb.checked = false;
-        const lbl = cb.closest('.star-cb-label');
-        if (lbl) updateFilterChipUI(lbl, 0);
+      document.querySelectorAll('.star-chip').forEach(chip => {
+        updateFilterChipUI(chip, 0);
       });
       state.starTypes = [];
       state.starCounts = {};
@@ -2621,10 +2622,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (rStarAny) rStarAny.checked = true;
       state.starMatchMode = 'any';
 
-      document.querySelectorAll('.lum-filter-cb').forEach(cb => {
-        cb.checked = false;
-        const lbl = cb.closest('.star-cb-label');
-        if (lbl) updateFilterChipUI(lbl, 0);
+      document.querySelectorAll('.lum-chip').forEach(chip => {
+        updateFilterChipUI(chip, 0);
       });
       state.luminosityClasses = [];
       state.lumCounts = {};
@@ -2958,10 +2957,8 @@ document.addEventListener('DOMContentLoaded', () => {
     state.maxArrivalDistLs = null;
 
     // 5. Star & Lum filters
-    document.querySelectorAll('.star-filter-cb').forEach(cb => {
-      cb.checked = false;
-      const lbl = cb.closest('.star-cb-label');
-      if (lbl) updateFilterChipUI(lbl, 0);
+    document.querySelectorAll('.star-chip').forEach(chip => {
+      updateFilterChipUI(chip, 0);
     });
     state.starTypes = [];
     state.starCounts = {};
@@ -2969,10 +2966,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (rStarAny) rStarAny.checked = true;
     state.starMatchMode = 'any';
 
-    document.querySelectorAll('.lum-filter-cb').forEach(cb => {
-      cb.checked = false;
-      const lbl = cb.closest('.star-cb-label');
-      if (lbl) updateFilterChipUI(lbl, 0);
+    document.querySelectorAll('.lum-chip').forEach(chip => {
+      updateFilterChipUI(chip, 0);
     });
     state.luminosityClasses = [];
     state.lumCounts = {};

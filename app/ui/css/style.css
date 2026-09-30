@@ -625,6 +625,46 @@ header {
   height: 12px;
 }
 
+/* Stellar & Luminosity Chip Styles */
+.chip.star-chip,
+.chip.lum-chip {
+  padding: 3px 4px;
+  border-radius: 4px;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.chip.star-chip:hover,
+.chip.lum-chip:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.chip.star-chip.active {
+  background: rgba(251, 146, 60, 0.22) !important;
+  border-color: #fb923c !important;
+  color: #fdba74 !important;
+  font-weight: bold;
+  box-shadow: 0 0 5px rgba(251, 146, 60, 0.35);
+}
+
+.chip.lum-chip.active {
+  background: rgba(244, 63, 94, 0.22) !important;
+  border-color: #f43f5e !important;
+  color: #fecdd3 !important;
+  font-weight: bold;
+  box-shadow: 0 0 5px rgba(244, 63, 94, 0.35);
+}
+
 /* Header Exploration Stats Collapsed State */
 .header-logged-group.collapsed #header-stats-content {
   display: none !important;

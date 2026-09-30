@@ -22,7 +22,8 @@ def run_js_integration_test(script_body):
 
     // Full DOM mock environment
     function createMockElement(tag = 'div') {{
-      return {{
+      const listeners = {{}};
+      const elem = {{
         tagName: tag.toUpperCase(),
         innerText: '',
         innerHTML: '',
@@ -39,24 +40,55 @@ def run_js_integration_test(script_body):
           remove(c) {{ this._classes.delete(c); }},
           toggle(c, force) {{
             if (force === undefined) {{
-              if (this._classes.has(c)) this._classes.delete(c);
-              else this._classes.add(c);
+              if (this._classes.has(c)) {{ this._classes.delete(c); return false; }}
+              else {{ this._classes.add(c); return true; }}
             }} else {{
               if (force) this._classes.add(c);
               else this._classes.delete(c);
+              return force;
             }}
           }},
           contains(c) {{ return this._classes.has(c); }}
         }},
         appendChild(child) {{ this.children.push(child); }},
-        querySelectorAll() {{ return []; }},
-        querySelector() {{ return null; }},
-        addEventListener() {{}},
+        querySelectorAll(sel) {{
+          const res = [];
+          for (const c of this.children) {{
+            if (c.matches && c.matches(sel)) res.push(c);
+            if (c.querySelectorAll) res.push(...c.querySelectorAll(sel));
+          }}
+          return res;
+        }},
+        querySelector(sel) {{
+          const all = this.querySelectorAll(sel);
+          return all.length > 0 ? all[0] : null;
+        }},
+        setAttribute(k, v) {{ this[k] = v; }},
+        getAttribute(k) {{ return this[k] || ''; }},
+        addEventListener(event, cb) {{
+          if (!listeners[event]) listeners[event] = [];
+          listeners[event].push(cb);
+        }},
+        click() {{
+          if (this.onclick) this.onclick({{ stopPropagation: () => {{}} }});
+          if (listeners['click']) listeners['click'].forEach(cb => cb({{ stopPropagation: () => {{}} }}));
+        }},
         scrollTo() {{}},
         scrollIntoView() {{}}
       }};
+
+      let _className = '';
+      Object.defineProperty(elem, 'className', {{
+        get() {{ return Array.from(elem.classList._classes).join(' ') || _className; }},
+        set(v) {{
+          _className = v;
+          (v || '').split(/\\s+/).filter(Boolean).forEach(c => elem.classList.add(c));
+        }}
+      }});
+      return elem;
     }}
 
+    const registeredElements = [];
     const domStore = {{}};
     function getOrCreateEl(id) {{
       if (!domStore[id]) {{
@@ -68,9 +100,25 @@ def run_js_integration_test(script_body):
 
     global.document = {{
       getElementById: (id) => getOrCreateEl(id),
-      querySelectorAll: (sel) => [],
-      querySelector: (sel) => null,
-      createElement: (tag) => createMockElement(tag),
+      querySelectorAll: (sel) => {{
+        return registeredElements.filter(el => el._selectorMatches && el._selectorMatches(sel));
+      }},
+      querySelector: (sel) => {{
+        const all = global.document.querySelectorAll(sel);
+        return all.length > 0 ? all[0] : null;
+      }},
+      createElement: (tag) => {{
+        const el = createMockElement(tag);
+        el._selectorMatches = (s) => {{
+          const classes = (el.className || '').split(/\\s+/);
+          if (s.includes('.star-chip') && (el.classList.contains('star-chip') || classes.includes('star-chip'))) return true;
+          if (s.includes('.lum-chip') && (el.classList.contains('lum-chip') || classes.includes('lum-chip'))) return true;
+          if (s.startsWith('.') && (el.classList.contains(s.slice(1)) || classes.includes(s.slice(1)))) return true;
+          return false;
+        }};
+        registeredElements.push(el);
+        return el;
+      }},
       addEventListener: () => {{}}
     }};
     global.window = global;
@@ -280,4 +328,75 @@ def test_body_card_click_does_not_overwrite_target_body_id():
     assert res["selectedAfterBioClick"] == 200
     assert res["targetAfterBioClick"] == 100
     assert res["card200HasTargetClassBefore"] is False
+
+
+def test_badge_style_star_and_lum_chips_trigger_events():
+    """Verify star-chip and lum-chip toggle active state and update filter arrays on click."""
+    out = run_js_integration_test("""
+    // Create mock star and lum chips
+    const chipO = document.createElement('button');
+    chipO.className = 'chip star-chip';
+    chipO.dataset.star = 'O';
+
+    const chipM = document.createElement('button');
+    chipM.className = 'chip star-chip';
+    chipM.dataset.star = 'M';
+
+    const chipI = document.createElement('button');
+    chipI.className = 'chip lum-chip';
+    chipI.dataset.lum = 'I';
+
+    const chipV = document.createElement('button');
+    chipV.className = 'chip lum-chip';
+    chipV.dataset.lum = 'V';
+
+    // Mock fetchSystems to verify it gets triggered
+    let fetchCount = 0;
+    fetchSystems = (opts) => { fetchCount++; return Promise.resolve(); };
+
+    // Initialize listeners
+    initStellarFilters();
+
+    // 1. Click star-chip 'O'
+    chipO.click();
+    const starTypesAfter1 = [...state.starTypes];
+    const isChipOActive1 = chipO.classList.contains('active');
+    const fetchAfter1 = fetchCount;
+
+    // 2. Click lum-chip 'I'
+    chipI.click();
+    const lumClassesAfter2 = [...state.luminosityClasses];
+    const isChipIActive2 = chipI.classList.contains('active');
+    const fetchAfter2 = fetchCount;
+
+    // 3. Click star-chip 'O' again (toggle off)
+    chipO.click();
+    const starTypesAfter3 = [...state.starTypes];
+    const isChipOActive3 = chipO.classList.contains('active');
+    const fetchAfter3 = fetchCount;
+
+    console.log(JSON.stringify({
+      starTypesAfter1,
+      isChipOActive1,
+      fetchAfter1,
+      lumClassesAfter2,
+      isChipIActive2,
+      fetchAfter2,
+      starTypesAfter3,
+      isChipOActive3,
+      fetchAfter3
+    }));
+    """)
+    res = json.loads(out)
+    assert res["starTypesAfter1"] == ["O"]
+    assert res["isChipOActive1"] is True
+    assert res["fetchAfter1"] == 1
+
+    assert res["lumClassesAfter2"] == ["I"]
+    assert res["isChipIActive2"] is True
+    assert res["fetchAfter2"] == 2
+
+    assert res["starTypesAfter3"] == []
+    assert res["isChipOActive3"] is False
+    assert res["fetchAfter3"] == 3
 

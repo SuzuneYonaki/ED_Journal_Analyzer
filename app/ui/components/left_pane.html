@@ -203,59 +203,59 @@
                 <button id="btn-clear-star-filters" class="btn-page" style="padding: 1px 6px; font-size: 0.7rem;" data-i18n="star_filter_clear">クリア</button>
               </div>
 
-              <!-- Stellar Types Checkbox Grid -->
+              <!-- Stellar Types Chip Grid -->
               <div class="stellar-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; font-size: 0.72rem;">
-                <label class="star-cb-label" data-i18n-title="star_tip_o" title="Class O (青色主系列星)">
-                  <input type="checkbox" class="star-filter-cb" value="O"> <span style="color: #60a5fa; font-weight: bold;">O</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_b" title="Class B (青白色主系列星/超巨星)">
-                  <input type="checkbox" class="star-filter-cb" value="B"> <span style="color: #93c5fd; font-weight: bold;">B</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_a" title="Class A (白色主系列星/超巨星)">
-                  <input type="checkbox" class="star-filter-cb" value="A"> <span style="color: #e2e8f0; font-weight: bold;">A</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_f" title="Class F (黄白色主系列星)">
-                  <input type="checkbox" class="star-filter-cb" value="F"> <span style="color: #fef08a; font-weight: bold;">F</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_g" title="Class G (黄色主系列星/太陽型)">
-                  <input type="checkbox" class="star-filter-cb" value="G"> <span style="color: #facc15; font-weight: bold;">G</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_k" title="Class K (橙色主系列星/巨星)">
-                  <input type="checkbox" class="star-filter-cb" value="K"> <span style="color: #fb923c; font-weight: bold;">K</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_m" title="Class M (赤色矮星/赤色巨星)">
-                  <input type="checkbox" class="star-filter-cb" value="M"> <span style="color: #f87171; font-weight: bold;">M</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_l" title="Class L (褐色矮星)">
-                  <input type="checkbox" class="star-filter-cb" value="L"> <span style="color: #d97706;">L</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_t" title="Class T (メタン褐色矮星)">
-                  <input type="checkbox" class="star-filter-cb" value="T"> <span style="color: #b45309;">T</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_y" title="Class Y (極低温褐色矮星)">
-                  <input type="checkbox" class="star-filter-cb" value="Y"> <span style="color: #92400e;">Y</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_tts" title="T Tauri (原始星)">
-                  <input type="checkbox" class="star-filter-cb" value="TTS"> <span style="color: #f472b6;">TTS</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_aebe" title="Herbig Ae/Be (大質量原始星)">
-                  <input type="checkbox" class="star-filter-cb" value="AeBe"> <span style="color: #c084fc;">AeBe</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_w" title="Wolf-Rayet (ウォルフ・ライエ星: W, WC, WN, WNC, WO)">
-                  <input type="checkbox" class="star-filter-cb" value="W"> <span style="color: #a855f7; font-weight: bold;">W*</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_c" title="Carbon & S-type (炭素星・S型)">
-                  <input type="checkbox" class="star-filter-cb" value="C"> <span style="color: #ef4444; font-weight: bold;">C*</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_d" title="White Dwarf (白色矮星: D, DA, DB, DC, DQ, DX...)">
-                  <input type="checkbox" class="star-filter-cb" value="D"> <span style="color: #38bdf8; font-weight: bold;">D*</span>
-                </label>
-                <label class="star-cb-label" data-i18n-title="star_tip_n" title="Neutron Star (中性子星: N)">
-                  <input type="checkbox" class="star-filter-cb" value="N"> <span style="color: #22d3ee; font-weight: bold;">N</span>
-                </label>
-                <label class="star-cb-label" style="grid-column: span 2;" data-i18n-title="star_tip_h" title="Black Hole (ブラックホール: H, 超大質量)">
-                  <input type="checkbox" class="star-filter-cb" value="H"> <span style="color: #c084fc; font-weight: bold;">H (BlackHole)</span>
-                </label>
+                <button class="chip star-chip" data-star="O" data-i18n-title="star_tip_o" title="Class O (青色主系列星)">
+                  <span style="color: #60a5fa; font-weight: bold;">O</span>
+                </button>
+                <button class="chip star-chip" data-star="B" data-i18n-title="star_tip_b" title="Class B (青白色主系列星/超巨星)">
+                  <span style="color: #93c5fd; font-weight: bold;">B</span>
+                </button>
+                <button class="chip star-chip" data-star="A" data-i18n-title="star_tip_a" title="Class A (白色主系列星/超巨星)">
+                  <span style="color: #e2e8f0; font-weight: bold;">A</span>
+                </button>
+                <button class="chip star-chip" data-star="F" data-i18n-title="star_tip_f" title="Class F (黄白色主系列星)">
+                  <span style="color: #fef08a; font-weight: bold;">F</span>
+                </button>
+                <button class="chip star-chip" data-star="G" data-i18n-title="star_tip_g" title="Class G (黄色主系列星/太陽型)">
+                  <span style="color: #facc15; font-weight: bold;">G</span>
+                </button>
+                <button class="chip star-chip" data-star="K" data-i18n-title="star_tip_k" title="Class K (橙色主系列星/巨星)">
+                  <span style="color: #fb923c; font-weight: bold;">K</span>
+                </button>
+                <button class="chip star-chip" data-star="M" data-i18n-title="star_tip_m" title="Class M (赤色矮星/赤色巨星)">
+                  <span style="color: #f87171; font-weight: bold;">M</span>
+                </button>
+                <button class="chip star-chip" data-star="L" data-i18n-title="star_tip_l" title="Class L (褐色矮星)">
+                  <span style="color: #d97706;">L</span>
+                </button>
+                <button class="chip star-chip" data-star="T" data-i18n-title="star_tip_t" title="Class T (メタン褐色矮星)">
+                  <span style="color: #b45309;">T</span>
+                </button>
+                <button class="chip star-chip" data-star="Y" data-i18n-title="star_tip_y" title="Class Y (極低温褐色矮星)">
+                  <span style="color: #92400e;">Y</span>
+                </button>
+                <button class="chip star-chip" data-star="TTS" data-i18n-title="star_tip_tts" title="T Tauri (原始星)">
+                  <span style="color: #f472b6;">TTS</span>
+                </button>
+                <button class="chip star-chip" data-star="AeBe" data-i18n-title="star_tip_aebe" title="Herbig Ae/Be (大質量原始星)">
+                  <span style="color: #c084fc;">AeBe</span>
+                </button>
+                <button class="chip star-chip" data-star="W" data-i18n-title="star_tip_w" title="Wolf-Rayet (ウォルフ・ライエ星: W, WC, WN, WNC, WO)">
+                  <span style="color: #a855f7; font-weight: bold;">W*</span>
+                </button>
+                <button class="chip star-chip" data-star="C" data-i18n-title="star_tip_c" title="Carbon & S-type (炭素星・S型)">
+                  <span style="color: #ef4444; font-weight: bold;">C*</span>
+                </button>
+                <button class="chip star-chip" data-star="D" data-i18n-title="star_tip_d" title="White Dwarf (白色矮星: D, DA, DB, DC, DQ, DX...)">
+                  <span style="color: #38bdf8; font-weight: bold;">D*</span>
+                </button>
+                <button class="chip star-chip" data-star="N" data-i18n-title="star_tip_n" title="Neutron Star (中性子星: N)">
+                  <span style="color: #22d3ee; font-weight: bold;">N</span>
+                </button>
+                <button class="chip star-chip" data-star="H" style="grid-column: span 2;" data-i18n-title="star_tip_h" title="Black Hole (ブラックホール: H, 超大質量)">
+                  <span style="color: #c084fc; font-weight: bold;">H (BlackHole)</span>
+                </button>
               </div>
 
               <!-- Stellar Luminosity & Evolutionary Stages (Independent Filter) -->
@@ -276,27 +276,27 @@
                 </div>
 
                 <div class="luminosity-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; font-size: 0.7rem;">
-                  <label class="star-cb-label" title="Class I (Supergiants: Ia0, Ia, Ib, Iab)">
-                    <input type="checkbox" class="lum-filter-cb" value="I"> <span style="color: #f43f5e; font-weight: bold;">I Supergiants</span>
-                  </label>
-                  <label class="star-cb-label" title="Class II (Bright Giants: II, IIa, IIb)">
-                    <input type="checkbox" class="lum-filter-cb" value="II"> <span style="color: #fb923c; font-weight: bold;">II Bright Giants</span>
-                  </label>
-                  <label class="star-cb-label" title="Class III (Giants: Red Giants, etc.)">
-                    <input type="checkbox" class="lum-filter-cb" value="III"> <span style="color: #facc15; font-weight: bold;">III Giants</span>
-                  </label>
-                  <label class="star-cb-label" title="Class IV (Subgiants: IV, IVa, IVb)">
-                    <input type="checkbox" class="lum-filter-cb" value="IV"> <span style="color: #a3e635; font-weight: bold;">IV Subgiants</span>
-                  </label>
-                  <label class="star-cb-label" title="Class V (Main Sequence / Dwarf: Solar-type, etc.)">
-                    <input type="checkbox" class="lum-filter-cb" value="V"> <span style="color: #38bdf8; font-weight: bold;">V Main Sequence</span>
-                  </label>
-                  <label class="star-cb-label" title="Class VI (Subdwarfs)">
-                    <input type="checkbox" class="lum-filter-cb" value="VI"> <span style="color: #c084fc; font-weight: bold;">VI Subdwarfs</span>
-                  </label>
-                  <label class="star-cb-label" style="grid-column: span 2;" title="Class VII / Degenerate Stars (White Dwarf, Neutron Star, Black Hole)">
-                    <input type="checkbox" class="lum-filter-cb" value="VII"> <span style="color: #e879f9; font-weight: bold;">VII Degenerate Stars (WD/NS/BH)</span>
-                  </label>
+                  <button class="chip lum-chip" data-lum="I" title="Class I (Supergiants: Ia0, Ia, Ib, Iab)">
+                    <span style="color: #f43f5e; font-weight: bold;">I Supergiants</span>
+                  </button>
+                  <button class="chip lum-chip" data-lum="II" title="Class II (Bright Giants: II, IIa, IIb)">
+                    <span style="color: #fb923c; font-weight: bold;">II Bright Giants</span>
+                  </button>
+                  <button class="chip lum-chip" data-lum="III" title="Class III (Giants: Red Giants, etc.)">
+                    <span style="color: #facc15; font-weight: bold;">III Giants</span>
+                  </button>
+                  <button class="chip lum-chip" data-lum="IV" title="Class IV (Subgiants: IV, IVa, IVb)">
+                    <span style="color: #a3e635; font-weight: bold;">IV Subgiants</span>
+                  </button>
+                  <button class="chip lum-chip" data-lum="V" title="Class V (Main Sequence / Dwarf: Solar-type, etc.)">
+                    <span style="color: #38bdf8; font-weight: bold;">V Main Sequence</span>
+                  </button>
+                  <button class="chip lum-chip" data-lum="VI" title="Class VI (Subdwarfs)">
+                    <span style="color: #c084fc; font-weight: bold;">VI Subdwarfs</span>
+                  </button>
+                  <button class="chip lum-chip" data-lum="VII" style="grid-column: span 2;" title="Class VII / Degenerate Stars (White Dwarf, Neutron Star, Black Hole)">
+                    <span style="color: #e879f9; font-weight: bold;">VII Degenerate Stars (WD/NS/BH)</span>
+                  </button>
                 </div>
               </div>
             </div>
