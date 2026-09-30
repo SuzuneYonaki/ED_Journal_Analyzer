@@ -1275,7 +1275,6 @@ function initOrreryInteractions(container, systemData) {
       }
       if (found) {
         state.selectedBody = found;
-        state.targetBodyId = found.body_id;
         renderBodyInspector();
       }
     });
@@ -1668,7 +1667,6 @@ function renderHierarchyTree(container, nodes) {
     card.onclick = (e) => {
       e.stopPropagation();
       state.selectedBody = node;
-      state.targetBodyId = node.body_id;
       renderBodyInspector();
       document.querySelectorAll('.node-card').forEach(nc => nc.classList.remove('selected'));
       card.classList.add('selected');
@@ -1772,7 +1770,6 @@ function renderFlatBodiesList(container, bodies) {
     card.dataset.bodyId = body.body_id;
     card.onclick = () => {
       state.selectedBody = body;
-      state.targetBodyId = body.body_id;
       renderBodyInspector();
       document.querySelectorAll('.node-card').forEach(nc => nc.classList.remove('selected'));
       card.classList.add('selected');
@@ -1907,7 +1904,6 @@ function renderBioOnlyView(container, bodies) {
     card.style.borderColor = isTarget ? 'var(--ed-green)' : (body.is_bio_completed ? 'rgba(0, 255, 136, 0.2)' : 'rgba(0, 255, 136, 0.5)');
     card.onclick = () => {
       state.selectedBody = body;
-      state.targetBodyId = body.body_id;
       renderBodyInspector();
       document.querySelectorAll('.node-card').forEach(nc => nc.classList.remove('selected'));
       card.classList.add('selected');

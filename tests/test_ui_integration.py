@@ -74,6 +74,7 @@ def run_js_integration_test(script_body):
       addEventListener: () => {{}}
     }};
     global.window = global;
+    global.window.addEventListener = () => {{}};
     global.localStorage = {{
       _data: {{}},
       getItem(k) {{ return this._data[k] || null; }},
@@ -224,4 +225,59 @@ def test_rhino_module_hides_mining_filters_and_resets_state():
     assert res["padReset1"] is False
     assert res["distReset1"] is None
     assert res["visibleDisplay"] == ""
+
+
+def test_body_card_click_does_not_overwrite_target_body_id():
+    """Verify clicking body cards (tree, bio view, flat list) selects body without hijacking targetBodyId."""
+    out = run_js_integration_test("""
+    const body1 = { body_id: 100, body_name: 'Targeted Body 100', planet_class: 'High metal content world' };
+    const body2 = { body_id: 200, body_name: 'Clicked Body 200', planet_class: 'Icy body', bio_signals: 2 };
+
+    state.currentSystemData = {
+      system: { system_address: 99999, last_targeted_body_id: 100 },
+      bodies: [body1, body2]
+    };
+    state.targetBodyId = 100;
+    state.selectedBody = body1;
+
+    // 1. Test flat list card click
+    const flatContainer = document.createElement('div');
+    renderFlatBodiesList(flatContainer, [body1, body2]);
+    const listWrapper = flatContainer.children[0];
+    const card200Flat = listWrapper.children.find(c => c.dataset && c.dataset.bodyId == 200);
+    if (card200Flat && card200Flat.onclick) {
+      card200Flat.onclick();
+    }
+
+    const selectedAfterFlatClick = state.selectedBody ? state.selectedBody.body_id : null;
+    const targetAfterFlatClick = state.targetBodyId;
+
+    // 2. Test bio only view card click
+    const bioContainer = document.createElement('div');
+    renderBioOnlyView(bioContainer, [body1, body2]);
+    const bioCards = bioContainer.children;
+    const card200Bio = bioCards.find(c => c.dataset && c.dataset.bodyId == 200);
+    const card200HasTargetClassBefore = card200Bio ? card200Bio.classList.contains('is-current-target') : false;
+    
+    if (card200Bio && card200Bio.onclick) {
+      card200Bio.onclick();
+    }
+
+    const selectedAfterBioClick = state.selectedBody ? state.selectedBody.body_id : null;
+    const targetAfterBioClick = state.targetBodyId;
+
+    console.log(JSON.stringify({
+      selectedAfterFlatClick,
+      targetAfterFlatClick,
+      selectedAfterBioClick,
+      targetAfterBioClick,
+      card200HasTargetClassBefore
+    }));
+    """)
+    res = json.loads(out)
+    assert res["selectedAfterFlatClick"] == 200
+    assert res["targetAfterFlatClick"] == 100
+    assert res["selectedAfterBioClick"] == 200
+    assert res["targetAfterBioClick"] == 100
+    assert res["card200HasTargetClassBefore"] is False
 
