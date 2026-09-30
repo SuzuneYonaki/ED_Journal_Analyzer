@@ -420,7 +420,6 @@ function renderMiningView(container, bodies) {
       card.dataset.bodyId = body.body_id;
       card.onclick = () => {
         state.selectedBody = body;
-        state.targetBodyId = body.body_id;
         renderBodyInspector();
         document.querySelectorAll('.node-card').forEach(nc => nc.classList.remove('selected'));
         card.classList.add('selected');

@@ -939,7 +939,6 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
       return; // Suppress click when user was dragging/panning
     }
     state.selectedBody = body;
-    state.targetBodyId = body.body_id;
     try {
       renderBodyInspector();
     } catch (err) {
