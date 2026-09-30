@@ -746,8 +746,15 @@ function renderBodyExobiologyBlock(node) {
     }
   });
 
-  // Sort candidates by genus base_value descending (highest price first), then by probability score
-  unscannedCandidates.sort((a, b) => (b.base_value || 0) - (a.base_value || 0) || (b.probability_score || 0) - (a.probability_score || 0));
+  // Sort candidates conservatively: if probability/fit scores are within 10% (0.10), prefer lower base_value
+  unscannedCandidates.sort((a, b) => {
+    const scoreA = a.fit_score ?? a.probability_score ?? 0;
+    const scoreB = b.fit_score ?? b.probability_score ?? 0;
+    if (Math.abs(scoreB - scoreA) < 0.10) {
+      return (a.base_value || 0) - (b.base_value || 0) || (scoreB - scoreA);
+    }
+    return (scoreB - scoreA) || ((a.base_value || 0) - (b.base_value || 0));
+  });
 
   // Primary prediction slots (up to remainingSlots)
   const primaryCandidates = unscannedCandidates.slice(0, remainingSlots > 0 ? remainingSlots : undefined);

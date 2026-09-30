@@ -1160,9 +1160,10 @@ class JournalParser:
         if not sys_addr or body_id is None:
             return
         self.cursor.execute("""
-            SELECT species_localised, species, genus_localised, genus, scan_type
+            SELECT species_localised, species, genus_localised, genus, scan_type, base_value, first_discovery_value
             FROM scanned_organics
             WHERE system_address = ? AND body_id = ?
+            ORDER BY id ASC
         """, (sys_addr, body_id))
         rows = self.cursor.fetchall()
         if not rows:
@@ -1170,13 +1171,25 @@ class JournalParser:
 
         for row in rows:
             sp_name = row["species_localised"] or row["species"] or ""
+            genus_name = row["genus_localised"] or row["genus"] or (sp_name.split()[0] if sp_name else "")
             stype = (row["scan_type"] or "").lower()
             stage_num = 3 if stype in ["analyse", "analyze"] else (2 if stype == "sample" else 1)
+            base_v = row["base_value"] or 0
+            fd_v = row["first_discovery_value"] or (base_v * 5)
+            if base_v == 0 and sp_name:
+                val_info = get_species_value(sp_name, genus_name)
+                base_v = val_info.get("base_value", 1000000)
+                fd_v = val_info.get("first_discovery_value", base_v * 5)
 
-            # Check if species matches any prediction
+            # Check if species or genus matches any prediction
+            # 1. Exact or partial species name match
             matched = False
             for p in predictions:
                 if sp_name.lower() in p["species"].lower() or p["species"].lower() in sp_name.lower():
+                    p["species"] = sp_name
+                    p["species_variant"] = sp_name
+                    p["base_value"] = base_v
+                    p["first_discovery_value"] = fd_v
                     p["confidence"] = "confirmed"
                     p["status"] = "Confirmed"
                     p["stage_level"] = stage_num
@@ -1184,24 +1197,55 @@ class JournalParser:
                     matched = True
                     break
 
-            # If not in predictions (rare edge case), append as confirmed
+            # 2. If species name didn't match directly, replace unconfirmed prediction of the SAME genus
+            # (Elite Dangerous Odyssey law: 1 species per genus per body. The scanned species confirms this genus slot)
+            if not matched and genus_name:
+                for p in predictions:
+                    if p.get("genus", "").lower() == genus_name.lower() and p.get("confidence") != "confirmed":
+                        p["species"] = sp_name
+                        p["genus"] = genus_name
+                        p["species_variant"] = sp_name
+                        p["base_value"] = base_v
+                        p["first_discovery_value"] = fd_v
+                        p["confidence"] = "confirmed"
+                        p["status"] = "Confirmed"
+                        p["stage_level"] = stage_num
+                        p["locked"] = True
+                        matched = True
+                        break
+
+            # 3. If not matched at all in predictions, insert as confirmed at the top
             if not matched and sp_name:
-                val_info = get_species_value(sp_name, row["genus_localised"] or row["genus"])
-                base_v = val_info.get("base_value", 1000000)
+                val_info = get_species_value(sp_name, genus_name)
+                colony_dist = val_info.get("colony_distance_m", 500)
                 predictions.insert(0, {
                     "species": sp_name,
-                    "genus": row["genus_localised"] or row["genus"] or sp_name.split()[0],
+                    "genus": genus_name,
                     "species_variant": sp_name,
                     "variant_color": "",
                     "base_value": base_v,
-                    "first_discovery_value": base_v * 5,
-                    "colony_distance_m": val_info.get("colony_distance_m", 500),
+                    "first_discovery_value": fd_v,
+                    "colony_distance_m": colony_dist,
                     "fit_score": 1.0,
                     "confidence": "confirmed",
                     "status": "Confirmed",
                     "stage_level": stage_num,
                     "locked": True
                 })
+
+            # 4. Prune any remaining unconfirmed predictions of this confirmed genus (1 species per genus law)
+            if genus_name:
+                cleaned = []
+                confirmed_seen = False
+                for p in predictions:
+                    if p.get("genus", "").lower() == genus_name.lower():
+                        if p.get("confidence") == "confirmed" and not confirmed_seen:
+                            cleaned.append(p)
+                            confirmed_seen = True
+                        # Skip other unconfirmed predictions of the same genus
+                    else:
+                        cleaned.append(p)
+                predictions[:] = cleaned
 
     def _handle_saa_scan_complete(self, data: dict):
         sys_addr = data.get("SystemAddress")

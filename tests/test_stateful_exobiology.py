@@ -78,8 +78,10 @@ def test_stateful_exobiology_event_lifecycle():
     assert row["surface_temperature"] == 240.0
     preds = json.loads(row["exobiology_predictions"])
     assert len(preds) > 0
-    # Stratum Tectonicas should be present
-    assert any("Stratum" in p["genus"] for p in preds)
+    # Stratum genus should be present with conservative valuation prior to sampling
+    stratum_init = next((p for p in preds if p["genus"] == "Stratum"), None)
+    assert stratum_init is not None
+    assert stratum_init["base_value"] == 2497300  # Conservative payout (Stratum Araneamus)
 
     # Step 4: SAASignalsFound (DSS completed) refreshes bio signals and sets is_mapped_by_user = 1
     parser.process_journal_line(json.dumps({
@@ -102,7 +104,8 @@ def test_stateful_exobiology_event_lifecycle():
     assert row["is_mapped_by_user"] == 1
     assert "Stratum" in row["confirmed_genuses"]
 
-    # Step 5: ScanOrganic - Log stage (1/3)
+    # Step 5: ScanOrganic - Log stage (1/3: 1st Sample confirms species)
+    # Recalculates estimated payout to actual confirmed species (Stratum Tectonicas: 19,010,800)
     parser.process_journal_line(json.dumps({
         "timestamp": "2026-08-30T10:05:00Z",
         "event": "ScanOrganic",
@@ -121,9 +124,13 @@ def test_stateful_exobiology_event_lifecycle():
     preds = json.loads(row["exobiology_predictions"])
     tectonicas = next((p for p in preds if "Tectonicas" in p["species"]), None)
     assert tectonicas is not None
+    assert tectonicas["base_value"] == 19010800  # Recalculated to actual sampled species value
+    assert tectonicas["first_discovery_value"] == 19010800 * 5
     assert tectonicas["confidence"] == "confirmed"
     assert tectonicas["stage_level"] == 1
     assert tectonicas["locked"] is True
+    # Ensure 1 species per genus law: only 1 Stratum entry exists in predictions
+    assert len([p for p in preds if p.get("genus") == "Stratum"]) == 1
 
     # Step 6: ScanOrganic - Analyse stage (3/3)
     parser.process_journal_line(json.dumps({
