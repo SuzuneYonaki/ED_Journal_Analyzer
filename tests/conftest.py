@@ -34,3 +34,6 @@ addon_manager.settings_path.write_text(
     json.dumps({addon_id: True for addon_id in _ALL_ADDON_IDS}),
     encoding="utf-8",
 )
+addon_manager.discover()
+addon_manager.load_enabled(_scratch_dir / "addons")
+

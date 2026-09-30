@@ -41,8 +41,8 @@ def test_temperature_and_gravity():
     assert get_gravity_g(body) == 0.35
 
 
-def test_stratum_tectonicas_prediction():
-    """Verify Stratum genus is accurately predicted on standard HMC bodies."""
+def test_stratum_prediction_conservative():
+    """Verify Stratum genus is predicted with conservative valuation when candidate species scores are within 10%."""
     body = {
         "landable": True,
         "planet_class": "High metal content world",
@@ -56,13 +56,37 @@ def test_stratum_tectonicas_prediction():
     candidates = predict_exobiology_candidates(body)
     assert len(candidates) > 0
     
-    # Check that Stratum is present
+    # Check that Stratum is present with conservative payout (e.g. Stratum Araneamus: 2,497,300 instead of 19,010,800)
     stratum_match = next((c for c in candidates if c["genus"] == "Stratum"), None)
     assert stratum_match is not None
-    assert stratum_match["base_value"] == 19010800
-    assert stratum_match["first_discovery_value"] == 19010800 * 5
+    assert stratum_match["base_value"] == 2497300
+    assert stratum_match["first_discovery_value"] == 2497300 * 5
     assert stratum_match["variant_color"] in ["Emerald", "Teal"]
     assert stratum_match["variant_color"] in stratum_match["species_variant"]
+
+
+def test_conservative_species_prediction_within_threshold():
+    """
+    Verify that when candidate species within the same genus have fit score differences < 10%,
+    the lower base value candidate is prioritized, but when difference is >= 10%, the higher fit score wins.
+    """
+    from app.parser.exobiology import rank_candidates_conservatively
+
+    # Within 10% threshold: 0.95 vs 0.90 -> choose lower base_value (1.5M over 19M)
+    cands_close = [
+        {"species": "Stratum Tectonicas", "genus": "Stratum", "fit_score": 0.95, "base_value": 19010800},
+        {"species": "Stratum Cucumisis", "genus": "Stratum", "fit_score": 0.90, "base_value": 1500000},
+    ]
+    ranked = rank_candidates_conservatively(cands_close, diff_threshold=0.10)
+    assert ranked[0]["species"] == "Stratum Cucumisis"
+
+    # Beyond 10% threshold: 0.95 vs 0.80 -> higher fit score wins regardless of base_value
+    cands_distinct = [
+        {"species": "Stratum Tectonicas", "genus": "Stratum", "fit_score": 0.95, "base_value": 19010800},
+        {"species": "Stratum Cucumisis", "genus": "Stratum", "fit_score": 0.80, "base_value": 1500000},
+    ]
+    ranked_dist = rank_candidates_conservatively(cands_distinct, diff_threshold=0.10)
+    assert ranked_dist[0]["species"] == "Stratum Tectonicas"
 
 
 def test_signal_budget_and_confidence_ranking():
