@@ -306,6 +306,32 @@ def match_parent_star(rule: Dict[str, Any], star_type: str, luminosity: Optional
     return True
 
 
+def rank_candidates_conservatively(cands: List[Dict[str, Any]], diff_threshold: float = 0.10) -> List[Dict[str, Any]]:
+    """
+    Rank candidate species or genera conservatively.
+    When candidate fit scores are within diff_threshold (< 10%),
+    the candidate with the lower base_value is prioritized to avoid overestimating payouts.
+    """
+    if not cands:
+        return []
+    pool = list(cands)
+    ranked: List[Dict[str, Any]] = []
+    while pool:
+        max_score = max(c.get("fit_score", 0.0) for c in pool)
+        # Candidates within threshold of the best remaining score
+        competitive = [c for c in pool if (max_score - c.get("fit_score", 0.0)) < diff_threshold]
+        # Pick the one with the lowest base_value (tie-breaker: higher fit_score, then species name)
+        competitive.sort(key=lambda c: (
+            c.get("base_value", 0),
+            -c.get("fit_score", 0.0),
+            c.get("species", "") or c.get("genus", "")
+        ))
+        chosen = competitive[0]
+        ranked.append(chosen)
+        pool.remove(chosen)
+    return ranked
+
+
 def predict_exobiology_candidates(
     planet_class: Any = None,
     atmosphere_type: Optional[str] = None,
@@ -506,8 +532,8 @@ def predict_exobiology_candidates(
             "confidence": "possible"
         })
 
-    # Sort candidates by fit score descending, then base value descending
-    candidates.sort(key=lambda x: (x["fit_score"], x["base_value"]), reverse=True)
+    # Rank candidates conservatively (lower base_value prioritized within 10% fit score threshold)
+    candidates = rank_candidates_conservatively(candidates, diff_threshold=0.10)
 
     # Signal Budget Ranking & 1 Species per Genus Law
     if bio_signals is not None and int(bio_signals) > 0:
@@ -522,17 +548,17 @@ def predict_exobiology_candidates(
                 genus_groups[g] = []
             genus_groups[g].append(c)
 
-        # For each distinct genus, pick the best candidate (highest fit_score, then base_value)
+        # For each distinct genus, pick the best candidate (conservative choice within 10% fit score threshold)
         distinct_genus_candidates: List[Dict[str, Any]] = []
         for g, sp_list in genus_groups.items():
-            sp_list.sort(key=lambda x: (x["fit_score"], x["base_value"]), reverse=True)
-            best_sp = sp_list[0]
-            if len(sp_list) > 1:
-                best_sp["alternate_species"] = [s["species"] for s in sp_list[1:3]]
+            ranked_sp = rank_candidates_conservatively(sp_list, diff_threshold=0.10)
+            best_sp = ranked_sp[0]
+            if len(ranked_sp) > 1:
+                best_sp["alternate_species"] = [s["species"] for s in ranked_sp[1:3]]
             distinct_genus_candidates.append(best_sp)
 
-        # Sort distinct genus candidates by fit score descending
-        distinct_genus_candidates.sort(key=lambda x: (x["fit_score"], x["base_value"]), reverse=True)
+        # Sort distinct genus candidates by fit score descending, and lower base value on tie
+        distinct_genus_candidates.sort(key=lambda x: (x["fit_score"], -x["base_value"]), reverse=True)
 
         if not distinct_genus_candidates:
             return []
@@ -559,16 +585,24 @@ def predict_exobiology_candidates(
         return result_candidates
     else:
         # bio_signals is None and body is not mapped
-        # Return top distinct genera as unconfirmed/possible candidates
-        genus_seen = set()
-        distinct_matches = []
+        # Return top distinct genera as unconfirmed/possible candidates conservatively
+        genus_groups: Dict[str, List[Dict[str, Any]]] = {}
         for c in candidates:
-            if c["genus"] not in genus_seen:
-                genus_seen.add(c["genus"])
-                c["confidence"] = "possible"
-                distinct_matches.append(c)
-            if len(distinct_matches) >= 3:
-                break
+            g = c["genus"]
+            if g not in genus_groups:
+                genus_groups[g] = []
+            genus_groups[g].append(c)
+
+        distinct_genus_candidates = []
+        for g, sp_list in genus_groups.items():
+            ranked_sp = rank_candidates_conservatively(sp_list, diff_threshold=0.10)
+            distinct_genus_candidates.append(ranked_sp[0])
+
+        distinct_genus_candidates.sort(key=lambda x: (x["fit_score"], -x["base_value"]), reverse=True)
+        distinct_matches = []
+        for c in distinct_genus_candidates[:3]:
+            c["confidence"] = "possible"
+            distinct_matches.append(c)
         return distinct_matches
 
 
@@ -604,24 +638,34 @@ def predict_system_exobiology_candidates(
 
     # Step 1: Preliminary pass to gather prominent / scanned species across the system
     system_known_species: Set[str] = set()
+    system_scanned_genuses: Set[str] = set()
 
+    # Pass 1a: Gather all actually scanned / confirmed species and genuses
     for b in bodies:
-        # Include already scanned or organic-analyzed species
         scanned_list = b.get("scanned_species") or b.get("scanned_species_list") or []
         for s in scanned_list:
             if isinstance(s, dict) and s.get("species"):
                 system_known_species.add(s["species"])
-            elif isinstance(s, str):
+                gen = s.get("genus") or s["species"].split()[0]
+                if gen:
+                    system_scanned_genuses.add(gen.lower())
+            elif isinstance(s, str) and s:
                 system_known_species.add(s)
+                gen = s.split()[0]
+                if gen:
+                    system_scanned_genuses.add(gen.lower())
 
-        # Preliminary candidate evaluation for high-signal or high-confidence bodies
+    # Pass 1b: Preliminary candidate evaluation for unverified high-signal bodies
+    # Exclude genuses already scanned anywhere in the system
+    for b in bodies:
         bio_sig = b.get("bio_signals") or b.get("BioSignals") or 0
         if bio_sig > 0:
             prelim_cands = predict_exobiology_candidates(b, system_context_species=None)
-            # Add definite high-fit species (fit_score >= 0.70) to system context
             for c in prelim_cands:
-                if c.get("confidence") == "definite" and c.get("fit_score", 0) >= 0.70:
-                    system_known_species.add(c["species"])
+                c_genus = (c.get("genus") or "").lower()
+                if c_genus not in system_scanned_genuses:
+                    if c.get("confidence") == "definite" and c.get("fit_score", 0) >= 0.70:
+                        system_known_species.add(c["species"])
 
     # Step 2: Final pass applying system-level co-occurrence weighting to each body
     for b in bodies:

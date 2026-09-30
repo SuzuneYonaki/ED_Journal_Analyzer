@@ -76,7 +76,7 @@ def test_journal_parser_live_high_bio_alert(tmp_path, monkeypatch):
         "enabled": True,
         "highBioEnabled": True,
         "highBioMode": "both",
-        "highBioThreshold": 40000000,
+        "highBioThreshold": 15000000,
         "highBioThresholdType": "bonus",
         "highBioText": "{body}、高額生物反応です。見込額{value}クレジット。"
     }), encoding="utf-8")
@@ -88,7 +88,7 @@ def test_journal_parser_live_high_bio_alert(tmp_path, monkeypatch):
     parser = JournalParser(conn, is_live=True)
     parser.current_star_system = "Praea Euq YZ-Y d100"
     
-    # Scan planet matching Stratum Tectonicas (HMC, CO2 atmosphere, 250K, 0.35G)
+    # Scan planet matching Stratum Araneamus (conservative) & Bacterium
     scan_event = {
         "event": "Scan",
         "timestamp": "2026-09-24T08:00:00Z",
@@ -111,7 +111,7 @@ def test_journal_parser_live_high_bio_alert(tmp_path, monkeypatch):
     msg, priority = captured_speech[0]
     assert "Praea Euq YZ-Y d100 3" in msg
     assert "高額生物反応です" in msg
-    assert "95.1M" in msg or "95.0M" in msg or "M" in msg
+    assert "17.5M" in msg or "M" in msg
     assert priority is False
 
     # Second scan of same body should NOT re-trigger alert (deduplication)
