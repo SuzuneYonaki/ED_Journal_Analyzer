@@ -22,11 +22,14 @@ def test_star_and_lum_filter_js_wiring():
     assert "starEntries.map" in app_js
     assert "lumEntries.map" in app_js
 
-    # 2. system_list.js contains contextmenu wiring on labels
+    # 2. system_list.js contains contextmenu wiring on the badge chips
+    # (stellar type / luminosity filters were converted from
+    # checkbox+label to reactive badge chips; right-click-to-set-count
+    # is now wired on the chip element itself)
     sys_list = (base_dir / "app" / "ui" / "js" / "system_list.js").read_text(encoding="utf-8")
     assert "state.starCounts[val] =" in sys_list
     assert "state.lumCounts[val] =" in sys_list
-    assert "lbl.addEventListener('contextmenu'" in sys_list
+    assert "chip.addEventListener('contextmenu'" in sys_list
 
 
 def test_api_star_and_lum_filter_min_count(client):
