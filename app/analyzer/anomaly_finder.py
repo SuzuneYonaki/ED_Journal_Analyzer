@@ -196,7 +196,7 @@ def detect_anomalies(body: dict) -> list:
                         "desc_en": f"Close hierarchical binary (binary of binary) companion ({dist_val:.1f} Ls)"
                     })
 
-    # 6. Rings
+    # 6. Rings (strictly genuine rings; excluding asteroid belts / AB)
     rings = body.get("rings")
     if rings:
         if isinstance(rings, str):
@@ -205,9 +205,14 @@ def detect_anomalies(body: dict) -> list:
                 rings = json.loads(rings)
             except Exception:
                 rings = []
-        if body.get("star_type") and len(rings) > 0:
+        # Filter strictly genuine rings (Name does NOT contain 'belt')
+        genuine_rings = [
+            r for r in rings
+            if isinstance(r, dict) and "belt" not in (r.get("Name") or "").strip().lower()
+        ]
+        if body.get("star_type") and len(genuine_rings) > 0:
             anomalies.append({"type": "ringed_star", "tag": "Ringed Star", "color": "amber", "desc": "リングを持つ恒星", "desc_en": "Ringed Star"})
-        for ring in rings:
+        for ring in genuine_rings:
             outer_rad_km = ring.get("OuterRad", 0) / 1000.0
             if outer_rad_km >= 5000000:
                 anomalies.append({"type": "giant_ring", "tag": "Giant Ring System", "color": "gold", "desc": f"巨大リング (外径 {outer_rad_km:,.0f} km)", "desc_en": f"Giant Ring System (Outer radius {outer_rad_km:,.0f} km)"})

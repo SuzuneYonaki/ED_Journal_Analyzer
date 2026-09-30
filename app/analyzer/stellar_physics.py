@@ -646,9 +646,12 @@ class StellarPhysicsEngine:
                         f"Small Object: {b.body_name} has exceptionally small radius ({rad/1e3:.1f} km)"
                     )
 
-            # Check: Wide Ring
+            # Check: Wide Ring (strictly genuine rings; excluding asteroid belts / AB)
             if b.rings and rad is not None and rad > 0:
                 for ring in b.rings:
+                    r_name = (ring.get("Name") or "").strip().lower()
+                    if "belt" in r_name:
+                        continue
                     inner_rad = ring.get("InnerRad", 0.0)
                     outer_rad = ring.get("OuterRad", 0.0)
                     ring_width = outer_rad - inner_rad
