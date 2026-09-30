@@ -1157,9 +1157,9 @@ def get_systems(
             "fast_orbit": "((b.orbital_period > 0 AND b.orbital_period <= 17280) OR (abs(b.rotation_period) > 0 AND abs(b.rotation_period) <= 7200))",
             "close_binary": "(b.star_type IS NOT NULL AND ((b.distance_from_arrival_ls > 0 AND b.distance_from_arrival_ls <= 50.0) OR (b.semi_major_axis > 0 AND (b.semi_major_axis / 299792458.0) <= 20.0)))",
             "hierarchical_binary": "(b.star_type IS NOT NULL AND b.parents LIKE '%Null%Null%')",
-            "ringed": "(b.rings IS NOT NULL AND b.rings != '' AND b.rings != '[]' AND b.rings != '\"\"')",
-            "wide_ring": "(b.anomalies_json LIKE '%giant_ring%' OR (b.rings LIKE '%OuterRad%' AND (b.rings LIKE '%\"OuterRad\": [5-9]%' OR b.rings LIKE '%\"OuterRad\": [1-9][0-9]%')))",
-            "ringed_star": "(b.star_type IS NOT NULL AND b.rings IS NOT NULL AND b.rings != '' AND b.rings != '[]' AND b.rings != '\"\"')",
+            "ringed": "(b.rings IS NOT NULL AND b.rings != '' AND b.rings != '[]' AND b.rings != '\"\"' AND b.rings LIKE '%Ring%')",
+            "wide_ring": "(b.anomalies_json LIKE '%giant_ring%' OR (b.rings LIKE '%Ring%' AND EXISTS (SELECT 1 FROM json_each(b.rings) WHERE json_extract(value, '$.Name') NOT LIKE '%belt%' AND (json_extract(value, '$.OuterRad') >= 5000000000.0 OR (json_extract(value, '$.OuterRad') - json_extract(value, '$.InnerRad')) >= 1000000000.0))))",
+            "ringed_star": "(b.star_type IS NOT NULL AND b.rings IS NOT NULL AND b.rings != '' AND b.rings != '[]' AND b.rings != '\"\"' AND b.rings LIKE '%Ring%')",
             "high_g": "(b.landable = 1 AND (b.surface_gravity_g >= 1.5 OR b.surface_gravity >= 14.71))",
             "volcanism": "(b.volcanism IS NOT NULL AND b.volcanism != '' AND LOWER(b.volcanism) != 'none')",
         }
@@ -1471,7 +1471,7 @@ def get_systems(
             elif "icy" in p_lower:
                 short_type = "Icy"
 
-            is_ringed = bool(b["rings"] and b["rings"] != "[]" and b["rings"] != '""')
+            is_ringed = bool(b["rings"] and b["rings"] != "[]" and b["rings"] != '""' and "Ring" in b["rings"])
             rad = b["radius"]
             rad_km = round(rad / 1000) if rad else None
             temp_k = round(b["surface_temperature"]) if b["surface_temperature"] is not None else None
