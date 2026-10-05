@@ -760,7 +760,7 @@ function renderSystemHeader() {
 
 // Collapsible Groups & Badges
 function updateCollapsibleBadges() {
-  const generalKeys = ['has_elw', 'has_water_world', 'has_ammonia', 'has_terraformable', 'has_bio', 'has_first_discover', 'has_bookmarks', 'is_shared', 'has_high_g', 'has_anomalies', 'has_ggg'];
+  const generalKeys = ['has_elw', 'has_water_world', 'has_ammonia', 'has_terraformable', 'has_bio', 'has_first_discover', 'has_bookmarks', 'is_shared', 'has_high_g', 'has_anomalies', 'has_ggg', 'age_lt_my', 'age_gte_my'];
   const generalCount = generalKeys.filter(k => (state.filters[k] === true || state.filters[k] > 0)).length;
   const badgeGen = document.getElementById('badge-general-filters');
   if (badgeGen) {

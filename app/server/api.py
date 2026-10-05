@@ -675,6 +675,8 @@ def get_systems(
     has_mining_signals: Optional[Union[int, str]] = None,
     has_bookmarks: Optional[Union[int, str]] = None,
     is_shared: Optional[Union[int, str]] = None,
+    age_lt_my: Optional[float] = None,
+    age_gte_my: Optional[float] = None,
     star_types: Optional[List[str]] = Query(None),
     star_match_mode: Optional[str] = "any",
     luminosity_classes: Optional[List[str]] = Query(None),
@@ -810,6 +812,14 @@ def get_systems(
             AND b.landable = 1
         ) >= ?""")
         params.append(c_landable)
+
+    # System age (million years); systems with unknown age never match either bound
+    if age_lt_my is not None and age_lt_my > 0:
+        conditions.append("systems.system_age_my IS NOT NULL AND systems.system_age_my < ?")
+        params.append(age_lt_my)
+    if age_gte_my is not None and age_gte_my > 0:
+        conditions.append("systems.system_age_my IS NOT NULL AND systems.system_age_my >= ?")
+        params.append(age_gte_my)
 
     c_hg = _parse_filter_min_count(has_high_g)
     if c_hg == 1:

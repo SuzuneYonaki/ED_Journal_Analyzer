@@ -25,8 +25,11 @@ let state = {
     has_landable_ringed: false,
     has_mining_signals: false,
     has_bookmarks: false,
-    is_shared: false
+    is_shared: false,
+    age_lt_my: 0,
+    age_gte_my: 0
   },
+  ageFilterValues: { age_lt_my: 2, age_gte_my: 2 },
   starTypes: [],
   starCounts: {},
   starMatchMode: 'any',
@@ -103,6 +106,8 @@ function updateStaticTexts() {
       }
     });
   }
+
+  if (typeof window.refreshAgeChips === 'function') window.refreshAgeChips();
 
   // Update language buttons
   const btnJa = document.getElementById('btn-lang-ja');
@@ -2494,6 +2499,99 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // System-age filter chips: "Age < N MY" and "Age >= N MY" (N editable via right-click)
+  const AGE_FILTER_KEYS = ['age_lt_my', 'age_gte_my'];
+
+  function refreshAgeChip(chip) {
+    const key = chip.dataset.ageFilter;
+    const n = state.ageFilterValues[key];
+    chip.textContent = t(key === 'age_lt_my' ? 'filter_age_lt' : 'filter_age_gte', { n: n.toLocaleString() });
+    chip.classList.toggle('active', state.filters[key] > 0);
+  }
+  function refreshAgeChips() {
+    document.querySelectorAll('.chip[data-age-filter]').forEach(refreshAgeChip);
+  }
+  function resetAgeFilters() {
+    AGE_FILTER_KEYS.forEach(k => { state.filters[k] = 0; });
+    refreshAgeChips();
+  }
+  function setAgeFilter(key, value) {
+    if (value > 0) state.ageFilterValues[key] = value;
+    state.filters[key] = value > 0 ? state.ageFilterValues[key] : 0;
+    refreshAgeChips();
+    state.page = 1;
+    updateCollapsibleBadges();
+    fetchSystems({ autoSelectTop: true });
+  }
+  window.refreshAgeChips = refreshAgeChips;
+  window.resetAgeFilters = resetAgeFilters;
+
+  function showAgeThresholdPopover(chip, key) {
+    closeActiveFilterPopover();
+    const isLt = key === 'age_lt_my';
+    const current = state.ageFilterValues[key];
+    const quick = isLt ? [1, 2, 5, 10] : [2, 1000, 5000, 10000];
+    const pop = document.createElement('div');
+    pop.className = 'filter-count-popover';
+    const rect = chip.getBoundingClientRect();
+    pop.style.left = `${Math.max(10, Math.min(window.innerWidth - 175, rect.left))}px`;
+    pop.style.top = `${rect.bottom + 6}px`;
+    pop.innerHTML = `
+      <div class="filter-count-popover-title">
+        <span>${t(isLt ? 'filter_age_threshold_title_lt' : 'filter_age_threshold_title_gte')}</span>
+        <span style="cursor: pointer; padding: 0 4px; font-weight: bold;" class="popover-close">✕</span>
+      </div>
+      <div class="filter-count-stepper">
+        <input type="number" min="0.1" step="any" class="filter-count-input" style="width: 100%;" value="${current}">
+      </div>
+      <div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 2px;">${t('filter_age_unit_hint')} / ${t('filter_count_quick')}</div>
+      <div class="filter-count-quick-list">
+        ${quick.map(v => `<button type="button" class="filter-count-quick-btn ${v === current ? 'active' : ''}" data-val="${v}">${v.toLocaleString()}</button>`).join('')}
+      </div>
+      <button type="button" class="filter-count-reset-btn">${t('filter_count_reset')}</button>
+    `;
+    document.body.appendChild(pop);
+    activeFilterPopover = pop;
+
+    const input = pop.querySelector('.filter-count-input');
+    const apply = () => {
+      const v = parseFloat(input.value);
+      if (!isNaN(v) && v > 0) setAgeFilter(key, v);
+    };
+    pop.querySelector('.popover-close').onclick = (e) => { e.stopPropagation(); closeActiveFilterPopover(); };
+    input.onchange = apply;
+    input.onkeydown = (e) => { if (e.key === 'Enter') { apply(); closeActiveFilterPopover(); } };
+    pop.querySelectorAll('.filter-count-quick-btn').forEach(qb => {
+      qb.onclick = (e) => {
+        e.stopPropagation();
+        setAgeFilter(key, parseFloat(qb.dataset.val));
+        closeActiveFilterPopover();
+      };
+    });
+    pop.querySelector('.filter-count-reset-btn').onclick = (e) => {
+      e.stopPropagation();
+      setAgeFilter(key, 0);
+      closeActiveFilterPopover();
+    };
+    pop.onclick = (e) => e.stopPropagation();
+    input.focus();
+    input.select();
+  }
+
+  document.querySelectorAll('.chip[data-age-filter]').forEach(chip => {
+    const key = chip.dataset.ageFilter;
+    chip.addEventListener('click', () => {
+      closeActiveFilterPopover();
+      setAgeFilter(key, state.filters[key] > 0 ? 0 : state.ageFilterValues[key]);
+    });
+    chip.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showAgeThresholdPopover(chip, key);
+    });
+  });
+  refreshAgeChips();
+
   // Celestial & Orbital Anomaly Filter chips
   document.querySelectorAll('.celestial-chip').forEach(chip => {
     const cKey = chip.dataset.celestial;
@@ -2555,10 +2653,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnClearGeneral) {
     btnClearGeneral.addEventListener('click', (e) => {
       e.stopPropagation();
-      document.querySelectorAll('#group-general-filters .chip').forEach(chip => {
+      document.querySelectorAll('#group-general-filters .chip[data-filter]').forEach(chip => {
         updateFilterChipUI(chip, 0);
         state.filters[chip.dataset.filter] = false;
       });
+      resetAgeFilters();
       state.page = 1;
       updateCollapsibleBadges();
       fetchSystems({ autoSelectTop: true });
@@ -2930,6 +3029,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.filters[chip.dataset.filter] = false;
       }
     });
+    resetAgeFilters();
 
     // 3. Celestial filters
     document.querySelectorAll('.celestial-chip').forEach(chip => {

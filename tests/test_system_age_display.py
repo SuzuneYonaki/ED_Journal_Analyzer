@@ -143,3 +143,64 @@ def test_backfill_star_ages_for_previously_parsed_systems(tmp_path):
     # Idempotent: a second run changes nothing
     assert parser.backfill_star_ages(journal_dir)["bodies_updated"] == 0
     conn.close()
+
+
+@pytest.fixture(scope="module")
+def age_client():
+    init_db()
+    return TestClient(app)
+
+
+def test_api_age_filters(age_client):
+    from app.db.database import get_db_connection
+
+    fixtures = {
+        999444000001: ("AgeFilter-Young", 1.5),
+        999444000002: ("AgeFilter-Mid", 2.0),
+        999444000003: ("AgeFilter-Old", 9000.0),
+        999444000004: ("AgeFilter-Unknown", None),
+    }
+    with get_db_connection() as conn:
+        for addr, (name, age) in fixtures.items():
+            conn.execute(
+                "INSERT OR REPLACE INTO systems (system_address, star_system, system_age_my) VALUES (?, ?, ?)",
+                (addr, name, age),
+            )
+        conn.commit()
+
+    def names(query):
+        res = age_client.get(f"/api/systems?q=AgeFilter-&{query}")
+        assert res.status_code == 200
+        return sorted(s["star_system"] for s in res.json()["systems"])
+
+    try:
+        assert len(names("")) == 4
+        # "< N MY": strictly younger; unknown ages never match
+        assert names("age_lt_my=2") == ["AgeFilter-Young"]
+        # ">= N MY": inclusive lower bound; unknown ages never match
+        assert names("age_gte_my=2") == ["AgeFilter-Mid", "AgeFilter-Old"]
+        assert names("age_gte_my=5000") == ["AgeFilter-Old"]
+        # Both bounds combine as a range
+        assert names("age_gte_my=2&age_lt_my=10000") == ["AgeFilter-Mid", "AgeFilter-Old"]
+        # Non-positive values mean "off"
+        assert len(names("age_lt_my=0&age_gte_my=0")) == 4
+    finally:
+        with get_db_connection() as conn:
+            conn.execute("DELETE FROM systems WHERE system_address IN (?, ?, ?, ?)", tuple(fixtures))
+            conn.commit()
+
+
+def test_age_filter_chip_wiring():
+    base = Path(__file__).resolve().parent.parent / "app" / "ui"
+    html = (base / "components" / "left_pane.html").read_text(encoding="utf-8")
+    app_js = (base / "js" / "app.js").read_text(encoding="utf-8")
+    sys_list = (base / "js" / "system_list.js").read_text(encoding="utf-8")
+    i18n_js = (base / "js" / "i18n.js").read_text(encoding="utf-8")
+
+    general = html.split('id="group-general-filters"')[1].split('id="group-celestial-filters"')[0]
+    assert 'data-age-filter="age_lt_my"' in general
+    assert 'data-age-filter="age_gte_my"' in general
+    assert "age_lt_my: 0" in app_js and "age_gte_my: 0" in app_js
+    assert "'age_lt_my', 'age_gte_my'" in sys_list
+    for key in ("filter_age_lt", "filter_age_gte", "filter_age_lt_tip", "filter_age_gte_tip"):
+        assert i18n_js.count(f"{key}:") == 2  # ja + en
