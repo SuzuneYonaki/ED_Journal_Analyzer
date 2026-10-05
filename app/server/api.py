@@ -48,6 +48,7 @@ from app.services.physics_translator import (
 )
 
 from app.addons import addon_manager
+from app.utils.voxel import voxel_key, voxel_age_stats
 
 app = FastAPI(title="Elite Dangerous Journal Analyzer")
 
@@ -1531,6 +1532,15 @@ def get_systems(
             r["bookmarks"] = []
         lm_dists = calculate_landmark_distances(r.get("star_pos_x"), r.get("star_pos_y"), r.get("star_pos_z"))
         r.update(lm_dists)
+
+    row_voxel_keys = {r["system_address"]: voxel_key(r.get("star_system")) for r in rows}
+    voxel_stats = voxel_age_stats(conn, [k for k in row_voxel_keys.values() if k])
+    for r in rows:
+        k = row_voxel_keys[r["system_address"]]
+        avg, count = voxel_stats.get(k, (None, 0))
+        r["voxel_key"] = k
+        r["voxel_age_avg_my"] = avg
+        r["voxel_age_count"] = count
 
     jump_stats = None
     try:

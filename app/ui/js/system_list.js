@@ -307,15 +307,23 @@ function renderSystemList() {
       }
     }
 
-    let ageFormatted = '';
-    if (sys.system_age_my !== null && sys.system_age_my !== undefined) {
-      const ageNum = Number(sys.system_age_my);
-      if (!isNaN(ageNum) && ageNum >= 0) {
-        const displayVal = ageNum < 10 ? (Math.round(ageNum * 10) / 10).toLocaleString() : Math.round(ageNum).toLocaleString();
-        ageFormatted = `${t('system_age')}: ${displayVal} ${t('my_unit')}`;
-      }
-    }
+    const formatAgeMy = (v) => {
+      const n = Number(v);
+      if (v === null || v === undefined || isNaN(n) || n < 0) return '';
+      return (n < 10 ? Math.round(n * 10) / 10 : Math.round(n)).toLocaleString();
+    };
+    const ageDisplay = formatAgeMy(sys.system_age_my);
+    const ageFormatted = ageDisplay ? `${t('system_age')}: ${ageDisplay} ${t('my_unit')}` : '';
     const ageHtml = ageFormatted ? `<span class="system-card-age" title="${ageFormatted}">${ageFormatted}</span>` : '';
+
+    // Average age of logged systems sharing this system's voxel code (needs 2+ samples to be informative)
+    let voxelHtml = '';
+    const voxelAvgDisplay = formatAgeMy(sys.voxel_age_avg_my);
+    if (voxelAvgDisplay && sys.voxel_age_count >= 2) {
+      const voxelText = `${t('voxel_age_avg')}: ${voxelAvgDisplay} ${t('my_unit')} (n=${sys.voxel_age_count})`;
+      const voxelTip = escapeHtml(t('voxel_age_avg_tip', { key: sys.voxel_key, n: sys.voxel_age_count }));
+      voxelHtml = `<div class="system-card-voxel-age" title="${voxelTip}">${voxelText}</div>`;
+    }
 
     card.innerHTML = `
       <div class="system-card-header">
@@ -330,6 +338,7 @@ function renderSystemList() {
         <span class="system-card-meta-left">${t('bodies_count')}: ${sys.scanned_bodies} / ${sys.total_bodies || '?'}${mainStar}</span>
         ${ageHtml}
       </div>
+      ${voxelHtml}
       <div class="system-card-tags">
         ${tags.join('')}
       </div>
