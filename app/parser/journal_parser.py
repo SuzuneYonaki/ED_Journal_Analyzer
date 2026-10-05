@@ -1793,6 +1793,72 @@ class JournalParser:
         self.conn.commit()
         return count
 
+    def backfill_star_ages(self, journal_dir: str | Path, progress_callback=None) -> dict:
+        """
+        Fills bodies.age_my / systems.system_age_my for journals parsed before the
+        age columns existed. Reads only Age_MY from star Scan events (no event replay,
+        so visit counts and payouts are untouched).
+        """
+        files = sorted(glob.glob(os.path.join(str(journal_dir), "Journal.*.log")))
+        total_files = len(files)
+        updated_bodies = 0
+        touched_systems = set()
+
+        for idx, fpath in enumerate(files, start=1):
+            rows = []
+            try:
+                with open(fpath, "rb") as f:
+                    for line_bytes in f:
+                        if b'"Age_MY"' not in line_bytes or b'"Scan"' not in line_bytes:
+                            continue
+                        try:
+                            data = json.loads(line_bytes.decode("utf-8", errors="replace"))
+                        except Exception:
+                            continue
+                        if data.get("event") != "Scan" or not data.get("StarType"):
+                            continue
+                        age = data.get("Age_MY")
+                        sys_addr = data.get("SystemAddress")
+                        body_id = data.get("BodyID")
+                        if age is None or sys_addr is None or body_id is None:
+                            continue
+                        rows.append((age, sys_addr, body_id))
+            except (PermissionError, OSError) as e:
+                print(f"[Star Age Backfill Warning] Could not read {fpath}: {e}")
+                continue
+
+            for age, sys_addr, body_id in rows:
+                self.cursor.execute(
+                    "UPDATE bodies SET age_my = ? WHERE system_address = ? AND body_id = ? AND age_my IS NULL",
+                    (age, sys_addr, body_id),
+                )
+                if self.cursor.rowcount:
+                    updated_bodies += self.cursor.rowcount
+                    touched_systems.add(sys_addr)
+
+            if progress_callback:
+                progress_callback(idx, total_files, Path(fpath).name)
+
+        for sys_addr in touched_systems:
+            self.cursor.execute("""
+                UPDATE systems
+                SET system_age_my = (
+                    SELECT b.age_my FROM bodies b
+                    WHERE b.system_address = systems.system_address
+                      AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL
+                    ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC
+                    LIMIT 1
+                )
+                WHERE system_address = ? AND system_age_my IS NULL
+            """, (sys_addr,))
+        self.conn.commit()
+
+        return {
+            "scanned_files": total_files,
+            "bodies_updated": updated_bodies,
+            "systems_updated": len(touched_systems),
+        }
+
     def scan_historical_codex_entries(self, journal_dir: str | Path, progress_callback=None) -> dict:
         """
         Fast scanner across all Journal.*.log files in journal_dir specifically looking for

@@ -2143,6 +2143,10 @@ def run_background_parse():
         parser = JournalParser(event_callback=addon_event_callback)
         target_dir = get_saved_journal_dir()
         tot = parser.parse_all_journals(str(target_dir), progress_callback=cb)
+        if not load_app_settings_data().get("star_age_backfill_done"):
+            scan_state["message"] = "Backfilling star system ages..."
+            parser.backfill_star_ages(str(target_dir), progress_callback=cb)
+            save_app_settings_data({"star_age_backfill_done": True})
         scan_state["current"] = tot
         scan_state["total"] = tot
         scan_state["percent"] = 100
