@@ -1334,6 +1334,7 @@ def get_systems(
                     systems.*,
                     (SELECT b.luminosity FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_luminosity,
                     (SELECT b.absolute_magnitude FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_absolute_magnitude,
+                    COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS system_age_my,
                     pe.rarity_score,
                     {cmdr_dist_expr} AS cmdr_distance_ly,
                     EXISTS (
@@ -1421,6 +1422,7 @@ def get_systems(
                 systems.*,
                 (SELECT b.luminosity FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_luminosity,
                 (SELECT b.absolute_magnitude FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_absolute_magnitude,
+                COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS system_age_my,
                 pe.rarity_score,
                 {cmdr_dist_expr} AS cmdr_distance_ly,
                 NULL AS composite_score,

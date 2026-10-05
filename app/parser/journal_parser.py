@@ -902,7 +902,7 @@ class JournalParser:
         self.cursor.execute("""
             INSERT INTO bodies (
                 system_address, body_id, body_name, star_system, distance_from_arrival_ls,
-                star_type, luminosity, stellar_mass, absolute_magnitude, radius, surface_temperature,
+                star_type, luminosity, age_my, stellar_mass, absolute_magnitude, radius, surface_temperature,
                 planet_class, atmosphere, atmosphere_type, atmosphere_composition,
                 mass_em, surface_gravity, surface_gravity_g, surface_pressure, landable,
                 volcanism, terraforming_state, tidal_lock, semi_major_axis, eccentricity,
@@ -912,7 +912,7 @@ class JournalParser:
                 first_discovered_fss, first_mapped_dss, max_potential_value,
                 confirmed_genuses, exobiology_predictions, anomalies_json, scan_type, scan_timestamp, updated_timestamp
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             ON CONFLICT(system_address, body_id) DO UPDATE SET
                 body_name = excluded.body_name,
@@ -920,6 +920,7 @@ class JournalParser:
                 distance_from_arrival_ls = excluded.distance_from_arrival_ls,
                 star_type = COALESCE(excluded.star_type, bodies.star_type),
                 luminosity = COALESCE(excluded.luminosity, bodies.luminosity),
+                age_my = COALESCE(excluded.age_my, bodies.age_my),
                 stellar_mass = COALESCE(excluded.stellar_mass, bodies.stellar_mass),
                 radius = COALESCE(excluded.radius, bodies.radius),
                 surface_temperature = COALESCE(excluded.surface_temperature, bodies.surface_temperature),
@@ -957,7 +958,7 @@ class JournalParser:
                 updated_timestamp = excluded.updated_timestamp
         """, (
             sys_addr, body_id, body_name, star_sys, dist_ls,
-            star_type, luminosity, stellar_mass, data.get("AbsoluteMagnitude"), radius, surface_temp,
+            star_type, luminosity, data.get("Age_MY"), stellar_mass, data.get("AbsoluteMagnitude"), radius, surface_temp,
             planet_class, atmosphere, atmosphere_type, atmosphere_comp,
             mass_em, gravity_raw, gravity_g, surface_pressure, landable,
             volcanism, terraforming, tidal_lock, semi_major_axis, eccentricity,
@@ -1606,6 +1607,7 @@ class JournalParser:
                 MAX(star_system) as sys_name,
                 MAX(scan_timestamp) as latest_ts,
                 (SELECT star_type FROM bodies WHERE system_address = ? AND star_type IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star,
+                (SELECT age_my FROM bodies WHERE system_address = ? AND star_type IS NOT NULL AND age_my IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star_age,
                 SUM(fss_value) as sum_fss,
                 SUM(dss_value) as sum_dss,
                 SUM(max_potential_value) as sum_max,
@@ -1624,12 +1626,13 @@ class JournalParser:
             FROM bodies 
             WHERE system_address = ? 
               AND (star_type IS NOT NULL OR planet_class IS NOT NULL)
-        """, (sys_addr, sys_addr))
+        """, (sys_addr, sys_addr, sys_addr))
         row = self.cursor.fetchone()
         if row and row["count"] > 0:
             sys_name = row["sys_name"] or f"System {sys_addr}"
             ts = row["latest_ts"] or datetime.now().isoformat()
             main_star = row["main_star"]
+            main_star_age = row["main_star_age"]
 
             # Check if system is populated - populated bubble systems are never CMDR first discoveries
             self.cursor.execute("SELECT population FROM systems WHERE system_address = ?", (sys_addr,))
@@ -1667,8 +1670,8 @@ class JournalParser:
                     total_potential_value, total_bio_signals, has_elw,
                     has_water_world, has_ammonia, has_terraformable, has_bio,
                     has_landable, has_high_g, has_anomalies, first_discovered_bodies, has_first_discover,
-                    avg_landable_radius, mining_scout_grade
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    avg_landable_radius, mining_scout_grade, system_age_my
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(system_address) DO UPDATE SET
                     scanned_bodies = excluded.scanned_bodies,
                     main_star_type = COALESCE(excluded.main_star_type, systems.main_star_type),
@@ -1687,7 +1690,8 @@ class JournalParser:
                     first_discovered_bodies = excluded.first_discovered_bodies,
                     has_first_discover = excluded.has_first_discover,
                     avg_landable_radius = excluded.avg_landable_radius,
-                    mining_scout_grade = CASE WHEN excluded.mining_scout_grade != '' THEN excluded.mining_scout_grade ELSE systems.mining_scout_grade END
+                    mining_scout_grade = CASE WHEN excluded.mining_scout_grade != '' THEN excluded.mining_scout_grade ELSE systems.mining_scout_grade END,
+                    system_age_my = COALESCE(excluded.system_age_my, systems.system_age_my)
             """, (
                 sys_addr, sys_name, ts, ts,
                 row["count"], main_star, row["sum_fss"] or 0, row["sum_dss"] or 0,
@@ -1696,7 +1700,8 @@ class JournalParser:
                 row["landable"] or 0, row["high_g"] or 0, row["anomalies"] or 0,
                 first_disc_count, has_first_disc,
                 row["avg_landable_radius"] or 0,
-                mining_grade
+                mining_grade,
+                main_star_age
             ))
 
     def parse_file(self, filepath: str, progress_callback=None):

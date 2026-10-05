@@ -307,6 +307,16 @@ function renderSystemList() {
       }
     }
 
+    let ageFormatted = '';
+    if (sys.system_age_my !== null && sys.system_age_my !== undefined) {
+      const ageNum = Number(sys.system_age_my);
+      if (!isNaN(ageNum) && ageNum >= 0) {
+        const displayVal = ageNum < 10 ? (Math.round(ageNum * 10) / 10).toLocaleString() : Math.round(ageNum).toLocaleString();
+        ageFormatted = `${t('system_age')}: ${displayVal} ${t('my_unit')}`;
+      }
+    }
+    const ageHtml = ageFormatted ? `<span class="system-card-age" title="${ageFormatted}">${ageFormatted}</span>` : '';
+
     card.innerHTML = `
       <div class="system-card-header">
         <span class="system-card-title" title="${sysName}">${sysName}</span>
@@ -317,7 +327,8 @@ function renderSystemList() {
         <span class="system-card-visited">${t('visited_meta')}: ${visitedDate} (${sys.visit_count}${t('times')})</span>
       </div>
       <div class="system-card-meta">
-        <span>${t('bodies_count')}: ${sys.scanned_bodies} / ${sys.total_bodies || '?'}${mainStar}</span>
+        <span class="system-card-meta-left">${t('bodies_count')}: ${sys.scanned_bodies} / ${sys.total_bodies || '?'}${mainStar}</span>
+        ${ageHtml}
       </div>
       <div class="system-card-tags">
         ${tags.join('')}

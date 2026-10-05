@@ -134,7 +134,8 @@ def init_db(conn=None, force: bool = False):
         system_second_economy TEXT DEFAULT '',
         system_reserve TEXT DEFAULT '',
         edsm_factions_json TEXT DEFAULT '[]',
-        mining_scout_grade TEXT DEFAULT ''
+        mining_scout_grade TEXT DEFAULT '',
+        system_age_my REAL
     );
     """)
 
@@ -194,6 +195,7 @@ def init_db(conn=None, force: bool = False):
         anomalies_json TEXT,
         scan_type TEXT,
         luminosity TEXT,
+        age_my REAL,
         scan_timestamp TEXT,
         updated_timestamp TEXT,
         UNIQUE(system_address, body_id)
@@ -443,6 +445,7 @@ def init_db(conn=None, force: bool = False):
         ("system_reserve", "TEXT DEFAULT ''"),
         ("edsm_factions_json", "TEXT DEFAULT '[]'"),
         ("mining_scout_grade", "TEXT DEFAULT ''"),
+        ("system_age_my", "REAL"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE systems ADD COLUMN {col_def[0]} {col_def[1]};")
@@ -529,6 +532,7 @@ def init_db(conn=None, force: bool = False):
         ("reserve_level", "TEXT"),
         ("scan_type", "TEXT"),
         ("luminosity", "TEXT"),
+        ("age_my", "REAL"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE bodies ADD COLUMN {col_def[0]} {col_def[1]};")
@@ -536,6 +540,30 @@ def init_db(conn=None, force: bool = False):
             pass
 
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_bodies_luminosity ON bodies(system_address, luminosity);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bodies_age_my ON bodies(system_address, age_my);")
+
+    # Backfill system_age_my from bodies if available
+    try:
+        cursor.execute("""
+            UPDATE systems
+            SET system_age_my = (
+                SELECT b.age_my
+                FROM bodies b
+                WHERE b.system_address = systems.system_address
+                  AND b.star_type IS NOT NULL
+                  AND b.age_my IS NOT NULL
+                ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC
+                LIMIT 1
+            )
+            WHERE system_age_my IS NULL AND EXISTS (
+                SELECT 1 FROM bodies b
+                WHERE b.system_address = systems.system_address
+                  AND b.star_type IS NOT NULL
+                  AND b.age_my IS NOT NULL
+            );
+        """)
+    except Exception:
+        pass
 
     for col_def in [
         ("alias_name", "TEXT DEFAULT ''"),

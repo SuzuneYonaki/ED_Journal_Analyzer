@@ -1284,9 +1284,26 @@ header {
   color: var(--text-secondary);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 5px;
+}
+
+.system-card-meta-left {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.system-card-age {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .system-card-tags {
