@@ -2213,7 +2213,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errJson.error || errJson.detail || `HTTP ${resp.status}`);
               }
               const resData = await resp.json();
-              loadBtn.innerHTML = '<span>✓ ロード完了</span>';
+              const hs = resData.spansh && resData.spansh.success ? resData.spansh.hotspots_found : null;
+              loadBtn.innerHTML = `<span>✓ ロード完了${hs !== null ? `（ホットスポット ${hs} 件）` : ''}</span>`;
               await fetchSystems();
               if (resData.system_address) {
                 await selectSystem(resData.system_address);
