@@ -2372,6 +2372,90 @@ def import_edsm_external_system(system_name: str):
 
     return JSONResponse(result)
 
+# Tables holding rows keyed by system_address that can belong to an EDSM-loaded system.
+_EXTERNAL_DEPENDENT_TABLES = (
+    "bodies", "stations", "system_physics_evaluations", "surface_mining_sites",
+    "surface_mining_activities", "body_bookmarks", "codex_entries", "scanned_organics", "visits",
+)
+# Only systems loaded from EDSM and never visited by the CMDR are ever removable here;
+# the CMDR's own journal-derived systems (visit_count > 0) are never touched.
+_EXTERNAL_ONLY_SQL = "is_external = 1 AND COALESCE(visit_count, 0) = 0"
+
+
+def _external_addresses(c, system_address: Optional[int] = None) -> List[int]:
+    if system_address is None:
+        c.execute(f"SELECT system_address FROM systems WHERE {_EXTERNAL_ONLY_SQL}")
+    else:
+        c.execute(f"SELECT system_address FROM systems WHERE {_EXTERNAL_ONLY_SQL} AND system_address = ?", (system_address,))
+    return [r["system_address"] for r in c.fetchall()]
+
+
+def _count_for_addresses(c, table: str, addrs: List[int]) -> int:
+    total = 0
+    for i in range(0, len(addrs), 500):
+        chunk = addrs[i:i + 500]
+        c.execute(f"SELECT COUNT(*) AS n FROM {table} WHERE system_address IN ({','.join('?' * len(chunk))})", chunk)
+        total += c.fetchone()["n"]
+    return total
+
+
+@app.get("/api/external/summary")
+def get_external_summary():
+    conn = get_db_connection()
+    c = conn.cursor()
+    addrs = _external_addresses(c)
+    summary = {
+        "systems": len(addrs),
+        "bodies": _count_for_addresses(c, "bodies", addrs),
+        "bookmarks": _count_for_addresses(c, "body_bookmarks", addrs),
+    }
+    conn.close()
+    return summary
+
+
+def _delete_external_systems(conn, addrs: List[int]) -> dict:
+    c = conn.cursor()
+    removed = {"systems": 0, "bodies": 0, "bookmarks": 0}
+    removed["bodies"] = _count_for_addresses(c, "bodies", addrs)
+    removed["bookmarks"] = _count_for_addresses(c, "body_bookmarks", addrs)
+    for i in range(0, len(addrs), 500):
+        chunk = addrs[i:i + 500]
+        marks = ",".join("?" * len(chunk))
+        for table in _EXTERNAL_DEPENDENT_TABLES:
+            c.execute(f"DELETE FROM {table} WHERE system_address IN ({marks})", chunk)
+        c.execute(f"DELETE FROM systems WHERE {_EXTERNAL_ONLY_SQL} AND system_address IN ({marks})", chunk)
+        removed["systems"] += c.rowcount
+    conn.commit()
+    footprint_service.clear_cache()
+    return removed
+
+
+@app.delete("/api/external/systems/{system_address}")
+def delete_external_system(system_address: int):
+    conn = get_db_connection()
+    c = conn.cursor()
+    addrs = _external_addresses(c, system_address)
+    if not addrs:
+        c.execute("SELECT 1 FROM systems WHERE system_address = ?", (system_address,))
+        exists = c.fetchone() is not None
+        conn.close()
+        if exists:
+            return JSONResponse({"error": "本人の探査データ（訪問済み星系）は削除できません。"}, status_code=400)
+        return JSONResponse({"error": "System not found"}, status_code=404)
+    removed = _delete_external_systems(conn, addrs)
+    conn.close()
+    return {"success": True, "system_address": system_address, **removed}
+
+
+@app.delete("/api/external/systems")
+def delete_all_external_systems():
+    conn = get_db_connection()
+    c = conn.cursor()
+    addrs = _external_addresses(c)
+    removed = _delete_external_systems(conn, addrs) if addrs else {"systems": 0, "bodies": 0, "bookmarks": 0}
+    conn.close()
+    return {"success": True, **removed}
+
 ## NOTE: /api/export/html, /api/export/snippet, /api/export/image,
 ## /api/export/open_location, /api/export/package(/save-local),
 ## /api/system/reveal-file, /api/import/png, /api/import/package/preview

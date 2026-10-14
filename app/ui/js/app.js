@@ -351,6 +351,7 @@ async function fetchSystems(options = {}) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.systems = data.systems;
+    if (typeof window.refreshExternalFootprintActions === 'function') window.refreshExternalFootprintActions();
     state.totalPages = Math.ceil(data.total / state.limit) || 1;
 
     // Update CMDR location in header if returned
@@ -2080,9 +2081,75 @@ document.addEventListener('DOMContentLoaded', () => {
   let searchTimeout = null;
   let footprintAbortController = null;
 
+  // Delete buttons for EDSM-loaded (unvisited, external) systems: this system only / all of them
+  async function refreshExternalFootprintActions() {
+    const box = document.getElementById('external-footprint-actions');
+    if (!box) return;
+    if (!state.externalFootprintCheck) {
+      box.style.display = 'none';
+      box.innerHTML = '';
+      return;
+    }
+
+    let summary = { systems: 0, bodies: 0, bookmarks: 0 };
+    try {
+      const resp = await fetch('/api/external/summary');
+      if (resp.ok) summary = await resp.json();
+    } catch (e) {}
+
+    const q = (state.searchQuery || '').trim().toLowerCase();
+    const target = q
+      ? (state.systems || []).find(s => (s.star_system || '').toLowerCase() === q && s.is_external === 1 && !s.visit_count)
+      : null;
+
+    const parts = [];
+    if (target) {
+      parts.push(`<button type="button" id="btn-delete-external-this" class="btn-page ext-del-btn" title="${escapeHtml(t('footprint_delete_this_tip'))}">${t('footprint_delete_this')}</button>`);
+    }
+    if (summary.systems > 0) {
+      parts.push(`<button type="button" id="btn-delete-external-all" class="btn-page ext-del-btn" title="${escapeHtml(t('footprint_delete_all_tip'))}">${t('footprint_delete_all', { n: summary.systems })}</button>`);
+    }
+    box.innerHTML = parts.join('');
+    box.style.display = parts.length ? 'flex' : 'none';
+
+    const runDelete = async (url, deletesSelected) => {
+      try {
+        const resp = await fetch(url, { method: 'DELETE' });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${resp.status}`);
+        }
+        await fetchSystems({ autoSelectTop: deletesSelected });
+        triggerExternalFootprintCheck(state.searchQuery);
+      } catch (e) {
+        console.error('External data delete error:', e);
+        await showAppConfirm(`${t('footprint_delete_failed')}: ${escapeHtml(e.message)}`);
+      }
+    };
+    const selected = state.selectedSystem;
+
+    const btnThis = document.getElementById('btn-delete-external-this');
+    if (btnThis && target) {
+      btnThis.onclick = async () => {
+        const ok = await showAppConfirm(t('footprint_delete_this_confirm', { name: escapeHtml(target.star_system) }));
+        if (ok) runDelete(`/api/external/systems/${target.system_address}`, !!selected && selected.system_address === target.system_address);
+      };
+    }
+    const btnAll = document.getElementById('btn-delete-external-all');
+    if (btnAll) {
+      btnAll.onclick = async () => {
+        const note = summary.bookmarks > 0 ? t('footprint_delete_bookmarks_note', { n: summary.bookmarks }) : '';
+        const ok = await showAppConfirm(t('footprint_delete_all_confirm', { systems: summary.systems, bodies: summary.bodies, bookmarks_note: note }));
+        if (ok) runDelete('/api/external/systems', !!selected && selected.is_external === 1 && !selected.visit_count);
+      };
+    }
+  }
+  window.refreshExternalFootprintActions = refreshExternalFootprintActions;
+
   async function triggerExternalFootprintCheck(sysName) {
     const resContainer = document.getElementById('external-footprint-result');
     if (!resContainer) return;
+    refreshExternalFootprintActions();
 
     const trimmed = (sysName || '').trim();
     if (!state.externalFootprintCheck || trimmed.length < 2) {
@@ -2252,6 +2319,7 @@ document.addEventListener('DOMContentLoaded', () => {
           resContainer.style.display = 'none';
           resContainer.innerHTML = '';
         }
+        refreshExternalFootprintActions();
       }
     });
   }

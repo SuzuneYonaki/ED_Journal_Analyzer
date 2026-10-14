@@ -24,6 +24,10 @@ class FootprintService:
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._cache_times: Dict[str, float] = {}
 
+    def clear_cache(self) -> None:
+        self._cache.clear()
+        self._cache_times.clear()
+
     def check_system_footprint(self, system_name: str) -> Dict[str, Any]:
         clean_name = (system_name or "").strip()
         if not clean_name:
