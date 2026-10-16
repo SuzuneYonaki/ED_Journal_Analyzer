@@ -12,23 +12,19 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Set
 
 from app.parser.exobiology_rules import EXOBIOLOGY_RULES, GENUS_DEFAULTS
-from app.utils.galactic_regions import get_region_from_coords
+from app.utils.galactic_regions import get_region_from_coords, DEFAULT_FALLBACK_REGION
 
 # Load external Canonn Research JSON rules dynamically (SSOT)
 CANONN_RULES_FILE = Path(__file__).resolve().parents[1] / "data" / "canonn_rules.json"
 
 # Galactic Region constraints (SSOT extension):
-# Maps genus or specific species to allowed region IDs (Frontier 42 Galactic Regions).
-# If a species or genus has an entry, it only spawns in the listed regions.
-# Species not listed here (allowed_regions is None) can spawn anywhere across the galaxy.
+# Maps genus or specific species to allowed region IDs (official Frontier region IDs, see
+# app/utils/galactic_regions.py). If a species or genus has an entry, it only spawns in the
+# listed regions; anything not listed can spawn in any region.
+# Only constraints backed by a source belong here. Brain Tree: region group 'brain-tree' of
+# Silarn's EDMC-BioScan (GPL-2.0-or-later), src/bio_scan/bio_data/regions.py.
 DEFAULT_REGION_CONSTRAINTS: Dict[str, List[int]] = {
-    # Electricae: outer galaxy / deep space regions only (strictly excluded from Inner Orion Spur (19) / Bubble)
-    "Electricae": [17, 18, 20, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 33, 35, 36, 37, 38, 39, 40, 41, 42],
-    # Brain Tree: Guardian ruins sectors and specific nebulae regions
-    "Brain Tree": [8, 9, 10, 11, 12, 13, 16, 17, 20, 21, 32, 34],
-    # Specific Bacterium species with regional constraints
-    "Bacterium Cerbrus": [1, 2, 3, 4, 5, 6, 7, 8, 17, 20, 22, 31, 40],
-    "Bacterium Alcyoneum": [1, 4, 5, 6, 17, 18, 20, 22, 28, 31, 40, 42],
+    "Brain Tree": [2, 9, 10, 17, 18, 35],
 }
 
 
@@ -392,7 +388,7 @@ def predict_exobiology_candidates(
             resolved_region = get_region_from_coords(star_pos[0], star_pos[1], star_pos[2])
             region_id = resolved_region[0]
         else:
-            region_id = 19  # Safe fallback if star_pos was explicitly passed but invalid
+            region_id = DEFAULT_FALLBACK_REGION[0]  # Safe fallback if star_pos was explicitly passed but invalid
 
     is_landable = body.get("landable") or body.get("Landable")
     if is_landable is False:

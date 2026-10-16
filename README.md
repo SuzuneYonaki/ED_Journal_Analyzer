@@ -210,6 +210,10 @@ python run.py
   Scientific research on Exobiology environmental matrices and biological colony distance rules.
 - **MattG & Exploration Pioneers**:
   For exploration payout formula reverse-engineering and community documentation.
+- **[EliteDangerousRegionMap](https://github.com/klightspeed/EliteDangerousRegionMap)** (klightspeed, MIT License):
+  Galactic region map data used to resolve a system's Galactic Region from its coordinates.
+- **[EDMC-BioScan](https://github.com/Silarn/EDMC-BioScan)** (Silarn, GPL-2.0-or-later):
+  Reference for exobiology region groupings and species rules.
 - **[VOICEVOX](https://voicevox.hiroshiba.jp/)**:
   Hiroshiba and character voice library creators for the outstanding local Japanese speech synthesis engine.
 - **AI Assisted Development**:
