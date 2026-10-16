@@ -1297,6 +1297,101 @@ header {
   gap: 4px;
 }
 
+.biolog-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+.biolog-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.biolog-toolbar .search-input {
+  flex: 1 1 220px;
+  min-width: 160px;
+}
+
+.biolog-status-row,
+.biolog-genus-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.biolog-chip-count {
+  opacity: 0.7;
+  font-family: var(--font-mono);
+  margin-left: 2px;
+}
+
+.biolog-summary {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.biolog-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.74rem;
+}
+
+.biolog-table th {
+  text-align: left;
+  padding: 4px 6px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  background: var(--bg-panel, #0b1220);
+  white-space: nowrap;
+}
+
+.biolog-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: top;
+}
+
+.biolog-row {
+  cursor: pointer;
+}
+
+.biolog-row:hover {
+  background: rgba(0, 255, 136, 0.08);
+}
+
+.biolog-species {
+  color: var(--ed-green);
+  font-weight: bold;
+}
+
+.biolog-value {
+  font-family: var(--font-mono);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.biolog-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.biolog-empty {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 30px;
+}
+
 .system-card-voxel-age {
   font-size: 0.68rem;
   color: var(--text-dim);

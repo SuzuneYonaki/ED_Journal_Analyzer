@@ -475,8 +475,10 @@ function updateModuleVisibilityUI() {
   
   // View switcher buttons in Central Pane
   const btnViewBio = document.getElementById('btn-view-bio');
+  const btnViewBioLog = document.getElementById('btn-view-biolog');
   const btnViewMining = document.getElementById('btn-view-mining');
   if (btnViewBio) btnViewBio.style.display = modSettings.exobiology ? 'inline-block' : 'none';
+  if (btnViewBioLog) btnViewBioLog.style.display = modSettings.exobiology ? 'inline-block' : 'none';
   if (btnViewMining) btnViewMining.style.display = modSettings.rhino ? 'inline-block' : 'none';
 
   // Left pane Mining Landable Filters group
@@ -531,7 +533,7 @@ function updateModuleVisibilityUI() {
   }
 
   // If currently selected view became hidden, fallback to sysmap
-  if (state.currentView === 'bio' && !modSettings.exobiology) {
+  if ((state.currentView === 'bio' || state.currentView === 'biolog') && !modSettings.exobiology) {
     state.currentView = 'sysmap';
     if (typeof updateViewButtons === 'function') updateViewButtons();
   }
@@ -546,6 +548,7 @@ function updateViewButtons() {
   const btnFlat = document.getElementById('btn-view-flat');
   const btnOrrery = document.getElementById('btn-view-orrery');
   const btnBio = document.getElementById('btn-view-bio');
+  const btnBioLog = document.getElementById('btn-view-biolog');
   const btnMining = document.getElementById('btn-view-mining');
   const btnVis = document.getElementById('btn-view-visits');
   const btnPhys = document.getElementById('btn-view-physics');
@@ -554,6 +557,7 @@ function updateViewButtons() {
   if (btnFlat) btnFlat.classList.toggle('active', state.currentView === 'flat');
   if (btnOrrery) btnOrrery.classList.toggle('active', state.currentView === 'orrery');
   if (btnBio) btnBio.classList.toggle('active', state.currentView === 'bio');
+  if (btnBioLog) btnBioLog.classList.toggle('active', state.currentView === 'biolog');
   if (btnMining) btnMining.classList.toggle('active', state.currentView === 'mining');
   if (btnVis) btnVis.classList.toggle('active', state.currentView === 'visits');
   if (btnPhys) btnPhys.classList.toggle('active', state.currentView === 'physics');
@@ -574,7 +578,7 @@ function updateViewButtons() {
 
 function switchCenterPaneView(viewName) {
   const modSettings = (typeof getModuleSettings === 'function') ? getModuleSettings() : {};
-  if (viewName === 'bio' && modSettings.exobiology === false) return;
+  if ((viewName === 'bio' || viewName === 'biolog') && modSettings.exobiology === false) return;
   if (viewName === 'mining' && modSettings.rhino === false) return;
 
   state.currentView = viewName;
@@ -606,7 +610,11 @@ const CENTER_PANE_TAB_KEY_MAP = {
   '6': 'physics',
   '６': 'physics',
   'Digit6': 'physics',
-  'Numpad6': 'physics'
+  'Numpad6': 'physics',
+  '7': 'biolog',
+  '７': 'biolog',
+  'Digit7': 'biolog',
+  'Numpad7': 'biolog'
 };
 
 function initCenterPaneTabShortcuts() {
@@ -981,6 +989,11 @@ async function dismissHonkWaitingAndShowCurrent() {
 function renderCurrentView() {
   const container = document.getElementById('map-content');
   container.innerHTML = '';
+
+  if (state.currentView === 'biolog') {
+    renderBioLogView(container);
+    return;
+  }
 
   // 1. Arrived Waiting FSS (Honk) State Placeholder
   if (state.jumpState === 'arrived_waiting_fss') {
@@ -3186,6 +3199,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-view-flat')?.addEventListener('click', () => switchCenterPaneView('flat'));
   document.getElementById('btn-view-orrery')?.addEventListener('click', () => switchCenterPaneView('orrery'));
   document.getElementById('btn-view-bio')?.addEventListener('click', () => switchCenterPaneView('bio'));
+  document.getElementById('btn-view-biolog')?.addEventListener('click', () => switchCenterPaneView('biolog'));
   document.getElementById('btn-view-mining')?.addEventListener('click', () => switchCenterPaneView('mining'));
   document.getElementById('btn-view-visits')?.addEventListener('click', () => switchCenterPaneView('visits'));
   document.getElementById('btn-view-physics')?.addEventListener('click', () => switchCenterPaneView('physics'));
