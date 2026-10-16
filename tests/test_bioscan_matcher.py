@@ -175,3 +175,98 @@ def test_match_body_returns_only_genera_that_can_exist():
     airless = BodyContext(name="b", body_type="Rocky body", atmosphere="None", gravity=2.0, temperature=300.0,
                           parent_stars=["S"])
     assert "Tussock" not in {GENUS_DATA[g]["name"] for g in match_body(airless, system)}
+
+
+def test_engine_reports_the_remaining_species_and_value_range():
+    from app.parser.exobiology import _genus_candidate
+
+    stratum_key = next(k for k, v in GENUS_DATA.items() if v["name"] == "Stratum" and "Genus" in k)
+    by_name = {d["name"]: k for k, d in SPECIES_RULES[stratum_key].items()}
+    remaining = [
+        (stratum_key, by_name["Stratum Tectonicas"], ["Emerald"]),
+        (stratum_key, by_name["Stratum Paleas"], ["Emerald", "Teal"]),
+    ]
+    entry = _genus_candidate("Stratum", remaining, genus_certain=True)
+    # The cheapest remaining species stands in; the rest are listed as alternates
+    assert entry["species"] == "Stratum Paleas"
+    assert entry["candidate_species"] == ["Stratum Paleas", "Stratum Tectonicas"]
+    assert entry["alternate_species"] == ["Stratum Tectonicas"]
+    assert entry["species_in_genus"] == 2
+    assert entry["min_value"] == entry["base_value"] < entry["max_value"] == 19010800
+    assert entry["possible_pct"] == 50
+    assert entry["confidence"] == "possible" and entry["genus_confirmed"] is True
+    assert entry["variant_color"] == "" and entry["alternate_variants"] == ["Emerald", "Teal"]
+
+    single = _genus_candidate("Stratum", remaining[:1], genus_certain=True)
+    assert single["confidence"] == "definite" and single["variant_color"] == "Emerald"
+    assert single["species_variant"] == "Stratum Tectonicas - Emerald"
+
+
+def test_system_detail_api_reports_the_galactic_region(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    import app.db.database as database
+    from app.server.api import app
+
+    monkeypatch.setattr(database, "DB_PATH", tmp_path / "region.db")
+    database.init_db(force=True)
+    conn = database.get_db_connection()
+    conn.execute(
+        "INSERT INTO systems (system_address, star_system, star_pos_x, star_pos_y, star_pos_z, edsm_checked, edsm_registered) "
+        "VALUES (7, 'Colonia', -9530.5, -910.3, 19808.1, 1, 0)"
+    )
+    conn.commit()
+    conn.close()
+    system = TestClient(app).get("/api/system/7").json()["system"]
+    assert system["galactic_region_id"] == 9
+    assert system["galactic_region_en"] == "Inner Scutum-Centaurus Arm"
+    assert system["galactic_region_ja"] == "内たて・ケンタウルス腕"
+
+
+def test_recompute_replaces_stored_predictions_and_keeps_scanned_organics(tmp_path, monkeypatch):
+    import json
+    import sqlite3
+
+    from app.addons import addon_manager
+    from app.db.database import init_db
+    from app.parser.journal_parser import JournalParser
+
+    conn = sqlite3.connect(str(tmp_path / "recompute.db"))
+    conn.row_factory = sqlite3.Row
+    init_db(conn)
+    old = json.dumps([{"species": "Bacterium Informis", "genus": "Bacterium", "confidence": "definite", "base_value": 1}])
+    conn.execute("INSERT INTO systems (system_address, star_system, star_pos_x, star_pos_y, star_pos_z, main_star_type) "
+                 "VALUES (9, 'Sys', 0, 0, 0, 'F')")
+    conn.execute("INSERT INTO bodies (system_address, body_id, body_name, star_type, luminosity, distance_from_arrival_ls) "
+                 "VALUES (9, 0, 'Sys A', 'F', 'V', 0)")
+    conn.execute(
+        "INSERT INTO bodies (system_address, body_id, body_name, planet_class, atmosphere_type, surface_gravity, "
+        "surface_gravity_g, surface_temperature, surface_pressure, landable, bio_signals, exobiology_predictions, parents) "
+        "VALUES (9, 1, 'Sys A 1', 'High metal content body', 'CarbonDioxide', 2.94, 0.30, 240.0, 3546.0, 1, 2, ?, '[{\"Star\": 0}]')",
+        (old,),
+    )
+    conn.execute(
+        "INSERT INTO bodies (system_address, body_id, body_name, planet_class, landable, bio_signals, exobiology_predictions) "
+        "VALUES (9, 2, 'Sys A 2', 'Rocky body', 1, 0, ?)", (old,)
+    )
+    conn.execute(
+        "INSERT INTO scanned_organics (system_address, body_id, body_name, timestamp, scan_type, genus_localised, "
+        "species_localised, base_value, first_discovery_value) "
+        "VALUES (9, 1, 'Sys A 1', 't', 'Analyse', 'Stratum', 'Stratum Tectonicas', 19010800, 95054000)"
+    )
+    conn.commit()
+
+    result = JournalParser(conn).recompute_exobiology_predictions()
+    assert result == {"skipped": False, "bodies": 1, "updated": 1}  # only bodies with bio signals
+
+    preds = json.loads(conn.execute("SELECT exobiology_predictions FROM bodies WHERE body_id = 1").fetchone()[0])
+    assert "Bacterium Informis" not in {p["species"] for p in preds}
+    tectonicas = next(p for p in preds if p["species"] == "Stratum Tectonicas")
+    assert tectonicas["confidence"] == "confirmed" and tectonicas["locked"] is True and tectonicas["stage_level"] == 3
+    # Bodies without bio signals are left alone
+    assert json.loads(conn.execute("SELECT exobiology_predictions FROM bodies WHERE body_id = 2").fetchone()[0]) == json.loads(old)
+
+    # With the prediction addon off nothing is touched
+    monkeypatch.setattr(addon_manager, "get_provider", lambda name: None)
+    assert JournalParser(conn).recompute_exobiology_predictions()["skipped"] is True
+    conn.close()

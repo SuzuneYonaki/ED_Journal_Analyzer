@@ -31,6 +31,7 @@ from app.services.edsm_service import edsm_service
 from app.services.landmark_service import load_landmarks, calculate_landmark_distances
 from app.services.footprint_service import footprint_service
 from app.parser.bioscan.adapters import build_system_context
+from app.utils.galactic_regions import get_region_from_coords
 from app.services.version_service import version_service
 from app.live.rhino.note_integrator import update_body_note_in_db
 from app.live.rhino.tracker import sync_body_mining_to_note, extract_all_mining_materials_for_body, extract_rhino_mining_sites
@@ -1660,6 +1661,9 @@ def get_system_detail(system_address: int):
         return JSONResponse({"error": "System not found"}, status_code=404)
 
     system_data = dict(sys_row)
+    if system_data.get("star_pos_x") is not None:
+        region = get_region_from_coords(system_data["star_pos_x"], system_data.get("star_pos_y"), system_data.get("star_pos_z"))
+        system_data["galactic_region_id"], system_data["galactic_region_en"], system_data["galactic_region_ja"] = region
     if system_data.get("edsm_factions_json"):
         try:
             system_data["edsm_factions"] = json.loads(system_data["edsm_factions_json"])
@@ -2176,6 +2180,10 @@ def run_background_parse():
             scan_state["message"] = "Backfilling star system ages..."
             parser.backfill_star_ages(str(target_dir), progress_callback=cb)
             save_app_settings_data({"star_age_backfill_done": True})
+        if not load_app_settings_data().get("exobiology_engine_v2_done"):
+            scan_state["message"] = "Recomputing exobiology predictions..."
+            if not parser.recompute_exobiology_predictions(progress_callback=cb).get("skipped"):
+                save_app_settings_data({"exobiology_engine_v2_done": True})
         scan_state["current"] = tot
         scan_state["total"] = tot
         scan_state["percent"] = 100

@@ -441,7 +441,10 @@ function renderBodyInspector() {
     if (secBio) secBio.style.display = 'none';
   } else if (b.bio_signals > 0 || scannedOrganics.length > 0 || potBio.length > 0) {
     if (secBio) secBio.style.display = 'block';
-    bioInfo.innerText = `${t('bio_signals_detected')}: ${b.bio_signals || 0} (${t('bio_status_confirmed')}: ${scannedOrganics.length})`;
+    const regionSys = (state.currentSystemData && state.currentSystemData.system) || {};
+    const regionName = getAppLang() === 'en' ? regionSys.galactic_region_en : regionSys.galactic_region_ja;
+    bioInfo.innerText = `${t('bio_signals_detected')}: ${b.bio_signals || 0} (${t('bio_status_confirmed')}: ${scannedOrganics.length})`
+      + (regionName ? ` / ${t('bio_region_label', { name: regionName })}` : '');
     
     let html = '';
     
@@ -500,6 +503,14 @@ function renderBodyInspector() {
         const coherentBadge = bio.is_system_coherent 
           ? `<span class="tag-badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); font-size: 0.65rem;" title="${t('bio_cooccurrence_tip')}">🪐 ${t('bio_cooccurrence_badge')}</span>` 
           : '';
+        const speciesRange = (bio.species_in_genus > 1 && bio.candidate_species)
+          ? `<div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;" title="${t('bio_species_range_tip')}">🧬 ${t('bio_species_range', {
+              n: bio.species_in_genus,
+              names: bio.candidate_species.join(' / '),
+              min: formatCredits(bio.min_value),
+              max: formatCredits(bio.max_value)
+            })}</div>`
+          : '';
         const isDefinite = bio.confidence === 'definite';
         const statusLabel = isDefinite ? (t('bio_status_definite') || '有力候補') : (t('bio_status_potential') || '次点候補');
         const icon = isDefinite ? '🌱' : '🌿';
@@ -528,6 +539,7 @@ function renderBodyInspector() {
                 <span class="bio-sample-dist">📍 ${bio.colony_distance_m || 500}m</span>
               </div>
               ${bio.description ? `<div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">${bio.description}</div>` : ''}
+              ${speciesRange}
               <div class="bio-payout-row">
                 <span>${t('bio_base_payout')} ${formatCredits(bio.base_value)}</span>
                 <span class="bio-first-bonus">${t('bio_first_bonus')} ${formatCredits(bio.first_discovery_value)}</span>

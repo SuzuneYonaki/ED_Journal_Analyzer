@@ -1160,6 +1160,37 @@ class JournalParser:
 
         self.dirty_systems.add(sys_addr)
 
+    def recompute_exobiology_predictions(self, progress_callback=None) -> dict:
+        """Recomputes the stored predictions of every landable body with bio signals, so data written by an
+        older species engine is replaced. Scanned organics stay locked in. Does nothing (and reports
+        skipped) while the exobiology prediction addon is off, so stored predictions are never wiped."""
+        if addon_manager.get_provider("exobiology_predict_body") is None:
+            return {"skipped": True, "bodies": 0, "updated": 0}
+
+        self.cursor.execute(
+            "SELECT * FROM bodies WHERE landable = 1 AND bio_signals > 0 ORDER BY system_address, body_id"
+        )
+        rows = [dict(r) for r in self.cursor.fetchall()]
+        contexts = {}
+        updated = 0
+        for index, body in enumerate(rows, start=1):
+            sys_addr = body["system_address"]
+            if sys_addr not in contexts:
+                contexts[sys_addr] = self._exobiology_system_context(sys_addr)
+            context = contexts[sys_addr]
+            if context is not None and context.has_coordinates:
+                body["star_pos"] = context.coordinates
+            predictions = _compute_exobiology_predictions(body, context)
+            self._lock_confirmed_organics_into_predictions(sys_addr, body["body_id"], predictions)
+            self.cursor.execute(
+                "UPDATE bodies SET exobiology_predictions = ? WHERE id = ?", (json.dumps(predictions), body["id"])
+            )
+            updated += 1
+            if progress_callback and index % 200 == 0:
+                progress_callback(index, len(rows), "")
+        self.conn.commit()
+        return {"skipped": False, "bodies": len(rows), "updated": updated}
+
     def _exobiology_system_context(self, sys_addr):
         """Stars, planet classes and position of the system, read through this parser's cursor so that
         rows written earlier in the same (uncommitted) file are visible."""

@@ -409,6 +409,7 @@ def _genus_candidate(
         "is_system_coherent": False,
         "species_in_genus": count,
         "alternate_species": [BIOSCAN_SPECIES[e[0]][e[1]]["name"] for e in ordered[1:3]],
+        "candidate_species": [BIOSCAN_SPECIES[e[0]][e[1]]["name"] for e in ordered],
         "genus_confirmed": genus_certain,
         "confidence": "definite" if (genus_certain and count == 1) else "possible",
     }
