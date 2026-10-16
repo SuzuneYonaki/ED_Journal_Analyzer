@@ -10,6 +10,7 @@ from typing import Optional, List, Dict, Any
 from app.parser.value_calculator import calculate_body_value, STAR_VALUES
 from app.analyzer.anomaly_finder import detect_anomalies
 from app.addons import addon_manager
+from app.parser.bioscan.adapters import system_context_from_db
 
 
 def extract_star_type(b: dict) -> str:
@@ -177,7 +178,9 @@ def import_and_complete_bodies(conn, system_address: int, star_system: str, bodi
         if not is_star and (atmosphere or landable):
             exobiology_predict_body = addon_manager.get_provider("exobiology_predict_body")
             if exobiology_predict_body:
-                bio_preds = exobiology_predict_body(anomaly_arg)
+                bio_preds = exobiology_predict_body(
+                    anomaly_arg, system_context=system_context_from_db(c, system_address)
+                )
         bio_pred_json = json.dumps(bio_preds)
 
         if existing:

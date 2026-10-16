@@ -8,6 +8,7 @@ from datetime import datetime
 from app.db.database import get_db_connection, save_or_merge_mining_site, invalidate_celestial_stats_cache
 from app.parser.value_calculator import calculate_body_value
 from app.parser.exobiology import get_species_value, evaluate_high_value_bio
+from app.parser.bioscan.adapters import system_context_from_db
 from app.analyzer.anomaly_finder import detect_anomalies
 from app.services.tts_service import tts_service
 from app.services.edsm_service import edsm_service
@@ -43,13 +44,16 @@ def _compute_rarity(body_dict: dict, **kwargs) -> dict:
     return provider(body_dict, **kwargs)
 
 
-def _compute_exobiology_predictions(body_dict: dict) -> list:
+def _compute_exobiology_predictions(body_dict: dict, system_context=None) -> list:
     """Delegates to the exobiology_prediction addon's provider if enabled,
     else returns an empty list (already a normal state elsewhere in this
-    file, e.g. when bio_signals == 0)."""
+    file, e.g. when bio_signals == 0). `system_context` carries the system's
+    stars and planet classes for the species rules."""
     provider = addon_manager.get_provider("exobiology_predict_body")
     if provider is None:
         return []
+    if system_context is not None:
+        return provider(body_dict, system_context=system_context)
     return provider(body_dict)
 
 GGG_VARIANTS_MAP: dict[str, tuple[str, str]] = {
@@ -795,7 +799,7 @@ class JournalParser:
         max_pot = values.get("max_potential_value", 0)
 
         # Predict Exobiology candidates and preserve locked/confirmed organics
-        bio_predictions = _compute_exobiology_predictions(body_dict)
+        bio_predictions = _compute_exobiology_predictions(body_dict, self._exobiology_system_context(sys_addr))
         self._lock_confirmed_organics_into_predictions(sys_addr, body_id, bio_predictions)
         bio_pred_json = json.dumps(bio_predictions)
         if self.is_live and body_dict.get("bio_signals"):
@@ -1081,7 +1085,7 @@ class JournalParser:
             if bio_count == 0:
                 bio_predictions = []
             else:
-                bio_predictions = _compute_exobiology_predictions(b_dict)
+                bio_predictions = _compute_exobiology_predictions(b_dict, self._exobiology_system_context(sys_addr))
                 self._lock_confirmed_organics_into_predictions(sys_addr, body_id or existing["body_id"], bio_predictions)
                 self._check_and_trigger_high_bio_alert(
                     sys_addr, body_id or existing["body_id"], b_dict.get("body_name", ""),
@@ -1129,7 +1133,7 @@ class JournalParser:
             if bio_count == 0:
                 bio_predictions = []
             else:
-                bio_predictions = _compute_exobiology_predictions(b_dict)
+                bio_predictions = _compute_exobiology_predictions(b_dict, self._exobiology_system_context(sys_addr))
                 self._lock_confirmed_organics_into_predictions(sys_addr, body_id or 0, bio_predictions)
                 self._check_and_trigger_high_bio_alert(
                     sys_addr, body_id or 0, b_dict.get("body_name", ""),
@@ -1155,6 +1159,16 @@ class JournalParser:
             """, (sys_addr, body_id or 0, body_name or f"Body {body_id}", bio_count, geo_count, mining_count, 1 if is_saa_signals else 0, confirmed_genuses_json, bio_pred_json, anomalies_json))
 
         self.dirty_systems.add(sys_addr)
+
+    def _exobiology_system_context(self, sys_addr):
+        """Stars, planet classes and position of the system, read through this parser's cursor so that
+        rows written earlier in the same (uncommitted) file are visible."""
+        if not sys_addr:
+            return None
+        try:
+            return system_context_from_db(self.cursor, sys_addr)
+        except Exception:
+            return None
 
     def _lock_confirmed_organics_into_predictions(self, sys_addr: int, body_id: int, predictions: list):
         """Promote scanned organics to confirmed and lock them in the predictions list."""

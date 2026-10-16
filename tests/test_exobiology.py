@@ -25,32 +25,28 @@ def test_exobiology_prediction():
         assert tectonicas["variant_color"] == "Emerald"
         assert "Emerald" in tectonicas["species_variant"]
 
-def test_radicoida_unica_prediction():
-    # Test body matching Radicoida Unica Canonn conditions:
-    # Body Type: High Metal Content / Rocky
-    # Atmosphere: Thin / Hot Thin Carbon Dioxide
-    # Gravity: 0.05 – 0.38 G
-    # Temperature: 467 – 699 K
-    # Pressure: 0.007 – 0.060 atm
-    body_radicoida = {
+
+def test_radicoida_unicus_exists_only_in_hip_87621():
+    """Radicoida Unicus is unique to HIP 87621; it must not be predicted on look-alike bodies elsewhere."""
+    body = {
         "landable": True,
         "planet_class": "High metal content body",
         "atmosphere": "Hot thin carbon dioxide",
         "surface_temperature": 520.0,
         "surface_gravity_g": 0.20,
-        "surface_pressure": 0.025 * 101325, # 0.025 atm in Pa
+        "surface_pressure": 0.025 * 101325,
         "volcanism": "Minor Silicate Vapour Geysers",
         "star_type": "M",
-        "bio_signals": 1
+        "bio_signals": 1,
+        "star_system": "Somewhere Else",
     }
-    candidates = predict_exobiology_candidates(body_radicoida)
-    names = [c["species"] for c in candidates]
-    assert "Radicoida Unica" in names
-    
-    radicoida = next(c for c in candidates if c["species"] == "Radicoida Unica")
-    assert radicoida["base_value"] == 7200000
-    assert radicoida["colony_distance_m"] == 1000
-    assert radicoida["variant_color"] == "Red"  # M star -> Red
+    assert "Radicoida Unicus" not in [c["species"] for c in predict_exobiology_candidates(body)]
+
+    candidates = predict_exobiology_candidates({**body, "star_system": "HIP 87621"})
+    radicoida = next((c for c in candidates if c["species"] == "Radicoida Unicus"), None)
+    assert radicoida is not None
+    assert radicoida["base_value"] == 119037
+
 
 def test_get_species_value():
     val = get_species_value("Stratum Tectonicas")

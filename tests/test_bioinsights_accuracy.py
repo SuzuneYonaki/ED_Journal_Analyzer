@@ -121,26 +121,25 @@ def test_atmosphere_rich_vs_plain_isolation():
     assert match_atmosphere(["carbon dioxide"], "thin carbon dioxide-rich atmosphere") is False
 
 
+
 def test_parent_star_resolution_for_planets():
-    """Verify that planets with star_type: None properly resolve parent star spectral class."""
+    """Planets without their own star_type are judged by their parent star's spectral class."""
     body_planet = {
         "landable": True,
-        "planet_class": "Rocky body",
-        "atmosphere": "Neon",
-        "surface_temperature": 75.0,
+        "planet_class": "Icy body",
+        "atmosphere_type": "Argon",
+        "surface_temperature": 100.0,
         "surface_gravity_g": 0.15,
         "surface_pressure": 0.02 * 101325,
         "bio_signals": 1,
         "star_type": None,
-        "parent_star_type": "M"  # M star is not allowed for Electricae
+        "parent_star_type": "M"  # an M parent star rules Electricae Pluma out
     }
-    cand_m = predict_exobiology_candidates(body_planet)
-    assert not any("Electricae" in c["species"] for c in cand_m)
+    names = lambda cands: {c["species"] for c in cands} | {a for c in cands for a in c.get("alternate_species", [])}
+    assert "Electricae Pluma" not in names(predict_exobiology_candidates(body_planet))
 
-    # When parent_star_type is A-type, Electricae is allowed
     body_planet["parent_star_type"] = "A"
-    cand_a = predict_exobiology_candidates(body_planet)
-    assert any("Electricae" in c["species"] for c in cand_a)
+    assert "Electricae Pluma" in names(predict_exobiology_candidates(body_planet))
 
 
 def test_saa_signals_found_zero_bio_clears_predictions(tmp_path):
@@ -203,4 +202,3 @@ def test_saa_signals_found_zero_bio_clears_predictions(tmp_path):
     assert row["is_mapped_by_user"] == 1
     assert row["exobiology_predictions"] == "[]"
     conn.close()
-

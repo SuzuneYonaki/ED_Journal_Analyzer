@@ -5,7 +5,6 @@ Exobiology regional-constraint mechanism.
 
 import pytest
 
-import app.parser.exobiology as exobiology
 from app.utils.galactic_regions import (
     DEFAULT_FALLBACK_REGION,
     GALACTIC_REGIONS,
@@ -13,11 +12,9 @@ from app.utils.galactic_regions import (
     get_region_from_coords,
     get_region_info,
 )
-from app.parser.exobiology import (
-    DEFAULT_REGION_CONSTRAINTS,
-    get_effective_exobiology_rules,
-    predict_exobiology_candidates,
-)
+from app.parser.exobiology import predict_exobiology_candidates
+from app.parser.bioscan.matcher import BodyContext, SystemContext, ruleset_passes
+from app.parser.bioscan.regions import region_map
 
 # (label, x, y, z, official region id, English name)
 LANDMARKS = [
@@ -62,58 +59,66 @@ def test_fallback_when_coordinates_missing_invalid_or_outside_the_map():
     assert get_region_info(None) == DEFAULT_FALLBACK_REGION
 
 
-def test_default_region_constraints_use_official_ids_and_are_sourced():
-    # Brain Tree: BioScan region group 'brain-tree'
-    assert DEFAULT_REGION_CONSTRAINTS == {"Brain Tree": [2, 9, 10, 17, 18, 35]}
-    assert all(rid in GALACTIC_REGIONS for ids in DEFAULT_REGION_CONSTRAINTS.values() for rid in ids)
+def test_region_groups_use_official_region_ids():
+    assert all(rid in GALACTIC_REGIONS for ids in region_map.values() for rid in ids)
 
 
-STRATUM_BODY = {
+def _ctx(region_id):
+    return SystemContext(name="Test", region_id=region_id)
+
+
+def test_region_rule_includes_and_excludes_by_region_group():
+    body = BodyContext(name="b", body_type="Rocky body")
+    # Colonia (9) is in the Sagittarius-Carina group but not in Orion-Cygnus; Sol (18) is in both
+    assert ruleset_passes({"regions": ["orion-cygnus"]}, body, _ctx(18))
+    assert not ruleset_passes({"regions": ["orion-cygnus"]}, body, _ctx(9))
+    assert ruleset_passes({"regions": ["sagittarius-carina"]}, body, _ctx(9))
+    # "!" excludes a group
+    assert not ruleset_passes({"regions": ["!orion-cygnus-core"]}, body, _ctx(18))
+    assert ruleset_passes({"regions": ["!orion-cygnus-core"]}, body, _ctx(1))
+
+
+def test_unknown_region_never_excludes():
+    body = BodyContext(name="b", body_type="Rocky body")
+    assert ruleset_passes({"regions": ["orion-cygnus"]}, body, _ctx(None))
+
+
+# Tussock Pennata: Carbon dioxide, rocky, 0.04-0.09 G, 146-154 K, no volcanism, and only in the
+# sagittarius-carina-core-9 / perseus-core / orion-cygnus-core regions.
+TUSSOCK_BODY = {
     "landable": True,
-    "planet_class": "High metal content body",
-    "atmosphere": "Carbon dioxide",
-    "surface_temperature": 180.0,
-    "surface_gravity_g": 0.4,
-    "surface_pressure": 0.05 * 101325,
-    "bio_signals": 1,
+    "planet_class": "Rocky body",
+    "atmosphere_type": "CarbonDioxide",
+    "surface_temperature": 150.0,
+    "surface_gravity_g": 0.06,
+    "surface_pressure": 0.004 * 101325,
+    "volcanism": "",
+    "bio_signals": 2,
     "star_type": "G",
 }
 
 
-def _has_stratum(cands):
-    return any("Stratum" in c.get("species", "") for c in cands)
+def _species(cands):
+    return {c["species"] for c in cands} | {a for c in cands for a in c.get("alternate_species", [])}
 
 
-def test_unconstrained_species_appear_in_any_region():
-    for pos in [(0.0, 0.0, 0.0), (-9530.5, -910.3, 19808.1), (25.0, -21.0, 25900.0)]:
-        assert _has_stratum(predict_exobiology_candidates(STRATUM_BODY, star_pos=pos))
+def test_end_to_end_region_decides_the_species():
+    in_sol = predict_exobiology_candidates(TUSSOCK_BODY, star_pos=(0.0, 0.0, 0.0))  # Inner Orion Spur (18)
+    in_core = predict_exobiology_candidates(TUSSOCK_BODY, star_pos=(25.2, -20.9, 25899.9))  # Galactic Centre (1)
+    assert "Tussock Pennata" in _species(in_sol)
+    assert "Tussock Pennata" not in _species(in_core)
+    # An explicit region id wins over the coordinates
+    assert "Tussock Pennata" in _species(predict_exobiology_candidates(TUSSOCK_BODY, region_id=18))
+    assert "Tussock Pennata" not in _species(predict_exobiology_candidates(TUSSOCK_BODY, region_id=1))
 
 
-def test_region_constraint_excludes_outside_and_keeps_inside(monkeypatch):
-    # Mechanism test with a synthetic constraint: Stratum only in the Galactic Centre (1)
-    monkeypatch.setattr(exobiology, "DEFAULT_REGION_CONSTRAINTS", {"Stratum": [1]})
-    assert get_effective_exobiology_rules()["Stratum Tectonicas"]["allowed_regions"] == [1]
-
-    # Sol (region 18): excluded; Sagittarius A* (region 1): kept
-    assert not _has_stratum(predict_exobiology_candidates(STRATUM_BODY, star_pos=(0.0, 0.0, 0.0)))
-    assert _has_stratum(predict_exobiology_candidates(STRATUM_BODY, star_pos=(25.2, -20.9, 25899.9)))
-    # Explicit region ids win over coordinates
-    assert not _has_stratum(predict_exobiology_candidates(STRATUM_BODY, region_id=18))
-    assert _has_stratum(predict_exobiology_candidates(STRATUM_BODY, region_id=1))
-
-
-def test_unknown_region_never_excludes(monkeypatch):
-    monkeypatch.setattr(exobiology, "DEFAULT_REGION_CONSTRAINTS", {"Stratum": [1]})
-    assert _has_stratum(predict_exobiology_candidates(STRATUM_BODY))
-
-
-def test_predict_exobiology_discrete_parameter_call():
+def test_discrete_parameter_call():
     cands = predict_exobiology_candidates(
-        planet_class="High metal content body",
+        planet_class="Rocky body",
         atmosphere_type="Carbon dioxide",
-        surface_temp=180.0,
-        gravity=0.4,
+        surface_temp=150.0,
+        gravity=0.06,
         star_type="G",
         star_pos=(0.0, 0.0, 0.0),
     )
-    assert _has_stratum(cands)
+    assert "Tussock Pennata" in _species(cands)

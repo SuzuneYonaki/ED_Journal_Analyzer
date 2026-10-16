@@ -41,28 +41,27 @@ def test_temperature_and_gravity():
     assert get_gravity_g(body) == 0.35
 
 
-def test_stratum_prediction_conservative():
-    """Verify Stratum genus is predicted with conservative valuation when candidate species scores are within 10%."""
+
+def test_stratum_on_high_metal_content_body_is_tectonicas():
+    """Only Stratum Tectonicas grows on high metal content bodies, so it is the one species left in the genus."""
     body = {
         "landable": True,
-        "planet_class": "High metal content world",
+        "planet_class": "High metal content world",  # EDSM spelling is accepted
         "atmosphere": "Carbon dioxide",
         "surface_temperature": 230.0,
         "surface_gravity_g": 0.25,
-        "surface_pressure": 0.035 * 101325, # in Pascals
+        "surface_pressure": 0.035 * 101325,  # in Pascals
         "bio_signals": 4,
         "star_type": "F"
     }
     candidates = predict_exobiology_candidates(body)
-    assert len(candidates) > 0
-    
-    # Check that Stratum is present with conservative payout (e.g. Stratum Araneamus: 2,497,300 instead of 19,010,800)
-    stratum_match = next((c for c in candidates if c["genus"] == "Stratum"), None)
-    assert stratum_match is not None
-    assert stratum_match["base_value"] == 2497300
-    assert stratum_match["first_discovery_value"] == 2497300 * 5
-    assert stratum_match["variant_color"] in ["Emerald", "Teal"]
-    assert stratum_match["variant_color"] in stratum_match["species_variant"]
+    stratum = next((c for c in candidates if c["genus"] == "Stratum"), None)
+    assert stratum is not None
+    assert stratum["species"] == "Stratum Tectonicas"
+    assert stratum["species_in_genus"] == 1
+    assert stratum["base_value"] == 19010800
+    assert stratum["first_discovery_value"] == 19010800 * 5
+    assert stratum["variant_color"] in stratum["species_variant"]
 
 
 def test_conservative_species_prediction_within_threshold():
@@ -89,59 +88,64 @@ def test_conservative_species_prediction_within_threshold():
     assert ranked_dist[0]["species"] == "Stratum Tectonicas"
 
 
-def test_signal_budget_and_confidence_ranking():
-    """Verify that signal budget produces Top X definite candidates plus qualifying runner-up."""
+
+def test_genera_are_definite_only_when_the_signals_require_them():
+    """With 2 signals and exactly 2 possible genera both must be present; with 1 signal neither is certain."""
     body = {
         "landable": True,
         "planet_class": "High metal content body",
         "atmosphere": "Carbon dioxide",
-        "surface_temperature": 220.0,
-        "surface_gravity_g": 0.25,
-        "surface_pressure": 0.030 * 101325,
-        "bio_signals": 2, # Budget of 2 -> 2 definite matches
-        "star_type": "G"
+        "surface_temperature": 240.0,
+        "surface_gravity_g": 0.30,
+        "surface_pressure": 0.035 * 101325,
+        "bio_signals": 2,
+        "star_type": "F"
+    }
+    two_signals = predict_exobiology_candidates(body)
+    assert {c["genus"] for c in two_signals} == {"Bacterium", "Stratum"}
+    assert all(c["confidence"] == "definite" for c in two_signals)
+
+    one_signal = predict_exobiology_candidates({**body, "bio_signals": 1})
+    assert {c["genus"] for c in one_signal} == {"Bacterium", "Stratum"}
+    assert all(c["confidence"] == "possible" for c in one_signal)
+
+
+def test_dss_confirmed_genus_narrows_the_candidates():
+    body = {
+        "landable": True,
+        "planet_class": "High metal content body",
+        "atmosphere": "Carbon dioxide",
+        "surface_temperature": 240.0,
+        "surface_gravity_g": 0.30,
+        "surface_pressure": 0.035 * 101325,
+        "bio_signals": 2,
+        "star_type": "F",
+        "confirmed_genuses": ["Stratum"],
     }
     candidates = predict_exobiology_candidates(body)
-    assert len(candidates) in [2, 3], "Should return top X definite candidates and at most 1 runner-up"
-    
-    definite_matches = [c for c in candidates if c["confidence"] == "definite"]
-    assert len(definite_matches) == 2, "Top 2 matches must be marked definite"
-
-    possible_matches = [c for c in candidates if c["confidence"] == "possible"]
-    assert len(possible_matches) <= 1, "At most 1 runner-up can be marked possible"
+    assert [c["genus"] for c in candidates] == ["Stratum"]
+    assert candidates[0]["confidence"] == "definite" and candidates[0]["genus_confirmed"] is True
 
 
-def test_volcanism_requirement():
-    """Verify that Fumerola species require volcanic activity."""
-    body_no_volc = {
-        "landable": True,
-        "planet_class": "High metal content body",
-        "atmosphere": "Water",
-        "surface_temperature": 200.0,
-        "surface_gravity_g": 0.20,
-        "surface_pressure": 0.02 * 101325,
-        "volcanism": "None",
-        "bio_signals": 5,
-        "star_type": "K"
-    }
-    candidates_no_volc = predict_exobiology_candidates(body_no_volc)
-    fumerola_names_no_volc = [c["species"] for c in candidates_no_volc if "Fumerola" in c["species"]]
-    assert len(fumerola_names_no_volc) == 0
 
-    body_with_volc = {
-        "landable": True,
-        "planet_class": "High metal content body",
-        "atmosphere": "Water",
-        "surface_temperature": 200.0,
-        "surface_gravity_g": 0.20,
-        "surface_pressure": 0.02 * 101325,
-        "volcanism": "Water Geysers",
-        "bio_signals": 5,
-        "star_type": "K"
-    }
-    candidates_volc = predict_exobiology_candidates(body_with_volc)
-    fumerola_names_volc = [c["species"] for c in candidates_volc if "Fumerola" in c["species"]]
-    assert len(fumerola_names_volc) > 0
+def test_volcanism_rule_semantics():
+    """The rule data distinguishes "Any", "None", substring lists and "!" exclusions of volcanism."""
+    from app.parser.bioscan.matcher import BodyContext, SystemContext, ruleset_passes
+
+    system = SystemContext(name="S")
+
+    def passes(rule, volcanism):
+        return ruleset_passes({"volcanism": rule}, BodyContext(name="b", body_type="Rocky body", volcanism=volcanism), system)
+
+    assert passes("Any", "minor water geysers volcanism") and not passes("Any", "")
+    assert passes("None", "") and not passes("None", "minor water geysers volcanism")
+    assert passes(["water"], "major water geysers volcanism") and not passes(["water"], "minor metallic magma volcanism")
+    assert passes(["silicate", "metallic", "rocky"], "minor metallic magma volcanism")
+    assert not passes(["major silicate vapour"], "minor silicate vapour geysers volcanism")
+    assert passes(["major silicate vapour"], "major silicate vapour geysers volcanism")
+    # "No volcanism" from EDSM is treated as none
+    from app.parser.bioscan.adapters import normalize_volcanism
+    assert normalize_volcanism("No volcanism") == "" and normalize_volcanism(None) == ""
 
 
 def test_get_species_value_lookups():
@@ -160,8 +164,9 @@ def test_get_species_value_lookups():
     assert val_genus["colony_distance_m"] == 300
 
 
-def test_nine_bio_signals_filling():
-    """Verify that a body with 9 biological signals fills species candidates up to the budget."""
+
+def test_candidates_are_not_padded_to_the_signal_count():
+    """A body with more signals than possible genera lists only the genera that can exist."""
     body = {
         "landable": True,
         "planet_class": "High metal content body",
@@ -169,106 +174,58 @@ def test_nine_bio_signals_filling():
         "surface_temperature": 220.0,
         "surface_gravity_g": 0.20,
         "surface_pressure": 0.030 * 101325,
-        "bio_signals": 9, # Budget of 9
+        "bio_signals": 9,
         "star_type": "G"
     }
     candidates = predict_exobiology_candidates(body)
-    assert len(candidates) >= 9, "Should fill species candidates up to 9 or X+1"
-    definite_matches = [c for c in candidates if c["confidence"] == "definite"]
-    assert len(definite_matches) == 9, "All 9 signal slots should have definite candidate matches"
+    assert 0 < len(candidates) < 9
+    assert len({c["genus"] for c in candidates}) == len(candidates), "one entry per genus"
+    assert all(c["genus_confirmed"] for c in candidates), "9 signals need every possible genus"
+    assert all(c["confidence"] == "definite" for c in candidates if c["species_in_genus"] == 1)
 
 
-def test_electricae_parent_star_and_gravity_rules():
-    """Verify Electricae parent star (A/B/O/N/H/D) and low gravity (<0.27G) requirements."""
-    # Matched body under A-type star with V luminosity class and low gravity
-    body_matched = {
-        "landable": True,
-        "planet_class": "Rocky body",
-        "atmosphere": "Neon",
-        "surface_temperature": 75.0,
-        "surface_gravity_g": 0.15, # < 0.27 G
-        "surface_pressure": 0.02 * 101325,
-        "bio_signals": 1,
-        "star_type": "A",
-        "luminosity": "V"
-    }
-    cand_matched = predict_exobiology_candidates(body_matched)
-    electricae_names = [c["species"] for c in cand_matched if "Electricae" in c["species"]]
-    assert len(electricae_names) > 0, "Electricae should be predicted on valid parent star and low gravity"
 
-    # Mismatched parent star (M-type star is not allowed for Electricae)
-    body_m_star = {
-        "landable": True,
-        "planet_class": "Rocky body",
-        "atmosphere": "Neon",
-        "surface_temperature": 75.0,
-        "surface_gravity_g": 0.15,
-        "surface_pressure": 0.02 * 101325,
-        "bio_signals": 1,
-        "star_type": "M",
-        "luminosity": "V"
-    }
-    cand_m_star = predict_exobiology_candidates(body_m_star)
-    m_star_electricae = [c["species"] for c in cand_m_star if "Electricae" in c["species"]]
-    assert len(m_star_electricae) == 0, "Electricae should not spawn on M-type parent star"
-
-    # High gravity body (> 0.27 G)
-    body_high_g = {
-        "landable": True,
-        "planet_class": "Rocky body",
-        "atmosphere": "Neon",
-        "surface_temperature": 75.0,
-        "surface_gravity_g": 0.45, # > 0.27 G
-        "surface_pressure": 0.02 * 101325,
-        "bio_signals": 1,
-        "star_type": "A",
-        "luminosity": "V"
-    }
-    cand_high_g = predict_exobiology_candidates(body_high_g)
-    high_g_electricae = [c["species"] for c in cand_high_g if "Electricae" in c["species"]]
-    assert len(high_g_electricae) == 0, "Electricae should not spawn on high gravity (> 0.27 G)"
+ELECTRICAE_BODY = {
+    "landable": True,
+    "planet_class": "Icy body",
+    "atmosphere_type": "Argon",
+    "surface_temperature": 100.0,
+    "surface_gravity_g": 0.15,
+    "surface_pressure": 0.02 * 101325,
+    "bio_signals": 1,
+    "star_type": "A",
+    "luminosity": "V",
+}
 
 
-def test_system_level_co_occurrence_weighting():
-    """Verify that species present on other bodies in the same system receive co-occurrence weight boost."""
+def _names(cands):
+    return {c["species"] for c in cands} | {a for c in cands for a in c.get("alternate_species", [])}
+
+
+def test_electricae_pluma_needs_icy_body_low_gravity_and_a_suitable_parent_star():
+    """Electricae Pluma: icy body, <= 0.276 G, parent star A/N/D/H/AeBe."""
+    assert "Electricae Pluma" in _names(predict_exobiology_candidates(ELECTRICAE_BODY))
+    assert "Electricae Pluma" not in _names(predict_exobiology_candidates({**ELECTRICAE_BODY, "star_type": "M"}))
+    assert "Electricae Pluma" not in _names(predict_exobiology_candidates({**ELECTRICAE_BODY, "surface_gravity_g": 0.45}))
+    assert "Electricae Pluma" not in _names(predict_exobiology_candidates({**ELECTRICAE_BODY, "planet_class": "Rocky body"}))
+
+
+
+def test_system_prediction_uses_the_parent_star_of_each_body():
+    """predict_system_exobiology_candidates shares one system context: each body is judged by its own parent star."""
     from app.parser.exobiology import predict_system_exobiology_candidates
 
-    # Body 1 has 2 signals: Bacterium and Stratum Cucumisis
-    body_1 = {
-        "body_name": "Test Star 1",
-        "landable": True,
-        "planet_class": "High metal content body",
-        "atmosphere": "Carbon dioxide",
-        "surface_temperature": 230.0,
-        "surface_gravity_g": 0.25,
-        "surface_pressure": 0.030 * 101325,
-        "bio_signals": 2,
-        "star_type": "G",
-        "scanned_species": ["Stratum Cucumisis"] # Scanned on Body 1
-    }
+    def icy(name, parent_id):
+        return {
+            "body_name": name, "body_id": 10 + parent_id, "landable": True, "planet_class": "Icy body",
+            "atmosphere_type": "Argon", "surface_temperature": 100.0, "surface_gravity_g": 0.15,
+            "surface_pressure": 0.02 * 101325, "bio_signals": 1, "parents": [{"Star": parent_id}],
+        }
 
-    # Body 2 has 1 signal, where Stratum Cucumisis is an eligible candidate
-    body_2 = {
-        "body_name": "Test Star 2",
-        "landable": True,
-        "planet_class": "High metal content body",
-        "atmosphere": "Carbon dioxide",
-        "surface_temperature": 230.0,
-        "surface_gravity_g": 0.25,
-        "surface_pressure": 0.030 * 101325,
-        "bio_signals": 1,
-        "star_type": "G"
-    }
+    star_m = {"body_name": "Test A", "body_id": 1, "star_type": "M", "luminosity": "Va", "distance_from_arrival_ls": 0.0}
+    star_a = {"body_name": "Test B", "body_id": 2, "star_type": "A", "luminosity": "V", "distance_from_arrival_ls": 500.0}
+    around_m, around_a = icy("Test A 1", 1), icy("Test B 1", 2)
+    predict_system_exobiology_candidates([star_m, star_a, around_m, around_a], {"star_system": "Test"})
 
-    # Isolated candidate prediction without system context
-    cand_isolated = predict_exobiology_candidates(body_2)
-
-    # System-wide prediction with co-occurrence weighting
-    bodies = [body_1, body_2]
-    predict_system_exobiology_candidates(bodies)
-
-    cand_system = body_2["exobiology"]
-    assert len(cand_system) >= 1
-    top_species = cand_system[0]["species"]
-    assert top_species == "Stratum Cucumisis", "Stratum Cucumisis should be prioritized as top candidate due to system co-occurrence weighting"
-    assert cand_system[0]["is_system_coherent"] is True
+    assert "Electricae Pluma" not in _names(around_m["exobiology"])
+    assert "Electricae Pluma" in _names(around_a["exobiology"])

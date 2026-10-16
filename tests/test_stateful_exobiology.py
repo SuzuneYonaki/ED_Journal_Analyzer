@@ -78,10 +78,10 @@ def test_stateful_exobiology_event_lifecycle():
     assert row["surface_temperature"] == 240.0
     preds = json.loads(row["exobiology_predictions"])
     assert len(preds) > 0
-    # Stratum genus should be present with conservative valuation prior to sampling
+    # Stratum genus should be present prior to sampling
     stratum_init = next((p for p in preds if p["genus"] == "Stratum"), None)
     assert stratum_init is not None
-    assert stratum_init["base_value"] == 2497300  # Conservative payout (Stratum Araneamus)
+    assert stratum_init["base_value"] == 19010800  # Only Stratum Tectonicas grows on high metal content bodies
 
     # Step 4: SAASignalsFound (DSS completed) refreshes bio signals and sets is_mapped_by_user = 1
     parser.process_journal_line(json.dumps({

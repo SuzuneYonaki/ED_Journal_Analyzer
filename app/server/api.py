@@ -30,6 +30,7 @@ from app.analyzer.orbit_analyzer import build_system_hierarchy
 from app.services.edsm_service import edsm_service
 from app.services.landmark_service import load_landmarks, calculate_landmark_distances
 from app.services.footprint_service import footprint_service
+from app.parser.bioscan.adapters import build_system_context
 from app.services.version_service import version_service
 from app.live.rhino.note_integrator import update_body_note_in_db
 from app.live.rhino.tracker import sync_body_mining_to_note, extract_all_mining_materials_for_body, extract_rhino_mining_sites
@@ -1691,7 +1692,15 @@ def get_system_detail(system_address: int):
     main_star = system_data.get("main_star_type") or "F"
     bodies = []
     exobiology_predict_body = addon_manager.get_provider("exobiology_predict_body")
-    for r in c.fetchall():
+    body_rows = [dict(r) for r in c.fetchall()]
+    exobiology_system_context = build_system_context(
+        body_rows,
+        system_name=system_data.get("system_name", "") or system_data.get("star_system", ""),
+        star_pos=(system_data.get("star_pos_x"), system_data.get("star_pos_y"), system_data.get("star_pos_z"))
+        if system_data.get("star_pos_x") is not None else None,
+        fallback_star_type=main_star,
+    )
+    for r in body_rows:
         b = dict(r)
         b["main_star_type"] = main_star
         b["system_main_star_type"] = main_star
@@ -1712,7 +1721,7 @@ def get_system_detail(system_address: int):
 
         # Always calculate latest exobiology predictions dynamically using full planet attributes & main star class
         try:
-            b["exobiology"] = exobiology_predict_body(b) if exobiology_predict_body else []
+            b["exobiology"] = exobiology_predict_body(b, system_context=exobiology_system_context) if exobiology_predict_body else []
         except Exception:
             if b.get("exobiology_predictions"):
                 try:
