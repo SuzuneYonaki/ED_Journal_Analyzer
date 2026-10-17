@@ -94,8 +94,10 @@ def test_edsm_unregistered_system():
     assert row["edsm_first_discoverer"] is None
 
 
-def test_edsm_priority_queue_and_backfill():
+def test_edsm_priority_queue_and_backfill(monkeypatch):
     """Test priority queue placement and recovery for registered systems with 0 bodies."""
+    # Background lookups are opt-in (EDSM addon + the user's auto-lookup choice); this test is about the queue itself
+    monkeypatch.setattr(EDSMService, "auto_lookup_enabled", staticmethod(lambda: True))
     conn = get_db_connection()
     c = conn.cursor()
     test_sys_addr = 999999003

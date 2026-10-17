@@ -15,6 +15,8 @@ from app.services.edsm.constants import (
     UNREGISTERED_RECHECK_COOLDOWN_SEC,
     USER_AGENT
 )
+from app.addons import addon_manager
+from app.services.app_settings import read_app_setting
 from app.services.edsm.client import EDSMClient
 from app.services.edsm.body_importer import extract_star_type, import_and_complete_bodies
 from app.services.edsm.station_importer import import_and_complete_stations
@@ -64,7 +66,15 @@ class EDSMService:
     def is_running(self):
         return self.client.is_running
 
+    @staticmethod
+    def auto_lookup_enabled() -> bool:
+        """Background EDSM lookups (on a live jump, when a system is opened) need both the EDSM addon and the
+        user's explicit "auto lookup" choice. Manual syncs and imports are not affected."""
+        return addon_manager.is_enabled("edsm_sync") and bool(read_app_setting("edsm_auto_lookup", False))
+
     def queue_system_check(self, system_address: int, system_name: str, force_recheck: bool = False, priority: bool = False):
+        if not self.auto_lookup_enabled():
+            return None
         return self.client.queue_system_check(system_address, system_name, force_recheck=force_recheck, priority=priority)
 
     def _throttle_delay(self):

@@ -436,6 +436,11 @@ const i18n = {
     footprint_delete_all_confirm: "EDSMからロードした未訪問星系 {systems} 件（天体 {bodies} 件{bookmarks_note}）をローカルDBからすべて削除します。<br>ご自身の探査データは削除されません。よろしいですか？",
     footprint_delete_bookmarks_note: "、ブックマーク/メモ {n} 件を含む",
     footprint_delete_failed: "削除に失敗しました",
+    spansh_hotspots_offer: "🪐 リングのホットスポットを Spansh から取得",
+    spansh_hotspots_offer_tip: "押したときだけ Spansh に問い合わせます（自動では取得しません）",
+    spansh_hotspots_done: "✓ 取得完了 (ホットスポット {count} 件)",
+    edsm_auto_lookup_title: "EDSM 自動照会",
+    edsm_auto_lookup_desc: "ジャンプ時や星系を開いたときに、EDSM へ自動で問い合わせます。オフの間は、手動ボタンで取得したときだけ通信します。",
 
     // Stellar Luminosity & Degenerate Stages
     star_luminosity_title: "光度階級 / 進化段階 (未指定は全対象):",
@@ -1453,6 +1458,11 @@ const i18n = {
     footprint_delete_all_confirm: "Delete all {systems} unvisited systems loaded from EDSM ({bodies} bodies{bookmarks_note}) from the local database?<br>Your own exploration data is not deleted.",
     footprint_delete_bookmarks_note: ", including {n} bookmarks/notes",
     footprint_delete_failed: "Delete failed",
+    spansh_hotspots_offer: "🪐 Fetch ring hotspots from Spansh",
+    spansh_hotspots_offer_tip: "Spansh is contacted only when you press this (never automatically)",
+    spansh_hotspots_done: "✓ Done ({count} hotspots)",
+    edsm_auto_lookup_title: "EDSM auto lookup",
+    edsm_auto_lookup_desc: "Query EDSM automatically on jumps and when a system is opened. While off, EDSM is contacted only when you use a manual button.",
 
     // Stellar Luminosity & Degenerate Stages
     star_luminosity_title: "Luminosity / Stage (Unchecked = All):",

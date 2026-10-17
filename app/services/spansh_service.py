@@ -13,6 +13,8 @@ import urllib.request
 import urllib.error
 from typing import Dict, List, Any, Optional
 
+from app.services.ring_format import normalize_rings
+
 logger = logging.getLogger(__name__)
 
 SPANSH_BODIES_SEARCH_URL = "https://spansh.co.uk/api/bodies/search"
@@ -194,7 +196,11 @@ class SpanshService:
                     except Exception:
                         existing_rings = []
 
-                rings_modified = False
+                # Rings loaded from EDSM before they were normalized are rewritten in journal form
+                # so their names can be matched against Spansh's ring names.
+                normalized_rings = normalize_rings(existing_rings) or []
+                rings_modified = normalized_rings != existing_rings
+                existing_rings = normalized_rings
 
                 if existing_rings:
                     for er in existing_rings:

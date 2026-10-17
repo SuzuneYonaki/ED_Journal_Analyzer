@@ -11,6 +11,7 @@ from app.parser.value_calculator import calculate_body_value, STAR_VALUES
 from app.analyzer.anomaly_finder import detect_anomalies
 from app.addons import addon_manager
 from app.parser.bioscan.adapters import system_context_from_db
+from app.services.ring_format import normalize_rings
 
 
 def extract_star_type(b: dict) -> str:
@@ -97,7 +98,8 @@ def import_and_complete_bodies(conn, system_address: int, star_system: str, bodi
         axial_tilt = b.get("axialTilt")
 
         parents_json = json.dumps(b.get("parents")) if b.get("parents") else None
-        rings_json = json.dumps(b.get("belts") or b.get("rings")) if (b.get("belts") or b.get("rings")) else None
+        raw_rings = b.get("belts") or b.get("rings")
+        rings_json = json.dumps(normalize_rings(raw_rings)) if raw_rings else None
         materials_json = json.dumps(b.get("materials")) if b.get("materials") else None
 
         if is_star:
