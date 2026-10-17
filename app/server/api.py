@@ -2205,7 +2205,7 @@ def get_app_settings():
         "default_journal_dir": str(DEFAULT_JOURNAL_DIR),
         "is_default": str(current_dir) == str(DEFAULT_JOURNAL_DIR),
         "language": cfg.get("language", "ja"),
-        "edsm_auto_lookup": bool(cfg.get("edsm_auto_lookup", False)),
+        "edsm_auto_lookup": bool(cfg.get("edsm_auto_lookup", True)),
     }
 
 @app.post("/api/app_settings")

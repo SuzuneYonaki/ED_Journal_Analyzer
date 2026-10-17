@@ -14,7 +14,10 @@ See /addons/README.md for the manifest schema and the register(ctx) contract.
 import importlib.util
 import inspect
 import json
+import os
 import sys
+import threading
+import time
 import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -106,6 +109,10 @@ class AddonContext:
         self.shutdown_fn = fn
 
 
+_FILE_RETRIES = 20
+_FILE_RETRY_DELAY = 0.05
+
+
 class AddonManager:
     def __init__(self, addons_dir: Path, settings_path: Path):
         self.addons_dir = addons_dir
@@ -113,19 +120,45 @@ class AddonManager:
         self.manifests: Dict[str, AddonManifest] = {}
         self.loaded: Dict[str, LoadedAddon] = {}
         self.contexts: Dict[str, AddonContext] = {}
+        # Toggling two addons at once (the "External Online Access" switch flips EDSM and Spansh together)
+        # sends concurrent requests; without a lock each one reads the old file and one change is lost.
+        self._settings_lock = threading.Lock()
 
     # -- settings: which addons the user has enabled -------------------------
-    def _load_settings(self) -> dict:
-        if self.settings_path.exists():
+    def _load_settings(self, strict: bool = False) -> dict:
+        """The saved enabled/disabled choices. A file that cannot be read right now (on Windows another process,
+        e.g. a virus scanner, can hold it open for an instant) is retried; with strict=True a persistent read
+        failure raises instead of returning {} so that a save can never wipe the other addons' choices."""
+        if not self.settings_path.exists():
+            return {}
+        for attempt in range(_FILE_RETRIES):
             try:
                 return json.loads(self.settings_path.read_text(encoding="utf-8"))
-            except Exception:
+            except OSError:
+                if attempt == _FILE_RETRIES - 1:
+                    if strict:
+                        raise
+                    return {}
+                time.sleep(_FILE_RETRY_DELAY)
+            except ValueError:
                 return {}
         return {}
 
     def _save_settings(self, data: dict):
         self.settings_path.parent.mkdir(parents=True, exist_ok=True)
-        self.settings_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        # Write to a temp file and swap it in, so a reader never sees a half-written file
+        tmp_path = self.settings_path.with_name(self.settings_path.name + ".tmp")
+        payload = json.dumps(data, ensure_ascii=False, indent=2)
+        tmp_path.write_text(payload, encoding="utf-8")
+        for attempt in range(_FILE_RETRIES):
+            try:
+                os.replace(tmp_path, self.settings_path)
+                return
+            except PermissionError:
+                time.sleep(_FILE_RETRY_DELAY)
+        # The target stayed locked: write it in place rather than losing the change
+        self.settings_path.write_text(payload, encoding="utf-8")
+        tmp_path.unlink(missing_ok=True)
 
     def is_enabled(self, addon_id: str) -> bool:
         settings = self._load_settings()
@@ -135,9 +168,10 @@ class AddonManager:
         return bool(manifest.enabled_by_default) if manifest else False
 
     def set_enabled(self, addon_id: str, enabled: bool):
-        settings = self._load_settings()
-        settings[addon_id] = bool(enabled)
-        self._save_settings(settings)
+        with self._settings_lock:
+            settings = self._load_settings(strict=True)
+            settings[addon_id] = bool(enabled)
+            self._save_settings(settings)
 
     # -- discovery (cheap: manifest JSON only, no python import) -------------
     def discover(self) -> Dict[str, AddonManifest]:

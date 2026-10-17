@@ -84,28 +84,25 @@ def test_edsm_body_import_stores_rings_in_journal_form(db):
 
 # ---- external data is fetched only when the user asks for it ---------------------------------------
 
-def _auto_lookup(monkeypatch, tmp_path, addon_on, setting):
+def _auto_lookup(monkeypatch, tmp_path, setting):
     import json
 
     import app.config as config
-    from app.addons import addon_manager
 
     monkeypatch.setattr(config, "DATA_DIR", tmp_path)
     if setting is not None:
         (tmp_path / "app_settings.json").write_text(json.dumps({"edsm_auto_lookup": setting}), encoding="utf-8")
-    monkeypatch.setattr(addon_manager, "is_enabled", lambda addon_id: addon_on if addon_id == "edsm_sync" else True)
 
 
-@pytest.mark.parametrize("addon_on,setting,expected", [
-    (False, True, False),   # addon off: never, whatever the setting says
-    (True, None, False),    # addon on, no choice made: off by default
-    (True, False, False),
-    (True, True, True),     # both the addon and the explicit choice
+@pytest.mark.parametrize("setting,expected", [
+    (None, True),    # no choice made: on, as before, so catalog systems such as Sol get their bodies
+    (True, True),
+    (False, False),  # the user switched it off in Settings
 ])
-def test_edsm_background_lookup_needs_the_addon_and_the_users_choice(tmp_path, monkeypatch, addon_on, setting, expected):
+def test_edsm_background_lookup_follows_the_users_setting(tmp_path, monkeypatch, setting, expected):
     from app.services.edsm_service import EDSMService, edsm_service
 
-    _auto_lookup(monkeypatch, tmp_path, addon_on, setting)
+    _auto_lookup(monkeypatch, tmp_path, setting)
     queued = []
     monkeypatch.setattr(edsm_service.client, "queue_system_check", lambda *a, **k: queued.append(a))
     assert EDSMService.auto_lookup_enabled() is expected
@@ -113,10 +110,34 @@ def test_edsm_background_lookup_needs_the_addon_and_the_users_choice(tmp_path, m
     assert bool(queued) is expected
 
 
+def test_opening_an_unscanned_catalog_system_queues_the_edsm_fill_in(tmp_path, monkeypatch):
+    """Regression: Sol / Omicron Capricorni B have no scan records in the journal; their bodies come from EDSM."""
+    from fastapi.testclient import TestClient
+
+    import app.db.database as database
+    from app.server.api import app
+    from app.services.edsm_service import edsm_service
+
+    monkeypatch.setattr(database, "DB_PATH", tmp_path / "catalog.db")
+    database.init_db(force=True)
+    conn = database.get_db_connection()
+    conn.execute("INSERT INTO systems (system_address, star_system, visit_count, edsm_checked, edsm_registered) "
+                 "VALUES (220354045116, 'Omicron Capricorni B', 2, 0, 0)")
+    conn.commit()
+    conn.close()
+    _auto_lookup(monkeypatch, tmp_path / "settings", None)  # no settings file at all = defaults
+    queued = []
+    monkeypatch.setattr(edsm_service.client, "queue_system_check", lambda *a, **k: queued.append((a, k)))
+
+    assert TestClient(app).get("/api/system/220354045116").status_code == 200
+    assert queued and queued[0][0][:2] == (220354045116, "Omicron Capricorni B")
+    assert queued[0][1].get("priority") is True
+
+
 def test_manual_edsm_actions_do_not_depend_on_auto_lookup(tmp_path, monkeypatch):
     from app.services.edsm_service import edsm_service
 
-    _auto_lookup(monkeypatch, tmp_path, True, False)
+    _auto_lookup(monkeypatch, tmp_path, False)
     called = []
     monkeypatch.setattr("app.services.edsm_service._import_unvisited_system_by_name",
                         lambda *a, **k: called.append("import") or {"success": True})
@@ -136,15 +157,16 @@ def test_no_spansh_request_is_made_automatically_after_edsm():
     assert not (root / "app" / "services" / "spansh_followup.py").exists()
 
 
+
 def test_settings_endpoint_reports_the_auto_lookup_choice(monkeypatch):
     from fastapi.testclient import TestClient
 
     import app.server.api as api
 
-    monkeypatch.setattr(api, "load_app_settings_data", lambda: {"edsm_auto_lookup": True})
-    assert TestClient(api.app).get("/api/app_settings").json()["edsm_auto_lookup"] is True
-    monkeypatch.setattr(api, "load_app_settings_data", lambda: {})
+    monkeypatch.setattr(api, "load_app_settings_data", lambda: {"edsm_auto_lookup": False})
     assert TestClient(api.app).get("/api/app_settings").json()["edsm_auto_lookup"] is False
+    monkeypatch.setattr(api, "load_app_settings_data", lambda: {})
+    assert TestClient(api.app).get("/api/app_settings").json()["edsm_auto_lookup"] is True
 
 
 def test_ui_offers_hotspots_and_the_auto_lookup_switch():
@@ -156,6 +178,8 @@ def test_ui_offers_hotspots_and_the_auto_lookup_switch():
     i18n_js = (base / "js" / "i18n.js").read_text(encoding="utf-8")
     assert "offerSpanshHotspots(" in app_js and "btn-spansh-hotspots-after-load" in app_js
     assert 'data-requires-addon", "spansh_sync"' in app_js.replace("'", '"')
-    assert 'id="cb-edsm-auto-lookup"' in modals and 'data-requires-addon="edsm_sync"' in modals
+    row = next(line for line in modals.splitlines() if 'id="edsm-auto-lookup-row"' in line)
+    assert 'id="cb-edsm-auto-lookup"' in modals
+    assert "data-requires-addon" not in row, "the switch must stay reachable when the EDSM addon is off"
     for key in ("spansh_hotspots_offer", "spansh_hotspots_done", "edsm_auto_lookup_title", "edsm_auto_lookup_desc"):
         assert i18n_js.count(f"{key}:") == 2  # ja + en

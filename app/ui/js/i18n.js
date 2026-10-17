@@ -439,8 +439,8 @@ const i18n = {
     spansh_hotspots_offer: "🪐 リングのホットスポットを Spansh から取得",
     spansh_hotspots_offer_tip: "押したときだけ Spansh に問い合わせます（自動では取得しません）",
     spansh_hotspots_done: "✓ 取得完了 (ホットスポット {count} 件)",
-    edsm_auto_lookup_title: "EDSM 自動照会",
-    edsm_auto_lookup_desc: "ジャンプ時や星系を開いたときに、EDSM へ自動で問い合わせます。オフの間は、手動ボタンで取得したときだけ通信します。",
+    edsm_auto_lookup_title: "EDSM 自動照会（天体情報の補完）",
+    edsm_auto_lookup_desc: "ジャンプ時や星系を開いたときに、ジャーナルにスキャン記録のない天体（Sol など）を EDSM から自動で補います。オフにすると、手動ボタンで取得したときだけ通信します。",
 
     // Stellar Luminosity & Degenerate Stages
     star_luminosity_title: "光度階級 / 進化段階 (未指定は全対象):",
@@ -1461,8 +1461,8 @@ const i18n = {
     spansh_hotspots_offer: "🪐 Fetch ring hotspots from Spansh",
     spansh_hotspots_offer_tip: "Spansh is contacted only when you press this (never automatically)",
     spansh_hotspots_done: "✓ Done ({count} hotspots)",
-    edsm_auto_lookup_title: "EDSM auto lookup",
-    edsm_auto_lookup_desc: "Query EDSM automatically on jumps and when a system is opened. While off, EDSM is contacted only when you use a manual button.",
+    edsm_auto_lookup_title: "EDSM auto lookup (fills in bodies)",
+    edsm_auto_lookup_desc: "On jumps and when a system is opened, fills in bodies the journal never scanned (e.g. Sol) from EDSM. Turn it off to contact EDSM only when you use a manual button.",
 
     // Stellar Luminosity & Degenerate Stages
     star_luminosity_title: "Luminosity / Stage (Unchecked = All):",
