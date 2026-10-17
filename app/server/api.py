@@ -32,6 +32,7 @@ from app.services.landmark_service import load_landmarks, calculate_landmark_dis
 from app.services.footprint_service import footprint_service
 from app.parser.bioscan.adapters import build_system_context
 from app.utils.galactic_regions import get_region_from_coords
+from app.services.bio_log import collect_bio_entries, query_bio_log
 from app.services.version_service import version_service
 from app.live.rhino.note_integrator import update_body_note_in_db
 from app.live.rhino.tracker import sync_body_mining_to_note, extract_all_mining_materials_for_body, extract_rhino_mining_sites
@@ -2388,6 +2389,25 @@ def import_edsm_external_system(system_name: str):
         return JSONResponse({"error": result.get("error", "EDSMからのインポートに失敗しました。")}, status_code=404)
 
     return JSONResponse(result)
+
+@app.get("/api/bio_log")
+def get_bio_log(
+    q: str = "",
+    genus: Optional[str] = None,
+    status: str = "",
+    sort: str = "found_desc",
+    page: int = 1,
+    limit: int = 100,
+):
+    """Every organism the CMDR has logged: species, where it was found, and sampling progress."""
+    conn = get_db_connection()
+    try:
+        entries = collect_bio_entries(conn)
+    finally:
+        conn.close()
+    genus_list = [g for g in (genus or "").split(",") if g.strip()]
+    return query_bio_log(entries, q=q, genus=genus_list, status=status, sort=sort, page=page, limit=limit)
+
 
 ## NOTE: /api/export/html, /api/export/snippet, /api/export/image,
 ## /api/export/open_location, /api/export/package(/save-local),
