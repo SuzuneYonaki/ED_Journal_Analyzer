@@ -1,6 +1,6 @@
 # Elite Dangerous Journal Analyzer & Exploration Orrery
 
-[![Version](https://img.shields.io/badge/version-v0.8.24-orange.svg)](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases)
+[![Version](https://img.shields.io/badge/version-v0.8.25-orange.svg)](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 
@@ -74,6 +74,12 @@ v0.8.15 より、EDSM/Spansh連携・TTS音声読み上げ・探査データ共�
     - EDSM/Spansh連携、TTS、探査データ共有（CMDR Data Share）、天体物理レア度スコア、生体種予測は、それぞれ独立したアドオンとして提供され、設定画面の「🧩 アドオン」タブから個別に有効/無効を切り替え可能。
     - 既定ではすべて無効化されており、必要な機能だけを選んで軽量に使えます。外部通信を伴うEDSM/Spanshは「外部オンラインアクセス」として一括のオン/オフスイッチにまとめられ、有効化時には確認ポップアップが表示されます。
     - 切り替えはアプリの再起動後に反映され、設定画面から再起動を実行できます。
+12. **📋 Bio記録（過去に見つけた生物の一覧）**:
+    - これまでに記録した生物を、星系・天体・発見日時・種・変異（色）・採取状況つきで横断的に一覧表示。属・採取状況のバッジ、テキスト検索、並べ替えに対応し、行をクリックするとその星系と天体を開きます。
+13. **🧬 生体種の判定（BioScan 由来のルールに基づく）**:
+    - 条件（大気・重力・温度・火山活動・親星・リージョン・星雲・ガーディアン遺跡・色）を満たす種をすべて候補に残し、DSS で属が確定した場合や信号数から確定できる場合にだけ「確定」と表示します。残る種の一覧と価値の幅、現在位置のリージョンも表示します。
+14. **🔒 外部通信はすべて任意**:
+    - EDSM への自動照会は、設定の「EDSM 自動照会」をオンにしたときだけ行われます（既定オフ）。Spansh のホットスポット取得は、ボタンを押したときだけ行われます。EDSM からロードした外部星系のデータは、足跡チェックの下のボタンから個別または一括で削除できます。
 
 ---
 
@@ -175,6 +181,12 @@ Starting with v0.8.15, major features — EDSM/Spansh sync, TTS voice alerts, ex
     - EDSM/Spansh sync, TTS, exploration data sharing (CMDR Data Share), astrophysical rarity scoring, and exobiology species prediction are each an independent addon, individually toggleable from the Settings > Addons tab.
     - All ship disabled by default, so you only run what you need. EDSM/Spansh (which reach external servers) are consolidated into a single "External Online Access" switch with a confirmation prompt on enable.
     - Toggling takes effect on the next restart; the Settings tab can trigger that restart for you.
+12. **📋 Bio Log (every organism you have logged)**:
+    - A cross-system list of the organisms you have recorded, with system, body, date found, species, variant (colour) and sampling progress. Genus and status badges, text search and sorting; click a row to open that system and body.
+13. **🧬 Species determination (based on BioScan rules)**:
+    - Every species whose conditions hold (atmosphere, gravity, temperature, volcanism, parent star, Galactic Region, nebulae, Guardian sites, colours) stays a candidate; a species is marked definite only when DSS confirms the genus or the signal count requires it. Remaining species, the value range and the current Galactic Region are shown.
+14. **🔒 Every external lookup is optional**:
+    - EDSM background lookups run only when "EDSM auto lookup" is switched on in Settings (off by default). Spansh ring hotspots are fetched only when you press the button. Data loaded from EDSM for unvisited systems can be deleted per system or all at once from the buttons under the footprint check.
 
 ---
 
