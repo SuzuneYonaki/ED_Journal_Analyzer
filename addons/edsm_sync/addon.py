@@ -10,7 +10,6 @@ from fastapi.responses import JSONResponse
 
 from app.db.database import get_db_connection
 from app.services.edsm_service import edsm_service
-from app.services.spansh_followup import fetch_ring_hotspots_if_rings
 
 
 def register(ctx):
@@ -30,10 +29,6 @@ def register(ctx):
 
         sys_name = row["star_system"]
         result = edsm_service.fetch_and_update_system_sync(system_address, sys_name)
-        if isinstance(result, dict) and not result.get("error"):
-            spansh_result = fetch_ring_hotspots_if_rings(system_address, sys_name)
-            if spansh_result is not None:
-                result["spansh"] = spansh_result
         return JSONResponse(result)
 
     # Reclaims the original /api/systems/{id}/edsm_sync path (no /api/addons/... prefix)

@@ -2076,6 +2076,37 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-modal-lang-ja')?.addEventListener('click', () => setLanguage('ja'));
   document.getElementById('btn-modal-lang-en')?.addEventListener('click', () => setLanguage('en'));
 
+  // After an EDSM load, a ringed system gets a button to fetch ring hotspots from Spansh. Nothing is
+  // requested until the user presses it.
+  function offerSpanshHotspots(container, systemAddress) {
+    const bodies = (state.currentSystemData && state.currentSystemData.bodies) || [];
+    if (!container || !bodies.some(b => Array.isArray(b.rings_list) && b.rings_list.length > 0)) return;
+    const btn = document.createElement('button');
+    btn.id = 'btn-spansh-hotspots-after-load';
+    btn.setAttribute('data-requires-addon', 'spansh_sync');
+    btn.className = 'btn-page';
+    btn.style.cssText = 'margin-right: 6px; padding: 3px 8px; font-size: 0.72rem; background: rgba(250, 204, 21, 0.15); border: 1px solid #fbbf24; color: #fbbf24; cursor: pointer;';
+    btn.title = t('spansh_hotspots_offer_tip');
+    btn.textContent = t('spansh_hotspots_offer');
+    btn.onclick = async () => {
+      btn.disabled = true;
+      btn.textContent = t('sync_spansh_querying');
+      try {
+        const resp = await fetch(`/api/systems/${systemAddress}/spansh_sync`, { method: 'POST' });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        btn.textContent = t('spansh_hotspots_done', { count: data.hotspots_found || 0 });
+        await selectSystem(systemAddress, true, false);
+      } catch (e) {
+        console.error('Spansh hotspot fetch failed:', e);
+        btn.disabled = false;
+        btn.textContent = t('sync_spansh_failed');
+      }
+    };
+    container.insertBefore(btn, container.firstChild);
+  }
+  window.offerSpanshHotspots = offerSpanshHotspots;
+
   // Search input & External Footprint Check
   let searchTimeout = null;
   let footprintAbortController = null;
@@ -2213,11 +2244,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errJson.error || errJson.detail || `HTTP ${resp.status}`);
               }
               const resData = await resp.json();
-              const hs = resData.spansh && resData.spansh.success ? resData.spansh.hotspots_found : null;
-              loadBtn.innerHTML = `<span>✓ ロード完了${hs !== null ? `（ホットスポット ${hs} 件）` : ''}</span>`;
+              loadBtn.innerHTML = '<span>✓ ロード完了</span>';
               await fetchSystems();
               if (resData.system_address) {
                 await selectSystem(resData.system_address);
+                offerSpanshHotspots(loadBtn.parentElement, resData.system_address);
               }
             } catch (e) {
               console.error('EDSM unvisited import error:', e);
@@ -4628,8 +4659,33 @@ async function initSettingsModal() {
     if (addonRestartBanner) addonRestartBanner.style.display = 'flex';
   }
 
+  async function loadEdsmAutoLookupSetting() {
+    const cb = document.getElementById('cb-edsm-auto-lookup');
+    if (!cb) return;
+    try {
+      const res = await fetch('/api/app_settings');
+      if (res.ok) cb.checked = !!(await res.json()).edsm_auto_lookup;
+    } catch (e) {}
+    if (cb.dataset.bound) return;
+    cb.dataset.bound = '1';
+    cb.addEventListener('change', async () => {
+      const wanted = cb.checked;
+      try {
+        const res = await fetch('/api/app_settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ edsm_auto_lookup: wanted })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } catch (e) {
+        cb.checked = !wanted;
+      }
+    });
+  }
+
   async function loadAddonSettingsToUI() {
     if (!addonToggleList) return;
+    loadEdsmAutoLookupSetting();
     addonToggleList.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.8rem;">${(typeof t === 'function' ? t('addons_loading') : null) || '読み込み中...'}</div>`;
     let addons = [];
     try {

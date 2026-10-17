@@ -399,6 +399,11 @@ const i18n = {
     footprint_found: "👣 足跡あり (外部DB登録済)",
     footprint_none: "✨ 未登録の可能性 (外部DB記録なし)",
     footprint_error: "⚠️ 照会失敗 / タイムアウト",
+    spansh_hotspots_offer: "🪐 リングのホットスポットを Spansh から取得",
+    spansh_hotspots_offer_tip: "押したときだけ Spansh に問い合わせます（自動では取得しません）",
+    spansh_hotspots_done: "✓ 取得完了 (ホットスポット {count} 件)",
+    edsm_auto_lookup_title: "EDSM 自動照会",
+    edsm_auto_lookup_desc: "ジャンプ時や星系を開いたときに、EDSM へ自動で問い合わせます。オフの間は、手動ボタンで取得したときだけ通信します。",
 
     // Stellar Luminosity & Degenerate Stages
     star_luminosity_title: "光度階級 / 進化段階 (未指定は全対象):",
@@ -1379,6 +1384,11 @@ const i18n = {
     footprint_found: "👣 Footprint found (Recorded in external DB)",
     footprint_none: "✨ Potential Uncharted (No record in external DB)",
     footprint_error: "⚠️ Query failed / Timeout",
+    spansh_hotspots_offer: "🪐 Fetch ring hotspots from Spansh",
+    spansh_hotspots_offer_tip: "Spansh is contacted only when you press this (never automatically)",
+    spansh_hotspots_done: "✓ Done ({count} hotspots)",
+    edsm_auto_lookup_title: "EDSM auto lookup",
+    edsm_auto_lookup_desc: "Query EDSM automatically on jumps and when a system is opened. While off, EDSM is contacted only when you use a manual button.",
 
     // Stellar Luminosity & Degenerate Stages
     star_luminosity_title: "Luminosity / Stage (Unchecked = All):",

@@ -2,13 +2,8 @@ import json
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
 
 import app.db.database as database
-from app.addons import addon_manager
-from app.server.api import app
-from app.services import spansh_followup
-from app.services.edsm_service import edsm_service
 from app.services.ring_format import normalize_rings, to_journal_ring
 from app.services.spansh_service import spansh_service
 
@@ -73,67 +68,6 @@ def test_spansh_hotspots_merge_into_edsm_format_rings(db, monkeypatch):
     assert ring["Hotspots"] == {"Platinum": 3, "Painite": 1}
 
 
-def test_followup_requests_spansh_only_when_rings_exist(db, monkeypatch):
-    calls = []
-    monkeypatch.setattr(spansh_service, "sync_system_spansh", lambda conn, a, n: calls.append((a, n)) or {"success": True, "hotspots_found": 2})
-
-    _add_body(None)
-    assert spansh_followup.fetch_ring_hotspots_if_rings(SYS_ADDR, "Foo") is None
-    assert calls == []
-
-    conn = database.get_db_connection()
-    conn.execute("UPDATE bodies SET rings = '[]' WHERE system_address = ?", (SYS_ADDR,))
-    conn.commit()
-    conn.close()
-    assert spansh_followup.fetch_ring_hotspots_if_rings(SYS_ADDR, "Foo") is None
-    assert calls == []
-
-    conn = database.get_db_connection()
-    conn.execute("UPDATE bodies SET rings = ? WHERE system_address = ?", (json.dumps([EDSM_RING]), SYS_ADDR))
-    conn.commit()
-    conn.close()
-    assert spansh_followup.fetch_ring_hotspots_if_rings(SYS_ADDR, "Foo") == {"success": True, "hotspots_found": 2}
-    assert calls == [(SYS_ADDR, "Foo")]
-
-
-def test_followup_skipped_when_spansh_addon_disabled(db, monkeypatch):
-    _add_body(json.dumps([EDSM_RING]))
-    calls = []
-    monkeypatch.setattr(spansh_service, "sync_system_spansh", lambda *a: calls.append(a) or {})
-    monkeypatch.setattr(addon_manager, "is_enabled", lambda addon_id: False)
-    assert spansh_followup.fetch_ring_hotspots_if_rings(SYS_ADDR, "Foo") is None
-    assert calls == []
-
-
-def test_followup_failure_is_reported_not_raised(db, monkeypatch):
-    _add_body(json.dumps([EDSM_RING]))
-
-    def boom(*a):
-        raise RuntimeError("spansh down")
-
-    monkeypatch.setattr(spansh_service, "sync_system_spansh", boom)
-    res = spansh_followup.fetch_ring_hotspots_if_rings(SYS_ADDR, "Foo")
-    assert res["success"] is False and "spansh down" in res["error"]
-
-
-def test_edsm_import_endpoint_adds_spansh_summary(db, monkeypatch):
-    _add_body(json.dumps([EDSM_RING]))
-    monkeypatch.setattr(
-        edsm_service, "import_unvisited_system_by_name",
-        lambda name: {"success": True, "system_address": SYS_ADDR, "star_system": "Foo"},
-    )
-    monkeypatch.setattr(spansh_service, "fetch_system_bodies", lambda name: SPANSH_BODIES)
-    res = TestClient(app).post("/api/external/import_edsm?system_name=Foo")
-    assert res.status_code == 200
-    assert res.json()["spansh"]["hotspots_found"] == 4
-    assert _stored_rings()[0]["Hotspots"] == {"Platinum": 3, "Painite": 1}
-
-
-def test_ui_shows_hotspot_count_after_load():
-    app_js = (Path(__file__).resolve().parent.parent / "app" / "ui" / "js" / "app.js").read_text(encoding="utf-8")
-    assert "resData.spansh" in app_js and "hotspots_found" in app_js
-
-
 def test_edsm_body_import_stores_rings_in_journal_form(db):
     from app.services.edsm.body_importer import import_and_complete_bodies
 
@@ -146,3 +80,82 @@ def test_edsm_body_import_stores_rings_in_journal_form(db):
     conn.commit()
     conn.close()
     assert _stored_rings() == [to_journal_ring(EDSM_RING)]
+
+
+# ---- external data is fetched only when the user asks for it ---------------------------------------
+
+def _auto_lookup(monkeypatch, tmp_path, addon_on, setting):
+    import json
+
+    import app.config as config
+    from app.addons import addon_manager
+
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    if setting is not None:
+        (tmp_path / "app_settings.json").write_text(json.dumps({"edsm_auto_lookup": setting}), encoding="utf-8")
+    monkeypatch.setattr(addon_manager, "is_enabled", lambda addon_id: addon_on if addon_id == "edsm_sync" else True)
+
+
+@pytest.mark.parametrize("addon_on,setting,expected", [
+    (False, True, False),   # addon off: never, whatever the setting says
+    (True, None, False),    # addon on, no choice made: off by default
+    (True, False, False),
+    (True, True, True),     # both the addon and the explicit choice
+])
+def test_edsm_background_lookup_needs_the_addon_and_the_users_choice(tmp_path, monkeypatch, addon_on, setting, expected):
+    from app.services.edsm_service import EDSMService, edsm_service
+
+    _auto_lookup(monkeypatch, tmp_path, addon_on, setting)
+    queued = []
+    monkeypatch.setattr(edsm_service.client, "queue_system_check", lambda *a, **k: queued.append(a))
+    assert EDSMService.auto_lookup_enabled() is expected
+    edsm_service.queue_system_check(1, "Sol", priority=True)
+    assert bool(queued) is expected
+
+
+def test_manual_edsm_actions_do_not_depend_on_auto_lookup(tmp_path, monkeypatch):
+    from app.services.edsm_service import edsm_service
+
+    _auto_lookup(monkeypatch, tmp_path, True, False)
+    called = []
+    monkeypatch.setattr("app.services.edsm_service._import_unvisited_system_by_name",
+                        lambda *a, **k: called.append("import") or {"success": True})
+    monkeypatch.setattr(edsm_service, "_fetch_and_update_system", lambda *a, **k: called.append("sync") or {})
+    monkeypatch.setattr(edsm_service.client, "throttle_delay", lambda: None)
+    edsm_service.import_unvisited_system_by_name("Sol")
+    edsm_service.fetch_and_update_system_sync(1, "Sol")
+    assert called == ["import", "sync"]
+
+
+def test_no_spansh_request_is_made_automatically_after_edsm():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    for relative in ("app/server/api.py", "addons/edsm_sync/addon.py"):
+        assert "fetch_ring_hotspots" not in (root / relative).read_text(encoding="utf-8"), relative
+    assert not (root / "app" / "services" / "spansh_followup.py").exists()
+
+
+def test_settings_endpoint_reports_the_auto_lookup_choice(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    import app.server.api as api
+
+    monkeypatch.setattr(api, "load_app_settings_data", lambda: {"edsm_auto_lookup": True})
+    assert TestClient(api.app).get("/api/app_settings").json()["edsm_auto_lookup"] is True
+    monkeypatch.setattr(api, "load_app_settings_data", lambda: {})
+    assert TestClient(api.app).get("/api/app_settings").json()["edsm_auto_lookup"] is False
+
+
+def test_ui_offers_hotspots_and_the_auto_lookup_switch():
+    from pathlib import Path
+
+    base = Path(__file__).resolve().parent.parent / "app" / "ui"
+    app_js = (base / "js" / "app.js").read_text(encoding="utf-8")
+    modals = (base / "components" / "modals.html").read_text(encoding="utf-8")
+    i18n_js = (base / "js" / "i18n.js").read_text(encoding="utf-8")
+    assert "offerSpanshHotspots(" in app_js and "btn-spansh-hotspots-after-load" in app_js
+    assert 'data-requires-addon", "spansh_sync"' in app_js.replace("'", '"')
+    assert 'id="cb-edsm-auto-lookup"' in modals and 'data-requires-addon="edsm_sync"' in modals
+    for key in ("spansh_hotspots_offer", "spansh_hotspots_done", "edsm_auto_lookup_title", "edsm_auto_lookup_desc"):
+        assert i18n_js.count(f"{key}:") == 2  # ja + en

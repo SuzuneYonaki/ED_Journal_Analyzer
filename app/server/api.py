@@ -30,7 +30,6 @@ from app.analyzer.orbit_analyzer import build_system_hierarchy
 from app.services.edsm_service import edsm_service
 from app.services.landmark_service import load_landmarks, calculate_landmark_distances
 from app.services.footprint_service import footprint_service
-from app.services.spansh_followup import fetch_ring_hotspots_if_rings
 from app.services.version_service import version_service
 from app.live.rhino.note_integrator import update_body_note_in_db
 from app.live.rhino.tracker import sync_body_mining_to_note, extract_all_mining_materials_for_body, extract_rhino_mining_sites
@@ -2187,7 +2186,8 @@ def get_app_settings():
         "journal_dir": str(current_dir),
         "default_journal_dir": str(DEFAULT_JOURNAL_DIR),
         "is_default": str(current_dir) == str(DEFAULT_JOURNAL_DIR),
-        "language": cfg.get("language", "ja")
+        "language": cfg.get("language", "ja"),
+        "edsm_auto_lookup": bool(cfg.get("edsm_auto_lookup", False)),
     }
 
 @app.post("/api/app_settings")
@@ -2370,10 +2370,6 @@ def import_edsm_external_system(system_name: str):
     result = edsm_service.import_unvisited_system_by_name(clean_name)
     if not result.get("success"):
         return JSONResponse({"error": result.get("error", "EDSMからのインポートに失敗しました。")}, status_code=404)
-
-    spansh_result = fetch_ring_hotspots_if_rings(result.get("system_address"), result.get("star_system") or clean_name)
-    if spansh_result is not None:
-        result["spansh"] = spansh_result
 
     return JSONResponse(result)
 
