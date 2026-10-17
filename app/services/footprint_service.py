@@ -28,7 +28,7 @@ class FootprintService:
         self._cache.clear()
         self._cache_times.clear()
 
-    def check_system_footprint(self, system_name: str) -> Dict[str, Any]:
+    def check_system_footprint(self, system_name: str, allow_external: bool = True) -> Dict[str, Any]:
         clean_name = (system_name or "").strip()
         if not clean_name:
             return {
@@ -86,6 +86,17 @@ class FootprintService:
             self._cache[cache_key] = result
             self._cache_times[cache_key] = now
             return result
+
+        if not allow_external:
+            # Not connected to EDSM/Spansh: asking would only ever report "not registered" (not cached)
+            return {
+                "system_name": clean_name,
+                "in_local_db": False,
+                "has_footprint": False,
+                "offline": True,
+                "services": {},
+                "summary": "offline",
+            }
 
         # 2. Not in local DB -> query external services concurrently
         services_result = {

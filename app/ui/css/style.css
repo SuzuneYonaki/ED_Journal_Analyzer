@@ -3586,6 +3586,8 @@ header {
    rendered elements (e.g. mining_view.js's per-system-state EDSM button
    variants) are hidden automatically the moment they're inserted, with no
    MutationObserver needed. */
+/* The external DB footprint check needs the External Online Access switch (EDSM and/or Spansh) */
+body.addon-off-edsm_sync.addon-off-spansh_sync #external-check-row,
 body.addon-off-edsm_sync [data-requires-addon="edsm_sync"],
 body.addon-off-spansh_sync [data-requires-addon="spansh_sync"],
 body.addon-off-tts [data-requires-addon="tts"],

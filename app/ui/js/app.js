@@ -2129,7 +2129,9 @@ document.addEventListener('DOMContentLoaded', () => {
   async function refreshExternalFootprintActions() {
     const box = document.getElementById('external-footprint-actions');
     if (!box) return;
-    if (!state.externalFootprintCheck) {
+    const offline = document.body.classList.contains('addon-off-edsm_sync')
+      && document.body.classList.contains('addon-off-spansh_sync');
+    if (offline || !state.externalFootprintCheck) {
       box.style.display = 'none';
       box.innerHTML = '';
       return;
@@ -2196,7 +2198,9 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshExternalFootprintActions();
 
     const trimmed = (sysName || '').trim();
-    if (!state.externalFootprintCheck || trimmed.length < 2) {
+    const offline = document.body.classList.contains('addon-off-edsm_sync')
+      && document.body.classList.contains('addon-off-spansh_sync');
+    if (offline || !state.externalFootprintCheck || trimmed.length < 2) {
       resContainer.style.display = 'none';
       resContainer.innerHTML = '';
       return;
@@ -2237,6 +2241,12 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
+
+      if (data.offline) {
+        resContainer.style.display = 'none';
+        resContainer.innerHTML = '';
+        return;
+      }
 
       // If user typed something else while waiting, ignore
       if ((state.searchQuery || '').trim().toLowerCase() !== trimmed.toLowerCase()) return;

@@ -2546,8 +2546,9 @@ def get_external_footprint(system_name: str = Query(..., min_length=1)):
     Checks if a system has an external footprint on Inara, Spansh, or EDSM.
     Skips external queries if the system already exists in the local database.
     """
-    result = footprint_service.check_system_footprint(system_name)
-    return result
+    # "Connected" means the External Online Access switch (EDSM / Spansh addons) is on
+    online = any(addon_manager.is_enabled(addon_id) for addon_id in ("edsm_sync", "spansh_sync"))
+    return footprint_service.check_system_footprint(system_name, allow_external=online)
 
 @app.get("/api/check_update")
 def check_update(force: bool = False):
