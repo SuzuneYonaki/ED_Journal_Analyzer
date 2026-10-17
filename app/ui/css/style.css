@@ -899,6 +899,25 @@ header {
   transition: all 0.2s ease;
 }
 
+.external-footprint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.external-footprint-actions .ext-del-btn {
+  padding: 2px 7px;
+  font-size: 0.68rem;
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  cursor: pointer;
+}
+
+.external-footprint-actions .ext-del-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
 .external-footprint-result.checking {
   background: rgba(56, 189, 248, 0.1);
   border-color: rgba(56, 189, 248, 0.3);

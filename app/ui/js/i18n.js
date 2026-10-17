@@ -428,6 +428,14 @@ const i18n = {
     footprint_found: "👣 足跡あり (外部DB登録済)",
     footprint_none: "✨ 未登録の可能性 (外部DB記録なし)",
     footprint_error: "⚠️ 照会失敗 / タイムアウト",
+    footprint_delete_this: "🗑 この星系の外部データを削除",
+    footprint_delete_all: "🗑 外部DB記録をすべて削除 ({n})",
+    footprint_delete_this_tip: "EDSMからロードしたこの未訪問星系のデータをローカルDBから削除します（ご自身の探査データは削除されません）",
+    footprint_delete_all_tip: "EDSMからロードした未訪問星系のデータをすべてローカルDBから削除します（ご自身の探査データは削除されません）",
+    footprint_delete_this_confirm: "「{name}」のEDSM由来データをローカルDBから削除します。<br>ご自身の探査データは削除されません。よろしいですか？",
+    footprint_delete_all_confirm: "EDSMからロードした未訪問星系 {systems} 件（天体 {bodies} 件{bookmarks_note}）をローカルDBからすべて削除します。<br>ご自身の探査データは削除されません。よろしいですか？",
+    footprint_delete_bookmarks_note: "、ブックマーク/メモ {n} 件を含む",
+    footprint_delete_failed: "削除に失敗しました",
 
     // Stellar Luminosity & Degenerate Stages
     star_luminosity_title: "光度階級 / 進化段階 (未指定は全対象):",
@@ -1437,6 +1445,14 @@ const i18n = {
     footprint_found: "👣 Footprint found (Recorded in external DB)",
     footprint_none: "✨ Potential Uncharted (No record in external DB)",
     footprint_error: "⚠️ Query failed / Timeout",
+    footprint_delete_this: "🗑 Delete this system's external data",
+    footprint_delete_all: "🗑 Delete all external DB records ({n})",
+    footprint_delete_this_tip: "Removes this unvisited system, loaded from EDSM, from the local database (your own exploration data is not deleted)",
+    footprint_delete_all_tip: "Removes every unvisited system loaded from EDSM from the local database (your own exploration data is not deleted)",
+    footprint_delete_this_confirm: "Delete the EDSM-sourced data for \"{name}\" from the local database?<br>Your own exploration data is not deleted.",
+    footprint_delete_all_confirm: "Delete all {systems} unvisited systems loaded from EDSM ({bodies} bodies{bookmarks_note}) from the local database?<br>Your own exploration data is not deleted.",
+    footprint_delete_bookmarks_note: ", including {n} bookmarks/notes",
+    footprint_delete_failed: "Delete failed",
 
     // Stellar Luminosity & Degenerate Stages
     star_luminosity_title: "Luminosity / Stage (Unchecked = All):",
