@@ -349,6 +349,16 @@ function saveModuleSettings(settings) {
   }
 }
 
+function formatSolarMass(val) {
+  if (val === null || val === undefined || isNaN(val)) return null;
+  const num = Number(val);
+  if (num <= 0) return '0';
+  if (num >= 100) return num.toFixed(1);
+  if (num >= 1) return num.toFixed(2);
+  if (num >= 0.01) return num.toFixed(3);
+  return num.toPrecision(2);
+}
+
 // Window / Global Export
 if (typeof window !== 'undefined') {
   window.getAppLang = getAppLang;
@@ -366,6 +376,7 @@ if (typeof window !== 'undefined') {
   window.defaultModuleSettings = defaultModuleSettings;
   window.getModuleSettings = getModuleSettings;
   window.saveModuleSettings = saveModuleSettings;
+  window.formatSolarMass = formatSolarMass;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -384,7 +395,8 @@ if (typeof module !== 'undefined' && module.exports) {
     getBodyIconLabel,
     defaultModuleSettings,
     getModuleSettings,
-    saveModuleSettings
+    saveModuleSettings,
+    formatSolarMass
   };
 }
 

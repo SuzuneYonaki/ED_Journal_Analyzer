@@ -1653,6 +1653,8 @@ class JournalParser:
                 MAX(scan_timestamp) as latest_ts,
                 (SELECT star_type FROM bodies WHERE system_address = ? AND star_type IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star,
                 (SELECT age_my FROM bodies WHERE system_address = ? AND star_type IS NOT NULL AND age_my IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star_age,
+                (SELECT stellar_mass FROM bodies WHERE system_address = ? AND star_type IS NOT NULL AND stellar_mass IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star_mass,
+                (SELECT (COALESCE(SUM(b.stellar_mass), 0.0) + COALESCE(SUM(b.mass_em) / 332946.0487, 0.0)) FROM bodies b WHERE b.system_address = ? AND (b.stellar_mass IS NOT NULL OR b.mass_em IS NOT NULL)) as total_system_mass,
                 SUM(fss_value) as sum_fss,
                 SUM(dss_value) as sum_dss,
                 SUM(max_potential_value) as sum_max,
@@ -1671,13 +1673,15 @@ class JournalParser:
             FROM bodies 
             WHERE system_address = ? 
               AND (star_type IS NOT NULL OR planet_class IS NOT NULL)
-        """, (sys_addr, sys_addr, sys_addr))
+        """, (sys_addr, sys_addr, sys_addr, sys_addr, sys_addr))
         row = self.cursor.fetchone()
         if row and row["count"] > 0:
             sys_name = row["sys_name"] or f"System {sys_addr}"
             ts = row["latest_ts"] or datetime.now().isoformat()
             main_star = row["main_star"]
             main_star_age = row["main_star_age"]
+            main_star_mass = row["main_star_mass"]
+            total_sys_mass = row["total_system_mass"]
 
             # Check if system is populated - populated bubble systems are never CMDR first discoveries
             self.cursor.execute("SELECT population FROM systems WHERE system_address = ?", (sys_addr,))
@@ -1715,8 +1719,9 @@ class JournalParser:
                     total_potential_value, total_bio_signals, has_elw,
                     has_water_world, has_ammonia, has_terraformable, has_bio,
                     has_landable, has_high_g, has_anomalies, first_discovered_bodies, has_first_discover,
-                    avg_landable_radius, mining_scout_grade, system_age_my
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    avg_landable_radius, mining_scout_grade, system_age_my,
+                    main_star_mass, total_system_mass
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(system_address) DO UPDATE SET
                     scanned_bodies = excluded.scanned_bodies,
                     main_star_type = COALESCE(excluded.main_star_type, systems.main_star_type),
@@ -1736,7 +1741,9 @@ class JournalParser:
                     has_first_discover = excluded.has_first_discover,
                     avg_landable_radius = excluded.avg_landable_radius,
                     mining_scout_grade = CASE WHEN excluded.mining_scout_grade != '' THEN excluded.mining_scout_grade ELSE systems.mining_scout_grade END,
-                    system_age_my = COALESCE(excluded.system_age_my, systems.system_age_my)
+                    system_age_my = COALESCE(excluded.system_age_my, systems.system_age_my),
+                    main_star_mass = COALESCE(excluded.main_star_mass, systems.main_star_mass),
+                    total_system_mass = COALESCE(excluded.total_system_mass, systems.total_system_mass)
             """, (
                 sys_addr, sys_name, ts, ts,
                 row["count"], main_star, row["sum_fss"] or 0, row["sum_dss"] or 0,
@@ -1746,7 +1753,9 @@ class JournalParser:
                 first_disc_count, has_first_disc,
                 row["avg_landable_radius"] or 0,
                 mining_grade,
-                main_star_age
+                main_star_age,
+                main_star_mass,
+                total_sys_mass
             ))
 
     def parse_file(self, filepath: str, progress_callback=None):

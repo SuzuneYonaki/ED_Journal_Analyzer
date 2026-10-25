@@ -1349,6 +1349,8 @@ def get_systems(
                     (SELECT b.luminosity FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_luminosity,
                     (SELECT b.absolute_magnitude FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_absolute_magnitude,
                     COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS system_age_my,
+                    COALESCE(systems.main_star_mass, (SELECT b.stellar_mass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.stellar_mass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_mass,
+                    COALESCE(systems.total_system_mass, (SELECT (COALESCE(SUM(b.stellar_mass), 0.0) + COALESCE(SUM(b.mass_em) / 332946.0487, 0.0)) FROM bodies b WHERE b.system_address = systems.system_address AND (b.stellar_mass IS NOT NULL OR b.mass_em IS NOT NULL))) AS total_system_mass,
                     pe.rarity_score,
                     {cmdr_dist_expr} AS cmdr_distance_ly,
                     EXISTS (
@@ -1437,6 +1439,8 @@ def get_systems(
                 (SELECT b.luminosity FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_luminosity,
                 (SELECT b.absolute_magnitude FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_absolute_magnitude,
                 COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS system_age_my,
+                COALESCE(systems.main_star_mass, (SELECT b.stellar_mass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.stellar_mass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_mass,
+                COALESCE(systems.total_system_mass, (SELECT (COALESCE(SUM(b.stellar_mass), 0.0) + COALESCE(SUM(b.mass_em) / 332946.0487, 0.0)) FROM bodies b WHERE b.system_address = systems.system_address AND (b.stellar_mass IS NOT NULL OR b.mass_em IS NOT NULL))) AS total_system_mass,
                 pe.rarity_score,
                 {cmdr_dist_expr} AS cmdr_distance_ly,
                 NULL AS composite_score,
@@ -1698,6 +1702,25 @@ def get_system_detail(system_address: int):
     bodies = []
     exobiology_predict_body = addon_manager.get_provider("exobiology_predict_body")
     body_rows = [dict(r) for r in c.fetchall()]
+
+    if system_data.get("main_star_mass") is None:
+        for b in body_rows:
+            if b.get("star_type") and b.get("stellar_mass") is not None:
+                system_data["main_star_mass"] = b["stellar_mass"]
+                break
+
+    if system_data.get("total_system_mass") is None:
+        tot_m = 0.0
+        has_m = False
+        for b in body_rows:
+            if b.get("stellar_mass") is not None:
+                tot_m += float(b["stellar_mass"])
+                has_m = True
+            elif b.get("mass_em") is not None:
+                tot_m += float(b["mass_em"]) / 332946.0487
+                has_m = True
+        if has_m:
+            system_data["total_system_mass"] = tot_m
     exobiology_system_context = build_system_context(
         body_rows,
         system_name=system_data.get("system_name", "") or system_data.get("star_system", ""),
