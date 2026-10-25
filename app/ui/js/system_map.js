@@ -1172,15 +1172,18 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     const ringHtml = hasPlanetaryRings ? `<div class="sysmap-ring-system ${primaryRingKey}"></div>` : '';
 
     const isStarBody = Boolean(body.isStar || body.star_type || role === 'root-star' || role === 'companion-star');
-    const starLabelInfo = getStarLabelStyle(iconLabel, isStarBody);
+    const effectiveIconClass = isConfirmedGgg ? 'icon-ggg' : iconClass;
+    const effectiveIconLabel = isConfirmedGgg ? 'GGG' : iconLabel;
+    const starLabelInfo = getStarLabelStyle(effectiveIconLabel, isStarBody);
     const starStyleAttr = starLabelInfo.size ? ` style="font-size: ${starLabelInfo.size};"` : '';
-    const starClassAttr = starLabelInfo.cls ? ` ${starLabelInfo.cls}` : '';
+    const longLabelCls = (!isStarBody && effectiveIconLabel && effectiveIconLabel.length >= 4) ? ' label-long' : '';
+    const starClassAttr = (starLabelInfo.cls ? ` ${starLabelInfo.cls}` : '') + longLabelCls;
 
     sphere.innerHTML = `
       ${landableArcHtml}
       ${ringHtml}
-      <div class="sysmap-sphere ${iconClass} ${role}">
-        <span class="sysmap-icon-label${starClassAttr}"${starStyleAttr}>${iconLabel}</span>
+      <div class="sysmap-sphere ${effectiveIconClass} ${role}">
+        <span class="sysmap-icon-label${starClassAttr}"${starStyleAttr}>${effectiveIconLabel}</span>
       </div>
     `;
   }

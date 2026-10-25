@@ -1809,6 +1809,8 @@ header {
 .icon-rocky { background: radial-gradient(circle, #8a8a8a 0%, #444444 100%); color: #fff; }
 .icon-icy { background: radial-gradient(circle, #e0f7fa 0%, #80deea 100%); color: #000; }
 .icon-gas { background: radial-gradient(circle, #fbc2eb 0%, #a6c1ee 100%); color: #000; }
+.icon-ggg { background: radial-gradient(circle, #00ff88 0%, #064e3b 100%); color: #ffffff; box-shadow: 0 0 14px rgba(0, 255, 136, 0.7); }
+.icon-ggg .sysmap-icon-label { color: #ffffff; text-shadow: 0 0 5px #00ff88, 0 1px 3px #000; font-weight: 900; letter-spacing: 0.5px; }
 
 .node-details {
   display: flex;
@@ -2471,6 +2473,11 @@ header {
   font-weight: bold;
   color: #ffffff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  letter-spacing: -0.2px;
+}
+.sysmap-sphere:not(.root-star) .sysmap-icon-label.label-long {
+  font-size: 0.58rem;
+  letter-spacing: -0.6px;
 }
 
 .sysmap-sphere.moon .sysmap-icon-label {

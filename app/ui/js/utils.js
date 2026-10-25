@@ -282,6 +282,7 @@ function getBodyIconClass(body) {
     return 'icon-star';
   }
   const pc = (body.planet_class || body.PlanetClass || body.sub_type || '').toLowerCase();
+  if (pc.includes('gas giant') || pc.includes('water giant') || pc.includes('gas') || pc.includes('ガス')) return 'icon-gas';
   if (pc.includes('earthlike') || pc.includes('earth-like') || pc.includes('地球型')) return 'icon-elw';
   if (pc.includes('ammonia') || pc.includes('アンモニア')) return 'icon-ammonia';
   if (pc.includes('water world') || pc.includes('海洋惑星')) return 'icon-water';
@@ -300,6 +301,11 @@ function getBodyIconLabel(body) {
     return body.star_type;
   }
   const pc = (body.planet_class || body.PlanetClass || body.sub_type || '').toLowerCase();
+  if (pc.includes('gas giant') || pc.includes('gas') || pc.includes('ガス')) {
+    if (pc.includes('ammonia') || pc.includes('アンモニア')) return 'AW-GG';
+    if (pc.includes('water') || pc.includes('海洋') || pc.includes('水生')) return 'WW-GG';
+    return 'GG';
+  }
   if (pc.includes('earthlike') || pc.includes('earth-like') || pc.includes('地球型')) return 'ELW';
   if (pc.includes('water world') || pc.includes('海洋惑星')) return 'WW';
   if (pc.includes('water giant')) return 'WG';
