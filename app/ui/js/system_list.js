@@ -49,7 +49,7 @@ function generateLandmarkDistanceBadges(sys) {
   if (lmSettings.sol) {
     const solDist = (sys.sol_distance_ly !== undefined && sys.sol_distance_ly !== null && sys.sol_distance_ly > 0)
       ? sys.sol_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+      : ((sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
         ? Math.hypot(sys.star_pos_x, sys.star_pos_y, sys.star_pos_z)
         : null);
     if (solDist !== null && solDist !== undefined) {
@@ -63,7 +63,7 @@ function generateLandmarkDistanceBadges(sys) {
   if (lmSettings.colonia) {
     const coloniaDist = (sys.colonia_distance_ly !== undefined && sys.colonia_distance_ly !== null)
       ? sys.colonia_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+      : ((sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
         ? Math.hypot(sys.star_pos_x - (-9530.5), sys.star_pos_y - (-910.28125), sys.star_pos_z - 19808.125)
         : null);
     if (coloniaDist !== null && coloniaDist !== undefined) {
@@ -77,7 +77,7 @@ function generateLandmarkDistanceBadges(sys) {
   if (lmSettings.rainbow) {
     const rbDist = (sys.rainbows_end_distance_ly !== undefined && sys.rainbows_end_distance_ly !== null)
       ? sys.rainbows_end_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+      : ((sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
         ? Math.hypot(sys.star_pos_x - 21481.40625, sys.star_pos_y - (-1004.5625), sys.star_pos_z - 43369.4375)
         : null);
     if (rbDist !== null && rbDist !== undefined) {
@@ -91,7 +91,7 @@ function generateLandmarkDistanceBadges(sys) {
   if (lmSettings.eanch) {
     const eaDist = (sys.explorers_anchorage_distance_ly !== undefined && sys.explorers_anchorage_distance_ly !== null)
       ? sys.explorers_anchorage_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+      : ((sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
         ? Math.hypot(sys.star_pos_x - 28.6875, sys.star_pos_y - (-19.78125), sys.star_pos_z - 25899.6875)
         : null);
     if (eaDist !== null && eaDist !== undefined) {
@@ -231,17 +231,23 @@ function renderSystemList() {
     let mainStar = '';
     if (sys.main_star_type) {
       const style = getStarTypeStyle(sys.main_star_type);
+      const sub = (sys.main_star_subclass !== null && sys.main_star_subclass !== undefined) ? String(sys.main_star_subclass) : '';
       const lumClass = (sys.main_star_luminosity || '').trim();
-      const starLabel = lumClass ? `${sys.main_star_type} ${lumClass}` : sys.main_star_type;
-      mainStar = `<span class="tag-badge" style="background: ${style.bg}; color: ${style.text}; border: 1px solid ${style.border}; margin-left: 6px; font-weight: bold;" title="主星スペクトル・光度階級: ${starLabel}">${starLabel}</span>`;
+      const starLabel = (typeof formatStarSpectralClass === 'function')
+        ? formatStarSpectralClass(sys.main_star_type, sub, lumClass)
+        : (lumClass ? `${sys.main_star_type}${sub} ${lumClass}` : `${sys.main_star_type}${sub}`);
+
+      const starNameDesc = (typeof getStarTypeName === 'function') ? getStarTypeName(sys.main_star_type, lumClass) : '';
+      const tipParts = [`主星: ${starLabel}${starNameDesc ? ` (${starNameDesc})` : ''}`];
       if (sys.main_star_absolute_magnitude !== null && sys.main_star_absolute_magnitude !== undefined) {
-        const magVal = Number(sys.main_star_absolute_magnitude).toFixed(1);
-        mainStar += `<span class="tag-badge" style="background: rgba(234, 179, 8, 0.15); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.4); margin-left: 4px; font-size: 0.68rem;" title="主星絶対等級 (光量): ${magVal} Mag">✨ ${magVal} Mag</span>`;
+        tipParts.push(`絶対等級: ${Number(sys.main_star_absolute_magnitude).toFixed(1)} Mag`);
       }
+      const starTip = escapeHtml(tipParts.join(' | '));
+      mainStar = `<span class="tag-badge" style="background: ${style.bg}; color: ${style.text}; border: 1px solid ${style.border}; margin-left: 6px; font-weight: bold;" title="${starTip}">${starLabel}</span>`;
     }
 
     const sysName = sys.star_system || (`System ${sys.system_address || ''}`);
-    const coordsStr = (sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+    const coordsStr = (sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
       ? `[${sys.star_pos_x.toFixed(6)}, ${sys.star_pos_y.toFixed(6)}, ${sys.star_pos_z.toFixed(6)}]`
       : '';
 
@@ -484,7 +490,7 @@ function renderSystemHeader() {
   const sys = state.selectedSystem;
   document.getElementById('current-system-name').innerText = sys.star_system;
   
-  const coords = (sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+  const coords = (sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
     ? `[ ${sys.star_pos_x.toFixed(6)}, ${sys.star_pos_y.toFixed(6)}, ${sys.star_pos_z.toFixed(6)} ]`
     : '';
   document.getElementById('current-system-coords').innerText = coords;

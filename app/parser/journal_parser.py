@@ -650,6 +650,7 @@ class JournalParser:
 
         star_type = data.get("StarType")
         luminosity = data.get("Luminosity")
+        subclass = data.get("Subclass")
         stellar_mass = data.get("StellarMass")
         planet_class = data.get("PlanetClass")
         if not star_type and not planet_class:
@@ -906,7 +907,7 @@ class JournalParser:
         self.cursor.execute("""
             INSERT INTO bodies (
                 system_address, body_id, body_name, star_system, distance_from_arrival_ls,
-                star_type, luminosity, age_my, stellar_mass, absolute_magnitude, radius, surface_temperature,
+                star_type, luminosity, subclass, age_my, stellar_mass, absolute_magnitude, radius, surface_temperature,
                 planet_class, atmosphere, atmosphere_type, atmosphere_composition,
                 mass_em, surface_gravity, surface_gravity_g, surface_pressure, landable,
                 volcanism, terraforming_state, tidal_lock, semi_major_axis, eccentricity,
@@ -916,7 +917,7 @@ class JournalParser:
                 first_discovered_fss, first_mapped_dss, max_potential_value,
                 confirmed_genuses, exobiology_predictions, anomalies_json, scan_type, scan_timestamp, updated_timestamp
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             ON CONFLICT(system_address, body_id) DO UPDATE SET
                 body_name = excluded.body_name,
@@ -924,6 +925,7 @@ class JournalParser:
                 distance_from_arrival_ls = excluded.distance_from_arrival_ls,
                 star_type = COALESCE(excluded.star_type, bodies.star_type),
                 luminosity = COALESCE(excluded.luminosity, bodies.luminosity),
+                subclass = COALESCE(excluded.subclass, bodies.subclass),
                 age_my = COALESCE(excluded.age_my, bodies.age_my),
                 stellar_mass = COALESCE(excluded.stellar_mass, bodies.stellar_mass),
                 radius = COALESCE(excluded.radius, bodies.radius),
@@ -962,7 +964,7 @@ class JournalParser:
                 updated_timestamp = excluded.updated_timestamp
         """, (
             sys_addr, body_id, body_name, star_sys, dist_ls,
-            star_type, luminosity, data.get("Age_MY"), stellar_mass, data.get("AbsoluteMagnitude"), radius, surface_temp,
+            star_type, luminosity, subclass, data.get("Age_MY"), stellar_mass, data.get("AbsoluteMagnitude"), radius, surface_temp,
             planet_class, atmosphere, atmosphere_type, atmosphere_comp,
             mass_em, gravity_raw, gravity_g, surface_pressure, landable,
             volcanism, terraforming, tidal_lock, semi_major_axis, eccentricity,
@@ -1653,6 +1655,7 @@ class JournalParser:
                 MAX(scan_timestamp) as latest_ts,
                 (SELECT star_type FROM bodies WHERE system_address = ? AND star_type IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star,
                 (SELECT age_my FROM bodies WHERE system_address = ? AND star_type IS NOT NULL AND age_my IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star_age,
+                (SELECT subclass FROM bodies WHERE system_address = ? AND star_type IS NOT NULL AND subclass IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star_subclass,
                 SUM(fss_value) as sum_fss,
                 SUM(dss_value) as sum_dss,
                 SUM(max_potential_value) as sum_max,
@@ -1671,13 +1674,14 @@ class JournalParser:
             FROM bodies 
             WHERE system_address = ? 
               AND (star_type IS NOT NULL OR planet_class IS NOT NULL)
-        """, (sys_addr, sys_addr, sys_addr))
+        """, (sys_addr, sys_addr, sys_addr, sys_addr))
         row = self.cursor.fetchone()
         if row and row["count"] > 0:
             sys_name = row["sys_name"] or f"System {sys_addr}"
             ts = row["latest_ts"] or datetime.now().isoformat()
             main_star = row["main_star"]
             main_star_age = row["main_star_age"]
+            main_star_subclass = row["main_star_subclass"]
 
             # Check if system is populated - populated bubble systems are never CMDR first discoveries
             self.cursor.execute("SELECT population FROM systems WHERE system_address = ?", (sys_addr,))
@@ -1715,8 +1719,9 @@ class JournalParser:
                     total_potential_value, total_bio_signals, has_elw,
                     has_water_world, has_ammonia, has_terraformable, has_bio,
                     has_landable, has_high_g, has_anomalies, first_discovered_bodies, has_first_discover,
-                    avg_landable_radius, mining_scout_grade, system_age_my
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    avg_landable_radius, mining_scout_grade, system_age_my,
+                    main_star_subclass
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(system_address) DO UPDATE SET
                     scanned_bodies = excluded.scanned_bodies,
                     main_star_type = COALESCE(excluded.main_star_type, systems.main_star_type),
@@ -1736,7 +1741,8 @@ class JournalParser:
                     has_first_discover = excluded.has_first_discover,
                     avg_landable_radius = excluded.avg_landable_radius,
                     mining_scout_grade = CASE WHEN excluded.mining_scout_grade != '' THEN excluded.mining_scout_grade ELSE systems.mining_scout_grade END,
-                    system_age_my = COALESCE(excluded.system_age_my, systems.system_age_my)
+                    system_age_my = COALESCE(excluded.system_age_my, systems.system_age_my),
+                    main_star_subclass = COALESCE(excluded.main_star_subclass, systems.main_star_subclass)
             """, (
                 sys_addr, sys_name, ts, ts,
                 row["count"], main_star, row["sum_fss"] or 0, row["sum_dss"] or 0,
@@ -1746,7 +1752,8 @@ class JournalParser:
                 first_disc_count, has_first_disc,
                 row["avg_landable_radius"] or 0,
                 mining_grade,
-                main_star_age
+                main_star_age,
+                main_star_subclass
             ))
 
     def parse_file(self, filepath: str, progress_callback=None):
@@ -1902,6 +1909,68 @@ class JournalParser:
             "scanned_files": total_files,
             "bodies_updated": updated_bodies,
             "systems_updated": len(touched_systems),
+        }
+
+    def backfill_star_subclasses(self, journal_dir: str | Path, progress_callback=None) -> dict:
+        """
+        Fast scanner across all Journal.*.log files in journal_dir looking for
+        Scan events containing StarType and Subclass to populate bodies.subclass
+        and systems.main_star_subclass without re-parsing entire log files.
+        """
+        j_path = Path(journal_dir)
+        if not j_path.exists():
+            return {"scanned_files": 0, "bodies_updated": 0, "systems_updated": 0}
+
+        files = sorted(glob.glob(os.path.join(str(j_path), "Journal.*.log")))
+        total_files = len(files)
+        updated_bodies = 0
+        touched_systems = set()
+
+        for idx, fpath in enumerate(files, start=1):
+            try:
+                with open(fpath, "rb") as f:
+                    for line_bytes in f:
+                        if b'"StarType"' in line_bytes and b'"Subclass"' in line_bytes:
+                            try:
+                                data = json.loads(line_bytes.decode("utf-8", errors="ignore"))
+                                if data.get("event") == "Scan" and "Subclass" in data and "SystemAddress" in data:
+                                    sys_addr = data["SystemAddress"]
+                                    body_id = data.get("BodyID")
+                                    subclass = data["Subclass"]
+                                    if body_id is not None and subclass is not None:
+                                        self.cursor.execute("""
+                                            UPDATE bodies
+                                            SET subclass = ?
+                                            WHERE system_address = ? AND body_id = ? AND subclass IS NULL
+                                        """, (subclass, sys_addr, body_id))
+                                        if self.cursor.rowcount > 0:
+                                            updated_bodies += self.cursor.rowcount
+                                            touched_systems.add(sys_addr)
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+            if progress_callback and idx % 50 == 0:
+                progress_callback(idx, total_files, Path(fpath).name)
+
+        for sys_addr in touched_systems:
+            self.cursor.execute("""
+                UPDATE systems
+                SET main_star_subclass = (
+                    SELECT b.subclass FROM bodies b
+                    WHERE b.system_address = systems.system_address
+                      AND b.star_type IS NOT NULL AND b.subclass IS NOT NULL
+                    ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC
+                    LIMIT 1
+                )
+                WHERE system_address = ?
+            """, (sys_addr,))
+        self.conn.commit()
+
+        return {
+            "scanned_files": total_files,
+            "bodies_updated": updated_bodies,
+            "systems_updated": len(touched_systems)
         }
 
     def scan_historical_codex_entries(self, journal_dir: str | Path, progress_callback=None) -> dict:

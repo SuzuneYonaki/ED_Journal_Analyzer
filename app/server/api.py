@@ -1347,6 +1347,7 @@ def get_systems(
                 SELECT 
                     systems.*,
                     (SELECT b.luminosity FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_luminosity,
+                    COALESCE(systems.main_star_subclass, (SELECT b.subclass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.subclass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_subclass,
                     (SELECT b.absolute_magnitude FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_absolute_magnitude,
                     COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS system_age_my,
                     pe.rarity_score,
@@ -1435,6 +1436,7 @@ def get_systems(
             SELECT 
                 systems.*,
                 (SELECT b.luminosity FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_luminosity,
+                COALESCE(systems.main_star_subclass, (SELECT b.subclass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.subclass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_subclass,
                 (SELECT b.absolute_magnitude FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_absolute_magnitude,
                 COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS system_age_my,
                 pe.rarity_score,
@@ -1698,6 +1700,11 @@ def get_system_detail(system_address: int):
     bodies = []
     exobiology_predict_body = addon_manager.get_provider("exobiology_predict_body")
     body_rows = [dict(r) for r in c.fetchall()]
+    if system_data.get("main_star_subclass") is None:
+        for b in body_rows:
+            if b.get("star_type") and b.get("subclass") is not None:
+                system_data["main_star_subclass"] = b["subclass"]
+                break
     exobiology_system_context = build_system_context(
         body_rows,
         system_name=system_data.get("system_name", "") or system_data.get("star_system", ""),

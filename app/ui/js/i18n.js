@@ -448,7 +448,7 @@ const i18n = {
     lum_II: "II 輝巨星 (Bright Giant)",
     lum_III: "III 巨星 (Giant)",
     lum_IV: "IV 準巨星 (Subgiant)",
-    lum_V: "V 主系列矮星 (Dwarf)",
+    lum_V: "V 主系列星 (Main Sequence)",
     lum_VI: "VI 準矮星 (Subdwarf)",
     lum_VII: "VII / 縮退星 (Degenerate: D/N/BH)",
     lum_mode_any: "いずれか (OR)",

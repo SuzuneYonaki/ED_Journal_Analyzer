@@ -349,6 +349,99 @@ function saveModuleSettings(settings) {
   }
 }
 
+function formatStarSpectralClass(starType, subclass, luminosity) {
+  if (!starType) return '';
+  const sub = (subclass !== null && subclass !== undefined && subclass !== '') ? String(subclass) : '';
+  const lum = (luminosity || '').trim();
+  if (lum) {
+    return `${starType}${sub} ${lum}`;
+  }
+  return `${starType}${sub}`;
+}
+
+function getStarTypeName(starType, luminosity) {
+  if (!starType) return '';
+  const lang = (typeof getAppLang === 'function') ? getAppLang() : 'ja';
+  const st = starType.trim().toUpperCase();
+  const lum = (luminosity || '').trim().toUpperCase();
+
+  let lumName = '';
+  if (lum.startsWith('IA0') || lum.startsWith('IA') || lum.startsWith('IB') || lum === 'I' || lum.startsWith('IAB')) {
+    lumName = lang === 'ja' ? '超巨星' : 'Supergiant';
+  } else if (lum.startsWith('II')) {
+    lumName = lang === 'ja' ? '輝巨星' : 'Bright Giant';
+  } else if (lum.startsWith('III')) {
+    lumName = lang === 'ja' ? '巨星' : 'Giant';
+  } else if (lum.startsWith('IV')) {
+    lumName = lang === 'ja' ? '準巨星' : 'Subgiant';
+  } else if (lum.startsWith('V')) {
+    lumName = lang === 'ja' ? '主系列星' : 'Main Sequence';
+  } else if (lum.startsWith('VI')) {
+    lumName = lang === 'ja' ? '準矮星' : 'Subdwarf';
+  } else if (lum.startsWith('VII')) {
+    lumName = lang === 'ja' ? '白色矮星' : 'White Dwarf';
+  }
+
+  const starNamesJa = {
+    'O': '青白色星',
+    'B': '青白色星',
+    'A': '青白色星',
+    'F': '白色星',
+    'G': '白黄色星',
+    'K': '黄橙色星',
+    'M': '赤色矮星',
+    'L': '赤褐色矮星',
+    'T': '褐色矮星',
+    'Y': '褐色矮星',
+    'TTS': 'T Tauri星',
+    'AEBE': 'ハービッグAe/Be型星',
+    'W': 'ウォルフ・ライエ星',
+    'C': '炭素星',
+    'D': '白色矮星',
+    'N': '中性子星',
+    'H': 'ブラックホール',
+    'SUPERMASSIVEBLACKHOLE': '超大質量ブラックホール'
+  };
+
+  const starNamesEn = {
+    'O': 'Blue-White Star',
+    'B': 'Blue-White Star',
+    'A': 'Blue-White Star',
+    'F': 'White Star',
+    'G': 'White-Yellow Star',
+    'K': 'Yellow-Orange Star',
+    'M': 'Red Dwarf Star',
+    'L': 'Brown Dwarf Star',
+    'T': 'Brown Dwarf Star',
+    'Y': 'Brown Dwarf Star',
+    'TTS': 'T Tauri Star',
+    'AEBE': 'Herbig Ae/Be Star',
+    'W': 'Wolf-Rayet Star',
+    'C': 'Carbon Star',
+    'D': 'White Dwarf Star',
+    'N': 'Neutron Star',
+    'H': 'Black Hole',
+    'SUPERMASSIVEBLACKHOLE': 'Supermassive Black Hole'
+  };
+
+  let baseName = '';
+  for (const [key, name] of Object.entries(lang === 'ja' ? starNamesJa : starNamesEn)) {
+    if (st === key || st.startsWith(key)) {
+      baseName = name;
+      break;
+    }
+  }
+
+  if (lumName) {
+    if (baseName && baseName.endsWith('星') && lang === 'ja') {
+      const prefix = baseName.replace(/星$/, '');
+      return `${prefix} ${lumName}`;
+    }
+    return baseName ? `${baseName} (${lumName})` : lumName;
+  }
+  return baseName || starType;
+}
+
 // Window / Global Export
 if (typeof window !== 'undefined') {
   window.getAppLang = getAppLang;
@@ -366,6 +459,8 @@ if (typeof window !== 'undefined') {
   window.defaultModuleSettings = defaultModuleSettings;
   window.getModuleSettings = getModuleSettings;
   window.saveModuleSettings = saveModuleSettings;
+  window.formatStarSpectralClass = formatStarSpectralClass;
+  window.getStarTypeName = getStarTypeName;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -384,7 +479,9 @@ if (typeof module !== 'undefined' && module.exports) {
     getBodyIconLabel,
     defaultModuleSettings,
     getModuleSettings,
-    saveModuleSettings
+    saveModuleSettings,
+    formatStarSpectralClass,
+    getStarTypeName
   };
 }
 
