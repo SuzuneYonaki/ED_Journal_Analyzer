@@ -18,19 +18,21 @@
       </div>
 
       <div id="inspector-content" style="display: none;">
-        <!-- Bookmark & Custom Notes Section -->
-        <div class="inspector-section" id="section-bookmark" style="display: none; border: 1px solid rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.04); border-radius: 6px; padding: 10px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <!-- Bookmark & Custom Notes Section (Top Priority Collapsible Accordion) -->
+        <div class="inspector-section" id="section-bookmark" style="display: none; border: 1px solid rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.04); border-radius: 6px; padding: 0; overflow: hidden; margin-bottom: 12px; transition: all 0.2s ease;">
+          <div id="bm-section-header" class="bm-section-header" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; cursor: pointer; user-select: none; background: rgba(251, 191, 36, 0.08); border-bottom: 1px solid rgba(251, 191, 36, 0.2);">
             <div class="section-heading" style="margin: 0; color: #fbbf24; font-size: 0.82rem; display: flex; align-items: center; gap: 6px;">
+              <span id="bm-chevron" style="display: inline-block; font-size: 0.65rem; color: #fbbf24; transition: transform 0.2s ease;">▼</span>
               <span data-i18n="bm_section_title">🔖 天体ブックマーク & メモ</span>
               <span id="bm-status-indicator" class="tag-badge" style="display: none; background: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.5); font-size: 0.68rem;" data-i18n="bm_status_active">登録中</span>
+              <span id="bm-has-note-badge" class="tag-badge" style="display: none; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); font-size: 0.68rem;" data-i18n="bm_has_note">📝 メモあり</span>
             </div>
-            <div style="display: flex; gap: 4px;">
+            <div style="display: flex; gap: 4px; align-items: center;" onclick="event.stopPropagation();">
               <button id="btn-save-bookmark" class="btn-primary" style="padding: 2px 10px; font-size: 0.72rem; background: #d97706; border-color: #f59e0b;" data-i18n="btn_save_bm">💾 保存</button>
               <button id="btn-delete-bookmark" class="view-btn" style="padding: 2px 8px; font-size: 0.72rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); display: none;" data-i18n-title="tip_delete_bm" title="ブックマークを解除" data-i18n="btn_delete_bm">🗑️ 解除</button>
             </div>
           </div>
-          <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div id="bm-section-body" style="padding: 10px; display: flex; flex-direction: column; gap: 6px;">
             <div>
               <label style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="bm_alias_label">🏷️ エイリアス (別名・通称):</label>
               <input type="text" id="bm-alias-input" class="search-input" data-i18n-placeholder="bm_alias_placeholder" placeholder="例: 採掘拠点 Alpha, テラフォーミング候補1..." style="width: 100%; padding: 4px 8px; font-size: 0.78rem;">

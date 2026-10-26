@@ -2331,6 +2331,19 @@ body.resizing-pane .pane-resizer {
   min-height: 520px;
 }
 
+/* Inspector Bookmark & Notes Section Collapsible Accordion */
+#section-bookmark.collapsed #bm-section-body {
+  display: none !important;
+}
+
+#section-bookmark.collapsed #bm-section-header {
+  border-bottom-color: transparent !important;
+}
+
+#section-bookmark.collapsed #bm-chevron {
+  transform: rotate(-90deg);
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;

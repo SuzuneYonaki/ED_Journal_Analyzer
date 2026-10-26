@@ -184,6 +184,8 @@ function renderBodyInspector() {
 
   // Bookmark UI elements
   const bmSection = document.getElementById('section-bookmark');
+  const bmHeader = document.getElementById('bm-section-header');
+  const bmHasNoteBadge = document.getElementById('bm-has-note-badge');
   const bmStatusIndicator = document.getElementById('bm-status-indicator');
   const btnBmSave = document.getElementById('btn-save-bookmark');
   const btnBmDelete = document.getElementById('btn-delete-bookmark');
@@ -220,6 +222,10 @@ function renderBodyInspector() {
       if (btnBmDelete) btnBmDelete.style.display = 'inline-block';
       if (bmAliasInput) bmAliasInput.value = b.bookmark.alias_name || '';
       if (bmNoteInput) bmNoteInput.value = b.bookmark.note_markdown || '';
+      if (bmHasNoteBadge) {
+        const hasNote = Boolean(b.bookmark.note_markdown && b.bookmark.note_markdown.trim());
+        bmHasNoteBadge.style.display = hasNote ? 'inline-block' : 'none';
+      }
       if (inspectAlias) {
         if (b.bookmark.alias_name) {
           inspectAlias.innerText = `🏷️ ${b.bookmark.alias_name}`;
@@ -240,6 +246,7 @@ function renderBodyInspector() {
       if (btnBmDelete) btnBmDelete.style.display = 'none';
       if (bmAliasInput) bmAliasInput.value = '';
       if (bmNoteInput) bmNoteInput.value = '';
+      if (bmHasNoteBadge) bmHasNoteBadge.style.display = 'none';
       if (inspectAlias) {
         inspectAlias.innerText = '';
         inspectAlias.style.display = 'none';
@@ -1455,7 +1462,39 @@ function renderBodyInspector() {
 // Window / Global Export
 if (typeof window !== 'undefined') {
   window.clearBodyInspector = clearBodyInspector;
-  window.renderBodyInspector = renderBodyInspector;
+  // Initialize inspector bookmark & notes collapsible accordion
+function initInspectorNotesAccordion() {
+  const bmSection = document.getElementById('section-bookmark');
+  const bmHeader = document.getElementById('bm-section-header');
+  if (!bmSection || !bmHeader) return;
+
+  // Restore saved collapse state
+  try {
+    const isCollapsed = localStorage.getItem('ed_inspector_notes_collapsed') === 'true';
+    bmSection.classList.toggle('collapsed', isCollapsed);
+  } catch (e) {}
+
+  bmHeader.addEventListener('click', (e) => {
+    // If clicking directly on or inside action buttons, do not toggle accordion
+    if (e.target && (e.target.tagName === 'BUTTON' || e.target.closest('button'))) return;
+    bmSection.classList.toggle('collapsed');
+    try {
+      localStorage.setItem('ed_inspector_notes_collapsed', bmSection.classList.contains('collapsed') ? 'true' : 'false');
+    } catch (e) {}
+  });
+}
+
+// Call on startup
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initInspectorNotesAccordion);
+  } else {
+    initInspectorNotesAccordion();
+  }
+}
+
+window.initInspectorNotesAccordion = initInspectorNotesAccordion;
+window.renderBodyInspector = renderBodyInspector;
   window.getLocalizedAnomalyTexts = getLocalizedAnomalyTexts;
   window.translateAnomalyDescToEn = translateAnomalyDescToEn;
 }
