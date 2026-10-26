@@ -817,6 +817,14 @@ function renderSystemHeader() {
 
 // Collapsible Groups & Badges
 function updateCollapsibleBadges() {
+  const searchInput = document.getElementById('system-search');
+  const searchCount = (searchInput && searchInput.value && searchInput.value.trim().length > 0) ? 1 : 0;
+  const badgeSearch = document.getElementById('badge-search-controls');
+  if (badgeSearch) {
+    badgeSearch.innerText = searchCount > 0 ? String(searchCount) : '';
+    badgeSearch.classList.toggle('active', searchCount > 0);
+  }
+
   const generalKeys = ['has_elw', 'has_water_world', 'has_ammonia', 'has_terraformable', 'has_bio', 'has_first_discover', 'has_bookmarks', 'is_shared', 'has_high_g', 'has_anomalies', 'has_ggg', 'age_lt_my', 'age_gte_my'];
   const generalCount = generalKeys.filter(k => (state.filters[k] === true || state.filters[k] > 0)).length;
   const badgeGen = document.getElementById('badge-general-filters');
@@ -1083,6 +1091,23 @@ function initLayoutSwitcher() {
     try {
       localStorage.setItem('ed_ui_layout', mode);
     } catch (e) {}
+
+    // When 2-column mode is active, collapse search & sort groups to conserve vertical space
+    if (mode === '2col') {
+      const searchGroup = document.getElementById('group-search-controls');
+      const sortGroup = document.getElementById('group-sort-filters');
+      if (searchGroup && !searchGroup.classList.contains('collapsed')) {
+        searchGroup.classList.add('collapsed');
+        state.collapsedGroups['search'] = true;
+      }
+      if (sortGroup && !sortGroup.classList.contains('collapsed')) {
+        sortGroup.classList.add('collapsed');
+        state.collapsedGroups['sort'] = true;
+      }
+      try {
+        localStorage.setItem('ed_collapsed_groups', JSON.stringify(state.collapsedGroups));
+      } catch (e) {}
+    }
   }
 
   // Restore initial layout mode

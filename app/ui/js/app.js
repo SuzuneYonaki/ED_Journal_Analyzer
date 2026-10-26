@@ -2757,6 +2757,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (btnSearchClear) {
         btnSearchClear.style.display = (val && val.trim().length > 0) ? 'block' : 'none';
       }
+      if (typeof updateCollapsibleBadges === 'function') updateCollapsibleBadges();
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => {
         state.searchQuery = val;
@@ -2792,20 +2793,31 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // 3. クリア（×）ボタンのクリック処理
+    // 3. クリア（×）ボタンおよびアコーディオン内クリアボタンの処理
+    const clearSearchBox = () => {
+      searchInput.value = '';
+      if (btnSearchClear) btnSearchClear.style.display = 'none';
+      state.searchQuery = '';
+      state.page = 1;
+      if (typeof updateCollapsibleBadges === 'function') updateCollapsibleBadges();
+      fetchSystems({ autoSelectTop: true });
+      const resContainer = document.getElementById('external-footprint-result');
+      if (resContainer) {
+        resContainer.style.display = 'none';
+        resContainer.innerHTML = '';
+      }
+      searchInput.focus();
+    };
+
     if (btnSearchClear) {
-      btnSearchClear.addEventListener('click', () => {
-        searchInput.value = '';
-        btnSearchClear.style.display = 'none';
-        state.searchQuery = '';
-        state.page = 1;
-        fetchSystems({ autoSelectTop: true });
-        const resContainer = document.getElementById('external-footprint-result');
-        if (resContainer) {
-          resContainer.style.display = 'none';
-          resContainer.innerHTML = '';
-        }
-        searchInput.focus();
+      btnSearchClear.addEventListener('click', clearSearchBox);
+    }
+
+    const btnClearSearchGroup = document.getElementById('btn-clear-search-group');
+    if (btnClearSearchGroup) {
+      btnClearSearchGroup.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearSearchBox();
       });
     }
   }
