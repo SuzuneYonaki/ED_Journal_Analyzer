@@ -285,9 +285,24 @@
                 </select>
               </div>
               <div>
-                <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="tts_speech_text_label">読み上げテキスト:</label>
-                <input type="text" id="tts-high-bio-text" class="search-input" value="{body}、高額生物反応です。見込額{value}クレジット。" style="width: 100%; padding: 4px 8px; font-size: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
+                  <label style="font-size: 0.72rem; color: var(--text-secondary);" data-i18n="tts_speech_text_label">読み上げテキスト:</label>
+                  <span style="font-size: 0.68rem; color: var(--ed-green);" title="使用可能な変数: {body} = 天体名, {bio_count} = シグナル数, {value} = 見込額, {system} = 星系名" data-i18n-title="tts_bio_variables_tip">
+                    変数: <code>{body}</code> <code>{bio_count}</code> <code>{value}</code> <code>{system}</code>
+                  </span>
+                </div>
+                <input type="text" id="tts-high-bio-text" class="search-input" value="{body}、生体シグナル{bio_count}件。推定額{value}クレジットです。" style="width: 100%; padding: 4px 8px; font-size: 0.75rem;">
               </div>
+            </div>
+            <!-- Preset chips for bio order -->
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 2px;">
+              <span style="font-size: 0.7rem; color: var(--text-secondary);" data-i18n="tts_bio_presets_label">プリセット:</span>
+              <button type="button" class="chip" id="btn-preset-bio-signals-value" style="padding: 2px 8px; font-size: 0.7rem; height: auto;" data-i18n="tts_bio_preset_signals_value">
+                シグナル数 ➜ 金額
+              </button>
+              <button type="button" class="chip" id="btn-preset-bio-value-signals" style="padding: 2px 8px; font-size: 0.7rem; height: auto;" data-i18n="tts_bio_preset_value_signals">
+                金額 ➜ シグナル数
+              </button>
             </div>
             <div style="display: flex; gap: 8px; margin-top: 4px;">
               <button type="button" id="btn-tts-high-bio-test" class="btn-primary" style="background: rgba(0, 255, 136, 0.2); border: 1px solid var(--ed-green); color: var(--ed-green); font-size: 0.75rem; padding: 4px 10px;" data-i18n="btn_tts_high_bio_test">
@@ -324,7 +339,12 @@
                 </select>
               </div>
               <div>
-                <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;" data-i18n="tts_ggg_confirmed_text_label">確定GGG読み上げテキスト:</label>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
+                  <label style="font-size: 0.72rem; color: var(--text-secondary);" data-i18n="tts_ggg_confirmed_text_label">確定GGG読み上げテキスト:</label>
+                  <span style="font-size: 0.68rem; color: var(--ed-green);" title="使用可能な変数: {body} = 天体名, {variant} = 種別, {system} = 星系名" data-i18n-title="tts_ggg_variables_tip">
+                    変数: <code>{body}</code> <code>{variant}</code> <code>{system}</code>
+                  </span>
+                </div>
                 <input type="text" id="tts-ggg-confirmed-text" class="search-input" value="{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。" style="width: 100%; padding: 4px 8px; font-size: 0.75rem;">
               </div>
             </div>

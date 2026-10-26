@@ -95,6 +95,37 @@ def resolve_ggg_variant(entry_name: str) -> tuple[str, str, str] | None:
     return raw_variant, tts_speech_name, en_name
 
 
+def resolve_ggg_variant_name_by_lang(variant_name: str | None, lang: str = "ja") -> str:
+    """
+    Resolves GGG variant name to either localized Japanese or English display/TTS text.
+    """
+    if not variant_name:
+        return "Gas Giant" if lang == "en" else "ガスジャイアント"
+    v_clean = variant_name.strip()
+    v_lower = v_clean.lower().replace(" ", "_")
+    for key, (ja_val, en_val) in GGG_VARIANTS_MAP.items():
+        if v_lower == key or v_clean == ja_val or v_clean.lower() == en_val.lower():
+            return en_val if lang == "en" else ja_val
+    for key, (ja_val, en_val) in GGG_VARIANTS_MAP.items():
+        if key in v_lower or ja_val in v_clean or en_val.lower() in v_clean.lower():
+            return en_val if lang == "en" else ja_val
+    return v_clean
+
+
+def get_app_language() -> str:
+    """Reads configured UI/app language from app_settings.json."""
+    try:
+        from app.config import DATA_DIR
+        app_settings_file = DATA_DIR / "app_settings.json"
+        if app_settings_file.exists():
+            with open(app_settings_file, "r", encoding="utf-8") as f:
+                import json
+                return json.load(f).get("language", "ja")
+    except Exception:
+        pass
+    return "ja"
+
+
 def is_ggg_tts_enabled() -> bool:
     """Checks tts_settings.json to see if GGG audio alerts are enabled."""
     return get_ggg_tts_config().get("enabled", True)
@@ -235,13 +266,36 @@ class JournalParser:
                 if row and row["star_system"]:
                     sys_name = row["star_system"]
 
-            msg = cfg.get("text", "{body}、高額生物反応です。見込額{value}クレジット。")
+            signals_count = bio_signals if bio_signals is not None else len(bio_predictions)
+
+            lang = get_app_language()
+            default_ja_tpls = (
+                "{body}、高額生物反応です。見込額{value}クレジット。",
+                "{body}、生体シグナル{bio_count}件。推定額{value}クレジットです。",
+            )
+            default_en_tpl = "{body}, {bio_count} biological signals detected. Estimated value {value} credits."
+
+            configured_msg = cfg.get("text")
+            if lang == "en":
+                if not configured_msg or configured_msg in default_ja_tpls:
+                    msg = default_en_tpl
+                else:
+                    msg = configured_msg
+            else:
+                if configured_msg == default_en_tpl:
+                    msg = default_ja_tpls[0]
+                else:
+                    msg = configured_msg or default_ja_tpls[0]
+
             if "{body}" in msg and not body_name:
                 return False
 
             msg = msg.replace("{body}", body_name)
             msg = msg.replace("{value}", formatted_payout)
             msg = msg.replace("{payout}", formatted_payout)
+            msg = msg.replace("{bio_count}", str(signals_count))
+            msg = msg.replace("{signals}", str(signals_count))
+            msg = msg.replace("{bio}", str(signals_count))
             msg = msg.replace("{system}", sys_name)
 
             tts_service.enqueue_speak(msg, priority=False)
@@ -286,15 +340,32 @@ class JournalParser:
             if alert_key in self._announced_ggg_confirmed:
                 return False
 
-            raw_tpl = cfg.get("confirmed_text") or "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。"
+            lang = get_app_language()
+            default_ja_tpl = "{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。"
+            default_en_tpl = "{body} is a Green Gas Giant, visual confirmation recommended. Type is {variant}."
+
+            configured_tpl = cfg.get("confirmed_text")
+            if lang == "en":
+                if not configured_tpl or configured_tpl == default_ja_tpl:
+                    raw_tpl = default_en_tpl
+                else:
+                    raw_tpl = configured_tpl
+            else:
+                if configured_tpl == default_en_tpl:
+                    raw_tpl = default_ja_tpl
+                else:
+                    raw_tpl = configured_tpl or default_ja_tpl
+
             # Strict {body} condition: if {body} is required by template, body_name must be present
             if "{body}" in raw_tpl and not body_name:
                 return False
 
+            tts_variant = resolve_ggg_variant_name_by_lang(variant_name, lang=lang)
+
             tts_msg = raw_tpl
             if body_name:
                 tts_msg = tts_msg.replace("{body}", body_name)
-            tts_msg = tts_msg.replace("{variant}", variant_name or "ガスジャイアント")
+            tts_msg = tts_msg.replace("{variant}", tts_variant)
 
             if "{system}" in tts_msg:
                 sys_name = self.current_star_system or ""
