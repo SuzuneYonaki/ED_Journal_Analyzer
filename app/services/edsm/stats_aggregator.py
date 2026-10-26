@@ -54,6 +54,12 @@ def update_system_aggregated_stats(conn, system_address: int):
             elif ring_row["has_icy"]:
                 mining_grade = "Medium"
 
+    # Check whether system was genuinely visited by CMDR
+    c.execute("SELECT visit_count, is_external FROM systems WHERE system_address = ?", (system_address,))
+    sys_visit_row = c.fetchone()
+    is_unvisited_or_ext = bool(sys_visit_row and (sys_visit_row["is_external"] == 1 or (sys_visit_row["visit_count"] is not None and sys_visit_row["visit_count"] == 0)))
+    effective_scanned_bodies = 0 if is_unvisited_or_ext else row["count"]
+
     c.execute("""
         UPDATE systems SET
             scanned_bodies = ?,
@@ -70,11 +76,13 @@ def update_system_aggregated_stats(conn, system_address: int):
             has_landable = ?,
             has_high_g = ?,
             has_anomalies = ?,
+            has_first_discover = CASE WHEN is_external = 1 OR COALESCE(visit_count, 0) = 0 THEN 0 ELSE has_first_discover END,
+            first_discovered_bodies = CASE WHEN is_external = 1 OR COALESCE(visit_count, 0) = 0 THEN 0 ELSE first_discovered_bodies END,
             avg_landable_radius = ?,
             mining_scout_grade = ?
         WHERE system_address = ?
     """, (
-        row["count"], row["main_star"], row["sum_fss"] or 0, row["sum_dss"] or 0,
+        effective_scanned_bodies, row["main_star"], row["sum_fss"] or 0, row["sum_dss"] or 0,
         row["sum_max"] or 0, row["sum_bio"] or 0, row["elw"] or 0,
         row["ww"] or 0, row["ammonia"] or 0, row["tf"] or 0, row["bio"] or 0,
         row["landable"] or 0, row["high_g"] or 0, row["anomalies"] or 0,

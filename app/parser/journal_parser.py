@@ -1762,12 +1762,14 @@ class JournalParser:
             main_star_mass = row["main_star_mass"]
             total_sys_mass = row["total_system_mass"]
 
-            # Check if system is populated - populated bubble systems are never CMDR first discoveries
-            self.cursor.execute("SELECT population FROM systems WHERE system_address = ?", (sys_addr,))
-            pop_row = self.cursor.fetchone()
-            is_populated = bool(pop_row and pop_row["population"] and pop_row["population"] > 0)
-            first_disc_count = 0 if is_populated else (row["first_disc_count"] or 0)
-            has_first_disc = 0 if is_populated else (row["has_first_disc"] or 0)
+            # Check if system is populated or unvisited/external - unvisited systems or populated bubble systems are never CMDR first discoveries
+            self.cursor.execute("SELECT population, visit_count, is_external FROM systems WHERE system_address = ?", (sys_addr,))
+            sys_meta_row = self.cursor.fetchone()
+            is_populated = bool(sys_meta_row and sys_meta_row["population"] and sys_meta_row["population"] > 0)
+            is_unvisited_or_ext = bool(sys_meta_row and (sys_meta_row["is_external"] == 1 or (sys_meta_row["visit_count"] is not None and sys_meta_row["visit_count"] == 0)))
+            disallow_first_disc = is_populated or is_unvisited_or_ext
+            first_disc_count = 0 if disallow_first_disc else (row["first_disc_count"] or 0)
+            has_first_disc = 0 if disallow_first_disc else (row["has_first_disc"] or 0)
 
             # Evaluate mining scout candidate grade based on Pristine reserve and Metallic/Icy rings
             self.cursor.execute("SELECT system_reserve FROM systems WHERE system_address = ?", (sys_addr,))

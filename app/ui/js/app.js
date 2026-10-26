@@ -417,6 +417,7 @@ async function selectSystem(systemAddress, preserveSelectedBody = false, resetJu
     const data = await res.json();
     state.currentSystemData = data;
     state.selectedSystem = data.system;
+    state.previewExternalMap = false; // Reset external preview on system change
     if (!preserveSelectedBody) {
       state.sysmapZoom = 1.0;
     }
@@ -1020,6 +1021,38 @@ function renderCurrentView() {
   }
 
   if (!state.currentSystemData) return;
+
+  // Guard against unvisited / external systems auto-rendering as if explored by CMDR
+  const isUnvisitedSys = Boolean(
+    state.selectedSystem && (
+      !state.selectedSystem.visit_count ||
+      state.selectedSystem.is_external === 1
+    )
+  );
+
+  if (isUnvisitedSys && !state.previewExternalMap && (state.currentView === 'sysmap' || state.currentView === 'flat' || state.currentView === 'orrery' || state.currentView === 'bio')) {
+    const curSysName = (state.selectedSystem && state.selectedSystem.star_system) ? state.selectedSystem.star_system : 'External System';
+    container.classList.remove('is-sysmap');
+    container.innerHTML = `
+      <div class="unvisited-system-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 420px; text-align: center; padding: 40px; color: var(--text-primary);">
+        <div style="font-size: 3rem; margin-bottom: 16px;">🌐</div>
+        <div style="font-size: 1.25rem; font-weight: bold; letter-spacing: 1.5px; color: #fff;">${curSysName} <span style="font-size: 0.8rem; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.5); background: rgba(56, 189, 248, 0.15); border-radius: 4px; padding: 2px 7px; margin-left: 6px;">UNVISITED</span></div>
+        <div style="font-size: 0.9rem; color: #38bdf8; margin-top: 10px;" data-i18n="unvisited_system_desc">この星系はCMDR自身が未訪問です。ゲーム内ジャーナルの探索記録はありません。</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 10px; max-width: 520px; line-height: 1.5;" data-i18n="unvisited_system_note">外部データベース (EDSM/Spansh) 参照データのみが存在します。自CMDRの探査データとの混同を防ぐため、自動マップ描画は保護されています。</div>
+        <button id="btn-preview-external-map" class="btn-page" style="margin-top: 22px; padding: 8px 18px; font-size: 0.82rem; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.5); color: #38bdf8; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; font-weight: 500;">
+          <span>🪐 外部観測マップをプレビュー表示</span>
+        </button>
+      </div>
+    `;
+    const btnPreview = document.getElementById('btn-preview-external-map');
+    if (btnPreview) {
+      btnPreview.addEventListener('click', () => {
+        state.previewExternalMap = true;
+        renderCurrentView();
+      });
+    }
+    return;
+  }
 
   container.classList.toggle('is-sysmap', state.currentView === 'sysmap');
 

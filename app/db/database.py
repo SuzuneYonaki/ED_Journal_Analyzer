@@ -720,6 +720,27 @@ def init_db(conn=None, force: bool = False):
         except Exception as e:
             print(f"[DB Migration Warning] system_flags_consistency_v1: {e}")
 
+    # Clean false 1st discovery on unvisited or external systems
+    if not is_meta_applied("clean_unvisited_first_discover_v1"):
+        try:
+            cursor.execute("""
+                UPDATE systems SET
+                    has_first_discover = 0,
+                    first_discovered_bodies = 0
+                WHERE COALESCE(visit_count, 0) = 0 OR is_external = 1;
+            """)
+            cursor.execute("""
+                UPDATE bodies SET
+                    is_first_discovered_by_user = 0
+                WHERE system_address IN (
+                    SELECT system_address FROM systems 
+                    WHERE COALESCE(visit_count, 0) = 0 OR is_external = 1
+                );
+            """)
+            mark_meta_applied("clean_unvisited_first_discover_v1")
+        except Exception as e:
+            print(f"[DB Migration Warning] clean_unvisited_first_discover_v1: {e}")
+
     # Backfill heavy mass code and close binary anomalies on star bodies (one-time on DB setup)
     if not is_meta_applied("star_anomalies_backfill_v1"):
         try:
