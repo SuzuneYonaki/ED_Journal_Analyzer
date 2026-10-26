@@ -186,6 +186,14 @@ function renderSystemList() {
       tags.push('<span class="tag-badge badge-scout-medium" title="Mining Scout Medium (Pristine + Icy Rings)">⛏️ Scout: Med</span>');
     }
 
+    if (sys.is_partial_dss) {
+      const uMapped = sys.user_mapped_bodies || 0;
+      const mTotal = sys.mappable_bodies || sys.total_bodies || 0;
+      const dssCount = mTotal > 0 ? ` (${uMapped}/${mTotal})` : (uMapped > 0 ? ` (${uMapped})` : '');
+      const dssTip = (t('tip_partial_dss') || '一部天体のみDSS完了（未マッピング天体あり）') + dssCount;
+      tags.push(`<span class="tag-badge tag-partial-dss" title="${dssTip}">📡 ${t('tag_partial_dss') || '一部DSS'}${dssCount}</span>`);
+    }
+
     if (sys.has_high_g) tags.push('<span class="tag-badge tag-high-g">High-G</span>');
     if (sys.has_anomalies) tags.push('<span class="tag-badge tag-anomaly">Rare/Orbit</span>');
     if (sys.bookmarks && sys.bookmarks.length > 0) {
@@ -825,7 +833,7 @@ function updateCollapsibleBadges() {
     badgeSearch.classList.toggle('active', searchCount > 0);
   }
 
-  const generalKeys = ['has_elw', 'has_water_world', 'has_ammonia', 'has_terraformable', 'has_bio', 'has_first_discover', 'has_bookmarks', 'is_shared', 'has_high_g', 'has_anomalies', 'has_ggg', 'age_lt_my', 'age_gte_my'];
+  const generalKeys = ['has_elw', 'has_water_world', 'has_ammonia', 'has_terraformable', 'has_bio', 'has_first_discover', 'has_bookmarks', 'is_shared', 'has_high_g', 'has_anomalies', 'has_ggg', 'has_partial_dss', 'age_lt_my', 'age_gte_my'];
   const generalCount = generalKeys.filter(k => (state.filters[k] === true || state.filters[k] > 0)).length;
   const badgeGen = document.getElementById('badge-general-filters');
   if (badgeGen) {

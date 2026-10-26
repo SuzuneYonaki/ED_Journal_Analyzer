@@ -669,6 +669,7 @@ def get_systems(
     has_high_g: Optional[Union[int, str]] = None,
     has_anomalies: Optional[Union[int, str]] = None,
     has_ggg: Optional[Union[int, str]] = None,
+    has_partial_dss: Optional[Union[int, str]] = None,
     has_first_discover: Optional[Union[int, str]] = None,
     has_landable_hmc: Optional[Union[int, str]] = None,
     has_landable_metal_rich: Optional[Union[int, str]] = None,
@@ -876,6 +877,31 @@ def get_systems(
     elif c_fd > 1:
         conditions.append("systems.first_discovered_bodies >= ?")
         params.append(c_fd)
+
+    c_pdss = _parse_filter_min_count(has_partial_dss)
+    if c_pdss >= 1:
+        conditions.append("""(
+            EXISTS (
+                SELECT 1 FROM bodies b1 
+                WHERE b1.system_address = systems.system_address 
+                AND b1.is_mapped_by_user = 1
+            )
+            AND (
+                EXISTS (
+                    SELECT 1 FROM bodies b2 
+                    WHERE b2.system_address = systems.system_address 
+                    AND (b2.planet_class IS NOT NULL AND b2.planet_class != '')
+                    AND b2.is_mapped_by_user = 0
+                )
+                OR (
+                    systems.total_bodies > (
+                        SELECT COUNT(*) FROM bodies b3 
+                        WHERE b3.system_address = systems.system_address 
+                        AND b3.is_mapped_by_user = 1
+                    )
+                )
+            )
+        )""")
 
     # Landable Mining Target Class & Feature Filtering (ignores non-landable bodies)
     c_hmc = _parse_filter_min_count(has_landable_hmc)
@@ -1533,6 +1559,29 @@ def get_systems(
             })
         for r in rows:
             r["bookmarks"] = bms_by_sys.get(r["system_address"], [])
+
+        # Fetch DSS mapping statistics (user mapped vs mappable) for matching systems
+        c.execute(f"""
+            SELECT 
+                system_address,
+                COUNT(CASE WHEN (planet_class IS NOT NULL AND planet_class != '') THEN 1 END) AS mappable_bodies,
+                COUNT(CASE WHEN is_mapped_by_user = 1 THEN 1 END) AS user_mapped_bodies
+            FROM bodies
+            WHERE system_address IN ({placeholders})
+            GROUP BY system_address
+        """, sys_addrs)
+        dss_by_sys = {row["system_address"]: row for row in c.fetchall()}
+        for r in rows:
+            dss_info = dss_by_sys.get(r["system_address"], {"mappable_bodies": 0, "user_mapped_bodies": 0})
+            u_mapped = dss_info["user_mapped_bodies"]
+            m_bodies = dss_info["mappable_bodies"]
+            is_pdss = (u_mapped > 0) and (
+                (m_bodies > 0 and u_mapped < m_bodies)
+                or (r.get("total_bodies", 0) > 0 and u_mapped < r.get("total_bodies", 0))
+            )
+            r["user_mapped_bodies"] = u_mapped
+            r["mappable_bodies"] = m_bodies
+            r["is_partial_dss"] = is_pdss
 
     for r in rows:
         if "landable_bodies" not in r:
