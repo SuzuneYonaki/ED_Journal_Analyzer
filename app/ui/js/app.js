@@ -4049,11 +4049,35 @@ function checkAndAnnounceHighBioBody(sysData, bodyData) {
     announcedHighBioBodies.add(alertKey);
 
     const formattedPayout = (totalEstimatedBio / 1000000).toFixed(1) + 'M';
-    const msg = (ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。')
-      .replace(/\{body\}/gi, bodyName)
-      .replace(/\{value\}/gi, formattedPayout)
-      .replace(/\{payout\}/gi, formattedPayout)
-      .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
+    const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en');
+    const defaultJaTpls = [
+      '{body}、高額生物反応です。見込額{value}クレジット。',
+      '{body}、生体シグナル{bio_count}件。推定額{value}クレジットです。'
+    ];
+    const defaultEnTpl = '{body}, {bio_count} biological signals detected. Estimated value {value} credits.';
+
+    let template = ttsState.highBioText;
+    if (isEn) {
+      if (!template || defaultJaTpls.includes(template)) {
+        template = defaultEnTpl;
+      }
+    } else {
+      if (template === defaultEnTpl) {
+        template = defaultJaTpls[1];
+      } else if (!template) {
+        template = defaultJaTpls[1];
+      }
+    }
+
+    const msg = formatTTSMessage(template, {
+      body: bodyName,
+      value: formattedPayout,
+      payout: formattedPayout,
+      bio_count: bioBudget,
+      signals: bioBudget,
+      bio: bioBudget,
+      system: sysData ? (sysData.star_system || '') : ''
+    });
 
     // Trigger Mode
     if (ttsState.highBioMode === 'buzzer' || ttsState.highBioMode === 'both') {
@@ -4120,11 +4144,33 @@ function checkAndAnnounceGggBody(sysData, bodyData) {
 
   if (mode === 'both' || mode === 'tts') {
     if (ttsState.engine === 'webspeech') {
-      const rawText = ttsState.gggConfirmedText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
-      const msg = rawText
-        .replace(/\{body\}/gi, bodyName)
-        .replace(/\{variant\}/gi, confirmedVariant || 'ガスジャイアント')
-        .replace(/\{system\}/gi, sysData ? (sysData.star_system || '') : '');
+      const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en');
+      const defaultJaTpl = '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
+      const defaultEnTpl = '{body} is a Green Gas Giant, visual confirmation recommended. Type is {variant}.';
+
+      let template = ttsState.gggConfirmedText;
+      if (isEn) {
+        if (!template || template === defaultJaTpl) {
+          template = defaultEnTpl;
+        }
+      } else {
+        if (template === defaultEnTpl) {
+          template = defaultJaTpl;
+        } else if (!template) {
+          template = defaultJaTpl;
+        }
+      }
+
+      let variantDisplay = confirmedVariant || (isEn ? 'Gas Giant' : 'ガスジャイアント');
+      if (isEn) {
+        variantDisplay = translateGGGVariantToEn(variantDisplay);
+      }
+
+      const msg = formatTTSMessage(template, {
+        body: bodyName,
+        variant: variantDisplay,
+        system: sysData ? (sysData.star_system || '') : ''
+      });
 
       setTimeout(() => {
         playWebSpeech(msg);
@@ -4180,14 +4226,59 @@ function updateTTSHeaderIcon() {
   }
 }
 
+function translateGGGVariantToEn(variant) {
+  if (!variant) return 'Gas Giant';
+  const v = String(variant).trim();
+  const map = {
+    'sudarsky_class_i': 'Sudarsky Class I Gas Giant',
+    'sudarsky_class_ii': 'Sudarsky Class II Gas Giant',
+    'sudarsky_class_iii': 'Sudarsky Class III Gas Giant',
+    'sudarsky_class_iv': 'Sudarsky Class IV Gas Giant',
+    'sudarsky_class_v': 'Sudarsky Class V Gas Giant',
+    'スダルスキー・クラス1 ガスジャイアント': 'Sudarsky Class I Gas Giant',
+    'スダルスキー・クラス2 ガスジャイアント': 'Sudarsky Class II Gas Giant',
+    'スダルスキー・クラス3 ガスジャイアント': 'Sudarsky Class III Gas Giant',
+    'スダルスキー・クラス4 ガスジャイアント': 'Sudarsky Class IV Gas Giant',
+    'スダルスキー・クラス5 ガスジャイアント': 'Sudarsky Class V Gas Giant',
+    '水生生命保有ガスジャイアント': 'Gas Giant with Water-based Life',
+    'アンモニア生命保有ガスジャイアント': 'Gas Giant with Ammonia-based Life',
+    '高ヘリウム含有ガスジャイアント': 'Helium-rich Gas Giant',
+    'ヘリウムガスジャイアント': 'Helium Gas Giant',
+    'ウォーター・ジャイアント': 'Water Giant',
+    'ガスジャイアント': 'Gas Giant'
+  };
+  if (map[v]) return map[v];
+  const vLow = v.toLowerCase().replace(/ /g, '_');
+  if (map[vLow]) return map[vLow];
+  if (v.includes('クラス1') || v.includes('Class I') || v.includes('Class 1')) return 'Sudarsky Class I Gas Giant';
+  if (v.includes('クラス2') || v.includes('Class II') || v.includes('Class 2')) return 'Sudarsky Class II Gas Giant';
+  if (v.includes('クラス3') || v.includes('Class III') || v.includes('Class 3')) return 'Sudarsky Class III Gas Giant';
+  if (v.includes('クラス4') || v.includes('Class IV') || v.includes('Class 4')) return 'Sudarsky Class IV Gas Giant';
+  if (v.includes('クラス5') || v.includes('Class V') || v.includes('Class 5')) return 'Sudarsky Class V Gas Giant';
+  return v;
+}
+
 function formatTTSMessage(template, params = {}) {
-  let text = template || 'First discover.';
+  const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en');
+  let text = template || (isEn ? 'First discovery in {system}.' : '{system}で未発見の天体を検出しました。');
   const systemName = params.system || params.system_name || (state.selectedSystem ? state.selectedSystem.star_system : 'Sol');
   const bodiesCount = params.bodies !== undefined ? String(params.bodies) : '1';
+  const bodyName = params.body || params.body_name || '';
+  const bioCount = params.bio_count !== undefined ? String(params.bio_count) : (params.signals !== undefined ? String(params.signals) : (params.bio !== undefined ? String(params.bio) : ''));
+  const value = params.value || params.payout || '';
+  const variant = params.variant || '';
 
   text = text.replace(/\{system\}/gi, systemName);
   text = text.replace(/\{system_name\}/gi, systemName);
   text = text.replace(/\{bodies\}/gi, bodiesCount);
+  text = text.replace(/\{body\}/gi, bodyName);
+  text = text.replace(/\{body_name\}/gi, bodyName);
+  text = text.replace(/\{bio_count\}/gi, bioCount);
+  text = text.replace(/\{signals\}/gi, bioCount);
+  text = text.replace(/\{bio\}/gi, bioCount);
+  text = text.replace(/\{value\}/gi, value);
+  text = text.replace(/\{payout\}/gi, value);
+  text = text.replace(/\{variant\}/gi, variant);
   return text;
 }
 
@@ -4437,7 +4528,9 @@ function announceFirstDiscovery(systemName, bodiesCount = 1) {
   if (announcedFirstDiscSystems.has(systemName)) return;
   announcedFirstDiscSystems.add(systemName);
 
-  speakText(ttsState.customText || 'First discover.', { system: systemName, bodies: bodiesCount });
+  const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en');
+  const defaultText = isEn ? 'First discovery in {system}.' : '{system}、初回発見です。';
+  speakText(ttsState.customText || defaultText, { system: systemName, bodies: bodiesCount });
 }
 
 async function initSettingsModal() {
@@ -4962,7 +5055,11 @@ async function initSettingsModal() {
     if (highBioToggle) highBioToggle.checked = Boolean(ttsState.highBioEnabled);
     if (highBioModeSelect) highBioModeSelect.value = ttsState.highBioMode || 'both';
     if (highBioThresholdSelect) highBioThresholdSelect.value = String(ttsState.highBioThreshold ?? 40000000);
-    if (highBioTextInput) highBioTextInput.value = ttsState.highBioText || '{body}、高額生物反応です。見込額{value}クレジット。';
+    const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en');
+    const defaultBioTpl = isEn
+      ? '{body}, {bio_count} biological signals detected. Estimated value {value} credits.'
+      : '{body}、生体シグナル{bio_count}件。推定額{value}クレジットです。';
+    if (highBioTextInput) highBioTextInput.value = ttsState.highBioText || defaultBioTpl;
     if (gggToggle) gggToggle.checked = (ttsState.gggEnabled !== false);
     if (gggConfirmedToggle) gggConfirmedToggle.checked = (ttsState.gggConfirmedEnabled !== false);
     if (gggModeSelect) gggModeSelect.value = ttsState.gggMode || 'both';
@@ -5065,15 +5162,49 @@ async function initSettingsModal() {
     });
   }
 
+  // Preset quick buttons for bio text order
+  const btnPresetBioSignalsValue = document.getElementById('btn-preset-bio-signals-value');
+  const btnPresetBioValueSignals = document.getElementById('btn-preset-bio-value-signals');
+  if (btnPresetBioSignalsValue) {
+    btnPresetBioSignalsValue.addEventListener('click', () => {
+      const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en');
+      const val = isEn
+        ? '{body}, {bio_count} biological signals detected. Estimated value {value} credits.'
+        : '{body}、生体シグナル{bio_count}件。推定額{value}クレジットです。';
+      if (highBioTextInput) highBioTextInput.value = val;
+      ttsState.highBioText = val;
+      saveTTSSettings();
+    });
+  }
+  if (btnPresetBioValueSignals) {
+    btnPresetBioValueSignals.addEventListener('click', () => {
+      const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en');
+      const val = isEn
+        ? '{body}, estimated value {value} credits. {bio_count} biological signals detected.'
+        : '{body}、推定額{value}クレジット。生体シグナル{bio_count}件です。';
+      if (highBioTextInput) highBioTextInput.value = val;
+      ttsState.highBioText = val;
+      saveTTSSettings();
+    });
+  }
+
   if (btnHighBioTest) {
     btnHighBioTest.addEventListener('click', () => {
       const mode = (highBioModeSelect ? highBioModeSelect.value : ttsState.highBioMode) || 'both';
-      const sampleText = (highBioTextInput ? highBioTextInput.value : ttsState.highBioText) || '{body}、高額生物反応です。見込額{value}クレジット。';
-      const testMsg = sampleText
-        .replace(/\{body\}/gi, 'Planet A 1')
-        .replace(/\{value\}/gi, '95.1M')
-        .replace(/\{payout\}/gi, '95.1M')
-        .replace(/\{system\}/gi, (state.selectedSystem ? state.selectedSystem.star_system : null) || 'Praea Euq YZ-Y d100');
+      const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en');
+      const defaultSample = isEn
+        ? '{body}, {bio_count} biological signals detected. Estimated value {value} credits.'
+        : '{body}、生体シグナル{bio_count}件。推定額{value}クレジットです。';
+      const sampleText = (highBioTextInput ? highBioTextInput.value : ttsState.highBioText) || defaultSample;
+      const testMsg = formatTTSMessage(sampleText, {
+        body: 'Planet A 1',
+        bio_count: '4',
+        signals: '4',
+        bio: '4',
+        value: '95.1M',
+        payout: '95.1M',
+        system: (state.selectedSystem ? state.selectedSystem.star_system : null) || 'Praea Euq YZ-Y d100'
+      });
 
       if (mode === 'both' || mode === 'buzzer') {
         playHighBioBuzzer();
@@ -5097,10 +5228,17 @@ async function initSettingsModal() {
         playGggChime();
       }
       if (mode === 'both' || mode === 'tts') {
+        const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en');
+        const defaultSample = isEn
+          ? '{body} is a Green Gas Giant, visual confirmation recommended. Type is {variant}.'
+          : '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。';
         const rawText = gggConfirmedTextInput ? gggConfirmedTextInput.value : ttsState.gggConfirmedText;
-        const msg = (rawText || '{body}はグリーンガスジャイアント、目視確認を推奨。種別は、{variant}です。')
-          .replace(/\{variant\}/gi, 'スダルスキー・クラス1 ガスジャイアント')
-          .replace(/\{body\}/gi, 'Planet A 1');
+        const variantSample = isEn ? 'Sudarsky Class I Gas Giant' : 'スダルスキー・クラス1 ガスジャイアント';
+        const msg = formatTTSMessage(rawText || defaultSample, {
+          body: 'Planet A 1',
+          variant: variantSample,
+          system: (state.selectedSystem ? state.selectedSystem.star_system : null) || 'Praea Euq YZ-Y d100'
+        });
         setTimeout(() => {
           if (engineSelect && engineSelect.value === 'voicevox') {
             playVoicevoxSpeech(msg);
