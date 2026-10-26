@@ -3936,20 +3936,35 @@ function updateSortControlsUI() {
       optLocked.remove();
     }
 
-    // Restore saved user sort selections
-    const savedVal1 = `${state.savedSortBy || 'total_potential_value'}-${state.savedSortOrder || 'desc'}`;
-    sortSelect1.value = savedVal1;
+    // Restore saved user sort selections cleanly
+    const effectiveSortBy = state.savedSortBy || (state.sortBy && state.sortBy !== 'live-locked' ? state.sortBy : 'rarity_score');
+    const effectiveSortOrder = state.savedSortOrder || state.sortOrder || 'desc';
+    state.sortBy = effectiveSortBy;
+    state.sortOrder = effectiveSortOrder;
+    state.savedSortBy = effectiveSortBy;
+    state.savedSortOrder = effectiveSortOrder;
+    sortSelect1.value = `${effectiveSortBy}-${effectiveSortOrder}`;
+
     if (sortSelect2) {
-      sortSelect2.value = state.savedSortBy2 ? `${state.savedSortBy2}-${state.savedSortOrder2}` : 'none';
+      state.sortBy2 = state.savedSortBy2 || null;
+      state.sortOrder2 = state.savedSortOrder2 || null;
+      sortSelect2.value = state.sortBy2 ? `${state.sortBy2}-${state.sortOrder2}` : 'none';
     }
     if (sortSelect3) {
-      sortSelect3.value = state.savedSortBy3 ? `${state.savedSortBy3}-${state.savedSortOrder3}` : 'none';
+      state.sortBy3 = state.savedSortBy3 || null;
+      state.sortOrder3 = state.savedSortOrder3 || null;
+      sortSelect3.value = state.sortBy3 ? `${state.sortBy3}-${state.sortOrder3}` : 'none';
     }
     if (cbSortComposite) {
       cbSortComposite.checked = (state.sortMode === 'composite');
     }
 
     document.querySelectorAll('.sort-row').forEach(el => el.classList.remove('sort-locked'));
+  }
+
+  // Always refresh collapsible filter/sort badges to ensure markers reset cleanly on live mode changes
+  if (typeof updateCollapsibleBadges === 'function') {
+    updateCollapsibleBadges();
   }
 }
 
