@@ -2319,6 +2319,18 @@ body.resizing-pane .pane-resizer {
   font-size: 14px; /* Safety: Modal stays clean and usable regardless of root font-size */
 }
 
+/* Settings Modal Fixed Top & Stable Height to prevent jumping when switching tabs */
+#settings-modal {
+  align-items: flex-start;
+  padding-top: max(32px, 5vh);
+}
+
+#settings-modal .modal-content {
+  height: 82vh;
+  max-height: 720px;
+  min-height: 520px;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
