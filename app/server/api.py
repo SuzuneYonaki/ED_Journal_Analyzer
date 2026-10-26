@@ -1347,6 +1347,7 @@ def get_systems(
                 SELECT 
                     systems.*,
                     (SELECT b.luminosity FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_luminosity,
+                    COALESCE(systems.main_star_subclass, (SELECT b.subclass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.subclass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_subclass,
                     (SELECT b.absolute_magnitude FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_absolute_magnitude,
                     COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS system_age_my,
                     COALESCE(systems.main_star_mass, (SELECT b.stellar_mass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.stellar_mass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_mass,
@@ -1437,6 +1438,7 @@ def get_systems(
             SELECT 
                 systems.*,
                 (SELECT b.luminosity FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_luminosity,
+                COALESCE(systems.main_star_subclass, (SELECT b.subclass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.subclass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_subclass,
                 (SELECT b.absolute_magnitude FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_absolute_magnitude,
                 COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS system_age_my,
                 COALESCE(systems.main_star_mass, (SELECT b.stellar_mass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.stellar_mass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_mass,
@@ -1702,6 +1704,11 @@ def get_system_detail(system_address: int):
     bodies = []
     exobiology_predict_body = addon_manager.get_provider("exobiology_predict_body")
     body_rows = [dict(r) for r in c.fetchall()]
+    if system_data.get("main_star_subclass") is None:
+        for b in body_rows:
+            if b.get("star_type") and b.get("subclass") is not None:
+                system_data["main_star_subclass"] = b["subclass"]
+                break
 
     if system_data.get("main_star_mass") is None:
         for b in body_rows:

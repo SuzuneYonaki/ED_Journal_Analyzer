@@ -11,12 +11,12 @@ def test_star_luminosity_and_magnitude_integration():
     assert "main_star_luminosity" in api_content
     assert "main_star_absolute_magnitude" in api_content
 
-    # 2. Left pane system list card: main star badge displays luminosity & absolute magnitude
+    # 2. Left pane system list card: main star badge displays in-game spectral class and luminosity
     sys_list_path = base_dir / "app" / "ui" / "js" / "system_list.js"
     sys_list_content = sys_list_path.read_text(encoding="utf-8")
     assert "main_star_luminosity" in sys_list_content
-    assert "main_star_absolute_magnitude" in sys_list_content
-    assert "Mag</span>" in sys_list_content
+    assert "main_star_subclass" in sys_list_content
+    assert "formatStarSpectralClass" in sys_list_content
 
     # 3. System Map: star nodes display luminosity class and magnitude badges
     sys_map_path = base_dir / "app" / "ui" / "js" / "system_map.js"

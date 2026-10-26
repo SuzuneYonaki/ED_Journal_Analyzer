@@ -136,6 +136,7 @@ def init_db(conn=None, force: bool = False):
         edsm_factions_json TEXT DEFAULT '[]',
         mining_scout_grade TEXT DEFAULT '',
         system_age_my REAL,
+        main_star_subclass INTEGER,
         main_star_mass REAL,
         total_system_mass REAL
     );
@@ -197,6 +198,7 @@ def init_db(conn=None, force: bool = False):
         anomalies_json TEXT,
         scan_type TEXT,
         luminosity TEXT,
+        subclass INTEGER,
         age_my REAL,
         scan_timestamp TEXT,
         updated_timestamp TEXT,
@@ -448,6 +450,7 @@ def init_db(conn=None, force: bool = False):
         ("edsm_factions_json", "TEXT DEFAULT '[]'"),
         ("mining_scout_grade", "TEXT DEFAULT ''"),
         ("system_age_my", "REAL"),
+        ("main_star_subclass", "INTEGER"),
         ("main_star_mass", "REAL"),
         ("total_system_mass", "REAL"),
     ]:
@@ -536,6 +539,7 @@ def init_db(conn=None, force: bool = False):
         ("reserve_level", "TEXT"),
         ("scan_type", "TEXT"),
         ("luminosity", "TEXT"),
+        ("subclass", "INTEGER"),
         ("age_my", "REAL"),
     ]:
         try:
@@ -564,6 +568,24 @@ def init_db(conn=None, force: bool = False):
                 WHERE b.system_address = systems.system_address
                   AND b.star_type IS NOT NULL
                   AND b.age_my IS NOT NULL
+            );
+        """)
+        cursor.execute("""
+            UPDATE systems
+            SET main_star_subclass = (
+                SELECT b.subclass
+                FROM bodies b
+                WHERE b.system_address = systems.system_address
+                  AND b.star_type IS NOT NULL
+                  AND b.subclass IS NOT NULL
+                ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC
+                LIMIT 1
+            )
+            WHERE main_star_subclass IS NULL AND EXISTS (
+                SELECT 1 FROM bodies b
+                WHERE b.system_address = systems.system_address
+                  AND b.star_type IS NOT NULL
+                  AND b.subclass IS NOT NULL
             );
         """)
     except Exception:
