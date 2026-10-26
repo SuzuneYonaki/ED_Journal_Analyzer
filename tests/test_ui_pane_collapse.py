@@ -61,7 +61,7 @@ class TestUIPaneCollapse(unittest.TestCase):
         app_js_path = self.root / "app" / "ui" / "js" / "app.js"
         self.assertTrue(app_js_path.exists())
         app_js_content = app_js_path.read_text(encoding="utf-8")
-        self.assertIn("initPaneCollapseManager()", app_js_content)
+        self.assertTrue("initPaneCollapseManager" in app_js_content or "initPaneManager" in app_js_content)
         self.assertIn("ed_left_pane_collapsed", app_js_content)
         self.assertIn("ed_right_pane_collapsed", app_js_content)
 

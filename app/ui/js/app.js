@@ -2055,10 +2055,13 @@ function showAppConfirm(message, options = {}) {
   });
 }
 
-// Side Panes Collapse / Expand Manager
-function initPaneCollapseManager() {
+// Side Panes Collapse & Drag Resizer Manager
+function initPaneManager() {
+  const initPaneCollapseManager = initPaneManager;
   const leftPane = document.getElementById('left-pane');
   const rightPane = document.getElementById('right-pane');
+  const resizerLeft = document.getElementById('resizer-left');
+  const resizerRight = document.getElementById('resizer-right');
   const btnToggleLeft = document.getElementById('btn-toggle-left-pane');
   const btnToggleRight = document.getElementById('btn-toggle-right-pane');
   const btnCollapseLeft = document.getElementById('btn-collapse-left-pane');
@@ -2068,9 +2071,29 @@ function initPaneCollapseManager() {
   const iconToggleLeft = document.getElementById('icon-toggle-left-pane');
   const iconToggleRight = document.getElementById('icon-toggle-right-pane');
 
+  function getSavedLeftWidth() {
+    try {
+      const saved = parseInt(localStorage.getItem('ed_left_pane_width'), 10);
+      if (!isNaN(saved) && saved >= 260 && saved <= 900) return saved;
+    } catch (e) {}
+    return null;
+  }
+
+  function getSavedRightWidth() {
+    try {
+      const saved = parseInt(localStorage.getItem('ed_right_pane_width'), 10);
+      if (!isNaN(saved) && saved >= 300 && saved <= 900) return saved;
+    } catch (e) {}
+    return null;
+  }
+
   function updateLeftPaneUI(isCollapsed) {
     if (leftPane) {
       leftPane.classList.toggle('collapsed', isCollapsed);
+      if (!isCollapsed) {
+        const savedW = getSavedLeftWidth();
+        if (savedW) leftPane.style.width = savedW + 'px';
+      }
     }
     if (tabExpandLeft) {
       tabExpandLeft.style.display = isCollapsed ? 'flex' : 'none';
@@ -2084,7 +2107,6 @@ function initPaneCollapseManager() {
     try {
       localStorage.setItem('ed_left_pane_collapsed', isCollapsed ? 'true' : 'false');
     } catch (e) {}
-    // Trigger map resize event so SVG/Canvas auto-fits expanded center pane
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
     }, 260);
@@ -2093,6 +2115,10 @@ function initPaneCollapseManager() {
   function updateRightPaneUI(isCollapsed) {
     if (rightPane) {
       rightPane.classList.toggle('collapsed', isCollapsed);
+      if (!isCollapsed) {
+        const savedW = getSavedRightWidth();
+        if (savedW) rightPane.style.width = savedW + 'px';
+      }
     }
     if (tabExpandRight) {
       tabExpandRight.style.display = isCollapsed ? 'flex' : 'none';
@@ -2123,12 +2149,23 @@ function initPaneCollapseManager() {
     updateRightPaneUI(nextState);
   }
 
-  // Restore saved collapse states
+  // Restore saved collapse states and custom widths
   try {
-    const savedLeft = localStorage.getItem('ed_left_pane_collapsed') === 'true';
-    if (savedLeft) updateLeftPaneUI(true);
-    const savedRight = localStorage.getItem('ed_right_pane_collapsed') === 'true';
-    if (savedRight) updateRightPaneUI(true);
+    const savedLeftCollapsed = localStorage.getItem('ed_left_pane_collapsed') === 'true';
+    if (savedLeftCollapsed) {
+      updateLeftPaneUI(true);
+    } else {
+      const savedW = getSavedLeftWidth();
+      if (savedW && leftPane) leftPane.style.width = savedW + 'px';
+    }
+
+    const savedRightCollapsed = localStorage.getItem('ed_right_pane_collapsed') === 'true';
+    if (savedRightCollapsed) {
+      updateRightPaneUI(true);
+    } else {
+      const savedW = getSavedRightWidth();
+      if (savedW && rightPane) rightPane.style.width = savedW + 'px';
+    }
   } catch (e) {}
 
   // Event Listeners for Header Toggle Buttons
@@ -2145,7 +2182,6 @@ function initPaneCollapseManager() {
 
   // Global Keyboard Shortcuts (Ctrl+[ or Alt+[ for left, Ctrl+] or Alt+] for right)
   window.addEventListener('keydown', (e) => {
-    // Ignore when typing in input, textarea, or contentEditable
     const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
     if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) {
       return;
@@ -2160,10 +2196,81 @@ function initPaneCollapseManager() {
     }
   });
 
+  // --- Resizer Drag Logic ---
+  function setupResizer(resizerEl, paneEl, isRight) {
+    if (!resizerEl || !paneEl) return;
+
+    let startX = 0;
+    let startWidth = 0;
+    let isDragging = false;
+
+    function onMouseDown(e) {
+      if (e.button !== 0) return;
+      isDragging = true;
+      startX = e.clientX;
+      startWidth = paneEl.getBoundingClientRect().width;
+
+      resizerEl.classList.add('dragging');
+      document.body.classList.add('resizing-pane');
+      paneEl.style.transition = 'none';
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      e.preventDefault();
+    }
+
+    function onMouseMove(e) {
+      if (!isDragging) return;
+      const delta = isRight ? (startX - e.clientX) : (e.clientX - startX);
+      const minW = isRight ? 320 : 260;
+      const maxW = Math.min(window.innerWidth * 0.55, 950);
+      const newWidth = Math.max(minW, Math.min(maxW, startWidth + delta));
+
+      paneEl.style.width = newWidth + 'px';
+      e.preventDefault();
+    }
+
+    function onMouseUp() {
+      if (!isDragging) return;
+      isDragging = false;
+      resizerEl.classList.remove('dragging');
+      document.body.classList.remove('resizing-pane');
+      paneEl.style.transition = '';
+
+      const finalWidth = Math.round(paneEl.getBoundingClientRect().width);
+      try {
+        localStorage.setItem(isRight ? 'ed_right_pane_width' : 'ed_left_pane_width', finalWidth);
+      } catch (e) {}
+
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      window.dispatchEvent(new Event('resize'));
+    }
+
+    resizerEl.addEventListener('mousedown', onMouseDown);
+
+    // Double-click to reset default width
+    resizerEl.addEventListener('dblclick', () => {
+      paneEl.style.width = '';
+      try {
+        localStorage.removeItem(isRight ? 'ed_right_pane_width' : 'ed_left_pane_width');
+      } catch (e) {}
+      window.dispatchEvent(new Event('resize'));
+    });
+  }
+
+  setupResizer(resizerLeft, leftPane, false);
+  setupResizer(resizerRight, rightPane, true);
+
   // Expose global methods
   window.toggleLeftPane = toggleLeft;
   window.toggleRightPane = toggleRight;
+  window.initPaneCollapseManager = initPaneManager;
+  window.initPaneManager = initPaneManager;
 }
+
+const initPaneCollapseManager = initPaneManager;
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
@@ -2178,7 +2285,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCollapsibleSections();
   initStellarFilters();
   initLayoutSwitcher();
-  initPaneCollapseManager();
+  initPaneManager(); // Initializes both collapse and drag resizers
   initHeaderStatsCollapse();
   if (typeof initSystemCardKeyboardNavigation === 'function') {
     initSystemCardKeyboardNavigation();

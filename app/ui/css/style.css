@@ -1904,6 +1904,63 @@ header {
   pointer-events: none !important;
 }
 
+/* Pane Resizers (Splitters between side panes and center pane) */
+.pane-resizer {
+  width: 5px;
+  background: transparent;
+  flex-shrink: 0;
+  cursor: col-resize;
+  position: relative;
+  z-index: 40;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.pane-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -2px;
+  right: -2px;
+  z-index: 1;
+}
+
+.pane-resizer-left:hover,
+.pane-resizer-left.dragging {
+  background: rgba(255, 113, 0, 0.6);
+  box-shadow: 0 0 6px rgba(255, 113, 0, 0.4);
+}
+
+.pane-resizer-right:hover,
+.pane-resizer-right.dragging {
+  background: rgba(0, 210, 255, 0.6);
+  box-shadow: 0 0 6px rgba(0, 210, 255, 0.4);
+}
+
+/* Hide resizer when associated pane is collapsed */
+.left-pane.collapsed + .pane-resizer-left {
+  display: none !important;
+}
+
+.pane-resizer-right:has(+ .right-pane.collapsed) {
+  display: none !important;
+}
+
+body.resizing-pane {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.resizing-pane * {
+  user-select: none !important;
+  pointer-events: none !important;
+}
+
+body.resizing-pane .pane-resizer {
+  pointer-events: auto !important;
+}
+
 /* Floating Pane Expand Handles on Center Pane */
 .pane-expand-tab-left,
 .pane-expand-tab-right {

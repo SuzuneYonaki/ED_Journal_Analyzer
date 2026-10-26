@@ -35,7 +35,11 @@
   <div class="main-container">
     {% include "components/left_pane.html" %}
 
+    <div class="pane-resizer pane-resizer-left" id="resizer-left" title="ドラッグして幅を調整 (ダブルクリックでリセット)"></div>
+
     {% include "components/center_pane.html" %}
+
+    <div class="pane-resizer pane-resizer-right" id="resizer-right" title="ドラッグして幅を調整 (ダブルクリックでリセット)"></div>
 
     {% include "components/right_pane.html" %}
   </div>
