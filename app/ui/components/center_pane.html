@@ -1,5 +1,13 @@
     <!-- Center Pane: System Map & Celestial Orbit Hierarchy -->
-    <div class="center-pane">
+    <div class="center-pane" style="position: relative;">
+      <!-- Floating Pane Expand Handles (shown when side panes are collapsed) -->
+      <button type="button" id="pane-expand-tab-left" class="pane-expand-tab-left" data-i18n-title="tip_expand_left_pane" title="星系リストを展開 (Ctrl+[)">
+        <span>▶</span> <span data-i18n="btn_expand_left_pane">星系</span>
+      </button>
+      <button type="button" id="pane-expand-tab-right" class="pane-expand-tab-right" data-i18n-title="tip_expand_right_pane" title="インスペクターを展開 (Ctrl+])">
+        <span data-i18n="btn_expand_right_pane">天体詳細</span> <span>◀</span>
+      </button>
+
       <div class="system-header-bar">
         <div class="system-title-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <div id="current-system-name" class="current-system-name" data-i18n="select_system_prompt" data-i18n-title="tip_copy_system_name" style="cursor: pointer;" title="クリックして星系名をコピー">星系を選択してください</div>

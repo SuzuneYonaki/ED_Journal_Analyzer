@@ -6,9 +6,12 @@
             <div id="inspect-body-name" class="inspector-title" data-i18n="inspector_title">天体詳細インスペクター</div>
             <div id="inspect-body-alias" class="inspector-alias" style="display: none; font-size: 0.82rem; color: #38bdf8; font-weight: bold; margin-top: 2px;"></div>
           </div>
-          <button id="btn-inspect-bookmark-toggle" class="view-btn" style="padding: 3px 8px; font-size: 0.75rem; border-color: rgba(251, 191, 36, 0.4); color: #fbbf24; display: none; align-items: center; gap: 4px; white-space: nowrap;" data-i18n-title="tip_inspect_bm_toggle" title="この天体をブックマーク登録/解除">
-            <span id="inspect-bm-icon">☆</span> <span id="inspect-bm-text" data-i18n="bm_toggle_btn">ブックマーク</span>
-          </button>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <button id="btn-inspect-bookmark-toggle" class="view-btn" style="padding: 3px 8px; font-size: 0.75rem; border-color: rgba(251, 191, 36, 0.4); color: #fbbf24; display: none; align-items: center; gap: 4px; white-space: nowrap;" data-i18n-title="tip_inspect_bm_toggle" title="この天体をブックマーク登録/解除">
+              <span id="inspect-bm-icon">☆</span> <span id="inspect-bm-text" data-i18n="bm_toggle_btn">ブックマーク</span>
+            </button>
+            <button type="button" id="btn-collapse-right-pane" class="pane-collapse-btn" data-i18n-title="tip_collapse_right_pane" title="インスペクターを折りたたむ (Ctrl+])">▶</button>
+          </div>
         </div>
         <div id="inspect-body-type" class="inspector-subtitle" data-i18n="inspector_subtitle">天体をクリックすると詳細が表示されます</div>
       </div>

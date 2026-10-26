@@ -135,6 +135,16 @@
         <span data-i18n="btn_settings">⚙️ 設定</span>
       </button>
 
+      <!-- Pane Toggle Buttons (Left & Right Pane Collapse / Expand) -->
+      <div class="pane-toggle-group" style="display: flex; gap: 2px; background: var(--bg-card); padding: 2px; border-radius: 4px; border: 1px solid var(--border-color); flex-shrink: 0;">
+        <button id="btn-toggle-left-pane" class="view-btn" style="padding: 3px 7px; font-size: 0.72rem; display: flex; align-items: center; gap: 3px;" data-i18n-title="tip_toggle_left_pane" title="星系リストを開閉 (Ctrl+[)">
+          <span id="icon-toggle-left-pane">◀</span> <span data-i18n="btn_toggle_left_pane">星系</span>
+        </button>
+        <button id="btn-toggle-right-pane" class="view-btn" style="padding: 3px 7px; font-size: 0.72rem; display: flex; align-items: center; gap: 3px;" data-i18n-title="tip_toggle_right_pane" title="インスペクターを開閉 (Ctrl+])">
+          <span data-i18n="btn_toggle_right_pane">天体詳細</span> <span id="icon-toggle-right-pane">▶</span>
+        </button>
+      </div>
+
       <!-- Layout Switcher Button (1-Column / 2-Columns) -->
       <button id="btn-toggle-layout" class="view-btn" style="padding: 4px 8px; font-size: 0.76rem; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; display: flex; align-items: center; gap: 4px; cursor: pointer; flex-shrink: 0; font-weight: bold; border-radius: 4px;" data-i18n-title="tip_toggle_layout" title="UIレイアウト切替 (1列 / 2列)">
         <span id="layout-toggle-icon">◫</span>

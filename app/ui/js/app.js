@@ -2055,6 +2055,116 @@ function showAppConfirm(message, options = {}) {
   });
 }
 
+// Side Panes Collapse / Expand Manager
+function initPaneCollapseManager() {
+  const leftPane = document.getElementById('left-pane');
+  const rightPane = document.getElementById('right-pane');
+  const btnToggleLeft = document.getElementById('btn-toggle-left-pane');
+  const btnToggleRight = document.getElementById('btn-toggle-right-pane');
+  const btnCollapseLeft = document.getElementById('btn-collapse-left-pane');
+  const btnCollapseRight = document.getElementById('btn-collapse-right-pane');
+  const tabExpandLeft = document.getElementById('pane-expand-tab-left');
+  const tabExpandRight = document.getElementById('pane-expand-tab-right');
+  const iconToggleLeft = document.getElementById('icon-toggle-left-pane');
+  const iconToggleRight = document.getElementById('icon-toggle-right-pane');
+
+  function updateLeftPaneUI(isCollapsed) {
+    if (leftPane) {
+      leftPane.classList.toggle('collapsed', isCollapsed);
+    }
+    if (tabExpandLeft) {
+      tabExpandLeft.style.display = isCollapsed ? 'flex' : 'none';
+    }
+    if (iconToggleLeft) {
+      iconToggleLeft.innerText = isCollapsed ? '▶' : '◀';
+    }
+    if (btnToggleLeft) {
+      btnToggleLeft.classList.toggle('active', !isCollapsed);
+    }
+    try {
+      localStorage.setItem('ed_left_pane_collapsed', isCollapsed ? 'true' : 'false');
+    } catch (e) {}
+    // Trigger map resize event so SVG/Canvas auto-fits expanded center pane
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 260);
+  }
+
+  function updateRightPaneUI(isCollapsed) {
+    if (rightPane) {
+      rightPane.classList.toggle('collapsed', isCollapsed);
+    }
+    if (tabExpandRight) {
+      tabExpandRight.style.display = isCollapsed ? 'flex' : 'none';
+    }
+    if (iconToggleRight) {
+      iconToggleRight.innerText = isCollapsed ? '◀' : '▶';
+    }
+    if (btnToggleRight) {
+      btnToggleRight.classList.toggle('active', !isCollapsed);
+    }
+    try {
+      localStorage.setItem('ed_right_pane_collapsed', isCollapsed ? 'true' : 'false');
+    } catch (e) {}
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 260);
+  }
+
+  function toggleLeft(forceState) {
+    const currentState = leftPane ? leftPane.classList.contains('collapsed') : false;
+    const nextState = typeof forceState === 'boolean' ? forceState : !currentState;
+    updateLeftPaneUI(nextState);
+  }
+
+  function toggleRight(forceState) {
+    const currentState = rightPane ? rightPane.classList.contains('collapsed') : false;
+    const nextState = typeof forceState === 'boolean' ? forceState : !currentState;
+    updateRightPaneUI(nextState);
+  }
+
+  // Restore saved collapse states
+  try {
+    const savedLeft = localStorage.getItem('ed_left_pane_collapsed') === 'true';
+    if (savedLeft) updateLeftPaneUI(true);
+    const savedRight = localStorage.getItem('ed_right_pane_collapsed') === 'true';
+    if (savedRight) updateRightPaneUI(true);
+  } catch (e) {}
+
+  // Event Listeners for Header Toggle Buttons
+  btnToggleLeft?.addEventListener('click', () => toggleLeft());
+  btnToggleRight?.addEventListener('click', () => toggleRight());
+
+  // Event Listeners for Pane Header Collapse Buttons
+  btnCollapseLeft?.addEventListener('click', () => toggleLeft(true));
+  btnCollapseRight?.addEventListener('click', () => toggleRight(true));
+
+  // Event Listeners for Floating Expand Tabs
+  tabExpandLeft?.addEventListener('click', () => toggleLeft(false));
+  tabExpandRight?.addEventListener('click', () => toggleRight(false));
+
+  // Global Keyboard Shortcuts (Ctrl+[ or Alt+[ for left, Ctrl+] or Alt+] for right)
+  window.addEventListener('keydown', (e) => {
+    // Ignore when typing in input, textarea, or contentEditable
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) {
+      return;
+    }
+
+    if ((e.ctrlKey || e.altKey) && e.key === '[') {
+      e.preventDefault();
+      toggleLeft();
+    } else if ((e.ctrlKey || e.altKey) && e.key === ']') {
+      e.preventDefault();
+      toggleRight();
+    }
+  });
+
+  // Expose global methods
+  window.toggleLeftPane = toggleLeft;
+  window.toggleRightPane = toggleRight;
+}
+
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
   updateStaticTexts();
@@ -2068,6 +2178,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCollapsibleSections();
   initStellarFilters();
   initLayoutSwitcher();
+  initPaneCollapseManager();
   initHeaderStatsCollapse();
   if (typeof initSystemCardKeyboardNavigation === 'function') {
     initSystemCardKeyboardNavigation();
