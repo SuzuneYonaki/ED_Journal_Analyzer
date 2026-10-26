@@ -2466,6 +2466,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateModuleVisibilityUI();
   initSettingsModal();
   initExportImportModals();
+  initGalacticExtremes();
   initMiningSiteModal();
   initCollapsibleSections();
   initStellarFilters();
@@ -6503,6 +6504,131 @@ if (typeof window !== 'undefined') {
   window.switchCenterPaneView = switchCenterPaneView;
   window.initCenterPaneTabShortcuts = initCenterPaneTabShortcuts;
   window.updateViewButtons = updateViewButtons;
+}
+
+
+function initGalacticExtremes() {
+  const modal = document.getElementById('modal-galactic-extremes');
+  const btnHeaderOpen = document.getElementById('btn-open-extremes');
+  const btnLeftOpen = document.getElementById('btn-pane-extremes');
+  const btnClose = document.getElementById('btn-close-galactic-extremes');
+  const btnDismiss = document.getElementById('btn-dismiss-galactic-extremes');
+  const container = document.getElementById('extremes-container');
+
+  if (!modal) return;
+
+  function closeModal() {
+    modal.style.display = 'none';
+  }
+
+  async function openModal() {
+    modal.style.display = 'flex';
+    if (!container) return;
+    container.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 24px; grid-column: 1 / -1;">${(typeof t === 'function' ? t('loading') : null) || '読み込み中...'}</div>`;
+
+    try {
+      const res = await fetch('/api/cmdr/galactic_extremes');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const ext = data.extremes || {};
+
+      const directions = [
+        { key: 'north', icon: '⬆️', title: (typeof t === 'function' ? t('extreme_north') : null) || '銀盤北端 (+Z)', desc: (typeof t === 'function' ? t('extreme_north_desc') : null) || 'Beagle Point / コア方面', border: 'rgba(56, 189, 248, 0.4)' },
+        { key: 'south', icon: '⬇️', title: (typeof t === 'function' ? t('extreme_south') : null) || '銀盤南端 (-Z)', desc: (typeof t === 'function' ? t('extreme_south_desc') : null) || 'Sol南側 / 銀盤外縁', border: 'rgba(251, 146, 60, 0.4)' },
+        { key: 'east', icon: '➡️', title: (typeof t === 'function' ? t('extreme_east') : null) || '銀盤東端 (+X)', desc: (typeof t === 'function' ? t('extreme_east_desc') : null) || '銀盤東端方面', border: 'rgba(74, 222, 128, 0.4)' },
+        { key: 'west', icon: '⬅️', title: (typeof t === 'function' ? t('extreme_west') : null) || '銀盤西端 (-X)', desc: (typeof t === 'function' ? t('extreme_west_desc') : null) || '銀盤西端方面', border: 'rgba(192, 132, 252, 0.4)' },
+        { key: 'zenith', icon: '🌌', title: (typeof t === 'function' ? t('extreme_zenith') : null) || '銀盤天頂 (+Y)', desc: (typeof t === 'function' ? t('extreme_zenith_desc') : null) || '銀盤上端（天頂）', border: 'rgba(234, 179, 8, 0.4)' },
+        { key: 'nadir', icon: '⚓', title: (typeof t === 'function' ? t('extreme_nadir') : null) || '銀盤天底 (-Y)', desc: (typeof t === 'function' ? t('extreme_nadir_desc') : null) || '銀盤下端（天底）', border: 'rgba(244, 114, 182, 0.4)' },
+        { key: 'farthest', icon: '🎯', title: (typeof t === 'function' ? t('extreme_farthest') : null) || 'Sol最遠到達点', desc: (typeof t === 'function' ? t('extreme_farthest_desc') : null) || 'Sol直線最遠到達距離', border: 'rgba(255, 113, 0, 0.5)' }
+      ];
+
+      let html = '';
+      directions.forEach(d => {
+        const item = ext[d.key];
+        if (item) {
+          const sysName = escapeHtml(item.star_system || 'Unknown');
+          const distSol = Number(item.distance_sol).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+          const dateStr = item.last_visited ? item.last_visited.replace('T', ' ').substring(0, 16) : '--';
+          const visitText = `${item.visit_count || 1}回`;
+          html += `
+            <div class="extreme-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid ${d.border}; border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; transition: all 0.2s ease; position: relative;" data-sys-addr="${item.system_address}" title="${sysName} を表示">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                <span style="font-weight: bold; font-size: 0.8rem; color: #fff; display: flex; align-items: center; gap: 5px;">
+                  <span>${d.icon}</span> ${d.title}
+                </span>
+                <span style="font-size: 0.68rem; color: #94a3b8;">${d.desc}</span>
+              </div>
+              <div style="font-size: 0.95rem; font-weight: bold; color: var(--ed-orange); word-break: break-all; margin-top: 2px;">
+                ${sysName}
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 2px; font-size: 0.73rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 4px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #94a3b8;">X / Y / Z:</span>
+                  <span style="font-family: monospace;">${item.x} / ${item.y} / ${item.z}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #94a3b8;">Sol 距離:</span>
+                  <span style="color: var(--ed-cyan); font-weight: bold;">${distSol} ly</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #94a3b8;">最終訪問:</span>
+                  <span>${dateStr} (${visitText})</span>
+                </div>
+              </div>
+              <button type="button" class="btn-page" style="margin-top: 4px; padding: 2px 8px; font-size: 0.7rem; align-self: flex-end; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
+                🔍 ${(typeof t === 'function' ? t('extreme_btn_view') : null) || '星系を表示'}
+              </button>
+            </div>
+          `;
+        } else {
+          html += `
+            <div style="background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                <span style="font-weight: bold; font-size: 0.8rem; color: #94a3b8;"><span>${d.icon}</span> ${d.title}</span>
+                <span style="font-size: 0.68rem; color: #64748b;">${d.desc}</span>
+              </div>
+              <div style="font-size: 0.78rem; color: #64748b; font-style: italic; margin-top: 6px;">
+                ${(typeof t === 'function' ? t('extreme_no_record') : null) || '記録なし'}
+              </div>
+            </div>
+          `;
+        }
+      });
+      container.innerHTML = html;
+
+      // Add click listener to cards
+      container.querySelectorAll('.extreme-card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+          card.style.borderColor = 'var(--ed-orange)';
+          card.style.background = 'rgba(255, 113, 0, 0.1)';
+        });
+        card.addEventListener('mouseleave', () => {
+          const origBorder = directions.find(d => card.innerHTML.includes(d.title))?.border || 'rgba(255,255,255,0.2)';
+          card.style.borderColor = origBorder;
+          card.style.background = 'rgba(15, 23, 42, 0.7)';
+        });
+        card.addEventListener('click', () => {
+          const addr = parseInt(card.dataset.sysAddr, 10);
+          if (addr && typeof selectSystem === 'function') {
+            closeModal();
+            selectSystem(addr);
+          }
+        });
+      });
+
+    } catch (err) {
+      console.error('Failed to fetch galactic extremes:', err);
+      container.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px; grid-column: 1 / -1;">取得エラー: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  btnHeaderOpen?.addEventListener('click', openModal);
+  btnLeftOpen?.addEventListener('click', openModal);
+  btnClose?.addEventListener('click', closeModal);
+  btnDismiss?.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
 }
 
 if (typeof module !== 'undefined' && module.exports) {

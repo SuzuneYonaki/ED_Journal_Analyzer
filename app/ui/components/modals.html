@@ -846,3 +846,27 @@
     </div>
   </div>
 
+
+  <!-- Galactic Extremes Modal -->
+  <div id="modal-galactic-extremes" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="background: #0b1120; border: 1px solid rgba(0, 210, 255, 0.4); border-radius: 8px; width: 680px; max-width: 95vw; box-shadow: 0 10px 30px rgba(0,0,0,0.85); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
+      <div class="modal-header" style="padding: 12px 16px; background: rgba(0, 210, 255, 0.1); border-bottom: 1px solid rgba(0, 210, 255, 0.25); display: flex; align-items: center; justify-content: space-between;">
+        <h3 style="margin: 0; font-size: 0.95rem; color: var(--ed-cyan); display: flex; align-items: center; gap: 8px;">
+          <span>🌌</span> <span data-i18n="extremes_title">銀河極値・限界到達記録 (Galactic Extremes)</span>
+        </h3>
+        <button id="btn-close-galactic-extremes" class="btn-icon" style="background: transparent; border: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 14px 16px; overflow-y: auto; font-size: 0.82rem; color: #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
+        <div style="background: rgba(0, 210, 255, 0.05); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 6px; padding: 10px 12px; font-size: 0.78rem; color: #94a3b8; line-height: 1.5;" data-i18n="extremes_desc">
+          Sol (0, 0, 0) を原点とした、自CMDRが探査・訪問した星系の限界到達座標（北端+Z、南端-Z、東端+X、西端-X、天頂+Y、天底-Y、最遠点）の記録です。カードをクリックするとその星系の詳細を表示します。
+        </div>
+
+        <div id="extremes-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px;">
+          <div style="text-align: center; color: #94a3b8; padding: 20px;" data-i18n="loading">読み込み中...</div>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 10px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; background: rgba(0,0,0,0.2);">
+        <button id="btn-dismiss-galactic-extremes" class="btn-page" style="padding: 6px 16px;" data-i18n="btn_close">閉じる</button>
+      </div>
+    </div>
+  </div>

@@ -431,6 +431,57 @@ def get_cmdr_coordinates():
         "message": "" if is_surface else "No surface coordinates available (CMDR not on surface)"
     }
 
+@app.get("/api/cmdr/galactic_extremes")
+def get_galactic_extremes():
+    """
+    Returns the CMDR's furthest reached systems relative to Sol (0,0,0):
+    - North (+Z) / South (-Z)
+    - East (+X) / West (-X)
+    - Zenith (+Y) / Nadir (-Y)
+    - Farthest (Maximum Euclidean distance from Sol)
+    Only considers visited systems (visit_count > 0, is_external = 0).
+    """
+    import math
+    conn = get_db_connection()
+    c = conn.cursor()
+    base_where = "WHERE visit_count > 0 AND (is_external = 0 OR is_external IS NULL) AND star_pos_x IS NOT NULL AND star_pos_y IS NOT NULL AND star_pos_z IS NOT NULL"
+
+    queries = {
+        "north": f"SELECT system_address, star_system, star_pos_x, star_pos_y, star_pos_z, last_visited, visit_count FROM systems {base_where} ORDER BY star_pos_z DESC, last_visited DESC LIMIT 1",
+        "south": f"SELECT system_address, star_system, star_pos_x, star_pos_y, star_pos_z, last_visited, visit_count FROM systems {base_where} ORDER BY star_pos_z ASC, last_visited DESC LIMIT 1",
+        "east": f"SELECT system_address, star_system, star_pos_x, star_pos_y, star_pos_z, last_visited, visit_count FROM systems {base_where} ORDER BY star_pos_x DESC, last_visited DESC LIMIT 1",
+        "west": f"SELECT system_address, star_system, star_pos_x, star_pos_y, star_pos_z, last_visited, visit_count FROM systems {base_where} ORDER BY star_pos_x ASC, last_visited DESC LIMIT 1",
+        "zenith": f"SELECT system_address, star_system, star_pos_x, star_pos_y, star_pos_z, last_visited, visit_count FROM systems {base_where} ORDER BY star_pos_y DESC, last_visited DESC LIMIT 1",
+        "nadir": f"SELECT system_address, star_system, star_pos_x, star_pos_y, star_pos_z, last_visited, visit_count FROM systems {base_where} ORDER BY star_pos_y ASC, last_visited DESC LIMIT 1",
+        "farthest": f"SELECT system_address, star_system, star_pos_x, star_pos_y, star_pos_z, last_visited, visit_count FROM systems {base_where} ORDER BY (star_pos_x * star_pos_x + star_pos_y * star_pos_y + star_pos_z * star_pos_z) DESC, last_visited DESC LIMIT 1"
+    }
+
+    extremes = {}
+    for key, q in queries.items():
+        c.execute(q)
+        row = c.fetchone()
+        if row:
+            x = round(float(row["star_pos_x"]), 2)
+            y = round(float(row["star_pos_y"]), 2)
+            z = round(float(row["star_pos_z"]), 2)
+            dist_sol = round(math.sqrt(x * x + y * y + z * z), 2)
+            extremes[key] = {
+                "system_address": row["system_address"],
+                "star_system": row["star_system"],
+                "x": x,
+                "y": y,
+                "z": z,
+                "distance_sol": dist_sol,
+                "last_visited": row["last_visited"],
+                "visit_count": row["visit_count"]
+            }
+        else:
+            extremes[key] = None
+
+    conn.close()
+    return {"status": "success", "extremes": extremes}
+
+
 @app.get("/api/landmarks")
 def get_landmarks_endpoint():
     """Return static galactic landmark coordinates and metadata."""
