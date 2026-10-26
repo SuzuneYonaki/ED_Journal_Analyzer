@@ -906,10 +906,19 @@ def save_or_merge_mining_site(
     if matched_site:
         site_id = matched_site["id"]
         curr_mats = [m.strip() for m in (matched_site["minerals"] or "").split(",") if m.strip()]
+        new_mat_added = False
         if clean_mat and clean_mat not in curr_mats:
             curr_mats.append(clean_mat)
-        merged_mats_str = ", ".join(curr_mats)
+            new_mat_added = True
+
         final_hotspot = hotspot.strip() or (matched_site["hotspot"] or "")
+        hotspot_changed = final_hotspot != (matched_site["hotspot"] or "")
+
+        # Optimization: skip redundant DB UPDATE & disk commit if no new mineral or hotspot change
+        if not new_mat_added and not hotspot_changed:
+            return site_id
+
+        merged_mats_str = ", ".join(curr_mats)
         cursor.execute("""
             UPDATE surface_mining_sites
             SET minerals = ?, hotspot = ?, updated_at = ?

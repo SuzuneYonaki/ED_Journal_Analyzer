@@ -215,6 +215,7 @@ class JournalParser:
         self.srv_type = None
         self.current_latitude = None
         self.current_longitude = None
+        self._has_unlocated_mining = False
 
     def _check_and_trigger_high_bio_alert(
         self,
@@ -418,12 +419,13 @@ class JournalParser:
         if "Latitude" in event_data and "Longitude" in event_data:
             self.current_latitude = event_data["Latitude"]
             self.current_longitude = event_data["Longitude"]
-            if self.current_system_address and self.current_body_id is not None:
+            if getattr(self, "_has_unlocated_mining", False) and self.current_system_address and self.current_body_id is not None:
                 self.cursor.execute("""
                     UPDATE surface_mining_activities
                     SET latitude = ?, longitude = ?
                     WHERE system_address = ? AND body_id = ? AND latitude IS NULL
                 """, (self.current_latitude, self.current_longitude, self.current_system_address, self.current_body_id))
+                self._has_unlocated_mining = False
         elif "Latitude" in event_data:
             self.current_latitude = event_data["Latitude"]
         elif "Longitude" in event_data:
@@ -1645,6 +1647,8 @@ class JournalParser:
                 count, self.current_latitude, self.current_longitude, timestamp
             ))
             self.dirty_systems.add(sys_addr)
+            if self.current_latitude is None:
+                self._has_unlocated_mining = True
 
             # Record into dedicated surface_mining_sites table (with top 2 digits / ~0.2 deg grouping)
             if self.in_srv and self.current_latitude is not None and self.current_longitude is not None:

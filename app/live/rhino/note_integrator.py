@@ -133,6 +133,9 @@ def update_body_note_in_db(
         alias_name = row["alias_name"] if isinstance(row, sqlite3.Row) else row[0]
         curr_note = row["note_markdown"] if isinstance(row, sqlite3.Row) else row[1]
         updated_note = append_or_merge_mining_site_to_note(curr_note or "", lat, lon, minerals)
+        # Optimization: skip redundant DB UPDATE & commit if note content did not change
+        if (curr_note or "").strip() == (updated_note or "").strip():
+            return curr_note or ""
         c.execute("""
             UPDATE body_bookmarks
             SET note_markdown = ?, updated_at = ?
