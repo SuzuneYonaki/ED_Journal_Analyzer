@@ -135,7 +135,9 @@ def init_db(conn=None, force: bool = False):
         system_reserve TEXT DEFAULT '',
         edsm_factions_json TEXT DEFAULT '[]',
         mining_scout_grade TEXT DEFAULT '',
-        system_age_my REAL
+        system_age_my REAL,
+        main_star_mass REAL,
+        total_system_mass REAL
     );
     """)
 
@@ -446,6 +448,8 @@ def init_db(conn=None, force: bool = False):
         ("edsm_factions_json", "TEXT DEFAULT '[]'"),
         ("mining_scout_grade", "TEXT DEFAULT ''"),
         ("system_age_my", "REAL"),
+        ("main_star_mass", "REAL"),
+        ("total_system_mass", "REAL"),
     ]:
         try:
             cursor.execute(f"ALTER TABLE systems ADD COLUMN {col_def[0]} {col_def[1]};")
@@ -560,6 +564,43 @@ def init_db(conn=None, force: bool = False):
                 WHERE b.system_address = systems.system_address
                   AND b.star_type IS NOT NULL
                   AND b.age_my IS NOT NULL
+            );
+        """)
+    except Exception:
+        pass
+
+    # Backfill main_star_mass and total_system_mass from bodies if available
+    try:
+        cursor.execute("""
+            UPDATE systems
+            SET main_star_mass = (
+                SELECT b.stellar_mass
+                FROM bodies b
+                WHERE b.system_address = systems.system_address
+                  AND b.star_type IS NOT NULL
+                  AND b.stellar_mass IS NOT NULL
+                ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC
+                LIMIT 1
+            )
+            WHERE main_star_mass IS NULL AND EXISTS (
+                SELECT 1 FROM bodies b
+                WHERE b.system_address = systems.system_address
+                  AND b.star_type IS NOT NULL
+                  AND b.stellar_mass IS NOT NULL
+            );
+        """)
+        cursor.execute("""
+            UPDATE systems
+            SET total_system_mass = (
+                SELECT (COALESCE(SUM(b.stellar_mass), 0.0) + COALESCE(SUM(b.mass_em) / 332946.0487, 0.0))
+                FROM bodies b
+                WHERE b.system_address = systems.system_address
+                  AND (b.stellar_mass IS NOT NULL OR b.mass_em IS NOT NULL)
+            )
+            WHERE total_system_mass IS NULL AND EXISTS (
+                SELECT 1 FROM bodies b
+                WHERE b.system_address = systems.system_address
+                  AND (b.stellar_mass IS NOT NULL OR b.mass_em IS NOT NULL)
             );
         """)
     except Exception:

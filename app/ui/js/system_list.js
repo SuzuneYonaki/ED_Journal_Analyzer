@@ -49,7 +49,7 @@ function generateLandmarkDistanceBadges(sys) {
   if (lmSettings.sol) {
     const solDist = (sys.sol_distance_ly !== undefined && sys.sol_distance_ly !== null && sys.sol_distance_ly > 0)
       ? sys.sol_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+      : ((sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
         ? Math.hypot(sys.star_pos_x, sys.star_pos_y, sys.star_pos_z)
         : null);
     if (solDist !== null && solDist !== undefined) {
@@ -63,7 +63,7 @@ function generateLandmarkDistanceBadges(sys) {
   if (lmSettings.colonia) {
     const coloniaDist = (sys.colonia_distance_ly !== undefined && sys.colonia_distance_ly !== null)
       ? sys.colonia_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+      : ((sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
         ? Math.hypot(sys.star_pos_x - (-9530.5), sys.star_pos_y - (-910.28125), sys.star_pos_z - 19808.125)
         : null);
     if (coloniaDist !== null && coloniaDist !== undefined) {
@@ -77,7 +77,7 @@ function generateLandmarkDistanceBadges(sys) {
   if (lmSettings.rainbow) {
     const rbDist = (sys.rainbows_end_distance_ly !== undefined && sys.rainbows_end_distance_ly !== null)
       ? sys.rainbows_end_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+      : ((sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
         ? Math.hypot(sys.star_pos_x - 21481.40625, sys.star_pos_y - (-1004.5625), sys.star_pos_z - 43369.4375)
         : null);
     if (rbDist !== null && rbDist !== undefined) {
@@ -91,7 +91,7 @@ function generateLandmarkDistanceBadges(sys) {
   if (lmSettings.eanch) {
     const eaDist = (sys.explorers_anchorage_distance_ly !== undefined && sys.explorers_anchorage_distance_ly !== null)
       ? sys.explorers_anchorage_distance_ly
-      : ((sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+      : ((sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
         ? Math.hypot(sys.star_pos_x - 28.6875, sys.star_pos_y - (-19.78125), sys.star_pos_z - 25899.6875)
         : null);
     if (eaDist !== null && eaDist !== undefined) {
@@ -241,7 +241,7 @@ function renderSystemList() {
     }
 
     const sysName = sys.star_system || (`System ${sys.system_address || ''}`);
-    const coordsStr = (sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+    const coordsStr = (sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
       ? `[${sys.star_pos_x.toFixed(6)}, ${sys.star_pos_y.toFixed(6)}, ${sys.star_pos_z.toFixed(6)}]`
       : '';
 
@@ -316,6 +316,19 @@ function renderSystemList() {
     const ageFormatted = ageDisplay ? `${t('system_age')}: ${ageDisplay} ${t('my_unit')}` : '';
     const ageHtml = ageFormatted ? `<span class="system-card-age" title="${ageFormatted}">${ageFormatted}</span>` : '';
 
+    const mainMass = (typeof formatSolarMass === 'function') ? formatSolarMass(sys.main_star_mass) : null;
+    const totMass = (typeof formatSolarMass === 'function') ? formatSolarMass(sys.total_system_mass) : null;
+    let massHtml = '';
+    if (mainMass || totMass) {
+      const massText = (mainMass && totMass && mainMass !== totMass)
+        ? `⚖️ ${mainMass} / ${totMass} M☉`
+        : `⚖️ ${mainMass || totMass} M☉`;
+      const massTip = (t('system_mass_badge_tip') || '主星重量: {main} M☉ / 星系総重量: {total} M☉')
+        .replace('{main}', mainMass || '--')
+        .replace('{total}', totMass || mainMass || '--');
+      massHtml = `<span class="system-card-mass" style="font-size: 0.7rem; color: #fbbf24;" title="${escapeHtml(massTip)}">${escapeHtml(massText)}</span>`;
+    }
+
     // Average age of logged systems sharing this system's voxel code (needs 2+ samples to be informative)
     let voxelHtml = '';
     const voxelAvgDisplay = formatAgeMy(sys.voxel_age_avg_my);
@@ -336,6 +349,7 @@ function renderSystemList() {
       </div>
       <div class="system-card-meta">
         <span class="system-card-meta-left">${t('bodies_count')}: ${sys.scanned_bodies} / ${sys.total_bodies || '?'}${mainStar}</span>
+        ${massHtml}
         ${ageHtml}
       </div>
       ${voxelHtml}
@@ -484,7 +498,7 @@ function renderSystemHeader() {
   const sys = state.selectedSystem;
   document.getElementById('current-system-name').innerText = sys.star_system;
   
-  const coords = (sys.star_pos_x !== null && sys.star_pos_y !== null && sys.star_pos_z !== null)
+  const coords = (sys.star_pos_x != null && sys.star_pos_y != null && sys.star_pos_z != null)
     ? `[ ${sys.star_pos_x.toFixed(6)}, ${sys.star_pos_y.toFixed(6)}, ${sys.star_pos_z.toFixed(6)} ]`
     : '';
   document.getElementById('current-system-coords').innerText = coords;
@@ -660,6 +674,34 @@ function renderSystemHeader() {
 
   // Configurable Key Galactic Distances in Header
   updateCurrentSystemDistances(sys);
+
+  // System Mass Badge in Header (Main Star & Total System Mass)
+  const massBadgeEl = document.getElementById('current-system-mass-badge');
+  if (massBadgeEl) {
+    const mainMass = (typeof formatSolarMass === 'function') ? formatSolarMass(sys.main_star_mass) : (sys.main_star_mass ? Number(sys.main_star_mass).toFixed(2) : null);
+    const totMass = (typeof formatSolarMass === 'function') ? formatSolarMass(sys.total_system_mass) : (sys.total_system_mass ? Number(sys.total_system_mass).toFixed(2) : null);
+    if (mainMass || totMass) {
+      const tip = (t('system_mass_badge_tip') || '主星重量: {main} M☉ / 星系総重量: {total} M☉')
+        .replace('{main}', mainMass || '--')
+        .replace('{total}', totMass || mainMass || '--');
+      let text = '';
+      if (mainMass && totMass && mainMass !== totMass) {
+        text = (t('system_mass_header') || '⚖️ 主星: {main} M☉ | 総重量: {total} M☉')
+          .replace('{main}', mainMass)
+          .replace('{total}', totMass);
+      } else {
+        text = (t('system_mass_header_main_only') || '⚖️ 主星: {main} M☉')
+          .replace('{main}', mainMass || totMass);
+      }
+      massBadgeEl.className = 'tag-badge';
+      massBadgeEl.style.cssText = 'background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 0.72rem; padding: 2px 7px; display: inline-flex; align-items: center;';
+      massBadgeEl.title = tip;
+      massBadgeEl.innerText = text;
+    } else {
+      massBadgeEl.style.display = 'none';
+      massBadgeEl.innerText = '';
+    }
+  }
 
   // Astrophysical Rarity Badge in Header
   const physBadgeEl = document.getElementById('current-system-physics-badge');
