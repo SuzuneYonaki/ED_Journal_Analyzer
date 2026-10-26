@@ -23,14 +23,17 @@
 
 ---
 
-### ⚠️ アップデート・データ移行に関する重要なお知らせ
+### ⚠️ アップデート・データ移行と安全性に関するお知らせ
 
 - **旧実行ファイル（`ED_Journal_Analyzer.exe`）の扱い**:
   - 本バージョンより実行ファイル名が **`ED_GALACTIC_MEMOIR.exe`** に変更されました。
   - 以前の実行ファイル（`ED_Journal_Analyzer.exe`）は削除して問題ありません。
-- **データフォルダ（`data/`）の保持（最重要）**:
-  - **`data/` フォルダ（SQLiteデータベース `elite_journal.db` や設定ファイル）は絶対に削除しないでください。**
-  - 新しい `ED_GALACTIC_MEMOIR.exe` を従来のフォルダ内に配置して起動するだけで、これまでの探査履歴、ブックマーク、メモ、設定がすべて自動的に引き継がれ、必要な内部マイグレーションも起動時に自動実行されます。
+- **データフォルダ（`data/`）の扱いとデータベース再構築**:
+  - `data/` フォルダ（SQLiteデータベース `elite_journal.db` 等）は、**削除しても構いません**。
+  - `data/` を削除した場合でも、次回起動時にゲームのJournalフォルダからフライトログを再解析してデータベースを自動的に再生成します（※独自に登録した天体ブックマークや個人メモを引き継ぎたい場合は、そのまま残しておくことを推奨します）。
+- **フライトジャーナルに対する完全な読み取り専用（Read-Only）安全設計**:
+  - 本アプリケーションは、Elite Dangerous本体の `Journal` フォルダ（フライトログファイル群）を**完全な読み取り専用（Read-Only）**としてのみ参照します。
+  - **ゲーム本体が生成した元のJournalファイルに対して、変更・書き込み・削除などの操作を行うことは一切ありません**。安心してお使いいただけます。
 
 ---
 
@@ -85,14 +88,17 @@
 
 ---
 
-### ⚠️ Important Notice on Update & Data Migration
+### ⚠️ Important Notice on Update, Data Migration & Journal Safety
 
 - **Old Executable (`ED_Journal_Analyzer.exe`)**:
   - The executable has been officially renamed to **`ED_GALACTIC_MEMOIR.exe`**.
   - You can safely delete the old executable (`ED_Journal_Analyzer.exe`).
-- **Preserve Data Directory (`data/`) (CRITICAL)**:
-  - **DO NOT delete the `data/` directory (containing SQLite database `elite_journal.db` and config files).**
-  - Simply place the new `ED_GALACTIC_MEMOIR.exe` in the existing folder. All exploration logs, bookmarks, notes, and settings will carry over automatically.
+- **Data Directory (`data/`) & Automatic DB Reconstruction**:
+  - You **can safely delete the `data/` directory** if desired.
+  - If deleted, the app will automatically rebuild the entire local database from your game Journal logs on the next launch (Note: Keep `data/` if you wish to preserve custom celestial bookmarks and personal Markdown notes).
+- **Zero-Modification Read-Only Safety Architecture**:
+  - The application accesses Elite Dangerous's `Journal` directory in **strict Read-Only mode**.
+  - **It will NEVER modify, overwrite, append to, or delete any of your original game journal files.**
 
 ---
 
@@ -120,7 +126,7 @@
 ### 方式 1: 配布バイナリ（推奨・インストール不要）
 1. [GitHub Releases](https://github.com/SuzuneYonaki/ED_Journal_Analyzer/releases) より最新の `ED_GALACTIC_MEMOIR.exe` をダウンロード。
 2. 任意のフォルダに配置してダブルクリックで起動します。
-   - ※ 以前のバージョンをお使いの方は、従来のフォルダ内に `ED_GALACTIC_MEMOIR.exe` を配置してください（旧 `ED_Journal_Analyzer.exe` は削除可、`data/` は保持）。
+   - ※ 以前のバージョンをお使いの方は、従来のフォルダ内に `ED_GALACTIC_MEMOIR.exe` を配置してください（旧 `ED_Journal_Analyzer.exe` は削除可。`data/` は削除しても再構築されますが、個人メモ等を残したい場合は保持推奨）。
 
 ### 方式 2: Python ソースコードからの実行
 ```bash
