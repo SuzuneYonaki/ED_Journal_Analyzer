@@ -305,12 +305,12 @@ header {
 .stat-gg-sub {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(192, 132, 252, 0.25);
   border-radius: 3px;
-  padding: 1px 3px;
-  font-size: 0.58rem;
+  padding: 2px 4px;
+  font-size: 0.68rem;
   font-family: var(--font-mono);
   color: #e2e8f0;
   line-height: 1.2;
@@ -319,25 +319,31 @@ header {
 .stat-gg-sub .gg-tag {
   color: #c084fc;
   font-weight: 600;
-  font-size: 0.54rem;
+  font-size: 0.64rem;
 }
 
 .stat-gg-sub b {
   color: #fff;
   font-weight: bold;
+  font-size: 0.72rem;
 }
 
 .stat-gg-sub.stat-gg-sub-ggg {
-  border-color: rgba(0, 255, 136, 0.5);
-  background: rgba(0, 255, 136, 0.12);
+  border-color: rgba(0, 255, 136, 0.6);
+  background: rgba(0, 255, 136, 0.16);
+  padding: 2px 6px;
+  box-shadow: 0 0 6px rgba(0, 255, 136, 0.25);
 }
 
 .stat-gg-sub.stat-gg-sub-ggg .gg-tag {
   color: #00ff88;
+  font-weight: bold;
+  font-size: 0.70rem;
 }
 
 .stat-gg-sub.stat-gg-sub-ggg b {
   color: #00ff88;
+  font-size: 0.78rem;
 }
 
 /* Header Summary Group (Bio Systems/Signals, Total Est. Value, and CMDR Location) */
@@ -2002,32 +2008,34 @@ body.resizing-pane .pane-resizer {
 .pane-expand-tab-left,
 .pane-expand-tab-right {
   position: absolute;
-  top: 10px;
-  z-index: 90;
-  background: rgba(15, 23, 42, 0.88);
+  top: 105px;
+  z-index: 95;
+  background: rgba(15, 23, 42, 0.92);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  padding: 4px 9px;
-  font-size: 0.74rem;
-  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
   cursor: pointer;
   display: none;
   align-items: center;
   gap: 5px;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
   transition: all 0.2s ease;
   user-select: none;
 }
 
 .pane-expand-tab-left {
-  left: 10px;
-  border-left: 2px solid var(--ed-orange);
+  left: 0;
+  border-left: 3px solid var(--ed-orange);
+  border-radius: 0 5px 5px 0;
 }
 
 .pane-expand-tab-right {
-  right: 10px;
-  border-right: 2px solid var(--ed-cyan);
+  right: 0;
+  border-right: 3px solid var(--ed-cyan);
+  border-radius: 5px 0 0 5px;
 }
 
 .pane-expand-tab-left:hover {
