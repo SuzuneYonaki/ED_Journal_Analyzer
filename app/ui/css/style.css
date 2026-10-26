@@ -1904,6 +1904,43 @@ header {
   pointer-events: none !important;
 }
 
+/* Floating Undocked Mode for Right Pane */
+.right-pane.floating {
+  position: fixed !important;
+  z-index: 1000 !important;
+  top: 90px;
+  right: 25px;
+  width: 440px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 120px);
+  border: 1px solid var(--ed-cyan);
+  border-radius: 8px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 12px rgba(0, 210, 255, 0.2);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  resize: both;
+  overflow: auto;
+  transition: box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.right-pane.floating .inspector-header {
+  cursor: grab;
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
+  background: rgba(0, 210, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 210, 255, 0.3);
+  user-select: none;
+}
+
+.right-pane.floating .inspector-header:active {
+  cursor: grabbing;
+}
+
+.right-pane.floating.dragging {
+  opacity: 0.92;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 18px rgba(0, 210, 255, 0.4);
+}
+
 /* Pane Resizers (Splitters between side panes and center pane) */
 .pane-resizer {
   width: 5px;

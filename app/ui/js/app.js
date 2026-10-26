@@ -2066,6 +2066,7 @@ function initPaneManager() {
   const btnToggleRight = document.getElementById('btn-toggle-right-pane');
   const btnCollapseLeft = document.getElementById('btn-collapse-left-pane');
   const btnCollapseRight = document.getElementById('btn-collapse-right-pane');
+  const btnFloatRight = document.getElementById('btn-float-right-pane');
   const tabExpandLeft = document.getElementById('pane-expand-tab-left');
   const tabExpandRight = document.getElementById('pane-expand-tab-right');
   const iconToggleLeft = document.getElementById('icon-toggle-left-pane');
@@ -2196,6 +2197,156 @@ function initPaneManager() {
     }
   });
 
+  // --- Floating Undocked Inspector Logic ---
+  function getSavedFloatingPos() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('ed_right_pane_floating_pos') || 'null');
+      if (saved && typeof saved.left === 'number' && typeof saved.top === 'number') {
+        const maxL = Math.max(10, window.innerWidth - 100);
+        const maxT = Math.max(50, window.innerHeight - 80);
+        return {
+          left: Math.max(10, Math.min(maxL, saved.left)),
+          top: Math.max(50, Math.min(maxT, saved.top))
+        };
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function setRightPaneFloating(isFloating) {
+    if (!rightPane) return;
+    rightPane.classList.toggle('floating', isFloating);
+
+    if (btnFloatRight) {
+      btnFloatRight.innerText = isFloating ? '📌' : '🗗';
+      btnFloatRight.title = isFloating
+        ? (typeof t === 'function' ? t('tip_dock_right_pane') : '右サイドバーへ再ドッキング')
+        : (typeof t === 'function' ? t('tip_float_right_pane') : 'フローティング化 / ドッキング解除');
+    }
+
+    if (isFloating) {
+      if (resizerRight) resizerRight.style.display = 'none';
+      // If currently collapsed, uncollapse it
+      if (rightPane.classList.contains('collapsed')) {
+        updateRightPaneUI(false);
+      }
+      const pos = getSavedFloatingPos();
+      if (pos) {
+        rightPane.style.left = pos.left + 'px';
+        rightPane.style.top = pos.top + 'px';
+        rightPane.style.right = 'auto';
+      } else {
+        rightPane.style.left = '';
+        rightPane.style.top = '90px';
+        rightPane.style.right = '25px';
+      }
+      try { localStorage.setItem('ed_right_pane_is_floating', 'true'); } catch (e) {}
+    } else {
+      rightPane.style.left = '';
+      rightPane.style.top = '';
+      rightPane.style.right = '';
+      rightPane.style.position = '';
+      if (resizerRight && !rightPane.classList.contains('collapsed')) {
+        resizerRight.style.display = '';
+      }
+      const savedW = getSavedRightWidth();
+      if (savedW) rightPane.style.width = savedW + 'px';
+      else rightPane.style.width = '';
+      try { localStorage.setItem('ed_right_pane_is_floating', 'false'); } catch (e) {}
+    }
+
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 260);
+  }
+
+  function toggleRightPaneFloating() {
+    const isFloating = rightPane ? rightPane.classList.contains('floating') : false;
+    setRightPaneFloating(!isFloating);
+  }
+
+  btnFloatRight?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleRightPaneFloating();
+  });
+
+  // Drag-to-move floating right pane via inspector header
+  const inspectorHeader = rightPane ? rightPane.querySelector('.inspector-header') : null;
+  if (inspectorHeader && rightPane) {
+    let isHeaderDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let initialL = 0;
+    let initialT = 0;
+
+    inspectorHeader.addEventListener('mousedown', (e) => {
+      if (!rightPane.classList.contains('floating')) return;
+      if (e.button !== 0) return;
+      // Ignore if clicking on buttons or inputs inside header
+      const targetTag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+      if (targetTag === 'BUTTON' || targetTag === 'INPUT' || e.target.closest('button')) {
+        return;
+      }
+
+      isHeaderDragging = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      const rect = rightPane.getBoundingClientRect();
+      initialL = rect.left;
+      initialT = rect.top;
+
+      rightPane.classList.add('dragging');
+      document.body.classList.add('resizing-pane');
+
+      function onHeaderMove(ev) {
+        if (!isHeaderDragging) return;
+        const deltaX = ev.clientX - dragStartX;
+        const deltaY = ev.clientY - dragStartY;
+        const minL = 10;
+        const maxL = Math.max(10, window.innerWidth - rightPane.offsetWidth - 10);
+        const minT = 50;
+        const maxT = Math.max(50, window.innerHeight - 80);
+
+        const curL = Math.max(minL, Math.min(maxL, initialL + deltaX));
+        const curT = Math.max(minT, Math.min(maxT, initialT + deltaY));
+
+        rightPane.style.left = curL + 'px';
+        rightPane.style.top = curT + 'px';
+        rightPane.style.right = 'auto';
+        ev.preventDefault();
+      }
+
+      function onHeaderUp() {
+        if (!isHeaderDragging) return;
+        isHeaderDragging = false;
+        rightPane.classList.remove('dragging');
+        document.body.classList.remove('resizing-pane');
+
+        document.removeEventListener('mousemove', onHeaderMove);
+        document.removeEventListener('mouseup', onHeaderUp);
+
+        const rect = rightPane.getBoundingClientRect();
+        try {
+          localStorage.setItem('ed_right_pane_floating_pos', JSON.stringify({
+            left: Math.round(rect.left),
+            top: Math.round(rect.top)
+          }));
+        } catch (e) {}
+      }
+
+      document.addEventListener('mousemove', onHeaderMove);
+      document.addEventListener('mouseup', onHeaderUp);
+      e.preventDefault();
+    });
+  }
+
+  // Restore floating state on startup
+  try {
+    if (localStorage.getItem('ed_right_pane_is_floating') === 'true') {
+      setRightPaneFloating(true);
+    }
+  } catch (e) {}
+
   // --- Resizer Drag Logic ---
   function setupResizer(resizerEl, paneEl, isRight) {
     if (!resizerEl || !paneEl) return;
@@ -2266,6 +2417,7 @@ function initPaneManager() {
   // Expose global methods
   window.toggleLeftPane = toggleLeft;
   window.toggleRightPane = toggleRight;
+  window.toggleRightPaneFloating = toggleRightPaneFloating;
   window.initPaneCollapseManager = initPaneManager;
   window.initPaneManager = initPaneManager;
 }
