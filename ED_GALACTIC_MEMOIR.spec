@@ -63,7 +63,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='ED_Journal_Analyzer',
+    name='ED_GALACTIC_MEMOIR',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

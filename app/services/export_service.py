@@ -487,7 +487,7 @@ HTML_I18N = {
         "atmo_none": "なし",
         "mining_section_title": "⛏️ Rhino SRV 惑星表面採掘ポイント ({count} 箇所)",
         "mining_extracted": "⛏️ 抽出・精製物: <strong>{comms}</strong>",
-        "footer": "Elite Dangerous Journal Analyzer &bull; Standalone Web Share Edition &bull; Exported on {now}"
+        "footer": "ED GALACTIC MEMOIR &bull; Your Flight Log, Your Legacy. &bull; Exported on {now}"
     },
     "en": {
         "html_lang": "en",
@@ -547,7 +547,7 @@ HTML_I18N = {
         "atmo_none": "None",
         "mining_section_title": "⛏️ Rhino SRV Surface Mining Sites ({count} sites)",
         "mining_extracted": "⛏️ Extracted Materials: <strong>{comms}</strong>",
-        "footer": "Elite Dangerous Journal Analyzer &bull; Standalone Web Share Edition &bull; Exported on {now}"
+        "footer": "ED GALACTIC MEMOIR &bull; Your Flight Log, Your Legacy. &bull; Exported on {now}"
     }
 }
 

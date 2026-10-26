@@ -54,7 +54,7 @@ def get_own_process_family():
     return pids
 
 def cleanup_stale_instances():
-    """Terminates any orphan background processes of ED_Journal_Analyzer.exe and associated msedgewebview2 from previous runs."""
+    """Terminates any orphan background processes of ED_GALACTIC_MEMOIR.exe and associated msedgewebview2 from previous runs."""
     family = get_own_process_family()
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
@@ -225,7 +225,7 @@ def main():
         # Create Desktop Window with pywebview using dedicated cache directory
         if is_ready:
             window = webview.create_window(
-                title=f"Elite Dangerous Journal Analyzer & Exploration Orrery (v{APP_VERSION})",
+                title=f"ED GALACTIC MEMOIR (v{APP_VERSION}) - Your Flight Log, Your Legacy.",
                 url=url,
                 width=1380,
                 height=840,
@@ -241,7 +241,7 @@ def main():
                 <h1 style="color: #ef4444; font-size: 1.5rem;">⚠️ ローカルサーバーの起動に失敗しました</h1>
                 <p style="color: #94a3b8; line-height: 1.6; margin-top: 12px;">
                     ポートの競合または前回のプロセスが残存している可能性があります。<br>
-                    タスクマネージャーから「ED_Journal_Analyzer.exe」を終了してから再度起動してください。
+                    タスクマネージャーから「ED_GALACTIC_MEMOIR.exe」を終了してから再度起動してください。
                 </p>
                 <div style="margin-top: 24px;">
                     <button onclick="window.close()" style="background: #ff7100; color: #000; font-weight: bold; border: none; padding: 10px 24px; border-radius: 4px; cursor: pointer;">
@@ -252,7 +252,7 @@ def main():
             </html>
             """
             window = webview.create_window(
-                title="Elite Dangerous Journal Analyzer - Startup Error",
+                title="ED GALACTIC MEMOIR - Startup Error",
                 html=error_html,
                 width=700,
                 height=450,

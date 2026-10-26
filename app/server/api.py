@@ -53,7 +53,7 @@ from app.services.physics_translator import (
 from app.addons import addon_manager
 from app.utils.voxel import voxel_key, voxel_age_stats
 
-app = FastAPI(title="Elite Dangerous Journal Analyzer")
+app = FastAPI(title="ED GALACTIC MEMOIR", description="Your Flight Log, Your Legacy.")
 
 app.add_middleware(
     CORSMiddleware,
