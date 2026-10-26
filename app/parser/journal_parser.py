@@ -95,6 +95,35 @@ def resolve_ggg_variant(entry_name: str) -> tuple[str, str, str] | None:
     return raw_variant, tts_speech_name, en_name
 
 
+def is_matching_ggg_planet_class(variant_en: str | None, planet_class: str | None) -> bool:
+    """Checks whether a body's planet_class matches a GGG variant name (e.g. Sudarsky Class III Gas Giant)."""
+    if not variant_en or not planet_class:
+        return False
+    v = variant_en.lower()
+    pc = planet_class.lower()
+    if "class i " in v and ("class i gas giant" in pc and "class ii" not in pc):
+        return True
+    if "class ii " in v and ("class ii gas giant" in pc and "class iii" not in pc):
+        return True
+    if "class iii " in v and "class iii gas giant" in pc:
+        return True
+    if "class iv " in v and "class iv gas giant" in pc:
+        return True
+    if "class v " in v and "class v gas giant" in pc:
+        return True
+    if "water-based life" in v and "water" in pc and "life" in pc:
+        return True
+    if "ammonia-based life" in v and "ammonia" in pc and "life" in pc:
+        return True
+    if "helium-rich" in v and "helium" in pc and "rich" in pc:
+        return True
+    if "helium gas giant" in v and "helium" in pc and "rich" not in pc:
+        return True
+    if "water giant" in v and "water giant" in pc:
+        return True
+    return False
+
+
 def resolve_ggg_variant_name_by_lang(variant_name: str | None, lang: str = "ja") -> str:
     """
     Resolves GGG variant name to either localized Japanese or English display/TTS text.
@@ -884,19 +913,52 @@ class JournalParser:
 
         # Check if this body has a confirmed GGG in codex_entries table or existing record
         b_name = body_dict.get("body_name") or body_dict.get("BodyName")
-        self.cursor.execute(
-            "SELECT ggg_variant FROM codex_entries WHERE system_address = ? AND (body_id = ? OR (body_name IS NOT NULL AND body_name = ?)) AND is_ggg = 1 LIMIT 1",
-            (sys_addr, body_id, b_name)
-        )
-        codex_ggg = self.cursor.fetchone()
-        is_confirmed_ggg = bool(codex_ggg)
-        confirmed_ggg_variant = codex_ggg["ggg_variant"] if codex_ggg else None
+        planet_class_str = (body_dict.get("planet_class") or body_dict.get("PlanetClass") or "")
+        is_star_body = bool(body_dict.get("star_type") or body_dict.get("StarType"))
 
-        if codex_ggg and body_id is not None and b_name:
+        is_confirmed_ggg = False
+        confirmed_ggg_variant = None
+
+        if not is_star_body:
             self.cursor.execute(
-                "UPDATE codex_entries SET body_id = ? WHERE system_address = ? AND body_name = ? AND body_id IS NULL",
-                (body_id, sys_addr, b_name)
+                "SELECT id, ggg_variant, body_id, body_name FROM codex_entries WHERE system_address = ? AND (body_id = ? OR (body_name IS NOT NULL AND body_name = ?)) AND is_ggg = 1 LIMIT 1",
+                (sys_addr, body_id, b_name)
             )
+            codex_ggg = self.cursor.fetchone()
+
+            # If no direct match by body_id/name, check if system has a GGG codex entry matching this gas giant class
+            if not codex_ggg and planet_class_str:
+                self.cursor.execute(
+                    "SELECT id, ggg_variant, body_id, body_name FROM codex_entries WHERE system_address = ? AND is_ggg = 1",
+                    (sys_addr,)
+                )
+                for entry in self.cursor.fetchall():
+                    if is_matching_ggg_planet_class(entry["ggg_variant"], planet_class_str):
+                        codex_ggg = entry
+                        # Fix misattributed codex entry (was on star body_id=0 or None)
+                        self.cursor.execute(
+                            "UPDATE codex_entries SET body_id = ?, body_name = ? WHERE id = ?",
+                            (body_id, b_name, entry["id"])
+                        )
+                        # Clean false GGG from star if present
+                        self.cursor.execute("SELECT id, anomalies_json FROM bodies WHERE system_address = ? AND star_type IS NOT NULL", (sys_addr,))
+                        for s_row in self.cursor.fetchall():
+                            if s_row["anomalies_json"] and "Confirmed GGG" in s_row["anomalies_json"]:
+                                try:
+                                    s_anoms = [a for a in json.loads(s_row["anomalies_json"]) if not ((isinstance(a, dict) and (a.get("type") == "confirmed_ggg" or "Confirmed GGG" in a.get("tag", ""))) or (isinstance(a, str) and "Confirmed GGG" in a))]
+                                    self.cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (json.dumps(s_anoms), s_row["id"]))
+                                except Exception:
+                                    pass
+                        break
+
+            if codex_ggg:
+                is_confirmed_ggg = True
+                confirmed_ggg_variant = codex_ggg["ggg_variant"]
+                if body_id is not None and b_name:
+                    self.cursor.execute(
+                        "UPDATE codex_entries SET body_id = ?, body_name = ? WHERE id = ?",
+                        (body_id, b_name, codex_ggg["id"])
+                    )
 
         if not is_confirmed_ggg and existing_anomalies_raw:
             try:
@@ -1465,6 +1527,36 @@ class JournalParser:
         is_ggg = 1 if ggg_info is not None else 0
         ggg_variant_name = ggg_info[2] if ggg_info is not None else None
 
+        if is_ggg and sys_addr is not None:
+            # Frontier logs often emit CodexEntry for GGG with BodyID=0 (primary star).
+            # Verify if current body is a star; if so, resolve to the genuine gas giant planet.
+            is_star_target = False
+            if body_id is not None:
+                self.cursor.execute("SELECT star_type, planet_class FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, body_id))
+                s_row = self.cursor.fetchone()
+                if s_row and (s_row["star_type"] or not s_row["planet_class"]):
+                    is_star_target = True
+            elif body_id == 0:
+                is_star_target = True
+
+            if is_star_target or body_id is None:
+                self.cursor.execute(
+                    "SELECT body_id, body_name, planet_class FROM bodies WHERE system_address = ? AND planet_class IS NOT NULL",
+                    (sys_addr,)
+                )
+                cand_planets = self.cursor.fetchall()
+                matching_planets = [
+                    p for p in cand_planets
+                    if is_matching_ggg_planet_class(ggg_variant_name, p["planet_class"])
+                ]
+                if matching_planets:
+                    body_id = matching_planets[0]["body_id"]
+                    body_name = matching_planets[0]["body_name"]
+                else:
+                    # Gas giant body not scanned yet; do not attribute to star
+                    body_id = None
+                    body_name = None
+
         if sys_addr is not None and entry_name:
             now_iso = datetime.now().isoformat()
             self.cursor.execute("""
@@ -1499,14 +1591,14 @@ class JournalParser:
                 variant_name=tts_speech_name
             )
 
-            # Persist confirmed GGG anomaly tags to bodies table
+            # Persist confirmed GGG anomaly tags ONLY to genuine planet bodies (never stars)
             if sys_addr is not None and body_id is not None:
                 self.cursor.execute(
-                    "SELECT id, anomalies_json FROM bodies WHERE system_address = ? AND body_id = ?",
+                    "SELECT id, star_type, planet_class, anomalies_json FROM bodies WHERE system_address = ? AND body_id = ?",
                     (sys_addr, body_id)
                 )
                 b_row = self.cursor.fetchone()
-                if b_row:
+                if b_row and not b_row["star_type"] and b_row["planet_class"]:
                     raw_anom = b_row["anomalies_json"]
                     anomalies = []
                     if raw_anom:
@@ -1531,6 +1623,18 @@ class JournalParser:
                     new_anom_json = json.dumps(anomalies)
                     self.cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (new_anom_json, b_row["id"]))
                     self.dirty_systems.add(sys_addr)
+
+            # Clean any falsely attached Confirmed GGG from star bodies in this system
+            if sys_addr is not None:
+                self.cursor.execute("SELECT id, anomalies_json FROM bodies WHERE system_address = ? AND star_type IS NOT NULL", (sys_addr,))
+                for s_row in self.cursor.fetchall():
+                    if s_row["anomalies_json"] and "Confirmed GGG" in s_row["anomalies_json"]:
+                        try:
+                            s_anoms = [a for a in json.loads(s_row["anomalies_json"]) if not ((isinstance(a, dict) and (a.get("type") == "confirmed_ggg" or "Confirmed GGG" in a.get("tag", ""))) or (isinstance(a, str) and "Confirmed GGG" in a))]
+                            self.cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (json.dumps(s_anoms), s_row["id"]))
+                            self.dirty_systems.add(sys_addr)
+                        except Exception:
+                            pass
             return
 
         cat = data.get("Category", "")

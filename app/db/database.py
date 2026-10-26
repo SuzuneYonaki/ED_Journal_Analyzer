@@ -741,6 +741,124 @@ def init_db(conn=None, force: bool = False):
         except Exception as e:
             print(f"[DB Migration Warning] clean_unvisited_first_discover_v1: {e}")
 
+    # Fix misattributed GGG anomalies on stars and link them to genuine gas giant bodies
+    if not is_meta_applied("fix_misattributed_ggg_v1"):
+        try:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='codex_entries'")
+            if cursor.fetchone() is not None:
+                cursor.execute("""
+                    SELECT id, system_address, body_id, body_name, ggg_variant, name
+                    FROM codex_entries
+                    WHERE is_ggg = 1
+                """)
+                ggg_codex_rows = cursor.fetchall()
+                for c_row in ggg_codex_rows:
+                    sys_addr = c_row["system_address"]
+                    curr_body_id = c_row["body_id"]
+                    v_name = c_row["ggg_variant"] or ""
+
+                    # Check if curr_body_id is a star
+                    cursor.execute("SELECT id, body_name, star_type, planet_class, anomalies_json FROM bodies WHERE system_address = ? AND body_id = ?", (sys_addr, curr_body_id))
+                    cur_b = cursor.fetchone()
+
+                    is_star = bool(cur_b and (cur_b["star_type"] or not cur_b["planet_class"])) or (curr_body_id == 0)
+
+                    # Look for genuine gas giant bodies in this system matching the GGG variant
+                    cursor.execute("SELECT id, body_id, body_name, planet_class, anomalies_json FROM bodies WHERE system_address = ? AND planet_class IS NOT NULL", (sys_addr,))
+                    cand_planets = cursor.fetchall()
+
+                    matched_planet = None
+                    # First attempt: match by GGG variant
+                    for p in cand_planets:
+                        p_class = (p["planet_class"] or "").lower()
+                        if "gas giant" in p_class or "water giant" in p_class:
+                            if v_name:
+                                v_lower = v_name.lower()
+                                if ("class i " in v_lower and "class i gas giant" in p_class and "class ii" not in p_class) or \
+                                   ("class ii " in v_lower and "class ii gas giant" in p_class and "class iii" not in p_class) or \
+                                   ("class iii " in v_lower and "class iii gas giant" in p_class) or \
+                                   ("class iv " in v_lower and "class iv gas giant" in p_class) or \
+                                   ("class v " in v_lower and "class v gas giant" in p_class) or \
+                                   ("water-based life" in v_lower and "water" in p_class and "life" in p_class) or \
+                                   ("ammonia-based life" in v_lower and "ammonia" in p_class and "life" in p_class) or \
+                                   ("helium-rich" in v_lower and "helium" in p_class and "rich" in p_class) or \
+                                   ("helium gas giant" in v_lower and "helium" in p_class and "rich" not in p_class) or \
+                                   ("water giant" in v_lower and "water giant" in p_class):
+                                    matched_planet = p
+                                    break
+                    # Fallback: if only one gas giant exists in system
+                    if not matched_planet:
+                        gg_candidates = [p for p in cand_planets if "gas giant" in (p["planet_class"] or "").lower() or "water giant" in (p["planet_class"] or "").lower()]
+                        if len(gg_candidates) == 1:
+                            matched_planet = gg_candidates[0]
+
+                    if matched_planet:
+                        new_body_id = matched_planet["body_id"]
+                        new_body_name = matched_planet["body_name"]
+
+                        # Update codex_entries
+                        cursor.execute("UPDATE codex_entries SET body_id = ?, body_name = ? WHERE id = ?", (new_body_id, new_body_name, c_row["id"]))
+
+                        # Add Confirmed GGG anomaly to matched_planet
+                        p_anoms = []
+                        if matched_planet["anomalies_json"]:
+                            try:
+                                p_anoms = json.loads(matched_planet["anomalies_json"])
+                            except Exception:
+                                p_anoms = []
+                        if not isinstance(p_anoms, list):
+                            p_anoms = []
+
+                        confirmed_tags = ["Confirmed GGG", f"Confirmed GGG ({v_name})" if v_name else "Confirmed GGG"]
+                        for tag_name in confirmed_tags:
+                            if not any((a.get("tag") == tag_name if isinstance(a, dict) else a == tag_name) for a in p_anoms):
+                                p_anoms.append({
+                                    "type": "confirmed_ggg",
+                                    "tag": tag_name,
+                                    "color": "green",
+                                    "desc": f"確定GGG: {v_name}",
+                                    "desc_en": tag_name
+                                })
+                        cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (json.dumps(p_anoms), matched_planet["id"]))
+
+                    # Remove Confirmed GGG anomaly from star if present
+                    cursor.execute("SELECT id, anomalies_json FROM bodies WHERE system_address = ? AND star_type IS NOT NULL", (sys_addr,))
+                    star_rows = cursor.fetchall()
+                    for s in star_rows:
+                        if s["anomalies_json"] and "Confirmed GGG" in s["anomalies_json"]:
+                            try:
+                                s_anoms = json.loads(s["anomalies_json"])
+                                s_anoms_filtered = [
+                                    a for a in s_anoms
+                                    if not (
+                                        (isinstance(a, dict) and (a.get("type") == "confirmed_ggg" or "Confirmed GGG" in a.get("tag", ""))) or
+                                        (isinstance(a, str) and "Confirmed GGG" in a)
+                                    )
+                                ]
+                                cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (json.dumps(s_anoms_filtered), s["id"]))
+                            except Exception:
+                                pass
+
+            # General sweep: remove any Confirmed GGG from any body that is a star
+            cursor.execute("SELECT id, anomalies_json FROM bodies WHERE star_type IS NOT NULL AND anomalies_json LIKE '%Confirmed GGG%'")
+            for stray_star in cursor.fetchall():
+                try:
+                    s_anoms = json.loads(stray_star["anomalies_json"])
+                    s_anoms_filtered = [
+                        a for a in s_anoms
+                        if not (
+                            (isinstance(a, dict) and (a.get("type") == "confirmed_ggg" or "Confirmed GGG" in a.get("tag", ""))) or
+                            (isinstance(a, str) and "Confirmed GGG" in a)
+                        )
+                    ]
+                    cursor.execute("UPDATE bodies SET anomalies_json = ? WHERE id = ?", (json.dumps(s_anoms_filtered), stray_star["id"]))
+                except Exception:
+                    pass
+
+            mark_meta_applied("fix_misattributed_ggg_v1")
+        except Exception as e:
+            print(f"[DB Migration Warning] fix_misattributed_ggg_v1: {e}")
+
     # Backfill heavy mass code and close binary anomalies on star bodies (one-time on DB setup)
     if not is_meta_applied("star_anomalies_backfill_v1"):
         try:
@@ -1102,7 +1220,7 @@ def get_celestial_statistics(conn: Optional[sqlite3.Connection] = None, bypass_c
                     OR EXISTS (
                         SELECT 1 FROM codex_entries ce
                         WHERE ce.system_address = bodies.system_address
-                        AND ce.body_id = bodies.body_id
+                        AND (ce.body_id = bodies.body_id OR (ce.body_name IS NOT NULL AND ce.body_name = bodies.body_name))
                         AND ce.is_ggg = 1
                     )
         """ if has_codex else ""
