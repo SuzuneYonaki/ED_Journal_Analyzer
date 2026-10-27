@@ -1829,7 +1829,8 @@ class JournalParser:
     def _update_system_stats(self, sys_addr: int):
         self.cursor.execute("""
             SELECT 
-                COUNT(*) as count,
+                COUNT(*) as total_count,
+                COUNT(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN 1 ELSE NULL END) as count,
                 MAX(star_system) as sys_name,
                 MAX(scan_timestamp) as latest_ts,
                 (SELECT star_type FROM bodies WHERE system_address = ? AND star_type IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star,
@@ -1837,27 +1838,27 @@ class JournalParser:
                 (SELECT subclass FROM bodies WHERE system_address = ? AND star_type IS NOT NULL AND subclass IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star_subclass,
                 (SELECT stellar_mass FROM bodies WHERE system_address = ? AND star_type IS NOT NULL AND stellar_mass IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star_mass,
                 (SELECT (COALESCE(SUM(b.stellar_mass), 0.0) + COALESCE(SUM(b.mass_em) / 332946.0487, 0.0)) FROM bodies b WHERE b.system_address = ? AND (b.stellar_mass IS NOT NULL OR b.mass_em IS NOT NULL)) as total_system_mass,
-                SUM(fss_value) as sum_fss,
-                SUM(dss_value) as sum_dss,
-                SUM(max_potential_value) as sum_max,
-                SUM(bio_signals) as sum_bio,
-                MAX(CASE WHEN LOWER(planet_class) LIKE '%earthlike%' OR LOWER(planet_class) LIKE '%earth-like%' THEN 1 ELSE 0 END) as elw,
-                MAX(CASE WHEN LOWER(planet_class) LIKE '%water world%' THEN 1 ELSE 0 END) as ww,
-                MAX(CASE WHEN LOWER(planet_class) LIKE '%ammonia%' THEN 1 ELSE 0 END) as ammonia,
-                MAX(CASE WHEN LOWER(terraforming_state) LIKE '%terraform%' THEN 1 ELSE 0 END) as tf,
-                MAX(CASE WHEN bio_signals > 0 THEN 1 ELSE 0 END) as bio,
-                MAX(CASE WHEN landable = 1 THEN 1 ELSE 0 END) as landable,
-                MAX(CASE WHEN landable = 1 AND surface_gravity_g >= 3.0 THEN 1 ELSE 0 END) as high_g,
-                MAX(CASE WHEN anomalies_json != '[]' AND anomalies_json IS NOT NULL THEN 1 ELSE 0 END) as anomalies,
-                SUM(CASE WHEN was_discovered = 0 THEN 1 ELSE 0 END) as first_disc_count,
-                MAX(CASE WHEN was_discovered = 0 THEN 1 ELSE 0 END) as has_first_disc,
-                ROUND(AVG(CASE WHEN landable = 1 AND radius IS NOT NULL AND radius > 0 THEN radius ELSE NULL END), 1) as avg_landable_radius
+                SUM(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN fss_value ELSE 0 END) as sum_fss,
+                SUM(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN dss_value ELSE 0 END) as sum_dss,
+                SUM(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN max_potential_value ELSE 0 END) as sum_max,
+                SUM(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN bio_signals ELSE 0 END) as sum_bio,
+                MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND (LOWER(planet_class) LIKE '%earthlike%' OR LOWER(planet_class) LIKE '%earth-like%') THEN 1 ELSE 0 END) as elw,
+                MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND LOWER(planet_class) LIKE '%water world%' THEN 1 ELSE 0 END) as ww,
+                MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND LOWER(planet_class) LIKE '%ammonia%' THEN 1 ELSE 0 END) as ammonia,
+                MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND LOWER(terraforming_state) LIKE '%terraform%' THEN 1 ELSE 0 END) as tf,
+                MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND bio_signals > 0 THEN 1 ELSE 0 END) as bio,
+                MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND landable = 1 THEN 1 ELSE 0 END) as landable,
+                MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND landable = 1 AND surface_gravity_g >= 3.0 THEN 1 ELSE 0 END) as high_g,
+                MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND anomalies_json != '[]' AND anomalies_json IS NOT NULL THEN 1 ELSE 0 END) as anomalies,
+                SUM(CASE WHEN was_discovered = 0 AND (scan_type IS NULL OR scan_type != 'EDSM_Known') THEN 1 ELSE 0 END) as first_disc_count,
+                MAX(CASE WHEN was_discovered = 0 AND (scan_type IS NULL OR scan_type != 'EDSM_Known') THEN 1 ELSE 0 END) as has_first_disc,
+                ROUND(AVG(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND landable = 1 AND radius IS NOT NULL AND radius > 0 THEN radius ELSE NULL END), 1) as avg_landable_radius
             FROM bodies 
             WHERE system_address = ? 
               AND (star_type IS NOT NULL OR planet_class IS NOT NULL)
         """, (sys_addr, sys_addr, sys_addr, sys_addr, sys_addr, sys_addr))
         row = self.cursor.fetchone()
-        if row and row["count"] > 0:
+        if row and row["total_count"] > 0:
             sys_name = row["sys_name"] or f"System {sys_addr}"
             ts = row["latest_ts"] or datetime.now().isoformat()
             main_star = row["main_star"]

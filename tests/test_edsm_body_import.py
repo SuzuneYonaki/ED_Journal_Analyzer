@@ -102,12 +102,11 @@ def test_edsm_body_import_and_value_calc(test_db):
 
     c.execute("SELECT * FROM systems WHERE system_address = ?", (sys_addr,))
     sys_row = c.fetchone()
-    assert sys_row["scanned_bodies"] == 2
+    # EDSM_Known bodies must NOT inflate CMDR's scanned_bodies or personal exploration values
+    assert sys_row["scanned_bodies"] == 0
     assert sys_row["main_star_type"] == "K"
-    assert sys_row["has_water_world"] == 1
-    assert sys_row["has_terraformable"] == 1
-    assert sys_row["total_fss_value"] > 200000
-    assert sys_row["total_dss_value"] > 1000000
+    assert sys_row["total_fss_value"] == 0
+    assert sys_row["total_dss_value"] == 0
 
 def test_edsm_import_protects_player_scans(test_db):
     conn = test_db

@@ -281,7 +281,7 @@ def import_and_complete_bodies(conn, system_address: int, star_system: str, bodi
                 terraforming, semi_major_m, eccentricity,
                 inclination, periapsis, orbital_period_s, rotation_period_s,
                 axial_tilt, rings_json, materials_json, parents_json,
-                1 if discoverer else 0,
+                1,
                 discoverer, discovered_at,
                 fss_val, dss_val, fd_fss, fm_dss,
                 max_pot, anomalies_json, bio_pred_json

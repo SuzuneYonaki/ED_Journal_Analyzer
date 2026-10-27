@@ -8,28 +8,29 @@ def update_system_aggregated_stats(conn, system_address: int):
     c = conn.cursor()
     c.execute("""
         SELECT 
-            COUNT(*) as count,
+            COUNT(*) as total_count,
+            COUNT(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN 1 ELSE NULL END) as count,
             MAX(star_system) as sys_name,
             (SELECT star_type FROM bodies WHERE system_address = ? AND star_type IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star,
-            SUM(fss_value) as sum_fss,
-            SUM(dss_value) as sum_dss,
-            SUM(max_potential_value) as sum_max,
-            SUM(bio_signals) as sum_bio,
-            MAX(CASE WHEN LOWER(planet_class) LIKE '%earthlike%' OR LOWER(planet_class) LIKE '%earth-like%' THEN 1 ELSE 0 END) as elw,
-            MAX(CASE WHEN LOWER(planet_class) LIKE '%water world%' THEN 1 ELSE 0 END) as ww,
-            MAX(CASE WHEN LOWER(planet_class) LIKE '%ammonia%' THEN 1 ELSE 0 END) as ammonia,
-            MAX(CASE WHEN LOWER(terraforming_state) LIKE '%terraform%' THEN 1 ELSE 0 END) as tf,
-            MAX(CASE WHEN bio_signals > 0 THEN 1 ELSE 0 END) as bio,
-            MAX(CASE WHEN landable = 1 THEN 1 ELSE 0 END) as landable,
-            MAX(CASE WHEN landable = 1 AND surface_gravity_g >= 3.0 THEN 1 ELSE 0 END) as high_g,
-            MAX(CASE WHEN anomalies_json != '[]' AND anomalies_json IS NOT NULL THEN 1 ELSE 0 END) as anomalies,
-            ROUND(AVG(CASE WHEN landable = 1 AND radius IS NOT NULL AND radius > 0 THEN radius ELSE NULL END), 1) as avg_landable_radius
+            SUM(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN fss_value ELSE 0 END) as sum_fss,
+            SUM(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN dss_value ELSE 0 END) as sum_dss,
+            SUM(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN max_potential_value ELSE 0 END) as sum_max,
+            SUM(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN bio_signals ELSE 0 END) as sum_bio,
+            MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND (LOWER(planet_class) LIKE '%earthlike%' OR LOWER(planet_class) LIKE '%earth-like%') THEN 1 ELSE 0 END) as elw,
+            MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND LOWER(planet_class) LIKE '%water world%' THEN 1 ELSE 0 END) as ww,
+            MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND LOWER(planet_class) LIKE '%ammonia%' THEN 1 ELSE 0 END) as ammonia,
+            MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND LOWER(terraforming_state) LIKE '%terraform%' THEN 1 ELSE 0 END) as tf,
+            MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND bio_signals > 0 THEN 1 ELSE 0 END) as bio,
+            MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND landable = 1 THEN 1 ELSE 0 END) as landable,
+            MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND landable = 1 AND surface_gravity_g >= 3.0 THEN 1 ELSE 0 END) as high_g,
+            MAX(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND anomalies_json != '[]' AND anomalies_json IS NOT NULL THEN 1 ELSE 0 END) as anomalies,
+            ROUND(AVG(CASE WHEN (scan_type IS NULL OR scan_type != 'EDSM_Known') AND landable = 1 AND radius IS NOT NULL AND radius > 0 THEN radius ELSE NULL END), 1) as avg_landable_radius
         FROM bodies 
         WHERE system_address = ? 
           AND (star_type IS NOT NULL OR planet_class IS NOT NULL)
     """, (system_address, system_address))
     row = c.fetchone()
-    if not row or row["count"] == 0:
+    if not row or row["total_count"] == 0:
         return
 
     # Evaluate mining scout candidate grade based on Pristine reserve and Metallic/Icy rings
