@@ -95,7 +95,7 @@ def test_edsm_unregistered_system():
 
 
 def test_edsm_priority_queue_and_backfill(monkeypatch):
-    """Test priority queue placement and recovery for registered systems with 0 bodies."""
+    """Test priority queue suppresses auto-backfill when ENABLE_EDSM_BODY_COMPLETION is False."""
     # Background lookups are opt-in (EDSM addon + the user's auto-lookup choice); this test is about the queue itself
     monkeypatch.setattr(EDSMService, "auto_lookup_enabled", staticmethod(lambda: True))
     conn = get_db_connection()
@@ -113,7 +113,14 @@ def test_edsm_priority_queue_and_backfill(monkeypatch):
     conn.close()
 
     service = EDSMService()
-    # Should accept queueing because bodies are missing in DB
+    # When ENABLE_EDSM_BODY_COMPLETION is False (default), it must NOT queue backfill
+    service.queue_system_check(test_sys_addr, test_sys_name, priority=True)
+    assert test_sys_addr not in service.priority_systems
+    assert service.high_priority_queue.empty()
+
+    # When ENABLE_EDSM_BODY_COMPLETION is True, it queues for backfill
+    import app.services.edsm.client as client_module
+    monkeypatch.setattr(client_module, "ENABLE_EDSM_BODY_COMPLETION", True)
     service.queue_system_check(test_sys_addr, test_sys_name, priority=True)
     assert test_sys_addr in service.priority_systems
     assert not service.high_priority_queue.empty()

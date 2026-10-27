@@ -1782,17 +1782,10 @@ def get_system_detail(system_address: int):
     lm_dists = calculate_landmark_distances(system_data.get("star_pos_x"), system_data.get("star_pos_y"), system_data.get("star_pos_z"))
     system_data.update(lm_dists)
 
-    # Queue EDSM verification with priority if not yet checked, or if registered on EDSM but missing bodies
+    # Queue EDSM verification with priority if not yet checked
     sys_name = system_data.get("star_system")
-    if sys_name:
-        if not system_data.get("edsm_checked"):
-            edsm_service.queue_system_check(system_address, sys_name, priority=True)
-        elif system_data.get("edsm_registered") == 1 and (system_data.get("edsm_body_count") or 0) > 0:
-            # Check if bodies in DB are missing
-            c.execute("SELECT COUNT(*) as cnt FROM bodies WHERE system_address = ?", (system_address,))
-            b_cnt = c.fetchone()["cnt"]
-            if b_cnt == 0:
-                edsm_service.queue_system_check(system_address, sys_name, priority=True)
+    if sys_name and not system_data.get("edsm_checked"):
+        edsm_service.queue_system_check(system_address, sys_name, priority=True)
 
     # Fetch bodies
     c.execute("""
