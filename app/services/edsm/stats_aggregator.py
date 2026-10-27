@@ -12,6 +12,8 @@ def update_system_aggregated_stats(conn, system_address: int):
             COUNT(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN 1 ELSE NULL END) as count,
             MAX(star_system) as sys_name,
             (SELECT star_type FROM bodies WHERE system_address = ? AND star_type IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star,
+            (SELECT stellar_mass FROM bodies WHERE system_address = ? AND star_type IS NOT NULL AND stellar_mass IS NOT NULL ORDER BY distance_from_arrival_ls ASC, body_id ASC LIMIT 1) as main_star_mass,
+            (SELECT (COALESCE(SUM(b.stellar_mass), 0.0) + COALESCE(SUM(b.mass_em) / 332946.0487, 0.0)) FROM bodies b WHERE b.system_address = ? AND (b.stellar_mass IS NOT NULL OR b.mass_em IS NOT NULL)) as total_system_mass,
             SUM(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN fss_value ELSE 0 END) as sum_fss,
             SUM(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN dss_value ELSE 0 END) as sum_dss,
             SUM(CASE WHEN scan_type IS NULL OR scan_type != 'EDSM_Known' THEN max_potential_value ELSE 0 END) as sum_max,
@@ -28,7 +30,7 @@ def update_system_aggregated_stats(conn, system_address: int):
         FROM bodies 
         WHERE system_address = ? 
           AND (star_type IS NOT NULL OR planet_class IS NOT NULL)
-    """, (system_address, system_address))
+    """, (system_address, system_address, system_address, system_address))
     row = c.fetchone()
     if not row or row["total_count"] == 0:
         return
@@ -80,7 +82,9 @@ def update_system_aggregated_stats(conn, system_address: int):
             has_first_discover = CASE WHEN is_external = 1 OR COALESCE(visit_count, 0) = 0 THEN 0 ELSE has_first_discover END,
             first_discovered_bodies = CASE WHEN is_external = 1 OR COALESCE(visit_count, 0) = 0 THEN 0 ELSE first_discovered_bodies END,
             avg_landable_radius = ?,
-            mining_scout_grade = ?
+            mining_scout_grade = ?,
+            main_star_mass = COALESCE(main_star_mass, ?),
+            total_system_mass = COALESCE(total_system_mass, ?)
         WHERE system_address = ?
     """, (
         effective_scanned_bodies, row["main_star"], row["sum_fss"] or 0, row["sum_dss"] or 0,
@@ -89,5 +93,7 @@ def update_system_aggregated_stats(conn, system_address: int):
         row["landable"] or 0, row["high_g"] or 0, row["anomalies"] or 0,
         row["avg_landable_radius"] or 0,
         mining_grade,
+        row["main_star_mass"],
+        row["total_system_mass"],
         system_address
     ))

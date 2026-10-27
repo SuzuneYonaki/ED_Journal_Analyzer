@@ -589,6 +589,15 @@ def list_bookmarks(q: Optional[str] = None):
     else:
         c.execute("SELECT * FROM body_bookmarks ORDER BY updated_at DESC")
     rows = [dict(r) for r in c.fetchall()]
+    for r in rows:
+        if r.get("main_star_subclass") is None and r.get("_calc_main_star_subclass") is not None:
+            r["main_star_subclass"] = r["_calc_main_star_subclass"]
+        if r.get("system_age_my") is None and r.get("_calc_system_age_my") is not None:
+            r["system_age_my"] = r["_calc_system_age_my"]
+        if r.get("main_star_mass") is None and r.get("_calc_main_star_mass") is not None:
+            r["main_star_mass"] = r["_calc_main_star_mass"]
+        if r.get("total_system_mass") is None and r.get("_calc_total_system_mass") is not None:
+            r["total_system_mass"] = r["_calc_total_system_mass"]
     conn.close()
     return {"bookmarks": rows}
 
@@ -1424,11 +1433,11 @@ def get_systems(
                 SELECT 
                     systems.*,
                     (SELECT b.luminosity FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_luminosity,
-                    COALESCE(systems.main_star_subclass, (SELECT b.subclass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.subclass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_subclass,
+                    COALESCE(systems.main_star_subclass, (SELECT b.subclass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.subclass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS _calc_main_star_subclass,
                     (SELECT b.absolute_magnitude FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_absolute_magnitude,
-                    COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS system_age_my,
-                    COALESCE(systems.main_star_mass, (SELECT b.stellar_mass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.stellar_mass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_mass,
-                    COALESCE(systems.total_system_mass, (SELECT (COALESCE(SUM(b.stellar_mass), 0.0) + COALESCE(SUM(b.mass_em) / 332946.0487, 0.0)) FROM bodies b WHERE b.system_address = systems.system_address AND (b.stellar_mass IS NOT NULL OR b.mass_em IS NOT NULL))) AS total_system_mass,
+                    COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS _calc_system_age_my,
+                    COALESCE(systems.main_star_mass, (SELECT b.stellar_mass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.stellar_mass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS _calc_main_star_mass,
+                    COALESCE(systems.total_system_mass, (SELECT (COALESCE(SUM(b.stellar_mass), 0.0) + COALESCE(SUM(b.mass_em) / 332946.0487, 0.0)) FROM bodies b WHERE b.system_address = systems.system_address AND (b.stellar_mass IS NOT NULL OR b.mass_em IS NOT NULL))) AS _calc_total_system_mass,
                     pe.rarity_score,
                     {cmdr_dist_expr} AS cmdr_distance_ly,
                     EXISTS (
@@ -1515,11 +1524,11 @@ def get_systems(
             SELECT 
                 systems.*,
                 (SELECT b.luminosity FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_luminosity,
-                COALESCE(systems.main_star_subclass, (SELECT b.subclass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.subclass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_subclass,
+                COALESCE(systems.main_star_subclass, (SELECT b.subclass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.subclass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS _calc_main_star_subclass,
                 (SELECT b.absolute_magnitude FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1) AS main_star_absolute_magnitude,
-                COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS system_age_my,
-                COALESCE(systems.main_star_mass, (SELECT b.stellar_mass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.stellar_mass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS main_star_mass,
-                COALESCE(systems.total_system_mass, (SELECT (COALESCE(SUM(b.stellar_mass), 0.0) + COALESCE(SUM(b.mass_em) / 332946.0487, 0.0)) FROM bodies b WHERE b.system_address = systems.system_address AND (b.stellar_mass IS NOT NULL OR b.mass_em IS NOT NULL))) AS total_system_mass,
+                COALESCE(systems.system_age_my, (SELECT b.age_my FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.age_my IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS _calc_system_age_my,
+                COALESCE(systems.main_star_mass, (SELECT b.stellar_mass FROM bodies b WHERE b.system_address = systems.system_address AND b.star_type IS NOT NULL AND b.stellar_mass IS NOT NULL ORDER BY b.distance_from_arrival_ls ASC, b.body_id ASC LIMIT 1)) AS _calc_main_star_mass,
+                COALESCE(systems.total_system_mass, (SELECT (COALESCE(SUM(b.stellar_mass), 0.0) + COALESCE(SUM(b.mass_em) / 332946.0487, 0.0)) FROM bodies b WHERE b.system_address = systems.system_address AND (b.stellar_mass IS NOT NULL OR b.mass_em IS NOT NULL))) AS _calc_total_system_mass,
                 pe.rarity_score,
                 {cmdr_dist_expr} AS cmdr_distance_ly,
                 NULL AS composite_score,
@@ -1540,6 +1549,15 @@ def get_systems(
         c.execute(select_sql, dist_params + params + [limit, offset])
 
     rows = [dict(r) for r in c.fetchall()]
+    for r in rows:
+        if r.get("main_star_subclass") is None and r.get("_calc_main_star_subclass") is not None:
+            r["main_star_subclass"] = r["_calc_main_star_subclass"]
+        if r.get("system_age_my") is None and r.get("_calc_system_age_my") is not None:
+            r["system_age_my"] = r["_calc_system_age_my"]
+        if r.get("main_star_mass") is None and r.get("_calc_main_star_mass") is not None:
+            r["main_star_mass"] = r["_calc_main_star_mass"]
+        if r.get("total_system_mass") is None and r.get("_calc_total_system_mass") is not None:
+            r["total_system_mass"] = r["_calc_total_system_mass"]
 
     if rows:
         sys_addrs = [r["system_address"] for r in rows]
