@@ -175,9 +175,11 @@ function renderBodyInspector() {
     typeSubtitle = `${b.planet_class || 'Body'}${b.terraforming_state ? ' [' + b.terraforming_state + ']' : ''}`;
   }
   if (b.scan_type === 'EDSM_Known') {
-    typeSubtitle += ` · ⭐ ${t('edsm_known_unscanned')}`;
+    typeSubtitle += ` · 🌐 ${t('edsm_known_unscanned')}`;
     if (b.edsm_discovered_by) {
       typeSubtitle += ` / ${t('discoverer_prefix')}: CMDR ${b.edsm_discovered_by}`;
+    } else {
+      typeSubtitle += ` / ${t('discoverer_prefix')}: ${t('unknown') || 'Unknown'}`;
     }
   }
   document.getElementById('inspect-body-type').innerText = typeSubtitle;

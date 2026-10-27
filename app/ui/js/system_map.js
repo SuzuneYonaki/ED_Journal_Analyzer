@@ -1047,8 +1047,12 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
   if (modSettings.rhino !== false && body.mining_signals > 0) {
     badgeList.push(`<span class="sysmap-mini-badge mining" style="background: rgba(56, 189, 248, 0.25); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.6);">⛏️ ${body.mining_signals}</span>`);
   }
-  if (body.has_first_discover || body.was_discovered === 0) {
+  const isCmdrFirstDisc = (body.has_first_discover || body.was_discovered === 0) && body.scan_type !== 'EDSM_Known';
+  if (isCmdrFirstDisc) {
     badgeList.push('<span class="sysmap-mini-badge first-disc">⭐ 1st</span>');
+  } else if (body.scan_type === 'EDSM_Known') {
+    const extDiscoverer = body.edsm_discovered_by ? ` (CMDR ${body.edsm_discovered_by})` : '';
+    badgeList.push(`<span class="sysmap-mini-badge edsm-known" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);" title="EDSM外部参照データ${extDiscoverer}">🌐 EDSM</span>`);
   }
 
   // Stellar Luminosity & Radiation Output Badges
@@ -1243,7 +1247,9 @@ function createSysMapBodyElement(body, role = 'planet', systemName = '') {
     let priceLabel = 'FSS';
     let badgeClass = 'fss';
 
-    if (isMapped && body.dss_value > 0) {
+    if (body.scan_type === 'EDSM_Known') {
+      // Unscanned external body: do not display as personal CMDR exploration payout
+    } else if (isMapped && body.dss_value > 0) {
       targetPrice = body.dss_value;
       priceLabel = 'DSS Bonus';
       badgeClass = 'dss';
