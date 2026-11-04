@@ -16,6 +16,8 @@
 
 ---
 
+moved to https://github.com/SuzuneYonaki/ED_GALACTIC_MEMOIR
+
 <a name="日本語"></a>
 ## 概要 (日本語)
 
